@@ -317,7 +317,7 @@ public static class LocalLmTools
             cancellationToken);
 
     [McpServerTool(Name = "local_models_sync")]
-    [Description("Queues installation of recommended missing models through the durable FIFO broker.")]
+    [Description("Queues installation of recommended missing models through the durable FIFO broker. Answers Complete, Partial or Failed, and names every model that did not install.")]
     public static Task<string> LocalModelsSync(
         ModelManagementTasks tasks,
         CancellationToken cancellationToken = default) =>

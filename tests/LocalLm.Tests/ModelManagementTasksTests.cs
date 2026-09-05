@@ -1,3 +1,4 @@
+using LocalAi.Broker.Client;
 using LocalAi.Contracts;
 using LocalLm.Core;
 
@@ -27,6 +28,152 @@ public sealed class ModelManagementTasksTests
         Assert.Equal("1", result.CatalogVersion);
         Assert.Equal(1, client.MaxConcurrentPulls);
     }
+
+    /// <summary>
+    /// A pull the broker refused is about that model, so the run goes on to the rest.
+    ///
+    /// Model pulls are minutes each, so a run that stops on the first refusal leaves the machine
+    /// without models it could have had. A `BrokerJobFailedException` means the job ran and the
+    /// broker wrote down why - a mis-tagged catalogue entry, a manifest that is not there - and
+    /// none of that says anything about the next model.
+    /// </summary>
+    [Fact]
+    public async Task A_model_the_broker_refused_does_not_stop_the_rest()
+    {
+        var client = Missing("first", "second", "third");
+        client.PullFailures["second"] = () =>
+            new BrokerJobFailedException(Guid.NewGuid(), "InvalidDataException", "no such tag");
+        var tasks = new ModelManagementTasks(client);
+
+        var result = await tasks.SyncRecommendedAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(LocalModelSyncOutcome.Partial, result.Outcome);
+        Assert.Equal(["first", "third"], result.InstalledModels);
+        Assert.Equal("second", Assert.Single(result.FailedModels).Model);
+        Assert.Contains("no such tag", Assert.Single(result.FailedModels).Reason, StringComparison.Ordinal);
+        Assert.Empty(result.NotAttemptedModels);
+
+        // Every model was tried: this is the assertion that says the run went on.
+        Assert.Equal(["first", "second", "third"], client.Pulled);
+    }
+
+    /// <summary>
+    /// A backend that is not there is about the machine, so the run stops and says what it never
+    /// tried.
+    ///
+    /// Not a preference: `BrokerClient` waits thirty minutes for a job before it gives up, so
+    /// carrying on through an unreachable Ollama would spend half an hour per remaining model
+    /// inside one call.
+    /// </summary>
+    [Fact]
+    public async Task An_unreachable_backend_stops_the_run_and_the_rest_are_named()
+    {
+        var client = Missing("first", "second", "third");
+        client.PullFailures["second"] = () =>
+            new BrokerBackendUnreachableException("http://127.0.0.1:11434");
+        var tasks = new ModelManagementTasks(client);
+
+        var result = await tasks.SyncRecommendedAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(LocalModelSyncOutcome.Partial, result.Outcome);
+        Assert.Equal(["first"], result.InstalledModels);
+        Assert.Equal("second", Assert.Single(result.FailedModels).Model);
+        Assert.Equal(["third"], result.NotAttemptedModels);
+
+        // Two attempts, not three: the third was never asked for.
+        Assert.Equal(["first", "second"], client.Pulled);
+    }
+
+    [Fact]
+    public async Task A_run_that_installed_nothing_says_so_rather_than_partly()
+    {
+        var client = Missing("first", "second");
+        foreach (var model in new[] { "first", "second" })
+        {
+            client.PullFailures[model] = () =>
+                new BrokerJobFailedException(Guid.NewGuid(), "InvalidDataException", "no such tag");
+        }
+
+        var result = await new ModelManagementTasks(client)
+            .SyncRecommendedAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(LocalModelSyncOutcome.Failed, result.Outcome);
+        Assert.Empty(result.InstalledModels);
+        Assert.Equal(2, result.FailedModels.Count);
+    }
+
+    [Fact]
+    public async Task A_run_with_nothing_to_do_is_complete()
+    {
+        var result = await new ModelManagementTasks(Missing())
+            .SyncRecommendedAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(LocalModelSyncOutcome.Complete, result.Outcome);
+        Assert.Empty(result.InstalledModels);
+        Assert.Empty(result.FailedModels);
+        Assert.Empty(result.NotAttemptedModels);
+    }
+
+    /// <summary>
+    /// The invariant the whole shape exists for: whatever happened, every recommended model is
+    /// accounted for exactly once. A caller reading the result can act on it without asking again.
+    /// </summary>
+    [Theory]
+    [InlineData("none")]
+    [InlineData("refused")]
+    [InlineData("unreachable")]
+    public async Task Every_recommended_model_is_accounted_for_exactly_once(string failure)
+    {
+        var client = Missing("first", "second", "third");
+        if (failure == "refused")
+        {
+            client.PullFailures["second"] = () =>
+                new BrokerJobFailedException(Guid.NewGuid(), "InvalidDataException", "no such tag");
+        }
+        else if (failure == "unreachable")
+        {
+            client.PullFailures["second"] = () =>
+                new BrokerBackendUnreachableException("http://127.0.0.1:11434");
+        }
+
+        var result = await new ModelManagementTasks(client)
+            .SyncRecommendedAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            ["first", "second", "third"],
+            result.InstalledModels
+                .Concat(result.FailedModels.Select(failed => failed.Model))
+                .Concat(result.NotAttemptedModels)
+                .Order(StringComparer.Ordinal)
+                .ToArray()
+                .Order(StringComparer.Ordinal));
+    }
+
+    /// <summary>
+    /// The host's own cancellation is not a partial result. `BrokerJobCancelledException` derives
+    /// from `OperationCanceledException`, so a filter that did not test the token would let a job
+    /// the queue cancelled escape as though the caller had asked to stop.
+    /// </summary>
+    [Fact]
+    public async Task Cancellation_the_caller_asked_for_is_not_a_result()
+    {
+        using var cancelled = new CancellationTokenSource();
+        var client = Missing("first", "second");
+        client.PullFailures["first"] = () =>
+        {
+            cancelled.Cancel();
+            return new OperationCanceledException(cancelled.Token);
+        };
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            new ModelManagementTasks(client).SyncRecommendedAsync(cancelled.Token));
+    }
+
+    private static FakeClient Missing(params string[] models) =>
+        new()
+        {
+            Status = new LocalModelsStatusOutput([], [], models, [], "1"),
+        };
 
     [Fact]
     public async Task Feedback_and_report_are_forwarded_as_typed_operations()
@@ -98,6 +245,13 @@ public sealed class ModelManagementTasksTests
             CancellationToken cancellationToken = default) =>
             Task.FromResult(Result(Status));
 
+        /// <summary>
+        /// What a pull does instead of succeeding, per model. A sync that keeps going after one
+        /// model and stops after another cannot be tested by a fake that only ever succeeds.
+        /// </summary>
+        public Dictionary<string, Func<Exception>> PullFailures { get; } =
+            new(StringComparer.Ordinal);
+
         public async Task<LocalJobResult<ModelMaintenanceJobOutput>> PullModelAsync(
             string model,
             string catalogVersion,
@@ -108,6 +262,11 @@ public sealed class ModelManagementTasksTests
             await Task.Yield();
             Pulled.Add(model);
             Interlocked.Decrement(ref _activePulls);
+            if (PullFailures.TryGetValue(model, out var failure))
+            {
+                throw failure();
+            }
+
             return Result(new ModelMaintenanceJobOutput("success"));
         }
 
