@@ -172,6 +172,48 @@ public sealed class OllamaTransportTests
     }
 
     /// <summary>
+    /// And when the retries run out, it must still not look like a bad request.
+    ///
+    /// The retry above is only half the answer: a runner that stays unreachable for all
+    /// three attempts ends as an HttpRequestException, which is what a genuinely malformed
+    /// request ends as too. The layer above cannot tell them apart, so it does the only
+    /// thing it knows - halves the batch to isolate a chunk that was never the problem, and
+    /// fails again smaller (#369).
+    ///
+    /// The type is the whole signal. BrokerHost records `exception.GetType().Name` as the
+    /// failure code, and BrokerJobFailedException says of that code that it is "ours and
+    /// stable" and the thing a caller matches on - as against the reason, which is quoted
+    /// rather than parsed. So Ollama's vocabulary stays in this file and a name leaves it.
+    /// </summary>
+    [Fact]
+    public async Task A_runner_that_never_comes_back_is_not_reported_as_a_bad_request()
+    {
+        var fake = new FakeOllamaServer();
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            fake.EnqueueJson(
+                HttpStatusCode.BadRequest,
+                """
+                {"error":"Post \"http://127.0.0.1:59268/tokenize\": dial tcp 127.0.0.1:59268: connectex: No connection could be made because the target machine actively refused it."}
+                """);
+        }
+
+        using var client = new HttpClient(fake);
+        using var transport = new OllamaTransport(client, BaseUri, NoDelay);
+
+        await Assert.ThrowsAsync<BackendUnavailableException>(() => transport.ExecuteAsync(
+            LocalJobRequestFactory.CreateEmbed(
+                "gone",
+                LocalJobPriority.Background,
+                "embed-model",
+                ["one"]),
+            TestContext.Current.CancellationToken));
+
+        // Every attempt was made: the type changes, the waiting does not.
+        Assert.Equal(3, fake.Requests.Count);
+    }
+
+    /// <summary>
     /// The half that must not be lost: a 400 that is about the request stays a refusal, and is
     /// not retried three times before saying so.
     /// </summary>
@@ -196,7 +238,7 @@ public sealed class OllamaTransportTests
         Assert.Single(fake.Requests);
     }
 
-    /// <summary>
+    /// <summary>
     /// Streamed, and this asserts the request that asks for it. Unstreamed — which is what this
     /// test used to pin — the backend answers once, when the download is over, so the only place
     /// a size is ever known stayed inside a call that said nothing until it ended.

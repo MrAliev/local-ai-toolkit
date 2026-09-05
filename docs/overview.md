@@ -84,7 +84,9 @@ scheduling, leased anyway, attempted once, and failed with a reason that names t
 A request the backend refuses because it could not reach its own runner is retried rather than
 reported as a bad request. It arrives as an HTTP 400 and is not one: the same request works
 moments later, and the layer above used to answer by halving the batch to isolate a chunk that
-did not exist.
+did not exist. When the retries do run out, the failure says so by name instead of arriving as
+one more bad request, so the layer above waits rather than dividing a batch it cannot make
+smaller.
 
 Partial offload to system memory is not an error — it makes the answer several times slower
 without failing. The slowdown announces itself only because the report line is made to say so,

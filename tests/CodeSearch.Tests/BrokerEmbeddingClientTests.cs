@@ -81,6 +81,61 @@ public sealed class BrokerEmbeddingClientTests
         Assert.Same(timeout, error.InnerException);
     }
 
+    /// <summary>
+    /// A backend that is not there is not a chunk that cannot be embedded.
+    ///
+    /// IndexBuilder answers a failed batch by halving it to isolate an offending chunk, and
+    /// excludes exactly one exception from that: EmbeddingUnavailableException. So a job that
+    /// failed because the runner never came back has to arrive as that one, or the indexer
+    /// divides work it cannot make smaller and fails again in both halves (#369).
+    ///
+    /// Matched on the failure code, which BrokerJobFailedException documents as ours and stable,
+    /// rather than on the reason - the reason is Ollama's own words and is quoted, not parsed.
+    /// </summary>
+    [Fact]
+    public async Task Translates_an_unavailable_backend_to_embedding_unavailable()
+    {
+        var failure = new BrokerJobFailedException(
+            Guid.NewGuid(),
+            "BackendUnavailableException",
+            "The model backend is unavailable: runner_unreachable. dial tcp: refused");
+        var client = new BrokerEmbeddingClient(
+            "embed-model",
+            new ThrowingBrokerClient(failure));
+
+        var error = await Assert.ThrowsAsync<EmbeddingUnavailableException>(
+            () => client.EmbedAsync(
+                ["text"],
+                LocalJobPriority.Background,
+                "index:tree:batch-1",
+                TestContext.Current.CancellationToken));
+
+        Assert.Same(failure, error.InnerException);
+    }
+
+    /// <summary>
+    /// The other half: a job that failed for a reason of its own is still the indexer's to
+    /// isolate, and halving is the right answer to it.
+    /// </summary>
+    [Fact]
+    public async Task Leaves_an_ordinary_job_failure_for_the_indexer_to_isolate()
+    {
+        var failure = new BrokerJobFailedException(
+            Guid.NewGuid(),
+            "InvalidDataException",
+            "input length exceeds maximum context length");
+        var client = new BrokerEmbeddingClient(
+            "embed-model",
+            new ThrowingBrokerClient(failure));
+
+        await Assert.ThrowsAsync<BrokerJobFailedException>(
+            () => client.EmbedAsync(
+                ["text"],
+                LocalJobPriority.Background,
+                "index:tree:batch-1",
+                TestContext.Current.CancellationToken));
+    }
+
     [Theory]
     [InlineData("broker_incompatible")]
     [InlineData("broker_start_failed")]

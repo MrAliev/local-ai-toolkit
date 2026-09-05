@@ -11,6 +11,12 @@ namespace LocalAi.Broker;
 public sealed class OllamaTransport : IModelRuntimeTransport, IDisposable
 {
     private const int MaxAttempts = 3;
+
+    /// <summary>
+    /// The code a backend that could not reach its own runner fails with. Short and ours, so the
+    /// layers above match on it without learning Ollama's vocabulary.
+    /// </summary>
+    private const string RunnerUnreachable = "runner_unreachable";
     private const int MaxErrorBodyCharacters = 400;
     private static readonly TimeSpan MaxRetryAfter = TimeSpan.FromMinutes(1);
     private static readonly JsonSerializerOptions ExternalResponseJson =
@@ -750,15 +756,28 @@ public sealed class OllamaTransport : IModelRuntimeTransport, IDisposable
                 var errorBody = await ReadBoundedErrorBodyAsync(
                     response.Content,
                     cancellationToken);
+                var reported = Redact(
+                    errorBody.Text,
+                    errorBody.IsTruncated,
+                    sensitiveValues);
+
+                // A runner that never came back is not a bad request, and after the last attempt
+                // it must stop looking like one. An HttpRequestException here is what a
+                // genuinely malformed request throws too, and the layer above answers that by
+                // halving the batch to isolate a chunk that was never the problem - failing
+                // again, smaller (#369). The name is what it can act on; Ollama's own words stay
+                // in this file and travel as the detail.
+                if (attempt == MaxAttempts &&
+                    response.StatusCode == HttpStatusCode.BadRequest &&
+                    NamesAnUnreachableRunner(errorBody.Text))
+                {
+                    throw new BackendUnavailableException(RunnerUnreachable, reported);
+                }
+
                 if (!IsRetryable(response.StatusCode, errorBody.Text) ||
                     attempt == MaxAttempts)
                 {
-                    throw CreateStatusException(
-                        response,
-                        Redact(
-                            errorBody.Text,
-                            errorBody.IsTruncated,
-                            sensitiveValues));
+                    throw CreateStatusException(response, reported);
                 }
 
                 var retryAfter = GetBoundedRetryAfter(response.Headers.RetryAfter);
