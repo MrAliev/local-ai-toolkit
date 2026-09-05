@@ -122,6 +122,33 @@ public static class CodeSearchText
     public static string SyncReached(object phase, string when) =>
         Catalogue.Format(nameof(SyncReached), phase, when);
 
+    /// <summary>
+    /// What a build in flight says on the answers it changes, and what it says when it ends.
+    ///
+    /// The figures come from the keys <c>index_status</c> already prints, so the two faces cannot
+    /// disagree about the same build. These four are what the inline line adds: how long ago the
+    /// figures were written, what they mean for the answer they sit above, and — once — that the
+    /// build is over and the qualification can be dropped.
+    ///
+    /// <see cref="SyncEnded"/> and <see cref="SyncStopped"/> begin lower case: they follow the
+    /// literal <c>Sync: </c> prefix, which is a field name and stays English.
+    /// </summary>
+    public static string RecordedAgo(string age) => Catalogue.Format(nameof(RecordedAgo), age);
+
+    public static string SyncNotSearchableYet => Catalogue.Get(nameof(SyncNotSearchableYet));
+
+    /// <summary>
+    /// Replaces the instruction to start a build, on the paths that give one, while a build is
+    /// already running. That instruction is not merely redundant then - a second
+    /// <c>localai sync</c> exits 75 against the gate - and it is what a new machine shows on
+    /// every search for the whole of its first build.
+    /// </summary>
+    public static string BuildAlreadyRunning => Catalogue.Get(nameof(BuildAlreadyRunning));
+
+    public static string SyncEnded => Catalogue.Get(nameof(SyncEnded));
+
+    public static string SyncStopped => Catalogue.Get(nameof(SyncStopped));
+
     public static string ProgressNotCounted => Catalogue.Get(nameof(ProgressNotCounted));
 
     public static string ProgressChunks(int processed, int total, int remaining) =>

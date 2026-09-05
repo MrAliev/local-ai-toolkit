@@ -44,6 +44,10 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a2c561934e089</value>
   </resheader>
+  <data name="BuildAlreadyRunning" xml:space="preserve">
+    <value>A build is already running for it; a second one would be refused until it finishes.</value>
+    <comment>Replaces BuildItBackground and its command line while a build is in flight: the instruction to start one is wrong then, and a second sync exits 75 sync_busy against the gate. Said on the paths that tell a reader to build, not on the ones that return content.</comment>
+  </data>
   <data name="BuildItBackground" xml:space="preserve">
     <value>Build it (runs for minutes on a large repository, so run it in the background):</value>
   </data>
@@ -129,6 +133,10 @@
   <data name="RateChunks" xml:space="preserve">
     <value>{0} chunks/s</value>
   </data>
+  <data name="RecordedAgo" xml:space="preserve">
+    <value>recorded {0} ago</value>
+    <comment>{0} is an age carried by Seconds under a minute and by EtaMinutes at a minute or more. It is how long ago the figures were written, never a claim that anything is still running: a killed sync reads as recorded 3.2 h ago rather than as a build.</comment>
+  </data>
   <data name="ReloadsInASecond" xml:space="preserve">
     <value>The next search reloads the index in about a second.</value>
   </data>
@@ -165,12 +173,24 @@ Check the broker, then search again: localai doctor</value>
     <value>STALE - built at {0}, HEAD is now {1}</value>
     <comment>The token and the ASCII separator are a contract; only the clause after it moves.</comment>
   </data>
+  <data name="SyncEnded" xml:space="preserve">
+    <value>the build finished. Answers from here on use the index it published.</value>
+    <comment>Printed once, on the first answer after the phase reaches Completed. Having told a caller that answers come from the last published index, the product owes it the moment that stops being true. Lower case: it follows the literal 'Sync: ' prefix.</comment>
+  </data>
   <data name="SyncFailed" xml:space="preserve">
     <value>LocalAi sync failed with {0}: {1}</value>
+  </data>
+  <data name="SyncNotSearchableYet" xml:space="preserve">
+    <value>Until it finishes, answers come from the last index it published.</value>
+    <comment>Said once per build, on the answers that return content. The figures alone do not say what they mean for this answer.</comment>
   </data>
   <data name="SyncReached" xml:space="preserve">
     <value>; a sync reached {0} at {1}</value>
     <comment>0 is a phase enum name and stays Latin.</comment>
+  </data>
+  <data name="SyncStopped" xml:space="preserve">
+    <value>the build ended in failure. Run a sync again - its output says why.</value>
+    <comment>The counterpart of SyncEnded for a build that failed. Lower case: it follows the literal 'Sync: ' prefix.</comment>
   </data>
   <data name="TooBigForToolCall" xml:space="preserve">
     <value>A refresh this size runs for minutes, so it does not belong inside a tool call.</value>
