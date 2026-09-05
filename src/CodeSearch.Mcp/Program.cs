@@ -1,4 +1,5 @@
 using System.Text;
+using CodeSearch.Mcp;
 using CodeSearch.Core.Search;
 using LocalAi.Contracts.Localization;
 using CodeSearch.Core.Semantics;
@@ -31,6 +32,12 @@ builder.Services.AddSingleton(serviceProvider =>
             workspaceRoot,
             policyStore.Read().ProcessSpec(languageId)));
 });
+// One per server, because what it remembers is what this server has already said about a build.
+// Its runtime root comes from the search service rather than from the machine's default, so the
+// figures above an answer and the index that answered cannot come from two installations.
+builder.Services.AddSingleton(serviceProvider => new SyncNotice(
+    new RepositoryProgressReader(
+        serviceProvider.GetRequiredService<SearchService>().RuntimeRoot).Read));
 builder.Services.AddSingleton<ILiveSemanticNavigation, LiveSemanticNavigationOverlay>();
 builder.Services.AddSingleton<IHeuristicSemanticNavigation, HeuristicSemanticNavigation>();
 builder.Services.AddSingleton<SemanticNavigationGateway>();

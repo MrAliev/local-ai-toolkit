@@ -145,6 +145,47 @@ public sealed class SyncNoticeTests
             StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// The two answers that name a command need more than a line to put above themselves: they
+    /// choose. "No index - build it" and "too big for a tool call - run this instead" are both
+    /// wrong while a build is running, so those callers replace the instruction rather than
+    /// qualify it, and that is a question, not a line.
+    /// </summary>
+    [Theory]
+    [InlineData(RepositoryIndexProgressPhase.EmbeddingBase, true)]
+    [InlineData(RepositoryIndexProgressPhase.SemanticBase, true)]
+    [InlineData(RepositoryIndexProgressPhase.Completed, false)]
+    [InlineData(RepositoryIndexProgressPhase.Failed, false)]
+    public void A_caller_that_names_a_command_can_ask_whether_one_is_already_running(
+        RepositoryIndexProgressPhase phase,
+        bool expected)
+    {
+        var notice = Watching(Building(phase, 948, 1511));
+
+        Assert.Equal(expected, notice.IsRunning("R:\\LocalAi"));
+    }
+
+    [Fact]
+    public void Nothing_recorded_is_no_build_running()
+    {
+        Assert.False(new SyncNotice(_ => null).IsRunning("R:\\LocalAi"));
+    }
+
+    /// <summary>
+    /// Asking is not being told. If the question counted as having heard the build start, the
+    /// answer that asked it would then be the one answer that never gets the sentence.
+    /// </summary>
+    [Fact]
+    public void Asking_whether_a_build_runs_is_not_being_told_that_it_does()
+    {
+        var notice = Watching(Building(RepositoryIndexProgressPhase.EmbeddingBase, 948, 1511));
+
+        notice.IsRunning("R:\\LocalAi");
+        var above = notice.Above("R:\\LocalAi", SyncNoticeAudience.Instruction);
+
+        Assert.Contains(CodeSearchText.BuildAlreadyRunning, above, StringComparison.Ordinal);
+    }
+
     private static SyncNotice Watching(Func<string?, RepositoryIndexProgress?> read) =>
         new(read);
 

@@ -49,6 +49,17 @@ public sealed class SyncNotice(Func<string?, RepositoryIndexProgress?> read)
     private readonly Lock _gate = new();
 
     /// <summary>
+    /// Whether a build is recorded as under way, for the callers that name a command.
+    ///
+    /// Separate from <see cref="Above"/> because those callers choose rather than prepend: the
+    /// instruction to start a build is not merely redundant while one is running, it is an
+    /// instruction to run a command that exits 75 against the gate. Asking deliberately records
+    /// nothing — a caller that asked and then printed the line would otherwise be the one caller
+    /// that never gets the sentence explaining it.
+    /// </summary>
+    public bool IsRunning(string? root) => read(root) is { } progress && !Ended(progress);
+
+    /// <summary>
     /// The lines to put above an answer, ending in a blank line, or nothing at all.
     /// </summary>
     public string Above(string? root, SyncNoticeAudience audience)
@@ -59,8 +70,7 @@ public sealed class SyncNotice(Func<string?, RepositoryIndexProgress?> read)
             return string.Empty;
         }
 
-        var ended = progress.Phase is RepositoryIndexProgressPhase.Completed
-            or RepositoryIndexProgressPhase.Failed;
+        var ended = Ended(progress);
         lock (_gate)
         {
             _said.TryGetValue(progress.RepositoryId, out var said);
@@ -102,6 +112,14 @@ public sealed class SyncNotice(Func<string?, RepositoryIndexProgress?> read)
             return line + explain + "\n";
         }
     }
+
+    /// <summary>
+    /// A recorded phase past which nothing more will be written. Not a claim that the process is
+    /// gone: it is what the last write said, which is all this ever claims.
+    /// </summary>
+    private static bool Ended(RepositoryIndexProgress progress) =>
+        progress.Phase is RepositoryIndexProgressPhase.Completed
+            or RepositoryIndexProgressPhase.Failed;
 
     /// <summary>
     /// Phase, figures and age. The figures use the keys `index_status` prints, so a reader who
