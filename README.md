@@ -32,9 +32,10 @@ toolkit rather than renaming those stable contracts.
   duration limit; after ten minutes without completion the broker probes backend/model residency and only
   fails an attempt after two consecutive confirmed unhealthy results. Probe timeouts and
   inconclusive results never classify a healthy multi-hour operation as failed.
-- Repository synchronization persists a safe progress snapshot. `index_status` reports the
-  phase, processed/total/remaining chunks, measured rate, and ETA while a generation builds,
-  without exposing source chunks or job prompts.
+- Repository synchronization persists a safe progress snapshot. While a generation builds,
+  every search, navigation and status answer carries a `Sync:` line naming the phase,
+  processed/total/remaining chunks, an ETA and how long ago that was recorded; `index_status`
+  adds the measured rate. Neither exposes source chunks or job prompts.
 - Task-aware routing selects an eligible model by capability, current VRAM residency,
   context limit, experiment state, and established fallback order.
 - Model-aware snapshots group work for the same model, run shorter compatible tasks
