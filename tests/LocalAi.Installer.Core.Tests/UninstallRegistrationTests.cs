@@ -79,6 +79,23 @@ public sealed class UninstallRegistrationTests : IDisposable
     }
 
     /// <summary>
+    /// Apps and features draws the row's icon from `DisplayIcon`, and without it falls back to
+    /// whatever the shell decides - which is not the same thing on every machine, and was a
+    /// generic box on this one. The value is the copy the entry already points at, so the icon
+    /// and the uninstall command can never name two different files.
+    /// </summary>
+    [Fact]
+    public void The_entry_names_the_icon_it_shows_rather_than_leaving_it_to_the_shell()
+    {
+        var registration = Registration();
+
+        registration.Register("0.1.50", installerSource);
+
+        using var key = Registry.CurrentUser.OpenSubKey(subKey);
+        Assert.Equal(registration.UninstallerPath, key!.GetValue("DisplayIcon"));
+    }
+
+    /// <summary>
     /// The key's name is the product, not the version, so an upgrade updates the one entry
     /// instead of leaving a list of every release ever installed.
     /// </summary>
