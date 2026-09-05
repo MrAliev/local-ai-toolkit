@@ -45,8 +45,8 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a2c561934e089</value>
   </resheader>
   <data name="BuildAlreadyRunning" xml:space="preserve">
-    <value>A build is already running for it; a second one would be refused until it finishes.</value>
-    <comment>Replaces BuildItBackground and its command line while a build is in flight: the instruction to start one is wrong then, and a second sync exits 75 sync_busy against the gate. Said on the paths that tell a reader to build, not on the ones that return content.</comment>
+    <value>A build is already running for this repository; a second one would be refused until it finishes.</value>
+    <comment>Replaces BuildItBackground and its command line while a build is in flight: the instruction to start one is wrong then, and a second sync exits 75 sync_busy against the gate. Said on the paths that tell a reader to build, not on the ones that return content. Printed on every call for as long as the build runs, unlike SyncNotSearchableYet: it stands in for an instruction line, and an instruction said once is missing every time after.</comment>
   </data>
   <data name="BuildItBackground" xml:space="preserve">
     <value>Build it (runs for minutes on a large repository, so run it in the background):</value>
@@ -60,11 +60,19 @@
   <data name="CliUnavailable" xml:space="preserve">
     <value>LocalAi CLI is unavailable. Expected: {0}</value>
   </data>
+  <data name="Days" xml:space="preserve">
+    <value>{0} d</value>
+    <comment>The top of the age ladder RecordedAgo carries: Seconds under a minute, EtaMinutes under an hour, Hours under a day, Days above it, one decimal throughout. A record left behind by a build whose process died is dated in days, and 2880 min is a number nobody reads.</comment>
+  </data>
   <data name="EtaCalculating" xml:space="preserve">
     <value>calculating</value>
   </data>
   <data name="EtaMinutes" xml:space="preserve">
     <value>{0} min</value>
+  </data>
+  <data name="Hours" xml:space="preserve">
+    <value>{0} h</value>
+    <comment>Part of the age ladder RecordedAgo carries; see Days. Follows EtaMinutes in taking a space before the unit.</comment>
   </data>
   <data name="LocationNumbering" xml:space="preserve">
     <value>(path:line:column, counted from 1)</value>
@@ -130,6 +138,14 @@
   <data name="ProgressNotCounted" xml:space="preserve">
     <value>not counted in this phase</value>
   </data>
+  <data name="ProgressNotRecordedYet" xml:space="preserve">
+    <value>started, no progress recorded yet</value>
+    <comment>Fills the figures slot when the gate is held and no progress record has been written yet - the window between a sync starting and its first write. 'started' is the antecedent of 'it' in the sentence below; without it SyncNotSearchableYet names nothing. No age: nothing was recorded, so there is nothing to date.</comment>
+  </data>
+  <data name="ProgressStoppedAt" xml:space="preserve">
+    <value>stopped at {0}</value>
+    <comment>Wraps the whole figures slot when a progress record exists, is neither Completed nor Failed, and the gate is free - a sync that died without writing an end. 0 carries the phase name, ProgressChunks and RecordedAgo in that order; the ETA is dropped here, because it was the dead process's prediction of a remaining time nobody is spending. Subjectless in both languages, like ProgressNotCounted beside it.</comment>
+  </data>
   <data name="RateChunks" xml:space="preserve">
     <value>{0} chunks/s</value>
   </data>
@@ -173,6 +189,10 @@ Check the broker, then search again: localai doctor</value>
     <value>STALE - built at {0}, HEAD is now {1}</value>
     <comment>The token and the ASCII separator are a contract; only the clause after it moves.</comment>
   </data>
+  <data name="SyncDidNotFinish" xml:space="preserve">
+    <value>the build stopped without finishing and nothing is running now. Until a sync is run again, answers keep coming from the same index as before.</value>
+    <comment>The end notice for a build that died rather than failed: a killed process never writes Failed, so it never reaches SyncStopped. Printed once, on the answers that return content, and only to a caller that was already told this build was running - that caller is holding SyncNotSearchableYet's promise of a finish that is not coming. A caller who never heard it start sees today's answer unchanged: a record nobody clears would otherwise ride above every search answer for weeks. Lower case: it follows the literal 'Sync: ' prefix.</comment>
+  </data>
   <data name="SyncEnded" xml:space="preserve">
     <value>the build finished. Answers from here on use the index it published.</value>
     <comment>Printed once, on the first answer after the phase reaches Completed. Having told a caller that answers come from the last published index, the product owes it the moment that stops being true. Lower case: it follows the literal 'Sync: ' prefix.</comment>
@@ -190,7 +210,7 @@ Check the broker, then search again: localai doctor</value>
   </data>
   <data name="SyncStopped" xml:space="preserve">
     <value>the build ended in failure. Run a sync again - its output says why.</value>
-    <comment>The counterpart of SyncEnded for a build that failed. Lower case: it follows the literal 'Sync: ' prefix.</comment>
+    <comment>The counterpart of SyncEnded for a build that failed - only when the record itself says Failed. A killed build never writes that; SyncDidNotFinish is its counterpart. Lower case: it follows the literal 'Sync: ' prefix.</comment>
   </data>
   <data name="TooBigForToolCall" xml:space="preserve">
     <value>A refresh this size runs for minutes, so it does not belong inside a tool call.</value>
@@ -207,7 +227,7 @@ Check the broker, then search again: localai doctor</value>
     <comment>The `Update:` label and its padding stay literal, aligned to the same column as the rest.</comment>
   </data>
   <data name="WhileItRuns" xml:space="preserve">
-    <value>While it runs, index_status reports the sync phase, the rate in chunks/s and an ETA.</value>
+    <value>While it runs, every search and navigation answer says how far it has got; index_status adds the rate in chunks/s.</value>
   </data>
   <data name="WorkingSetNotTrimmed" xml:space="preserve">
     <value>the working set was not trimmed (not Windows, or the call was refused)</value>

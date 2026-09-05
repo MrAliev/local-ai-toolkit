@@ -394,6 +394,7 @@ public sealed class SearchChunkServiceTests : IDisposable
 
         var response = await CodeSearchTools.GetCodeChunk(
             Service(),
+            NoBuildRunning.Notice,
             id,
             _root,
             TestContext.Current.CancellationToken);

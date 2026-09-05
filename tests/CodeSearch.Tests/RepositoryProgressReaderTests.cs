@@ -10,12 +10,15 @@ namespace CodeSearch.Tests;
 /// index_status could afford RuntimeIndexLayout.Inspect - five git processes and a hash of every
 /// dirty file - because a person asks for a status now and then. Every search and every navigation
 /// answer cannot: the figures are worth a line above an answer only if reading them costs about
-/// nothing. So this asks git once per working root, keeps the answer, and reads a small file after
-/// that.
+/// nothing. So this asks git once per working root, keeps the answer, and after that reads a small
+/// file and takes one momentary look at a named mutex.
 ///
-/// Everything it cannot do is silence. A directory that is not a repository, a runtime that has
-/// never recorded a build, a progress file half-written by a sync that is writing it right now -
-/// none of those are worth a word above an answer the reader did ask for.
+/// It reads both because neither answers alone. The record says how far a build got; only the gate
+/// says whether anything is running, because nothing writes an end for a process that was killed.
+///
+/// Everything it cannot answer is silence. A directory that is not a repository, a runtime that
+/// has never recorded a build, a progress file half-written by a sync that is writing it right now
+/// - none of those are worth a word above an answer the reader did ask for.
 /// </summary>
 public sealed class RepositoryProgressReaderTests : IDisposable
 {
@@ -40,12 +43,46 @@ public sealed class RepositoryProgressReaderTests : IDisposable
     {
         Record(Progress(RepositoryIndexProgressPhase.EmbeddingBase, 948, 1511));
 
-        var progress = Reader().Read(_root);
+        var sighting = Reader().Look(_root);
 
-        Assert.NotNull(progress);
-        Assert.Equal(RepositoryIndexProgressPhase.EmbeddingBase, progress.Phase);
-        Assert.Equal(948, progress.ProcessedChunks);
-        Assert.Equal(1511, progress.TotalChunks);
+        Assert.NotNull(sighting);
+        Assert.Equal(RepositoryId, sighting.RepositoryId);
+        Assert.NotNull(sighting.Progress);
+        Assert.Equal(RepositoryIndexProgressPhase.EmbeddingBase, sighting.Progress.Phase);
+        Assert.Equal(948, sighting.Progress.ProcessedChunks);
+        Assert.Equal(1511, sighting.Progress.TotalChunks);
+    }
+
+    /// <summary>
+    /// The half the record cannot answer, and the reason this is not just a file read: whether a
+    /// sync holds the gate right now decides whether an answer may tell the reader to start one.
+    /// </summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void The_gate_is_reported_as_it_is_found(bool held)
+    {
+        Record(Progress(RepositoryIndexProgressPhase.EmbeddingBase, 948, 1511));
+
+        var sighting = Reader(gateHeld: _ => held).Look(_root);
+
+        Assert.NotNull(sighting);
+        Assert.Equal(held, sighting.BuildHoldsTheGate);
+    }
+
+    /// <summary>
+    /// A build seen before it has written anything is still a build. The gate is taken before the
+    /// first byte of shared state, so this window exists on every sync and is the whole of it on
+    /// a machine building its first index.
+    /// </summary>
+    [Fact]
+    public void A_gate_held_with_nothing_recorded_is_still_a_sighting()
+    {
+        var sighting = Reader(gateHeld: _ => true).Look(_root);
+
+        Assert.NotNull(sighting);
+        Assert.True(sighting.BuildHoldsTheGate);
+        Assert.Null(sighting.Progress);
     }
 
     /// <summary>
@@ -64,9 +101,9 @@ public sealed class RepositoryProgressReaderTests : IDisposable
             return _commonDirectory;
         });
 
-        reader.Read(_root);
-        reader.Read(_root);
-        reader.Read(_root);
+        reader.Look(_root);
+        reader.Look(_root);
+        reader.Look(_root);
 
         Assert.Equal(1, asked);
     }
@@ -84,18 +121,21 @@ public sealed class RepositoryProgressReaderTests : IDisposable
         string? answer = null;
         var reader = Reader(() => answer);
 
-        var before = reader.Read(_root);
+        var before = reader.Look(_root);
         answer = _commonDirectory;
-        var after = reader.Read(_root);
+        var after = reader.Look(_root);
 
         Assert.Null(before);
         Assert.NotNull(after);
     }
 
     [Fact]
-    public void A_runtime_that_has_recorded_nothing_says_nothing()
+    public void A_runtime_that_has_recorded_nothing_reports_no_progress()
     {
-        Assert.Null(Reader().Read(_root));
+        var sighting = Reader().Look(_root);
+
+        Assert.NotNull(sighting);
+        Assert.Null(sighting.Progress);
     }
 
     /// <summary>
@@ -104,16 +144,16 @@ public sealed class RepositoryProgressReaderTests : IDisposable
     /// an exception thrown out of a search that had an answer ready.
     /// </summary>
     [Fact]
-    public void A_progress_file_it_cannot_read_says_nothing()
+    public void A_progress_file_it_cannot_read_reports_no_progress()
     {
-        var directory = Path.Combine(
-            _runtimeRoot,
-            "repositories",
-            RepositoryIdentity.FromCommonDirectory(_commonDirectory).Id);
+        var directory = Path.Combine(_runtimeRoot, "repositories", RepositoryId);
         Directory.CreateDirectory(directory);
         File.WriteAllText(Path.Combine(directory, "progress.json"), "{ not json");
 
-        Assert.Null(Reader().Read(_root));
+        var sighting = Reader().Look(_root);
+
+        Assert.NotNull(sighting);
+        Assert.Null(sighting.Progress);
     }
 
     public void Dispose()
@@ -122,14 +162,20 @@ public sealed class RepositoryProgressReaderTests : IDisposable
         Delete(_runtimeRoot);
     }
 
-    private RepositoryProgressReader Reader(Func<string?>? commonDirectory = null) =>
-        new(_runtimeRoot, _ => commonDirectory is null ? _commonDirectory : commonDirectory());
+    private string RepositoryId =>
+        RepositoryIdentity.FromCommonDirectory(_commonDirectory).Id;
+
+    private RepositoryProgressReader Reader(
+        Func<string?>? commonDirectory = null,
+        Func<string, bool>? gateHeld = null) =>
+        new(
+            _runtimeRoot,
+            _ => commonDirectory is null ? _commonDirectory : commonDirectory(),
+            gateHeld ?? (_ => false));
 
     private void Record(RepositoryIndexProgress progress) =>
         new RepositoryIndexProgressStore(
-                FsPath.From(_runtimeRoot).Combine(
-                    "repositories",
-                    RepositoryIdentity.FromCommonDirectory(_commonDirectory).Id))
+                FsPath.From(_runtimeRoot).Combine("repositories", RepositoryId))
             .Save(progress);
 
     private RepositoryIndexProgress Progress(
@@ -137,7 +183,7 @@ public sealed class RepositoryProgressReaderTests : IDisposable
         int processed,
         int total) =>
         new(
-            RepositoryIdentity.FromCommonDirectory(_commonDirectory).Id,
+            RepositoryId,
             phase,
             _root,
             processed,

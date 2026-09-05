@@ -138,6 +138,38 @@ public static class CodeSearchText
     public static string SyncNotSearchableYet => Catalogue.Get(nameof(SyncNotSearchableYet));
 
     /// <summary>
+    /// The two rungs above <see cref="EtaMinutes"/> on the ladder <see cref="RecordedAgo"/>
+    /// carries. They exist because a build whose process died leaves a record nobody clears, so
+    /// the age this reports is measured in hours and days rather than in minutes, and
+    /// <c>recorded 2880 min ago</c> is a number nobody reads.
+    /// </summary>
+    public static string Hours(string hours) => Catalogue.Format(nameof(Hours), hours);
+
+    public static string Days(string days) => Catalogue.Format(nameof(Days), days);
+
+    /// <summary>
+    /// What stands where the figures go when a build holds the gate and has written nothing yet -
+    /// the window between a sync starting and its first record. It is also the antecedent of "it"
+    /// in <see cref="SyncNotSearchableYet"/>, which names nothing without a line above it.
+    /// </summary>
+    public static string ProgressNotRecordedYet =>
+        Catalogue.Get(nameof(ProgressNotRecordedYet));
+
+    /// <summary>
+    /// Wraps the figures when a record is left behind by a build that is no longer running. The
+    /// ETA is dropped inside it: it was the dead process's prediction of a remaining time nobody
+    /// is spending.
+    /// </summary>
+    public static string ProgressStoppedAt(string figures) =>
+        Catalogue.Format(nameof(ProgressStoppedAt), figures);
+
+    /// <summary>
+    /// The end notice for a build that died rather than failed. A killed process never writes
+    /// <c>Failed</c>, so it never reaches <see cref="SyncStopped"/>.
+    /// </summary>
+    public static string SyncDidNotFinish => Catalogue.Get(nameof(SyncDidNotFinish));
+
+    /// <summary>
     /// Replaces the instruction to start a build, on the paths that give one, while a build is
     /// already running. That instruction is not merely redundant then - a second
     /// <c>localai sync</c> exits 75 against the gate - and it is what a new machine shows on

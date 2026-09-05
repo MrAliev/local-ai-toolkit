@@ -37,7 +37,7 @@ builder.Services.AddSingleton(serviceProvider =>
 // figures above an answer and the index that answered cannot come from two installations.
 builder.Services.AddSingleton(serviceProvider => new SyncNotice(
     new RepositoryProgressReader(
-        serviceProvider.GetRequiredService<SearchService>().RuntimeRoot).Read));
+        serviceProvider.GetRequiredService<SearchService>().RuntimeRoot).Look));
 builder.Services.AddSingleton<ILiveSemanticNavigation, LiveSemanticNavigationOverlay>();
 builder.Services.AddSingleton<IHeuristicSemanticNavigation, HeuristicSemanticNavigation>();
 builder.Services.AddSingleton<SemanticNavigationGateway>();
