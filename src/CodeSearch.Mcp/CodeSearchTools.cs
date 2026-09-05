@@ -795,9 +795,10 @@ public static class CodeSearchTools
         since the last build. Run it after committing, so search stops answering for code that no
         longer looks like that. The size of the work is bounded and the bound is enforced: a cold
         build, or a branch switch that changes most of the tree, is refused before anything is
-        embedded, and the reply carries the command to run in the background instead. Relay that
-        command; the refusal is a decision, not a transient failure, so calling again changes
-        nothing.
+        embedded. The refusal carries the command to run in the background instead — unless a
+        build already holds this repository's sync gate, where it names that build instead,
+        because a second sync would exit 75 sync_busy. Relay whichever it gives you; the refusal
+        is a decision, not a transient failure, so calling again changes nothing.
         """)]
     public static async Task<string> IndexRefresh(
         SearchService service,
