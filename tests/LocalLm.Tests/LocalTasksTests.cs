@@ -298,8 +298,7 @@ public sealed class LocalTasksTests
     public async Task A_translation_bound_for_a_file_counts_the_context_it_kept_out()
     {
         const string source = "English version";
-        const string translated = "Английская "
-            + "версия";
+        const string translated = "Английская версия";
 
         var written = await new LocalTasks(new FakeLocalModelClient { Answer = translated })
             .TranslateAsync(
@@ -459,6 +458,51 @@ public sealed class LocalTasksTests
         Assert.False(completion.Metrics.UsedFallback);
         Assert.Equal(2, client.Calls.Count);
         Assert.Single(client.Calls.Select(call => call.WorkflowId).Distinct());
+    }
+
+    /// <summary>
+    /// The figure the notice prints and the figure the telemetry keeps are the same claim about
+    /// the same run, and they were computed by two expressions - so teaching one that a document
+    /// written to a file never reaches a context left the other saying it saved nothing.
+    ///
+    /// Which showed up exactly where it would: `local_model_experiment_report` reported
+    /// EstimatedNetCloudContextTokensSaved 0 for a pair whose runs had just reported a saving.
+    /// </summary>
+    [Fact]
+    public async Task The_telemetry_records_the_same_saving_the_notice_prints()
+    {
+        const string source = "English version";
+        const string translated = "\u0410\u043d\u0433\u043b\u0438\u0439\u0441\u043a\u0430\u044f "
+            + "\u0432\u0435\u0440\u0441\u0438\u044f";
+
+        var toFile = new FakeLocalModelClient { Answer = translated };
+        var written = await new LocalTasks(toFile).TranslateAsync(
+            source,
+            "English",
+            "Russian",
+            markdown: false,
+            TranslationDelivery.ToFile,
+            TestContext.Current.CancellationToken);
+
+        var completion = Assert.Single(toFile.ExperimentCompletions);
+        Assert.Equal(
+            written.NetCloudContextTokensSaved,
+            completion.Metrics.EstimatedNetCloudContextTokensSaved);
+
+        // And the text route keeps agreeing, which is the half that was already right.
+        var toCaller = new FakeLocalModelClient { Answer = translated };
+        var returned = await new LocalTasks(toCaller).TranslateAsync(
+            source,
+            "English",
+            "Russian",
+            markdown: false,
+            TranslationDelivery.ToCaller,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            returned.NetCloudContextTokensSaved,
+            Assert.Single(toCaller.ExperimentCompletions)
+                .Metrics.EstimatedNetCloudContextTokensSaved);
     }
 
     [Fact]
