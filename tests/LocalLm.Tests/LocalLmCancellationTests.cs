@@ -45,11 +45,11 @@ public sealed class LocalLmCancellationTests
                     token.ThrowIfCancellationRequested();
                     throw new InvalidOperationException("should not be reached");
                 })),
-                "привет мир",
-                "Russian",
-                "English",
+                sourceLanguage: "Russian",
+                targetLanguage: "English",
+                source: "привет мир",
                 markdown: false,
-                cancelled.Token));
+                cancellationToken: cancelled.Token));
     }
 
     [Fact]

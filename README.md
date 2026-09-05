@@ -1018,7 +1018,7 @@ LocalLm exposes these model-management and translation MCP tools:
 
 | Tool | Purpose |
 |---|---|
-| `translate_local` | Translate text, validate protected Markdown structure, and append the actual model attribution. |
+| `translate_local` | Translate text or a whole file, validate protected Markdown structure, and append the actual model attribution. |
 | `local_models_status` | Show installed, resident, missing recommended, and experiment state. |
 | `local_model_preflight` | Load one model/context without task content and return full-VRAM residency proof. |
 | `local_models_sync` | Queue allowlisted recommended-model installation. |
@@ -1034,6 +1034,9 @@ applied by the write that records a new task.
 
 `translate_local` is the validated local translation path. The calling agent decides
 whether a translation runs locally or in the cloud; LocalAi does not impose that policy.
+It takes either text as `source` or a file as `path`, and with `outPath` it writes the
+translation to disk instead of returning it - which is what keeps a 200 KB document out
+of the caller's context entirely, and what a document over 48000 characters requires.
 
 `read_image` accepts `VisualAnalysis`, `Ocr`, or `ImageTranslation`; `ask_local`
 accepts an explicit text task profile. An explicit model is an override subject to the

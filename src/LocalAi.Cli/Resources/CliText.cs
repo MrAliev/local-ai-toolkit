@@ -466,23 +466,9 @@ public static class CliText
     public static string TranslateOneSource(string usage) =>
         Catalogue.Format(nameof(TranslateOneSource), usage);
 
-    public static string TranslateFileMissing(string path) =>
-        Catalogue.Format(nameof(TranslateFileMissing), path);
-
-    public static string TranslateNotAFile(string path) =>
-        Catalogue.Format(nameof(TranslateNotAFile), path);
-
-    public static string TranslateFileEmpty(string path) =>
-        Catalogue.Format(nameof(TranslateFileEmpty), path);
-
-    public static string TranslateFileNotText(string path) =>
-        Catalogue.Format(nameof(TranslateFileNotText), path);
-
-    public static string TranslateFileNotRead(string path, string reason) =>
-        Catalogue.Format(nameof(TranslateFileNotRead), path, reason);
-
-    public static string TranslateOutputIsSource(string path) =>
-        Catalogue.Format(nameof(TranslateOutputIsSource), path);
+    // Reading the document `--in` names, and refusing to write over it, are the same job on the
+    // MCP face, so their sentences live in LocalLmText beside the reader that produces them.
+    // What stays here is what names a console thing: an option, standard input, a usage line.
 
     public static string TranslateMarkdownAssumed(string path) =>
         Catalogue.Format(nameof(TranslateMarkdownAssumed), path);

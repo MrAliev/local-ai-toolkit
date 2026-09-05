@@ -1,21 +1,29 @@
 using System.Text;
-using LocalAi.Cli.Resources;
+using LocalLm.Core.Resources;
 
-namespace LocalAi.Cli;
-
-/// <summary>
-/// What reading the document <c>--in</c> named produced: its text, or the refusal that says why
-/// there is none, with the exit code that refusal carries.
-/// </summary>
-public sealed record TranslateSourceRead(string? Text, CommandRefusal? Refusal, int Exit);
+namespace LocalLm.Core;
 
 /// <summary>
-/// Reads the document <c>--in</c> names.
+/// What reading a document to translate produced: its text, or the refusal that says why there
+/// is none, as a code and the sentence that goes with it.
 ///
-/// Separate from <c>TranslateCommand</c> because the parser touches no disk — that is what lets
-/// it be tested with literal paths — and separate from the entry point because everything here
-/// has an answer worth asserting. Every refusal names the *resolved* path: a relative path run
-/// from the wrong directory is the commonest cause, and only the resolved form shows it.
+/// The code is not an exit code. Two faces read documents now — <c>localai translate --in</c>
+/// and <c>translate_local</c>'s <c>path</c> — and only one of them has exit codes at all, so the
+/// console maps <see cref="RefusalCode"/> to a number at its own edge and the MCP tool returns
+/// the sentence.
+/// </summary>
+public sealed record TranslateSourceRead(string? Text, string? RefusalCode, string? Message);
+
+/// <summary>
+/// Reads a document to translate, for whichever face was asked to.
+///
+/// One reader for both because the part that matters is the wording of the refusals: a second
+/// copy would drift there first, and a reader that disagrees with itself about what "not text"
+/// means is worse than either answer. Separate from <c>TranslateCommand</c> because that parser
+/// touches no disk — which is what lets it be tested with literal paths — and separate from
+/// either entry point because everything here has an answer worth asserting. Every refusal names
+/// the *resolved* path: a relative path run from the wrong directory is the commonest cause, and
+/// only the resolved form shows it.
 /// </summary>
 public static class TranslateSource
 {
@@ -45,16 +53,16 @@ public static class TranslateSource
         {
             return new TranslateSourceRead(
                 null,
-                new CommandRefusal("file_missing", CliText.TranslateNotAFile(resolved)),
-                2);
+                "file_missing",
+                LocalLmText.TranslateNotAFile(resolved));
         }
 
         if (!File.Exists(resolved))
         {
             return new TranslateSourceRead(
                 null,
-                new CommandRefusal("file_missing", CliText.TranslateFileMissing(resolved)),
-                2);
+                "file_missing",
+                LocalLmText.TranslateFileMissing(resolved));
         }
 
         string text;
@@ -69,8 +77,8 @@ public static class TranslateSource
             {
                 return new TranslateSourceRead(
                     null,
-                    new CommandRefusal("file_not_text", CliText.TranslateFileNotText(resolved)),
-                    2);
+                    "file_not_text",
+                    LocalLmText.TranslateFileNotText(resolved));
             }
 
             stream.Position = 0;
@@ -81,15 +89,13 @@ public static class TranslateSource
         catch (Exception failure) when (
             failure is IOException or UnauthorizedAccessException or NotSupportedException)
         {
-            // 66 is EX_NOINPUT, the mirror of the 73 `--out` gives when it cannot write, and for
-            // the same reason: the command line was right, and the cause is a lock or a
-            // permission.
+            // Its own code rather than `file_missing`, because the request was right and the
+            // cause is a lock or a permission: the console turns this one into EX_NOINPUT, the
+            // mirror of the EX_CANTCREAT `--out` gives when it cannot write.
             return new TranslateSourceRead(
                 null,
-                new CommandRefusal(
-                    "input_not_read",
-                    CliText.TranslateFileNotRead(resolved, failure.Message)),
-                66);
+                "input_not_read",
+                LocalLmText.TranslateFileNotRead(resolved, failure.Message));
         }
 
         // Whitespace only is empty here too: that is what the task's own guard would reject a
@@ -98,11 +104,11 @@ public static class TranslateSource
         {
             return new TranslateSourceRead(
                 null,
-                new CommandRefusal("source_missing", CliText.TranslateFileEmpty(resolved)),
-                2);
+                "source_missing",
+                LocalLmText.TranslateFileEmpty(resolved));
         }
 
-        return new TranslateSourceRead(text, null, 0);
+        return new TranslateSourceRead(text, null, null);
     }
 
     /// <summary>

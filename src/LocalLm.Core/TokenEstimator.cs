@@ -68,9 +68,19 @@ public static class TokenEstimator
     public static int Saved(int wouldHaveCost, string actualAnswer) =>
         Math.Max(0, wouldHaveCost - ForText(actualAnswer));
 
+    /// <summary>
+    /// The three figures a translation reports, and the one of them that depends on where
+    /// the document went.
+    ///
+    /// The subtraction is what a translation costs a caller that receives it: the source
+    /// was in its context and the translation lands there too. A document written to a
+    /// file puts neither there, so the whole of both is what was kept out - the same
+    /// number as <c>LocalTokensProcessed</c>, arrived at for a different reason.
+    /// </summary>
     public static TranslationTokenMetrics ForTranslation(
         string source,
-        string translated)
+        string translated,
+        TranslationDelivery delivery)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(translated);
@@ -81,7 +91,9 @@ public static class TokenEstimator
             output,
             checked(input + output),
             output,
-            Math.Max(0, input - output));
+            delivery is TranslationDelivery.ToFile
+                ? checked(input + output)
+                : Math.Max(0, input - output));
     }
 
     /// <summary>
@@ -140,6 +152,24 @@ public static class TokenEstimator
         var thousands = tokens / 1000.0;
         return thousands >= 10 ? Math.Round(thousands).ToString("0") : Math.Round(thousands, 1).ToString("0.#");
     }
+}
+
+/// <summary>
+/// Where the translated document ends up, which is what the last figure of the notice depends
+/// on. A translation handed back to the caller lands in its context, so only the difference
+/// between the two halves was saved; one written to a file never gets there at all, and neither
+/// does the source, so the whole of both was.
+///
+/// A parameter rather than something read off the result, because it is decided before the run:
+/// the console knows `--out` and the tool knows `outPath` at the moment they ask.
+/// </summary>
+public enum TranslationDelivery
+{
+    /// <summary>Returned as text, into the context of whoever asked.</summary>
+    ToCaller,
+
+    /// <summary>Written to a file, so no part of it is ever read into a context.</summary>
+    ToFile,
 }
 
 public sealed record TranslationTokenMetrics(

@@ -3,6 +3,7 @@ using LocalAi.Cli;
 using LocalAi.Cli.Resources;
 using LocalAi.Contracts;
 using LocalAi.Contracts.Localization;
+using LocalLm.Core;
 using System.Globalization;
 using System.Text.Json;
 
@@ -271,9 +272,13 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
         if (translate.InputPath is { } document)
         {
             var read = TranslateSource.Read(document);
-            if (read.Refusal is { } unreadable)
+            if (read.RefusalCode is { } unreadable)
             {
-                return Refuse("translate", unreadable, machineReadable, read.Exit);
+                return Refuse(
+                    "translate",
+                    new CommandRefusal(unreadable, read.Message!),
+                    machineReadable,
+                    TranslateCommand.ExitFor(unreadable));
             }
 
             source = read.Text;

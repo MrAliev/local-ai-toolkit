@@ -319,7 +319,7 @@ while a symbol absent at the given position is not.
 | `read_image` | Read an image | Screenshot, scan, diagram, PDF page — as a file on disk |
 | `triage_log` | Triage a log | Build and test logs, dependency dumps, query plans, long stack traces |
 | `ask_local` | Ask about known files | Mechanical work: list, summarise, extract |
-| `translate_local` | Local translation | With a check that the structure survived |
+| `translate_local` | Local translation | With a check that the structure survived — a file in, and a file out |
 | `local_models_status` | Model state | Installed, resident, recommended-but-missing |
 | `local_model_preflight` | Model preflight | Proof of full residency with no payload |
 | `local_models_sync` | Sync models | Install the missing ones through the queue |
@@ -379,7 +379,10 @@ identifiers and ranges were written by whoever wrote the repository, so they are
 as a snippet is. On the `locallm` server: `read_image`, `triage_log`, `ask_local` and
 `translate_local` — a local model read files, logs or images, and a weak model can repeat or
 amplify an instruction planted in them, so its answer arrives inside the same boundary while
-the notice line stays outside as this process's own words.
+the notice line stays outside as this process's own words. The one exception is
+`translate_local` given an `outPath`: the translation is written to disk, so the answer
+carries the notice and the name of the file it wrote and nothing derived from the
+document at all.
 
 ### 6.2 The result identifier
 
@@ -765,6 +768,10 @@ both. `ok: false` from this command means no report was produced at all.
 `savedTokensEstimate`, `localTokensProcessedEstimate` and `netContextTokensSavedEstimate`, all
 named as estimates for the same reason — and no `truncated`, because translation chunks the whole
 input and drops nothing. Its `answer` includes the attribution paragraph.
+
+`netContextTokensSavedEstimate` is the difference between the document and its translation
+when the translation comes back, and the whole of both when `--out` wrote it to a file:
+with `--out` neither half ever reaches a context, so neither is subtracted from the other.
 
 With `--json` nothing is written to standard error, so a caller may treat anything there as an
 anomaly.

@@ -140,6 +140,12 @@ internal static class LocalModelRun
                 request.From,
                 request.To,
                 request.Markdown,
+                // What `--out` is worth saying out loud: with it, neither the document
+                // nor its translation ever reaches a context, and the notice's last
+                // figure is the whole of both rather than the difference.
+                request.OutputPath is null
+                    ? TranslationDelivery.ToCaller
+                    : TranslationDelivery.ToFile,
                 cancellationToken);
 
             if (request.OutputPath is { } path)
