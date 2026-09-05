@@ -71,7 +71,7 @@ to wrap.
 | `translate_local` | Translation with structural validation, of text or of a whole file. | Attributes the model actually used. Exactly one of `source` and `path`; with `outPath` the translation is written to disk rather than returned, which a document over 48000 characters requires. A `.md` or `.markdown` file turns `markdown` on by itself. |
 | `local_models_status` | Installed and resident models, recommended missing ones, experiment state. | Failures come back as text, not as a protocol error. |
 | `local_model_preflight` | Loads one model and context with no task content. | Returns full-VRAM residency proof. Failures come back as text, not as a protocol error. |
-| `local_models_sync` | Queues installation of recommended missing models. | Failures come back as text, not as a protocol error. |
+| `local_models_sync` | Queues installation of recommended missing models. | `Outcome` is `Complete`, `Partial` or `Failed`; every recommended model appears exactly once, under `InstalledModels`, under `FailedModels` with its reason, or under `NotAttemptedModels`. A run that never started comes back as text, not as a protocol error. |
 | `local_model_experiment_report` | Timings, errors, fallback, warm/cold and estimated saving per task/model pair. | Failures come back as text, not as a protocol error. |
 | `local_model_feedback` | The owner's decision: `Promote`, `ContinueExperiment`, `FallbackOnly`, `Disable`. | Failures come back as text, not as a protocol error. |
 
