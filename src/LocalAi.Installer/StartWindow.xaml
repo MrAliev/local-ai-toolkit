@@ -4,6 +4,7 @@
         xmlns:vm="clr-namespace:LocalAi.Installer.ViewModels"
         Background="{DynamicResource WindowFill}"
         Foreground="{DynamicResource TextPrimary}"
+        Icon="pack://application:,,,/Resources/localai.ico"
         Title="LocalAi"
         Width="640"
         Height="640"

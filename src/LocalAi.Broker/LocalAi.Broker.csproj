@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
+    <ApplicationIcon>..\..\assets\localai.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>

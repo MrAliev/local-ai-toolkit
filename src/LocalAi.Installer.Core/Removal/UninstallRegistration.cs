@@ -88,6 +88,10 @@ public sealed class UninstallRegistration(
         key.SetValue("UninstallString", entry.UninstallString, RegistryValueKind.String);
         key.SetValue("InstallLocation", entry.InstallLocation, RegistryValueKind.String);
         key.SetValue("EstimatedSize", entry.EstimatedSizeKilobytes, RegistryValueKind.DWord);
+        // The same copy the uninstall command points at, so the row's icon and the program it
+        // runs can never name two different files. Without this the shell picks the icon itself,
+        // which is not the same choice on every machine.
+        key.SetValue("DisplayIcon", UninstallerPath, RegistryValueKind.String);
         // There is no repair or modify path: the wizard's own start page is where those live,
         // and offering buttons here that lead nowhere is worse than not offering them.
         key.SetValue("NoModify", 1, RegistryValueKind.DWord);

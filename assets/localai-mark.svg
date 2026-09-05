@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <!-- LocalAi. An L with a seal in the corner it leaves empty: the product's initial, and
+       beside it the sealed generation of the index - an immutable ring around a fixed core.
+
+       One ink, #2D7FD3, and no tile. That is AccentFill from the installer's Themes/Dark.xaml,
+       and the only colour in the palette that clears 3:1 on a light taskbar (3.72) and a dark
+       one (3.95) alike; the light Accent #0067C0 gives 2.87 on dark and cannot carry a mark.
+
+       The seal's middle ring is a hole rather than white: with no tile behind it, a white ring
+       is invisible on a light surface, while a hole is the same shape on every surface because
+       it is the surface.
+
+       Geometry: the L is untouched, and its stroke of 80 is the module. The seal's right flat
+       sits on the L's right edge at x=232 and its apex on the L's top at y=16, so the mark's
+       bounding box is the L's own; the clearance below the seal is 80/2. Three pointy-top
+       hexagons share the centre (187,68) with circumradii 52, 38 and 24 - stepping by 14, so
+       the rim and the ring carry the same weight and neither dies first when reduced.
+
+       assets/localai.ico is built from this by scripts/build-mark.py, which also carries the
+       16 and 24 frames that are set pixel by pixel and cannot be reduced from here. -->
+  <path fill="#2D7FD3" fill-rule="evenodd"
+        d="M24,16 H104 V160 H232 V240 H24 Z
+           M187,16 L232,42 V94 L187,120 L142,94 V42 Z
+           M187,30 L220,49 V87 L187,106 L154,87 V49 Z
+           M187,44 L208,56 V80 L187,92 L166,80 V56 Z" />
+</svg>
