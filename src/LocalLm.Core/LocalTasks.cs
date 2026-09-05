@@ -484,11 +484,17 @@ public sealed class LocalTasks
             Truncated: boundedNote.Length > 0);
     }
 
+    /// <summary>
+    /// Translates a document, and is told where it is going: a translation handed back to
+    /// the caller lands in a context and one written to a file does not, which is the
+    /// whole of the difference between the two figures the notice can print.
+    /// </summary>
     public async Task<LocalTranslationResult> TranslateAsync(
         string source,
         string sourceLanguage,
         string targetLanguage,
         bool markdown,
+        TranslationDelivery delivery,
         CancellationToken ct)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(source);
@@ -694,7 +700,10 @@ public sealed class LocalTasks
             attempt.Text,
             targetLanguage,
             model);
-        var tokenMetrics = TokenEstimator.ForTranslation(source, attempt.Text);
+        var tokenMetrics = TokenEstimator.ForTranslation(
+            source,
+            attempt.Text,
+            delivery);
         return new LocalTranslationResult(
             answer,
             tokenMetrics.EstimatedCloudGenerationTokensSaved,

@@ -185,6 +185,66 @@
     <value>Изображений в запросе: {0}; предел на один вызов — {1}. Разделить запрос.</value>
     <comment>The Russian puts the count after a colon so the numeral does not have to agree.</comment>
   </data>
+  <data name="TranslateFileEmpty" xml:space="preserve">
+    <value>Файл '{0}' пуст — переводить нечего.</value>
+    <comment>Whitespace only is empty here too, because that is what the task's own ThrowIfNullOrWhiteSpace would reject a moment later with a vaguer sentence. One sentence for both faces: the console's --in and translate_local's path.</comment>
+  </data>
+  <data name="TranslateFileMissing" xml:space="preserve">
+    <value>По пути '{0}' файла нет.</value>
+    <comment>{0} is the resolved absolute path, never the path as typed: a relative path run from the wrong directory is the commonest cause, and only the resolved form shows it. Shares file_missing with TranslateNotAFile.</comment>
+  </data>
+  <data name="TranslateFileNotRead" xml:space="preserve">
+    <value>Файл '{0}' не удалось прочитать: {1}</value>
+    <comment>{1} is the framework's own message, English under the --json pin and the machine's language otherwise. The console maps this to exit 66, EX_NOINPUT, the mirror of the 73 --out gives when it cannot write.</comment>
+  </data>
+  <data name="TranslateFileNotText" xml:space="preserve">
+    <value>'{0}' — не текст: в нём есть нулевой байт, которого в текстовом файле не бывает.</value>
+    <comment>The sentence names the check the code performs: a zero byte in the first 8000 bytes, skipped when a UTF-16 or UTF-32 BOM says the file decodes. Any looser wording would be a claim about content this does not inspect.</comment>
+  </data>
+  <data name="TranslateMarkdownOn" xml:space="preserve">
+    <value>'{0}' — Markdown, поэтому markdown был включён: код в ограждённых блоках прошёл без перевода. Чтобы перевести файл как обычный текст, передайте markdown false.</value>
+    <comment>Past tense, and inside the answer rather than before the run: an MCP caller cannot stop a run the way a person watching a console can, so the line reports what was assumed instead of warning. CliText.TranslateMarkdownAssumed is the console's present-tense twin.</comment>
+  </data>
+  <data name="TranslateNeedsOutPath" xml:space="preserve">
+    <value>Файл '{0}' — {1} символов, больше предела в {2} символов для перевода, возвращаемого текстом. Передайте outPath, и документ будет записан на диск.</value>
+    <comment>Refused before the model runs. The limit is on what may land in a caller's context, not on what may be translated, which is why outPath lifts it. {1} and {2} are invariant.</comment>
+  </data>
+  <data name="TranslateNotAFile" xml:space="preserve">
+    <value>'{0}' — это каталог, а не файл для перевода.</value>
+    <comment>Shares file_missing with TranslateFileMissing because the remedy is the same, and keeps its own sentence because the reader who typed one made a different mistake - the pair TriageEmptyInput and TriageNoSource already work this way.</comment>
+  </data>
+  <data name="TranslateNotWritten" xml:space="preserve">
+    <value>Перевод не удалось записать в '{0}': {1}. Он не сохранён — исправьте путь и вызовите снова.</value>
+    <comment>The sentence has to say the translation is gone: handing back a document the caller asked to be written to disk would drop everything outPath saved into its context as a surprise. CliText.OutputNotWritten stays separate because it does not carry that fact.</comment>
+  </data>
+  <data name="TranslateOutputDirectoryMissing" xml:space="preserve">
+    <value>Каталога для outPath '{0}' нет. Перевод ещё не запускался — создайте каталог и вызовите снова.</value>
+    <comment>Checked before the run rather than after it: a missing directory discovered at the end of twenty minutes of GPU work is the one failure with nothing left to recover.</comment>
+  </data>
+  <data name="TranslateOutputIsDirectory" xml:space="preserve">
+    <value>outPath '{0}' — это каталог. Назовите файл, в который писать.</value>
+    <comment>outPath stays Latin in every language: it is a parameter name, as ExactlyOneSource already spells path and text.</comment>
+  </data>
+  <data name="TranslateOutputIsSource" xml:space="preserve">
+    <value>{0} и {1} указывают на один файл '{2}'. Дайте переводу собственное имя.</value>
+    <comment>Translating in place destroys the original and there is no undo. {0} and {1} are the two names of the face that refuses - the console passes --in and --out, translate_local passes path and outPath - so one sentence serves both. The paths are compared resolved, so {2} is the resolved form of both.</comment>
+  </data>
+  <data name="TranslateReplaced" xml:space="preserve">
+    <value>Существовавший по этому пути файл заменён.</value>
+    <comment>Visibility instead of prohibition: refusing to overwrite would fight the main use, and the workaround it invites - delete the target first - is worse when a run dies halfway. Joined to TranslateWritten by a single space.</comment>
+  </data>
+  <data name="TranslateSourceAmbiguous" xml:space="preserve">
+    <value>Указать ровно одно из двух: source — текст, который уже под рукой, или path — файл, который инструмент прочитает сам.</value>
+    <comment>Not ExactlyOneSource, which names path and text: translate_local has no text parameter, and naming a parameter the tool does not have sends the caller to fix the wrong thing.</comment>
+  </data>
+  <data name="TranslateSourceMissing" xml:space="preserve">
+    <value>Переводить нечего: передайте текст в source или файл в path.</value>
+    <comment>The pair of TranslateSourceAmbiguous, and the reason both name the parameters rather than the concepts: the caller is a model choosing arguments.</comment>
+  </data>
+  <data name="TranslateWritten" xml:space="preserve">
+    <value>Перевод записан в '{0}' ({1} КБ, {2} символов). Документ на диске, а не в этом ответе.</value>
+    <comment>{1} and {2} are invariant. The sentence says where the document went because the answer deliberately does not carry it.</comment>
+  </data>
   <data name="TranslationFailed" xml:space="preserve">
     <value>Локальный перевод не выполнен: {0}</value>
   </data>

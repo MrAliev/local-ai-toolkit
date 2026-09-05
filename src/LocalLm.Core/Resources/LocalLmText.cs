@@ -149,6 +149,64 @@ public static class LocalLmText
     public static string TranslationValidationFailed(string detail) =>
         Format(nameof(TranslationValidationFailed), detail);
 
+    /// <summary>
+    /// What reading a document to translate can refuse with, and what writing one can say.
+    ///
+    /// These live here rather than in the console's catalogue because both faces read files
+    /// now: <c>localai translate --in</c> and <c>translate_local</c>'s <c>path</c> go through
+    /// one reader, <see cref="LocalLm.Core.TranslateSource"/>, and a second copy of these
+    /// sentences would drift exactly where drift matters — the wording of a refusal. The
+    /// console keeps the sentences that name a console thing: an option, standard input, a
+    /// usage line.
+    /// </summary>
+    public static string TranslateFileMissing(string path) =>
+        Format(nameof(TranslateFileMissing), path);
+
+    public static string TranslateNotAFile(string path) =>
+        Format(nameof(TranslateNotAFile), path);
+
+    public static string TranslateFileEmpty(string path) =>
+        Format(nameof(TranslateFileEmpty), path);
+
+    public static string TranslateFileNotText(string path) =>
+        Format(nameof(TranslateFileNotText), path);
+
+    public static string TranslateFileNotRead(string path, string reason) =>
+        Format(nameof(TranslateFileNotRead), path, reason);
+
+    /// <summary>
+    /// The two names are the caller's own: the console passes <c>--in</c> and <c>--out</c>,
+    /// <c>translate_local</c> passes <c>path</c> and <c>outPath</c>. Naming a parameter the
+    /// reader's face does not have is the mistake <c>ParseProfile</c> already carries a comment
+    /// about.
+    /// </summary>
+    public static string TranslateOutputIsSource(string input, string output, string path) =>
+        Format(nameof(TranslateOutputIsSource), input, output, path);
+
+    public static string TranslateSourceAmbiguous => Get(nameof(TranslateSourceAmbiguous));
+
+    public static string TranslateSourceMissing => Get(nameof(TranslateSourceMissing));
+
+    public static string TranslateOutputIsDirectory(string path) =>
+        Format(nameof(TranslateOutputIsDirectory), path);
+
+    public static string TranslateOutputDirectoryMissing(string path) =>
+        Format(nameof(TranslateOutputDirectoryMissing), path);
+
+    public static string TranslateNeedsOutPath(string path, int characters, int limit) =>
+        Format(nameof(TranslateNeedsOutPath), path, characters, limit);
+
+    public static string TranslateMarkdownOn(string path) =>
+        Format(nameof(TranslateMarkdownOn), path);
+
+    public static string TranslateWritten(string path, long kilobytes, int characters) =>
+        Format(nameof(TranslateWritten), path, kilobytes, characters);
+
+    public static string TranslateReplaced => Get(nameof(TranslateReplaced));
+
+    public static string TranslateNotWritten(string path, string reason) =>
+        Format(nameof(TranslateNotWritten), path, reason);
+
     /// <summary>What to tell somebody whose task has no model to run on.</summary>
     public static string NoModelAndCatalogNamesNone(LocalTaskProfile profile) =>
         Format(nameof(NoModelAndCatalogNamesNone), profile);

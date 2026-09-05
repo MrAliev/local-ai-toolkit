@@ -59,13 +59,50 @@ public class TokenEstimatorTests
     {
         var metrics = TokenEstimator.ForTranslation(
             new string('a', 4_000),
-            new string('ф', 2_200));
+            new string('ф', 2_200),
+            TranslationDelivery.ToCaller);
 
         Assert.Equal(1_000, metrics.InputTokens);
         Assert.Equal(1_000, metrics.OutputTokens);
         Assert.Equal(2_000, metrics.LocalTokensProcessed);
         Assert.Equal(1_000, metrics.EstimatedCloudGenerationTokensSaved);
         Assert.Equal(0, metrics.EstimatedNetCloudContextTokensSaved);
+    }
+
+    /// <summary>
+    /// The subtraction above is only right when the translation comes back into the caller's
+    /// context. Written to a file it never does, and neither does the source, so the whole of
+    /// both is what the caller was spared - the figure the notice's last hole carries, and the
+    /// one `--out` and `outPath` exist to produce. Reporting the smaller number there understates
+    /// the saving of the very route built to make it large.
+    /// </summary>
+    [Fact]
+    public void A_translation_written_to_a_file_keeps_both_halves_out_of_the_context()
+    {
+        var source = new string('a', 4_000);
+        var translated = new string('ф', 2_200);
+
+        var written = TokenEstimator.ForTranslation(
+            source,
+            translated,
+            TranslationDelivery.ToFile);
+
+        Assert.Equal(2_000, written.EstimatedNetCloudContextTokensSaved);
+        Assert.Equal(
+            written.LocalTokensProcessed,
+            written.EstimatedNetCloudContextTokensSaved);
+
+        // Everything else is the same work and the same arithmetic; only where the document ends
+        // up differs.
+        var returned = TokenEstimator.ForTranslation(
+            source,
+            translated,
+            TranslationDelivery.ToCaller);
+        Assert.Equal(returned.InputTokens, written.InputTokens);
+        Assert.Equal(returned.OutputTokens, written.OutputTokens);
+        Assert.Equal(
+            returned.EstimatedCloudGenerationTokensSaved,
+            written.EstimatedCloudGenerationTokensSaved);
     }
 
     [Theory]

@@ -1,14 +1,15 @@
 using System.Text;
-using LocalAi.Cli;
-using LocalAi.Cli.Resources;
+using LocalLm.Core;
+using LocalLm.Core.Resources;
 
-namespace LocalAi.IntegrationTests;
+namespace LocalLm.Tests;
 
 /// <summary>
-/// Reading the document `--in` names. The parser stays away from the disk, so everything that
-/// can only be learned by opening a file is decided here, and every refusal names the resolved
-/// path: a relative path run from the wrong directory is the commonest cause, and only the
-/// resolved form shows it.
+/// Reading the document to translate, for either face: the console's `--in` and the MCP
+/// tool's `path` go through this one reader. The console's parser stays away from the disk, so
+/// everything that can only be learned by opening a file is decided here, and every refusal
+/// names the resolved path: a relative path run from the wrong directory is the commonest
+/// cause, and only the resolved form shows it.
 /// </summary>
 public sealed class TranslateSourceTests : IDisposable
 {
@@ -33,11 +34,11 @@ public sealed class TranslateSourceTests : IDisposable
 
         var read = TranslateSource.Read(path);
 
-        Assert.Null(read.Refusal);
+        Assert.Null(read.RefusalCode);
         Assert.Equal("Брокер держит модель.", read.Text, StringComparer.Ordinal);
     }
 
-    /// <summary>The same code `triage` gives for the same mistake, and the same exit.</summary>
+    /// <summary>The same code `triage` gives for the same mistake.</summary>
     [Fact]
     public void A_path_with_no_file_at_it_is_refused()
     {
@@ -45,9 +46,8 @@ public sealed class TranslateSourceTests : IDisposable
 
         var read = TranslateSource.Read(path);
 
-        Assert.Equal("file_missing", read.Refusal!.Code, StringComparer.Ordinal);
-        Assert.Equal(2, read.Exit);
-        Assert.Contains(path, read.Refusal.Message, StringComparison.Ordinal);
+        Assert.Equal("file_missing", read.RefusalCode, StringComparer.Ordinal);
+        Assert.Contains(path, read.Message, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -59,17 +59,17 @@ public sealed class TranslateSourceTests : IDisposable
     {
         var read = TranslateSource.Read(_root);
 
-        Assert.Equal("file_missing", read.Refusal!.Code, StringComparer.Ordinal);
+        Assert.Equal("file_missing", read.RefusalCode, StringComparer.Ordinal);
 
         // Asserted against the catalogue rather than against an English word: this test says the
         // two sentences are different, and it has to say that in whichever language it runs.
         Assert.Equal(
-            CliText.TranslateNotAFile(Path.GetFullPath(_root)),
-            read.Refusal.Message,
+            LocalLmText.TranslateNotAFile(Path.GetFullPath(_root)),
+            read.Message,
             StringComparer.Ordinal);
         Assert.NotEqual(
-            CliText.TranslateFileMissing(Path.GetFullPath(_root)),
-            read.Refusal.Message,
+            LocalLmText.TranslateFileMissing(Path.GetFullPath(_root)),
+            read.Message,
             StringComparer.Ordinal);
     }
 
@@ -87,8 +87,7 @@ public sealed class TranslateSourceTests : IDisposable
 
         var read = TranslateSource.Read(path);
 
-        Assert.Equal("source_missing", read.Refusal!.Code, StringComparer.Ordinal);
-        Assert.Equal(2, read.Exit);
+        Assert.Equal("source_missing", read.RefusalCode, StringComparer.Ordinal);
     }
 
     /// <summary>
@@ -103,8 +102,7 @@ public sealed class TranslateSourceTests : IDisposable
 
         var read = TranslateSource.Read(path);
 
-        Assert.Equal("file_not_text", read.Refusal!.Code, StringComparer.Ordinal);
-        Assert.Equal(2, read.Exit);
+        Assert.Equal("file_not_text", read.RefusalCode, StringComparer.Ordinal);
     }
 
     /// <summary>
@@ -120,16 +118,17 @@ public sealed class TranslateSourceTests : IDisposable
 
         var read = TranslateSource.Read(path);
 
-        Assert.Null(read.Refusal);
+        Assert.Null(read.RefusalCode);
         Assert.Equal("Брокер держит модель.", read.Text, StringComparer.Ordinal);
     }
 
     /// <summary>
-    /// 66 is EX_NOINPUT, the mirror of the 73 `--out` gives when it cannot write. Not 2: the
-    /// command line was right, and the cause is a lock or a permission.
+    /// A code of its own, not `file_missing`: the request was right and the cause is a lock or
+    /// a permission. It is the one the console turns into EX_NOINPUT rather than the ordinary
+    /// refusal 2, which `TranslateCommandTests` asserts on the console's side of the move.
     /// </summary>
     [Fact]
-    public void A_file_that_cannot_be_opened_exits_where_a_file_that_cannot_be_written_does()
+    public void A_file_that_cannot_be_opened_has_a_code_of_its_own()
     {
         var path = Path.Combine(_root, "locked.md");
         File.WriteAllText(path, "text");
@@ -139,8 +138,7 @@ public sealed class TranslateSourceTests : IDisposable
 
         var read = TranslateSource.Read(path);
 
-        Assert.Equal("input_not_read", read.Refusal!.Code, StringComparer.Ordinal);
-        Assert.Equal(66, read.Exit);
+        Assert.Equal("input_not_read", read.RefusalCode, StringComparer.Ordinal);
     }
 
     /// <summary>

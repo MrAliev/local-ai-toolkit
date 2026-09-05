@@ -250,6 +250,7 @@ public sealed class LocalTasksTests
             "English",
             "Russian",
             markdown: true,
+            TranslationDelivery.ToCaller,
             TestContext.Current.CancellationToken);
 
         Assert.Equal(LocalTaskProfile.TechnicalTranslation, Assert.Single(client.Calls).Profile);
@@ -273,6 +274,7 @@ public sealed class LocalTasksTests
             "English",
             "Russian",
             markdown: true,
+            TranslationDelivery.ToCaller,
             TestContext.Current.CancellationToken);
 
         Assert.Equal(2, client.Calls.Count);
@@ -283,6 +285,47 @@ public sealed class LocalTasksTests
             "Перевод выполнен локальной моделью: qwen2.5-coder:14b.",
             result.Answer,
             StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The figure the notice ends on has to mean what it says. A translation that comes back is
+    /// paid for twice over - the source was in the caller's context and the answer joins it - so
+    /// only the difference between them was saved. One written to a file puts neither there, and
+    /// the whole of both is the saving; reporting the smaller number understates exactly the
+    /// route built to make it large.
+    /// </summary>
+    [Fact]
+    public async Task A_translation_bound_for_a_file_counts_the_context_it_kept_out()
+    {
+        const string source = "English version";
+        const string translated = "Английская "
+            + "версия";
+
+        var written = await new LocalTasks(new FakeLocalModelClient { Answer = translated })
+            .TranslateAsync(
+                source,
+                "English",
+                "Russian",
+                markdown: false,
+                TranslationDelivery.ToFile,
+                TestContext.Current.CancellationToken);
+
+        var returned = await new LocalTasks(new FakeLocalModelClient { Answer = translated })
+            .TranslateAsync(
+                source,
+                "English",
+                "Russian",
+                markdown: false,
+                TranslationDelivery.ToCaller,
+                TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            TokenEstimator.ForTranslation(source, translated, TranslationDelivery.ToFile)
+                .EstimatedNetCloudContextTokensSaved,
+            written.NetCloudContextTokensSaved);
+        Assert.True(
+            written.NetCloudContextTokensSaved > returned.NetCloudContextTokensSaved,
+            "A document that never reaches a context cannot save less than one that does.");
     }
 
     [Fact]
@@ -299,6 +342,7 @@ public sealed class LocalTasksTests
             "English",
             "Russian",
             markdown: false,
+            TranslationDelivery.ToCaller,
             TestContext.Current.CancellationToken);
 
         Assert.Equal(2, client.Calls.Count);
@@ -323,6 +367,7 @@ public sealed class LocalTasksTests
             "English",
             "Russian",
             markdown: true,
+            TranslationDelivery.ToCaller,
             TestContext.Current.CancellationToken);
 
         Assert.Equal(3, client.Calls.Count);
@@ -347,6 +392,7 @@ public sealed class LocalTasksTests
             "English",
             "Russian",
             markdown: false,
+            TranslationDelivery.ToCaller,
             TestContext.Current.CancellationToken);
 
         Assert.InRange(
@@ -374,6 +420,7 @@ public sealed class LocalTasksTests
             "English",
             "Russian",
             markdown: true,
+            TranslationDelivery.ToCaller,
             TestContext.Current.CancellationToken);
 
         Assert.StartsWith(
@@ -400,6 +447,7 @@ public sealed class LocalTasksTests
             "English",
             "Russian",
             markdown: true,
+            TranslationDelivery.ToCaller,
             TestContext.Current.CancellationToken);
 
         var completion = Assert.Single(client.ExperimentCompletions);
@@ -428,6 +476,7 @@ public sealed class LocalTasksTests
             "English",
             "Russian",
             markdown: false,
+            TranslationDelivery.ToCaller,
             TestContext.Current.CancellationToken);
 
         var completion = Assert.Single(client.ExperimentCompletions);
@@ -688,6 +737,7 @@ public sealed class LocalTasksTests
             "English",
             "Russian",
             markdown: true,
+            TranslationDelivery.ToCaller,
             TestContext.Current.CancellationToken);
 
         // The fenced block is not translatable, so it is not a model call and not a fragment.
@@ -715,6 +765,7 @@ public sealed class LocalTasksTests
             "English",
             "Russian",
             markdown: true,
+            TranslationDelivery.ToCaller,
             TestContext.Current.CancellationToken);
 
         var retry = Assert.Single(seen.Steps.OfType<TranslationRetrying>());
