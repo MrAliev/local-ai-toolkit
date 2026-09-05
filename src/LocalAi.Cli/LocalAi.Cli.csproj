@@ -2,6 +2,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <AssemblyName>localai</AssemblyName>
+    <ApplicationIcon>..\..\assets\localai.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\CodeSearch.Core\CodeSearch.Core.csproj" />

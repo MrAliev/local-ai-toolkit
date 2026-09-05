@@ -4,6 +4,7 @@
     <OutputType>Exe</OutputType>
     <AssemblyName>codesearch</AssemblyName>
     <RootNamespace>CodeSearch.Cli</RootNamespace>
+    <ApplicationIcon>..\..\assets\localai.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>

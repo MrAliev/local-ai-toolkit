@@ -4,6 +4,7 @@
     <OutputType>Exe</OutputType>
     <AssemblyName>locallm-mcp</AssemblyName>
     <RootNamespace>LocalLm.Mcp</RootNamespace>
+    <ApplicationIcon>..\..\assets\localai.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>

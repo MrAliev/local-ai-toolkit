@@ -4,6 +4,7 @@
         xmlns:vm="clr-namespace:LocalAi.Installer.ViewModels"
         Background="{DynamicResource WindowFill}"
         Foreground="{DynamicResource TextPrimary}"
+        Icon="pack://application:,,,/Resources/localai.ico"
         Title="{x:Static vm:PageLabels.RemoveLocalAi}"
         Width="760"
         Height="560"
