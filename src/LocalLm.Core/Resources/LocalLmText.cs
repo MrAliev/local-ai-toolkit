@@ -116,6 +116,19 @@ public static class LocalLmText
         Format(nameof(LocalModelFailed), reason);
 
     /// <summary>
+    /// What a model-management tool says when it has nothing to return.
+    ///
+    /// Not "failed": the commonest case is the product working - the experiment gate
+    /// declining feedback before ten completed tasks, so nobody judges a model on a first
+    /// impression. Not "refused" either, because the code cannot tell that apart from a
+    /// fault: the broker records the exception type name as the failure code, and the gate
+    /// throws a plain InvalidOperationException. No answer is what is true of every branch,
+    /// and the reason that follows is written by whatever knows which one it was.
+    /// </summary>
+    public static string NoAnswerFromTool(string tool, string reason) =>
+        Format(nameof(NoAnswerFromTool), tool, reason);
+
+    /// <summary>
     /// What a tool says when the request itself cannot be run. These reach the caller as the
     /// tool's answer rather than as a protocol error, so they are read by the same person as
     /// the notice line and belong in the same language.

@@ -291,57 +291,114 @@ public static class LocalLmTools
 
     [McpServerTool(Name = "local_models_status")]
     [Description("Shows installed and resident models, recommended missing models, and per-task experiment state.")]
-    public static async Task<string> LocalModelsStatus(
+    public static Task<string> LocalModelsStatus(
         ModelManagementTasks tasks,
         CancellationToken cancellationToken = default) =>
-        Serialize(await tasks.GetStatusAsync(cancellationToken));
+        Structured(
+            "local_models_status",
+            () => tasks.GetStatusAsync(cancellationToken),
+            cancellationToken);
 
     [McpServerTool(Name = "local_model_preflight")]
     [Description("Loads one model/context through the FIFO broker without task content and returns full-VRAM residency proof.")]
-    public static async Task<string> LocalModelPreflight(
+    public static Task<string> LocalModelPreflight(
         ModelManagementTasks tasks,
         string model,
         string catalogVersion,
         int contextTokens = 2048,
         CancellationToken cancellationToken = default) =>
-        Serialize(await tasks.PreflightAsync(
-            model,
-            contextTokens,
-            catalogVersion,
-            cancellationToken));
+        Structured(
+            "local_model_preflight",
+            () => tasks.PreflightAsync(
+                model,
+                contextTokens,
+                catalogVersion,
+                cancellationToken),
+            cancellationToken);
 
     [McpServerTool(Name = "local_models_sync")]
     [Description("Queues installation of recommended missing models through the durable FIFO broker.")]
-    public static async Task<string> LocalModelsSync(
+    public static Task<string> LocalModelsSync(
         ModelManagementTasks tasks,
         CancellationToken cancellationToken = default) =>
-        Serialize(await tasks.SyncRecommendedAsync(cancellationToken));
+        Structured(
+            "local_models_sync",
+            () => tasks.SyncRecommendedAsync(cancellationToken),
+            cancellationToken);
 
     [McpServerTool(Name = "local_model_experiment_report")]
     [Description("Returns timing, error, fallback, warm/cold, and estimated token-saving statistics for one task/model experiment pair.")]
-    public static async Task<string> LocalModelExperimentReport(
+    public static Task<string> LocalModelExperimentReport(
         ModelManagementTasks tasks,
         string taskProfile,
         string model,
         CancellationToken cancellationToken = default) =>
-        Serialize(await tasks.GetExperimentReportAsync(
-            ParseProfile(taskProfile, nameof(taskProfile)),
-            model,
-            cancellationToken));
+        Structured(
+            "local_model_experiment_report",
+            () => tasks.GetExperimentReportAsync(
+                ParseProfile(taskProfile, nameof(taskProfile)),
+                model,
+                cancellationToken),
+            cancellationToken);
 
     [McpServerTool(Name = "local_model_feedback")]
     [Description("Applies owner feedback to one task/model pair: Promote, ContinueExperiment, FallbackOnly, or Disable.")]
-    public static async Task<string> LocalModelFeedback(
+    public static Task<string> LocalModelFeedback(
         ModelManagementTasks tasks,
         string taskProfile,
         string model,
         string action,
         CancellationToken cancellationToken = default) =>
-        Serialize(await tasks.ApplyFeedbackAsync(
-            ParseProfile(taskProfile, nameof(taskProfile)),
-            model,
-            ParseEnum<ExperimentOwnerAction>(action, nameof(action)),
-            cancellationToken));
+        Structured(
+            "local_model_feedback",
+            () => tasks.ApplyFeedbackAsync(
+                ParseProfile(taskProfile, nameof(taskProfile)),
+                model,
+                ParseEnum<ExperimentOwnerAction>(action, nameof(action)),
+                cancellationToken),
+            cancellationToken);
+
+    /// <summary>
+    /// The five model-management tools' failure ladder.
+    ///
+    /// <see cref="Run"/> cannot serve them: it wraps its answer in untrusted-content markers, and
+    /// these five are unwrapped by explicit allowlist because their fields are catalogue and
+    /// state identifiers, not model prose. What they do share with it is the part that matters -
+    /// a failure comes back as readable text rather than as a protocol error.
+    ///
+    /// They had none of it. Each was a one-line <c>Serialize(await ...)</c>, so anything thrown
+    /// reached the host as "An error occurred invoking". The gate that declines feedback before
+    /// ten completed tasks - the product working, so nobody judges a model on a first impression
+    /// - wrote its reason down in full and the caller saw nine words naming no cause.
+    ///
+    /// The ordering is <see cref="Run"/>'s, deliberately: the host's own cancellation travels as
+    /// itself, an argument this could not parse is an invalid request because the broker was
+    /// never reached, and everything else is no answer from the tool. Not "failed" - the broker
+    /// records the exception type name as the failure code, so a refusal by rule and a fault
+    /// arrive under the same one, and a word that told them apart would be a guess.
+    /// </summary>
+    private static async Task<string> Structured<T>(
+        string tool,
+        Func<Task<T>> job,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Serialize(await job());
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (ArgumentException exception)
+        {
+            return LocalLmText.InvalidRequest(exception.Message);
+        }
+        catch (Exception exception)
+        {
+            return LocalLmText.NoAnswerFromTool(tool, exception.Message);
+        }
+    }
 
     /// <summary>
     /// What a local tool hands back: the report line, the advice when there is any to give,

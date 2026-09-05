@@ -69,11 +69,11 @@ to wrap.
 | `triage_log` | Machine output of any length, supplied as a file or direct text: what failed and why. | Probes the largest full-VRAM context, then streams and reduces bounded fragments sequentially. |
 | `ask_local` | A mechanical task over known files: list, summarise, extract. | Not for architecture or subtle bug analysis. At most 64 files sharing a ~720K-character budget; overflow is cut at a visible `TRUNCATED` marker and named in the notice. |
 | `translate_local` | Translation with structural validation, of text or of a whole file. | Attributes the model actually used. Exactly one of `source` and `path`; with `outPath` the translation is written to disk rather than returned, which a document over 48000 characters requires. A `.md` or `.markdown` file turns `markdown` on by itself. |
-| `local_models_status` | Installed and resident models, recommended missing ones, experiment state. | — |
-| `local_model_preflight` | Loads one model and context with no task content. | Returns full-VRAM residency proof. |
-| `local_models_sync` | Queues installation of recommended missing models. | — |
-| `local_model_experiment_report` | Timings, errors, fallback, warm/cold and estimated saving per task/model pair. | — |
-| `local_model_feedback` | The owner's decision: `Promote`, `ContinueExperiment`, `FallbackOnly`, `Disable`. | — |
+| `local_models_status` | Installed and resident models, recommended missing ones, experiment state. | Failures come back as text, not as a protocol error. |
+| `local_model_preflight` | Loads one model and context with no task content. | Returns full-VRAM residency proof. Failures come back as text, not as a protocol error. |
+| `local_models_sync` | Queues installation of recommended missing models. | Failures come back as text, not as a protocol error. |
+| `local_model_experiment_report` | Timings, errors, fallback, warm/cold and estimated saving per task/model pair. | Failures come back as text, not as a protocol error. |
+| `local_model_feedback` | The owner's decision: `Promote`, `ContinueExperiment`, `FallbackOnly`, `Disable`. | Failures come back as text, not as a protocol error. |
 
 `triage_log` reads its tuning profile before every invocation from
 `%LOCALAPPDATA%\LocalAi\settings\log-triage.json`. The optional JSON fields are `maximumContextTokens`, `reservedContextTokens`,
@@ -86,8 +86,11 @@ contexts when necessary.
 
 ### The notice line
 
-Every LocalLm tool returns a line naming the model it used and the estimated cloud tokens avoided.
-Surface it: the point is that it is visible when work went downstairs, not only that it got done.
+The four content tools return a line naming the model they used and the estimated cloud
+tokens avoided. Surface it: the point is that it is visible when work went downstairs, not
+only that it got done. The five model-management tools return their JSON and no notice
+line: none of them delegates the caller's work to a model, so there is no saving to
+report.
 
 The estimate is computed from what was actually processed — 4.0 characters per token for Latin,
 2.2 for Cyrillic, pixel area over 750 for images — and is reported as a range, because there is no
