@@ -1,4 +1,6 @@
 using LocalAi.Cli.Resources;
+using LocalLm.Core;
+using LocalLm.Core.Resources;
 
 namespace LocalAi.Cli;
 
@@ -165,7 +167,7 @@ public static class TranslateCommand
             {
                 refusal = new CommandRefusal(
                     "output_is_source",
-                    CliText.TranslateOutputIsSource(resolvedInput));
+                    LocalLmText.TranslateOutputIsSource("--in", "--out", resolvedInput));
                 return false;
             }
         }
@@ -203,4 +205,19 @@ public static class TranslateCommand
         request = new TranslateRequest(null, true, from, to, markdown, output, null);
         return true;
     }
+
+    /// <summary>
+    /// The exit code a refusal from <see cref="TranslateSource"/> leaves the console with.
+    ///
+    /// The reader answers in codes rather than numbers because the MCP face it now also serves
+    /// has no exit codes at all. The numbers stay here, where they have always been: 66 is
+    /// EX_NOINPUT, the mirror of the 73 EX_CANTCREAT <c>--out</c> gives when it cannot write —
+    /// in both the command line was right, and the cause is a lock or a permission. Every other
+    /// refusal is the ordinary 2, because every other one means the command line was wrong.
+    /// </summary>
+    public static int ExitFor(string refusalCode) => refusalCode switch
+    {
+        "input_not_read" => 66,
+        _ => 2,
+    };
 }

@@ -189,7 +189,31 @@ public sealed class TranslateCommandTests
             out var refusal));
 
         Assert.Equal("output_is_source", refusal!.Code, StringComparer.Ordinal);
+
+        // The sentence is shared with `translate_local`, which passes `path` and
+        // `outPath` into the same two holes. Naming the other face's parameters here
+        // would send a reader at a console to fix something the console does not have.
+        Assert.Contains("--in", refusal.Message, StringComparison.Ordinal);
+        Assert.Contains("--out", refusal.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("outPath", refusal.Message, StringComparison.Ordinal);
     }
+
+    /// <summary>
+    /// The console's half of the reader that now serves both faces: `TranslateSource`
+    /// answers in codes, because the MCP face has no exit codes at all, and these are the
+    /// numbers the console has always turned them into. 66 is EX_NOINPUT, the mirror of
+    /// the 73 EX_CANTCREAT `--out` gives when it cannot write: in both the command line
+    /// was right and the cause is a lock or a permission.
+    /// </summary>
+    [Theory]
+    [InlineData("input_not_read", 66)]
+    [InlineData("file_missing", 2)]
+    [InlineData("file_not_text", 2)]
+    [InlineData("source_missing", 2)]
+    public void A_document_that_could_not_be_read_keeps_the_exit_code_it_had(
+        string refusalCode,
+        int exit) =>
+        Assert.Equal(exit, TranslateCommand.ExitFor(refusalCode));
 
     /// <summary>
     /// A refusal that omits a route sends the reader down a worse one, so the sentence that
