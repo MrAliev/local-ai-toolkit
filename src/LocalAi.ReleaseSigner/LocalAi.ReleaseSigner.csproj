@@ -4,6 +4,7 @@
     <OutputType>Exe</OutputType>
     <AssemblyName>localai-release-signer</AssemblyName>
     <RootNamespace>LocalAi.ReleaseSigner</RootNamespace>
+    <ApplicationIcon>..\..\assets\localai.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>

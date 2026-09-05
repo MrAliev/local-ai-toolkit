@@ -4,6 +4,7 @@
     <OutputType>Exe</OutputType>
     <AssemblyName>codesearch-mcp</AssemblyName>
     <RootNamespace>CodeSearch.Mcp</RootNamespace>
+    <ApplicationIcon>..\..\assets\localai.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>

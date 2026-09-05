@@ -1,3 +1,5 @@
+![LocalAi logo](docs/images/localai-mark.png)
+
 # Local AI Developer Toolkit
 
 [Русская версия](README.ru.md)

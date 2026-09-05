@@ -9,7 +9,14 @@
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
     <InvariantGlobalization>false</InvariantGlobalization>
+    <ApplicationIcon>..\..\assets\localai.ico</ApplicationIcon>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- Linked rather than copied: assets/localai.ico is the one icon the eight
+         executables already point at, and a second copy under this project would be a
+         second thing to keep in step. -->
+    <Resource Include="..\..\assets\localai.ico" Link="Resources\localai.ico" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\LocalAi.Installer.Core\LocalAi.Installer.Core.csproj" />
   </ItemGroup>

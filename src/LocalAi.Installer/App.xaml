@@ -11,6 +11,10 @@
                      replaces it before any window is built when the answer is dark. -->
                 <ResourceDictionary Source="Themes/Light.xaml" />
                 <ResourceDictionary Source="Themes/Controls.xaml" />
+                <!-- Not a palette, and appended rather than swapped: the mark keeps one
+                     colour in both themes, because the icon Windows draws beside it in
+                     the title bar cannot change with anything. -->
+                <ResourceDictionary Source="Themes/Brand.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

@@ -4,6 +4,7 @@
         xmlns:vm="clr-namespace:LocalAi.Installer.ViewModels"
         Background="{DynamicResource WindowFill}"
         Foreground="{DynamicResource TextPrimary}"
+        Icon="pack://application:,,,/Resources/localai.ico"
         Title="{Binding WindowTitle}"
         Width="820"
         Height="620"
@@ -71,7 +72,29 @@
 
         <Border Grid.Column="0" Background="{DynamicResource RailFill}" BorderBrush="{DynamicResource Divider}" BorderThickness="0,0,1,0">
             <StackPanel Margin="16,20,12,16">
-                <TextBlock Text="LocalAi" FontSize="15" FontWeight="Bold" />
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <!-- The icon's own geometry, not a second drawing of it: the seal's
+                         ring is a hole, which an even-odd figure expresses, so the rail and
+                         assets/localai.ico cannot drift apart. MarkInk rather than AccentFill,
+                         because the palette's accent is one colour in light and another in
+                         dark, and a mark that changed with the theme would disagree with the
+                         icon in the title bar above it. Themes/Brand.xaml says the rest. -->
+                    <Path Grid.Column="0" Width="24" Height="24" Stretch="Uniform"
+                          Fill="{StaticResource MarkInk}"
+                          Data="F0 M0,0 H80 V144 H208 V224 H0 Z
+                                M163,0 L208,26 V78 L163,104 L118,78 V26 Z
+                                M163,14 L196,33 V71 L163,90 L130,71 V33 Z
+                                M163,28 L184,40 V64 L163,76 L142,64 V40 Z" />
+                    <!-- A picture cannot say "LocalAi", and this rail is the only place the
+                         wizard names the product. The mark joins the wordmark; it does not
+                         replace it. -->
+                    <TextBlock Grid.Column="1" Text="LocalAi" FontSize="15" FontWeight="Bold"
+                               VerticalAlignment="Center" Margin="8,0,0,0" />
+                </Grid>
                 <!-- The one place a version is a question. Every other page states it. -->
                 <TextBlock Text="{Binding VersionContext}" FontFamily="Consolas" FontSize="12"
                            Foreground="{DynamicResource TextSecondary}" Margin="0,2,0,16" TextWrapping="Wrap" />
