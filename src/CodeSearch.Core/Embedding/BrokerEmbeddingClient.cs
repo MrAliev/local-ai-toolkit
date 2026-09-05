@@ -13,6 +13,13 @@ public sealed class BrokerEmbeddingClient(
             ? model
             : throw new ArgumentException("Model cannot be blank.", nameof(model));
 
+    /// <summary>
+    /// The failure code a job carries when the backend, not the request, was the problem. It is
+    /// the name of the exception the broker recorded, which is the contract
+    /// <see cref="BrokerJobFailedException.FailureCode"/> states.
+    /// </summary>
+    private const string BackendUnavailable = "BackendUnavailableException";
+
     public async Task<float[][]> EmbedAsync(
         IReadOnlyList<string> inputs,
         LocalJobPriority priority,
@@ -48,6 +55,23 @@ public sealed class BrokerEmbeddingClient(
         {
             throw new EmbeddingUnavailableException(
                 "The LocalAi broker did not become available for embedding.",
+                exception);
+        }
+        // A backend that is not there is not a chunk that cannot be embedded. IndexBuilder
+        // answers a failed batch by halving it to isolate the offending chunk and excludes
+        // exactly one exception from that - this one - so a job that failed because the runner
+        // never came back has to arrive as it, or the indexer divides work it cannot make
+        // smaller and fails again in both halves (#369).
+        //
+        // Matched on the failure code, which BrokerJobFailedException documents as ours and
+        // stable, and never on the reason: the reason is the backend's own words, quoted rather
+        // than parsed, and learning Ollama's vocabulary up here is what the transport's own
+        // comment argues against.
+        catch (BrokerJobFailedException exception)
+            when (exception.FailureCode.Equals(BackendUnavailable, StringComparison.Ordinal))
+        {
+            throw new EmbeddingUnavailableException(
+                "The model backend was not available for embedding.",
                 exception);
         }
 

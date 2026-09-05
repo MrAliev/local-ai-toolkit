@@ -57,8 +57,28 @@ public sealed record BackendWatchdogPolicy(
     }
 }
 
-public sealed class BackendUnavailableException(string code)
-    : Exception($"The model backend failed its liveness probe: {code}.")
+/// <summary>
+/// The backend is not there. Two things reach this conclusion and both say it this way, because
+/// what a caller acts on is the name: BrokerHost records `exception.GetType().Name` as the
+/// failure code, and BrokerJobFailedException says of that code that it is the stable thing to
+/// match on, as against the reason, which is quoted rather than parsed.
+///
+/// The message no longer names a liveness probe. The watchdog is one producer; the transport is
+/// the other, and it reaches the same conclusion by exhausting its retries against a runner that
+/// never answered - no probe involved.
+/// </summary>
+public sealed class BackendUnavailableException : Exception
 {
-    public string Code { get; } = code;
+    public BackendUnavailableException(string code)
+        : base($"The model backend is unavailable: {code}.") => Code = code;
+
+    /// <summary>
+    /// With what the backend itself said. Kept because losing it is the defect #349 was filed
+    /// for: the one sentence that explains the failure existed for a moment at every layer and
+    /// was dropped by each of them.
+    /// </summary>
+    public BackendUnavailableException(string code, string detail)
+        : base($"The model backend is unavailable: {code}. {detail}") => Code = code;
+
+    public string Code { get; }
 }
