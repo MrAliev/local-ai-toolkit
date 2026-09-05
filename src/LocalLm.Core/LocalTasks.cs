@@ -637,6 +637,13 @@ public sealed class LocalTasks
                 : TranslationValidator.ValidatePlain(source, attempt.Text);
         }
 
+        // Computed once, here, because two readers want it: the telemetry record below and the
+        // result returned at the end. It used to be computed twice - the notice from
+        // TokenEstimator, the telemetry from its own subtraction - and teaching one of them that
+        // a document written to a file never reaches a context left the other reporting nothing
+        // saved for exactly those runs.
+        var tokenMetrics = TokenEstimator.ForTranslation(source, attempt.Text, delivery);
+
         var experimentalModel = experimentalAttempt.Receipts
             .Select(receipt => receipt.Routing)
             .Select(routing => routing?.ExperimentalModel ??
@@ -653,7 +660,6 @@ public sealed class LocalTasks
                 .ToArray();
             var totalInputTokens = attempts.Sum(candidate => candidate.InputTokens);
             var totalOutputTokens = attempts.Sum(candidate => candidate.OutputTokens);
-            var sourceTokens = TokenEstimator.ForText(source);
             await client.CompleteExperimentAsync(
                 workflowId,
                 profile,
@@ -664,7 +670,7 @@ public sealed class LocalTasks
                     totalOutputTokens,
                     checked(totalInputTokens + totalOutputTokens),
                     attempt.OutputTokens,
-                    Math.Max(0, sourceTokens - attempt.OutputTokens),
+                    tokenMetrics.EstimatedNetCloudContextTokensSaved,
                     allReceipts.Aggregate(
                         TimeSpan.Zero,
                         (total, receipt) =>
@@ -700,10 +706,6 @@ public sealed class LocalTasks
             attempt.Text,
             targetLanguage,
             model);
-        var tokenMetrics = TokenEstimator.ForTranslation(
-            source,
-            attempt.Text,
-            delivery);
         return new LocalTranslationResult(
             answer,
             tokenMetrics.EstimatedCloudGenerationTokensSaved,
