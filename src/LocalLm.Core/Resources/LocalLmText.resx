@@ -117,6 +117,10 @@
   <data name="ModelNotConfiguredForTriage" xml:space="preserve">
     <value>Model '{0}' is not configured for log triage.</value>
   </data>
+  <data name="NoAnswerFromTool" xml:space="preserve">
+    <value>No answer from {0}: {1}</value>
+    <comment>{0} is the MCP tool name and is never translated. {1} is what was recorded with the failure, written by whatever refused and English whatever the reader's language, so it is quoted rather than translated. One key for all five model-management tools: the broker records the exception type name as the failure code, so a refusal by rule and a fault arrive under the same one, and a word that told them apart would be a guess.</comment>
+  </data>
   <data name="NoImagePaths" xml:space="preserve">
     <value>No image paths given.</value>
   </data>
