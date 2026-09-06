@@ -168,13 +168,18 @@ internal static class BrokerProgram
             // this instead of killing the process, so the job in flight is finished and
             // reported rather than abandoned half way through an inference.
             var drain = new DrainSignal();
-            var heartbeat = PublishHeartbeatAsync(
-                stateStore,
+            var heartbeat = new HeartbeatLoop(
                 owner,
                 runtimeRoot,
-                drain,
-                backendReachable,
-                shutdown.Token);
+                stateStore.Publish,
+                () => backendReachable.Current,
+                () => drain.Requested,
+                drain.Request,
+                exception => diagnosticLog.Write(
+                    "heartbeat",
+                    exception.GetType().Name,
+                    Guid.Empty,
+                    exception.Message)).RunAsync(shutdown.Token);
             // Off the job path on purpose: this is the only long-lived process, so the update
             // check runs here — but on its own loop, so nothing queued ever waits on GitHub.
             // It does nothing at all until somebody switches it on, and it reads that consent
@@ -274,46 +279,6 @@ internal static class BrokerProgram
         public bool Requested => requested;
 
         public void Request() => requested = true;
-    }
-
-    /// <summary>
-    /// Publishes the heartbeat and, on the same tick, notices a shutdown request addressed to
-    /// this broker. The loop already runs once a second, so noticing costs one file check and
-    /// no watcher, port or protocol.
-    ///
-    /// The request is deleted as soon as it is accepted: leaving it behind would shut down the
-    /// broker that replaces this one, seconds after it starts.
-    /// </summary>
-    private static async Task PublishHeartbeatAsync(
-        BrokerRuntimeStateStore store,
-        BrokerProcessState owner,
-        string runtimeRoot,
-        DrainSignal drain,
-        BackendReachability backend,
-        CancellationToken cancellationToken)
-    {
-        while (true)
-        {
-            await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
-            store.Publish(owner with
-            {
-                HeartbeatAtUtc = DateTimeOffset.UtcNow,
-                Backend = backend.Current,
-            });
-            if (drain.Requested)
-            {
-                continue;
-            }
-
-            var request = BrokerShutdownRequestStore.Read(runtimeRoot);
-            if (request is not null &&
-                request.ProcessId == owner.ProcessId &&
-                request.StartedAtUtc == owner.StartedAtUtc)
-            {
-                BrokerShutdownRequestStore.Delete(runtimeRoot);
-                drain.Request();
-            }
-        }
     }
 
     private static async Task ObserveCancellationAsync(Task task)
