@@ -147,12 +147,61 @@ public sealed class GenerationStore
         return manifest;
     }
 
+    /// <summary>
+    /// The generation this repository currently answers from, or null when there is not one —
+    /// and null too when the pointer cannot be read, because for everybody who asks this way the
+    /// two are the same answer: nothing is known to be current.
+    ///
+    /// That used to escape as an exception, and it escaped through everybody. Of the eight callers
+    /// only <see cref="GenerationRetention"/> guarded itself, and two of the unguarded ones —
+    /// <c>RuntimeIndexLayout</c> and the semantic navigation gateway — are on the read path, so a
+    /// zero-length <c>current.json</c> took search and navigation down along with the sync. That
+    /// is precisely the file a power cut between the rename and the flush leaves behind, and the
+    /// swallow belongs here rather than at seven call sites.
+    ///
+    /// Retention is the one caller that must not have them collapsed, and it asks through
+    /// <see cref="TryReadCurrent(out GenerationPointer?)"/> instead.
+    /// </summary>
     public GenerationPointer? ReadCurrent() =>
-        File.Exists(_currentPath)
-            ? JsonSerializer.Deserialize<GenerationPointer>(
+        TryReadCurrent(out var current) ? current : null;
+
+    /// <summary>
+    /// Reads the pointer, telling "there is no pointer" apart from "the pointer cannot be read".
+    ///
+    /// Only <see cref="GenerationRetention"/> needs the difference, and it needs it badly. With no
+    /// pointer nothing is current, so nothing has been superseded and a pass may prune down to the
+    /// count; with an unreadable one the generation it names is still the generation this
+    /// repository answers from, and it may be the one the pass was about to remove. Deleting it
+    /// costs an hour of embedding, so an unreadable pointer stops the pass instead.
+    /// </summary>
+    /// <returns>
+    /// <see langword="false"/> when <c>current.json</c> is there and cannot be opened or parsed.
+    /// <see langword="true"/> otherwise, with <paramref name="current"/> null when the file is
+    /// simply absent.
+    /// </returns>
+    public bool TryReadCurrent(out GenerationPointer? current)
+    {
+        current = null;
+        if (!File.Exists(_currentPath))
+        {
+            return true;
+        }
+
+        try
+        {
+            current = JsonSerializer.Deserialize<GenerationPointer>(
                 File.ReadAllText(_currentPath),
-                LocalAiJson.Strict)
-            : null;
+                LocalAiJson.Strict);
+            return true;
+        }
+        catch (Exception exception) when (
+            exception is JsonException or
+                IOException or
+                UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
 
     /// <summary>
     /// Unconditional pointer write, for test setup and repair paths. A sync publishes
@@ -172,6 +221,11 @@ public sealed class GenerationStore
     /// killed process abandoned — the same belt-and-braces the launcher's activation keeps
     /// with --if-current-sha256. A pointer that moved since planning means this run's whole
     /// view is stale, and a stale run must not make itself current.
+    ///
+    /// An unreadable pointer therefore lets the publish through, deliberately: both reads answer
+    /// null, the comparison matches, and the write lands. It should. A pointer nobody can read
+    /// names no generation to protect from being overwritten, and publishing over it is how the
+    /// repository comes back.
     /// </summary>
     public void SetCurrent(
         GenerationManifest generation,
