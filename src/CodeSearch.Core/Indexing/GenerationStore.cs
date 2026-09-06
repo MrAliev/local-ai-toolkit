@@ -238,6 +238,21 @@ public sealed class GenerationStore
             current = JsonSerializer.Deserialize<GenerationPointer>(
                 File.ReadAllText(_currentPath),
                 LocalAiJson.Strict);
+            // Refused here rather than at the two call sites that turn this into a path, for the
+            // reason the swallow above is here: a value that is not a generation id is not one for
+            // anybody, and the boundary is where the launcher checks its own pointer too
+            // (CurrentPointerSnapshot.ReadPath, before the version becomes a directory name).
+            //
+            // Unreadable rather than absent, including for a document that parses to nothing at
+            // all: the file is there and says something, and what it says cannot be acted on.
+            // Retention is the caller that needs the difference, and refusing to prune is the
+            // conservative side of it.
+            if (!GenerationIdentity.IsWellFormedId(current?.GenerationId))
+            {
+                current = null;
+                return false;
+            }
+
             return true;
         }
         catch (Exception exception) when (
