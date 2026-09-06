@@ -534,18 +534,50 @@ public sealed class BrokerHost
 /// The sink the host hands to the executor: the one job it holds a lease for, and no
 /// other. Reporting is best-effort by construction — a position is an encouragement, and
 /// a queue that refused one must never turn a running download into a failed job.
+///
+/// The construction is the catch below, and it was missing for as long as this summary
+/// claimed it. Everything <see cref="IBrokerQueue.ReportProgressAsync"/> can refuse with —
+/// a lost lease from either of the two checks, an <see cref="IOException"/> from the atomic
+/// write underneath — travelled out of the executor into the host's catch-all and was
+/// recorded as the job's own failure. A nine-gigabyte pull at seventy per cent, an antivirus
+/// holding the temporary file for one moment, and the download is reported as failed while
+/// it is still running.
 /// </summary>
 internal sealed class LeasedJobProgress(IBrokerQueue queue, LeasedJob lease) : IJobProgress
 {
-    public Task ReportAsync(
+    public async Task ReportAsync(
         JobProgress progress,
-        CancellationToken cancellationToken = default) =>
-        queue.ReportProgressAsync(
-            lease.Request.JobId,
-            lease.WorkerId,
-            lease.LeaseId,
-            progress,
-            cancellationToken);
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await queue.ReportProgressAsync(
+                lease.Request.JobId,
+                lease.WorkerId,
+                lease.LeaseId,
+                progress,
+                cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            // The one refusal that is not observational. A host shutting down cancels the
+            // attempt, and an executor reporting on its way out has to feel that: swallowing
+            // it would leave a cancelled job running to completion against a dead lease.
+            throw;
+        }
+        catch (Exception exception) when (
+            exception is LeaseLostException or
+                IOException or
+                UnauthorizedAccessException or
+                ObjectDisposedException)
+        {
+            // A lost lease is swallowed with the rest on purpose. It means this attempt will
+            // be failed or re-leased by somebody else in a moment anyway, and the work in
+            // flight is better finished than abandoned halfway on the strength of a position
+            // report. The alternative — stopping a running download because the queue would
+            // not accept a number about it — is the failure this class exists to prevent.
+        }
+    }
 }
 
 public sealed record BrokerExecutionResult(
