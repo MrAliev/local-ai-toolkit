@@ -33,6 +33,7 @@ public sealed class SyncInlineLimitTests : IDisposable
 
         var result = await CodeSearchSyncCommand.ExecuteAsync(
             _root,
+            TextWriter.Null,
             cancellationToken: TestContext.Current.CancellationToken,
             runtimeRoot: _runtimeRoot,
             refuseInlineOverFiles: 0);
@@ -62,6 +63,7 @@ public sealed class SyncInlineLimitTests : IDisposable
 
         var planned = (await CodeSearchSyncCommand.ExecuteAsync(
             _root,
+            TextWriter.Null,
             cancellationToken: TestContext.Current.CancellationToken,
             runtimeRoot: _runtimeRoot,
             refuseInlineOverFiles: 0)).RefusedFiles;
@@ -69,6 +71,7 @@ public sealed class SyncInlineLimitTests : IDisposable
 
         var refused = await CodeSearchSyncCommand.ExecuteAsync(
             _root,
+            TextWriter.Null,
             cancellationToken: TestContext.Current.CancellationToken,
             runtimeRoot: _runtimeRoot,
             refuseInlineOverFiles: planned - 1);
@@ -92,6 +95,7 @@ public sealed class SyncInlineLimitTests : IDisposable
 
         await CodeSearchSyncCommand.ExecuteAsync(
             _root,
+            TextWriter.Null,
             cancellationToken: TestContext.Current.CancellationToken,
             runtimeRoot: _runtimeRoot,
             refuseInlineOverFiles: 0);

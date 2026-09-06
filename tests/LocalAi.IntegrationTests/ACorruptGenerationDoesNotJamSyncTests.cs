@@ -54,6 +54,7 @@ public sealed class ACorruptGenerationDoesNotJamSyncTests : IDisposable
         var error = await Record.ExceptionAsync(
             () => CodeSearchSyncCommand.ExecuteAsync(
                 _root,
+                TextWriter.Null,
                 cancellationToken: TestContext.Current.CancellationToken,
                 runtimeRoot: _runtimeRoot));
 

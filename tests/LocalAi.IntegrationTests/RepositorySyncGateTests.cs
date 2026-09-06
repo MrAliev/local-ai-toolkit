@@ -132,6 +132,7 @@ public sealed class RepositorySyncGateTests : IDisposable
         var error = await Assert.ThrowsAsync<RepositorySyncBusyException>(
             () => CodeSearchSyncCommand.ExecuteAsync(
                 repository,
+                TextWriter.Null,
                 cancellationToken: TestContext.Current.CancellationToken,
                 runtimeRoot: runtime));
 
