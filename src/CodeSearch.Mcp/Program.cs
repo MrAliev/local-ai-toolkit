@@ -32,12 +32,16 @@ builder.Services.AddSingleton(serviceProvider =>
             workspaceRoot,
             policyStore.Read().ProcessSpec(languageId)));
 });
-// One per server, because what it remembers is what this server has already said about a build.
-// Its runtime root comes from the search service rather than from the machine's default, so the
-// figures above an answer and the index that answered cannot come from two installations.
+// One reader for the whole server, and one notice over it.
+//
+// The reader's runtime root comes from the search service rather than from the machine's default,
+// so the figures above an answer and the index that answered cannot come from two installations.
+// `index_status` takes the reader directly: a status reads the world and says none of the
+// once-only sentences, and asking the notice for them is what spends them.
+builder.Services.AddSingleton(serviceProvider => new RepositoryProgressReader(
+    serviceProvider.GetRequiredService<SearchService>().RuntimeRoot));
 builder.Services.AddSingleton(serviceProvider => new SyncNotice(
-    new RepositoryProgressReader(
-        serviceProvider.GetRequiredService<SearchService>().RuntimeRoot).Look));
+    serviceProvider.GetRequiredService<RepositoryProgressReader>().Look));
 builder.Services.AddSingleton<ILiveSemanticNavigation, LiveSemanticNavigationOverlay>();
 builder.Services.AddSingleton<IHeuristicSemanticNavigation, HeuristicSemanticNavigation>();
 builder.Services.AddSingleton<SemanticNavigationGateway>();
