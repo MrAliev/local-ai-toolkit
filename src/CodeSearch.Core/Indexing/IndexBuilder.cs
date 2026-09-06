@@ -572,7 +572,7 @@ public sealed class IndexBuilder(
                         batch,
                         chars,
                         stopwatch.Elapsed,
-                        EmbedBatchAsync(batch, ct));
+                        EmbedBatchAsync(batch, checkpoint, ct));
                 }
 
                 if (current is not null)
@@ -671,9 +671,15 @@ public sealed class IndexBuilder(
     /// is published atomically and nothing is checkpointed. Halving the batch on failure isolates
     /// the offender - a transient fault clears on the smaller retry, and a deterministic one is
     /// reported against the exact file and chunk instead of an opaque broker job id.
+    ///
+    /// The checkpoint comes down here for the sake of the half that succeeds.
+    /// <see cref="EmbedAsync"/> saves a batch only once the whole of it comes back, so a failure
+    /// in the second half threw the first half away - up to 511 chunks of finished work, redone
+    /// on the next run, and a deterministic failure means on every run after it as well.
     /// </summary>
     private async Task<float[][]> EmbedBatchAsync(
         IReadOnlyList<(string RelPath, int Slot, string Text)> batch,
+        EmbeddingCheckpointStore? checkpoint,
         CancellationToken ct)
     {
         var inputs = batch.Select(b => b.Text).ToList();
@@ -692,9 +698,23 @@ public sealed class IndexBuilder(
         {
             _log(IndexText.BuildBatchHalved(batch.Count, exception.Message));
             var half = batch.Count / 2;
-            var head = await EmbedBatchAsync([.. batch.Take(half)], ct);
-            var tail = await EmbedBatchAsync([.. batch.Skip(half)], ct);
-            return [.. head, .. tail];
+            var headItems = batch.Take(half).ToArray();
+            var head = await EmbedBatchAsync(headItems, checkpoint, ct);
+            try
+            {
+                var tail = await EmbedBatchAsync([.. batch.Skip(half)], checkpoint, ct);
+                return [.. head, .. tail];
+            }
+            catch
+            {
+                // On the way out only. On the way through, the caller saves the whole batch, and
+                // saving here as well would write the same vectors to a second file on disk.
+                //
+                // Every level of the recursion keeps its own half, so a failure deep inside still
+                // leaves each half above it saved rather than only the innermost one.
+                checkpoint?.SaveBatch([.. headItems.Select(item => item.Text)], head);
+                throw;
+            }
         }
         catch (Exception exception) when (
             exception is not OperationCanceledException and

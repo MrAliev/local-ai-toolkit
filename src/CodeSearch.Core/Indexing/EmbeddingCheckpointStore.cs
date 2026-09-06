@@ -21,6 +21,18 @@ internal sealed class EmbeddingCheckpointStore
     private readonly Action<string> _log;
     private readonly Dictionary<string, float[]> _vectors = new(StringComparer.Ordinal);
 
+    /// <summary>
+    /// Saving used to happen at one place in the build loop, one batch at a time, so nothing
+    /// needed a lock. It now also happens from inside a halved batch, to keep the half that
+    /// succeeded when the other half fails — and the loop keeps two batches in flight, so two of
+    /// those can be saved at once. The lock costs nothing beside the file write it guards.
+    ///
+    /// <see cref="TryGet"/> is deliberately outside it: every read happens while the queue is
+    /// being assembled, before the first batch is posted, and taking the lock per chunk would be
+    /// a cost paid on every build for a race that cannot happen.
+    /// </summary>
+    private readonly Lock _gate = new();
+
     public EmbeddingCheckpointStore(
         string directory,
         string model,
@@ -61,6 +73,17 @@ internal sealed class EmbeddingCheckpointStore
             throw new InvalidDataException("A checkpoint batch contains inconsistent vector dimensions.");
         }
 
+        lock (_gate)
+        {
+            Write(canonicalTexts, vectors, dimension);
+        }
+    }
+
+    private void Write(
+        IReadOnlyList<string> canonicalTexts,
+        IReadOnlyList<float[]> vectors,
+        int dimension)
+    {
         Directory.CreateDirectory(_directory);
         var final = Path.Combine(_directory, Guid.NewGuid().ToString("N") + ".batch");
         var temporary = final + ".tmp";
