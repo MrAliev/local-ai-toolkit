@@ -26,6 +26,11 @@ coverage/
 *.pid
 *.log
 
+# Local working files, never published
+.claude/
+CLAUDE.md
+CLAUDE.ru.md
+
 # Operating-system files
 .DS_Store
 Thumbs.db
