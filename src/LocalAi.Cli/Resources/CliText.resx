@@ -707,4 +707,12 @@ for those.</value>
     <value>localai doctor does not understand '{0}'. Usage: {1}</value>
     <comment>0 is the argument as it was typed and 1 is the usage line; both stay as they are.</comment>
   </data>
+  <data name="SyncFinished" xml:space="preserve">
+    <value>Sync finished in {0}s.</value>
+    <comment>The hole arrives already formatted to one decimal, invariantly, as BuildSaved's does - these lines are quoted verbatim and parsed, so no group separator may appear in either language. It says the total and nothing else: a breakdown printed once the run is over is the summary the progress rule refuses as a substitute for reporting while it runs.</comment>
+  </data>
+  <data name="SyncStoppedAfter" xml:space="preserve">
+    <value>Sync stopped after {0}s.</value>
+    <comment>The hole arrives already formatted to one decimal, invariantly, as BuildSaved's does - these lines are quoted verbatim and parsed, so no group separator may appear in either language. It says the total and nothing else: a breakdown printed once the run is over is the summary the progress rule refuses as a substitute for reporting while it runs.</comment>
+  </data>
 </root>

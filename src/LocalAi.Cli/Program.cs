@@ -538,11 +538,19 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
             return 0;
         }
 
+        // seconds= is appended last, after the conditional skipped=, so every token that was
+        // there keeps its position and a reader looking them up by key cannot notice the
+        // addition. It goes here as well as in the prose line because the MCP caller — the
+        // reader most likely to be deciding whether there is time to rebuild before searching —
+        // is handed stdout and never sees stderr.
         Console.WriteLine(
             $"SYNCED repository={result.RepositoryId} generation={result.GenerationId} " +
             $"overlays={result.OverlaysBuilt}" +
             (result.WorktreesSkipped > 0
                 ? $" skipped={result.WorktreesSkipped}"
+                : string.Empty) +
+            (result.ElapsedSeconds is { } seconds
+                ? $" seconds={seconds}"
                 : string.Empty));
         return 0;
     }

@@ -7,6 +7,7 @@ using LocalAi.Cli.Resources;
 using LocalAi.Contracts;
 using LocalAi.Contracts.Indexing;
 using LocalAi.Repository;
+using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
@@ -36,7 +37,11 @@ public sealed record CodeSearchSyncResult(
     int WorktreesSkipped = 0,
     // Non-null when the run refused rather than built: the work was over the caller's inline
     // limit, and the number is the files it would have had to re-read.
-    int? RefusedFiles = null);
+    int? RefusedFiles = null,
+    // Already formatted to one decimal, invariantly, because it goes on the wire. Null on the
+    // paths that return before any work: a refusal and a busy gate did nothing, and a duration
+    // beside them would imply they did.
+    string? ElapsedSeconds = null);
 
 public static class CodeSearchSyncCommand
 {
@@ -85,6 +90,9 @@ public static class CodeSearchSyncCommand
         bool requireSemantics = false,
         int? refuseInlineOverFiles = null)
     {
+        // Before the gate, so the figure is what the caller waited rather than what the work
+        // took: a run that spent four minutes queued behind another one waited four minutes.
+        var elapsed = Stopwatch.StartNew();
         var requested = RuntimeIndexLayout.Inspect(workingRoot, runtimeRoot);
         // The gate comes before the first write of any shared state — progress included.
         // Everything below (progress, manifest, generation directories, checkpoints, the
@@ -429,16 +437,22 @@ public static class CodeSearchSyncCommand
                 UpdatedAtUtc = DateTimeOffset.UtcNow,
             });
 
+            Console.Error.WriteLine(CliText.SyncFinished(Seconds(elapsed)));
             return new CodeSearchSyncResult(
                 requested.RepositoryId,
                 generation.Identity.Id,
                 store.IndexPath(generation.Identity.Id),
                 overlaysBuilt,
                 generationChanged,
-                worktreesSkipped);
+                worktreesSkipped,
+                ElapsedSeconds: Seconds(elapsed));
         }
         catch
         {
+            // The fact first, then Program.cs prints the cause. A run that stopped after four
+            // hundred seconds is precisely the one whose cost the reader wants named, and it is
+            // the run that never reaches the line above.
+            Console.Error.WriteLine(CliText.SyncStoppedAfter(Seconds(elapsed)));
             try
             {
                 progressStore.Save(lastProgress with
@@ -666,6 +680,14 @@ public static class CodeSearchSyncCommand
     /// other two — which is what a truncated copy or a bad sector produces — left the sync as an
     /// unexpected failure and did so again on every run after it.
     /// </summary>
+    /// <summary>
+    /// One decimal, invariant, as every other duration this product prints: these lines are
+    /// quoted verbatim by agents and parsed by tests, so a Russian reader must not be handed a
+    /// comma or a group separator.
+    /// </summary>
+    private static string Seconds(Stopwatch elapsed) =>
+        elapsed.Elapsed.TotalSeconds.ToString("F1", CultureInfo.InvariantCulture);
+
     private static GenerationManifest? TryReadManifest(GenerationStore store, string generationId)
     {
         try
