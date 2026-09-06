@@ -220,14 +220,13 @@ public static class CodeSearchSyncCommand
                 generationIdentity.Id,
                 StringComparison.Ordinal);
 
-            GenerationManifest generation;
-            try
+            var generation = TryReadManifest(store, generationIdentity.Id);
+            if (generation is null)
             {
-                generation = store.ReadManifest(generationIdentity.Id);
-            }
-            catch (Exception error) when (
-                error is DirectoryNotFoundException or FileNotFoundException)
-            {
+                // A generation that exists and cannot be read has to be moved out of the way
+                // before it can be rebuilt: PublishIndex returns the existing manifest when the
+                // directory is there, which means reading it again and failing the same way.
+                store.QuarantineUnreadable(generationIdentity.Id);
                 generation = await BuildGenerationAsync(
                     store,
                     current,
@@ -658,6 +657,29 @@ public static class CodeSearchSyncCommand
             CliText.MainlineMissing(string.Join(", ", candidates)));
     }
 
+    /// <summary>
+    /// The manifest, or null when this generation cannot be read at all.
+    ///
+    /// The four ways it refuses are one situation to a caller that is deciding whether to rebuild:
+    /// the directory is gone, the manifest file is gone, the manifest is not valid JSON, or the
+    /// index it names does not match its checksum. Only the first two were ever caught, so the
+    /// other two — which is what a truncated copy or a bad sector produces — left the sync as an
+    /// unexpected failure and did so again on every run after it.
+    /// </summary>
+    private static GenerationManifest? TryReadManifest(GenerationStore store, string generationId)
+    {
+        try
+        {
+            return store.ReadManifest(generationId);
+        }
+        catch (Exception error) when (
+            error is DirectoryNotFoundException or FileNotFoundException or
+                InvalidDataException or JsonException)
+        {
+            return null;
+        }
+    }
+
     private static async Task<GenerationManifest> BuildGenerationAsync(
         GenerationStore store,
         GenerationPointer? current,
@@ -688,9 +710,14 @@ public static class CodeSearchSyncCommand
             generation.Id + ".embedding-checkpoint");
         try
         {
-            if (current is not null)
+            // Reuse is an optimisation, so a previous generation that cannot be read costs this
+            // build its head start and nothing else. It used to cost the build: `ReadManifest`
+            // validates the checksum, and a `base.cidx` truncated by a failed copy or a bad
+            // sector made this line throw `InvalidDataException` out of the sync entirely — where
+            // `Program.cs` reported the one recoverable state it has as `unexpected_failure`, and
+            // every sync after it took the same path (#390).
+            if (current is not null && TryReadManifest(store, current.GenerationId) is { } previous)
             {
-                var previous = store.ReadManifest(current.GenerationId);
                 var reusable = store.IndexPath(previous.Identity.Id);
                 if (generation.CanReuseCorpusFrom(previous.Identity) &&
                     File.Exists(reusable))

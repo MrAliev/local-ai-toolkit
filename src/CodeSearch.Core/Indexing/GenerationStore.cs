@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text.Json;
 using CodeSearch.Core.Semantics;
@@ -9,6 +10,7 @@ public sealed class GenerationStore
 {
     private readonly string _generationsRoot;
     private readonly string _currentPath;
+    private readonly string _stagingRoot;
 
     /// <summary>
     /// Takes an <see cref="FsPath"/> so the caller cannot hand over a path it has not
@@ -20,6 +22,51 @@ public sealed class GenerationStore
     {
         _generationsRoot = repositoryRuntimeRoot.Combine("generations").Value;
         _currentPath = repositoryRuntimeRoot.Combine("current.json").Value;
+        _stagingRoot = repositoryRuntimeRoot.Combine("staging").Value;
+    }
+
+    /// <summary>
+    /// Moves a generation that cannot be read out of the way, and answers whether it moved.
+    ///
+    /// A generation is immutable, so a damaged one is not repairable — it is rebuilt. But
+    /// <see cref="PublishIndex"/> returns the existing manifest whenever the directory is there,
+    /// which means reading it again and failing the same way, so the rebuild cannot begin until
+    /// the damaged copy stops occupying the name (#390).
+    ///
+    /// Moved rather than deleted, and into <c>staging</c> rather than anywhere new: retention
+    /// already collects everything there that no build could still be holding, so the evidence
+    /// outlives the incident by a day and no longer. Deleting it outright would destroy the only
+    /// copy of whatever went wrong at the moment somebody might want to look.
+    /// </summary>
+    public bool QuarantineUnreadable(string generationId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(generationId);
+        var directory = Path.Combine(_generationsRoot, generationId);
+        if (!Directory.Exists(directory))
+        {
+            return false;
+        }
+
+        try
+        {
+            Directory.CreateDirectory(_stagingRoot);
+            Directory.Move(
+                directory,
+                Path.Combine(
+                    _stagingRoot,
+                    generationId + ".corrupt-" + DateTime.UtcNow.ToString(
+                        "yyyyMMdd-HHmmssfff",
+                        CultureInfo.InvariantCulture)));
+            return true;
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException)
+        {
+            // A build holding the directory open, or an ACL nobody expected. The caller's next
+            // step fails on the same generation and says so; refusing to start because the
+            // quarantine failed would replace a reported problem with a silent one.
+            return false;
+        }
     }
 
     public GenerationManifest PublishIndex(

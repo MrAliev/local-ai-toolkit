@@ -123,6 +123,51 @@ public sealed class GenerationStoreTests : IDisposable
     }
 
     /// <summary>
+    /// A generation is immutable, so a damaged one is not repaired — it is rebuilt. The obstacle
+    /// is that <see cref="GenerationStore.PublishIndex"/> returns the existing manifest whenever
+    /// the directory is there, which means reading the damaged one again and failing the same
+    /// way. The rebuild cannot begin until the name is free (#390).
+    ///
+    /// Moved rather than deleted, so whatever went wrong can still be looked at, and into
+    /// <c>staging</c>, where retention already collects what no build could still be holding.
+    /// </summary>
+    [Fact]
+    public void An_unreadable_generation_moves_aside_so_the_rebuild_can_take_its_name()
+    {
+        Directory.CreateDirectory(_root);
+        var runtimeRoot = Path.Combine(_root, "repo");
+        var source = Path.Combine(_root, "source.cidx");
+        File.WriteAllText(source, "INDEX");
+        var store = new GenerationStore(FsPath.From(runtimeRoot));
+        var identity = Identity();
+        store.PublishIndex(source, identity);
+        File.WriteAllText(store.IndexPath(identity.Id), "TRUNCATED");
+        Assert.Throws<InvalidDataException>(() => store.ReadManifest(identity.Id));
+
+        Assert.True(store.QuarantineUnreadable(identity.Id));
+
+        Assert.False(Directory.Exists(Path.Combine(runtimeRoot, "generations", identity.Id)));
+        var quarantined = Assert.Single(Directory.GetDirectories(
+            Path.Combine(runtimeRoot, "staging"),
+            identity.Id + ".corrupt-*"));
+        Assert.Equal("TRUNCATED", File.ReadAllText(Path.Combine(quarantined, "base.cidx")));
+
+        // The point of the whole exercise: the name is free, so the rebuild publishes into it —
+        // a new manifest with its own publication time, and an index that reads.
+        var rebuilt = store.PublishIndex(source, identity);
+        Assert.Equal(identity.Id, rebuilt.Identity.Id);
+        Assert.Equal(rebuilt, store.ReadManifest(identity.Id));
+    }
+
+    [Fact]
+    public void A_generation_that_is_not_there_is_not_quarantined()
+    {
+        var store = new GenerationStore(FsPath.From(Path.Combine(_root, "repo")));
+
+        Assert.False(store.QuarantineUnreadable(Identity().Id));
+    }
+
+    /// <summary>
     /// A pointer that cannot be read is not a different kind of answer from a pointer that is not
     /// there: in both cases nothing is known to be current. It used to be the difference between
     /// an empty repository and a broken installation — `File.Exists` said yes, `Deserialize` threw
