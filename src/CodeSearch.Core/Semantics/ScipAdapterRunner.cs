@@ -113,13 +113,9 @@ public sealed class ScipAdapterRunner(ScipImporter? importer = null)
             .Select(argument => Expand(argument, root))
             .ToArray();
         var executable = ExecutableResolver.Resolve(spec.Executable);
-        var isCommandScript = OperatingSystem.IsWindows() &&
-            (executable.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase) ||
-             executable.EndsWith(".bat", StringComparison.OrdinalIgnoreCase));
+        var isCommandScript = WindowsCommandScript.Is(executable);
         var start = new ProcessStartInfo(
-            isCommandScript
-                ? Environment.GetEnvironmentVariable("ComSpec") ?? "cmd.exe"
-                : executable)
+            isCommandScript ? WindowsCommandScript.Interpreter : executable)
         {
             WorkingDirectory = root,
             RedirectStandardOutput = true,
@@ -145,8 +141,11 @@ public sealed class ScipAdapterRunner(ScipImporter? importer = null)
         {
             try
             {
-                start.Arguments =
-                    "/d /s /c \"" + CommandScriptInvocation(executable, arguments) + "\"";
+                start.Arguments = WindowsCommandScript.Arguments(
+                    executable,
+                    arguments,
+                    "Windows command-script adapter paths and arguments contain unsafe " +
+                    "characters.");
             }
             catch (ArgumentException exception)
             {
@@ -275,21 +274,6 @@ public sealed class ScipAdapterRunner(ScipImporter? importer = null)
                 ? character
                 : '_').ToArray();
         return characters.Length == 0 ? "project" : new string(characters);
-    }
-
-
-    private static string CommandScriptInvocation(
-        string executable,
-        IReadOnlyList<string> arguments)
-    {
-        var values = new[] { executable }.Concat(arguments).ToArray();
-        if (values.Any(value => value.IndexOfAny(['"', '\r', '\n', '%', '!']) >= 0))
-        {
-            throw new ArgumentException(
-                "Windows command-script adapter paths and arguments contain unsafe characters.");
-        }
-
-        return string.Join(" ", values.Select(value => $"\"{value}\""));
     }
 
     private static async Task<BoundedOutput> DrainAsync(Stream stream, int maximumBytes)
