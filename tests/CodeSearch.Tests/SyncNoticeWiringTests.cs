@@ -136,6 +136,32 @@ public sealed class SyncNoticeWiringTests : IDisposable
     }
 
     /// <summary>
+    /// One blank line before the instruction, whether or not there is a sync to report above it.
+    ///
+    /// The rows of this block are dropped when they have nothing in them, and the separator was
+    /// dropped along with the row above it - so the ordinary machine, the one with no index and
+    /// nothing running, ran the instruction straight on from the status line. The state that does
+    /// have a sync to report kept its blank, which is why nothing noticed.
+    /// </summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void The_instruction_is_a_paragraph_of_its_own_either_way(bool building)
+    {
+        var status = CodeSearchTools.IndexStatus(Service(), Reader(building), _root);
+
+        Assert.Contains("Status:     NOT BUILT", status, StringComparison.Ordinal);
+        Assert.DoesNotContain("\n\n\n", status, StringComparison.Ordinal);
+        Assert.Matches(@"\n\n(?!\n)", status);
+        Assert.Contains(
+            "\n\n" + (building
+                ? CodeSearchText.BuildAlreadyRunning
+                : CodeSearchText.BuildItWith),
+            status,
+            StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// The refusal already says "not inside a tool call, run this instead". While a build holds the
     /// gate that instruction is the one command that cannot run, so it is replaced in place.
     /// </summary>
