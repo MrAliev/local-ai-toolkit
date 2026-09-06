@@ -19,8 +19,10 @@ ConsoleOutputText.UseUtf8();
 
 // English, for both faces, whatever machine this runs on.
 //
-// `CodeSearch.Core` now has a catalogue, so its refusals follow the reader — and this binary's own
-// prose is still English literals from end to end: `No matches.`, `Connected:`, `LEXICAL ONLY`.
+// `CodeSearch.Core` now has a catalogue, so its refusals and the narration of a build both follow
+// the reader — and this binary's own prose is still English literals from end to end:
+// `No matches.`, `Connected:`, `LEXICAL ONLY`. The pin is what keeps `codesearch index` from
+// printing a Russian `Просмотрено …` between two English lines of its own.
 // Without a pin here, a Russian machine would get one Russian sentence inside an English answer,
 // which is worse than none, and `--json` would stop promising the same bytes everywhere. The MCP
 // server has no such problem: its own strings are catalogued, and it calls `Apply()` with no
