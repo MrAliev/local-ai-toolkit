@@ -511,6 +511,41 @@ public sealed class UntrustedContentMcpTests : IDisposable
         Assert.Contains("localai sync --root", status, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// Precision is a property of this worktree, not of the generation. The gateway reaches for a
+    /// semantic overlay whenever the head tree differs from the generation's or the tree is dirty,
+    /// and refuses when that file has not been built — so a checkout with uncommitted edits cannot
+    /// navigate precisely however healthy the generation is.
+    ///
+    /// The status line said `precise` one second before `find_references` refused, on this
+    /// machine, because it branched on the generation alone (#421). The first assertion here is
+    /// the control: the same generation, the same everything, and a clean tree does read as
+    /// precise — so what the second assertion catches is the worktree, not the setup.
+    /// </summary>
+    [Fact]
+    public void Status_does_not_promise_precision_to_a_worktree_awaiting_its_overlay()
+    {
+        PublishGenerationWithCoveringSemanticIndex();
+        Assert.Contains(
+            CodeSearchText.NavigationPrecise,
+            CodeSearchTools.IndexStatus(_service, Reader(), _root),
+            StringComparison.Ordinal);
+
+        File.AppendAllText(Path.Combine(_root, "Example.cs"), "third source\r\n");
+
+        var status = CodeSearchTools.IndexStatus(_service, Reader(), _root);
+
+        Assert.DoesNotContain(
+            CodeSearchText.NavigationPrecise,
+            status,
+            StringComparison.Ordinal);
+        // Not HEURISTIC either: two of the four navigation tools refuse in this state rather than
+        // answering worse, so the line has its own token and its own consequence clause.
+        Assert.Contains("Navigation: NOT READY", status, StringComparison.Ordinal);
+        Assert.Contains("semantic overlay has not been built", status, StringComparison.Ordinal);
+        Assert.Contains("localai sync --root", status, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void A_phase_that_counts_no_chunks_does_not_show_the_last_phase_tally()
     {
@@ -655,6 +690,45 @@ public sealed class UntrustedContentMcpTests : IDisposable
     /// current one. A generation is immutable, so the semantic index cannot be added to the one
     /// the fixture already published -- this identity differs by its semantic version.
     /// </summary>
+    /// <summary>
+    /// The healthy shape: a generation whose semantic index covers the one source file here, so
+    /// nothing about the generation stands between the reader and precise navigation.
+    /// </summary>
+    private void PublishGenerationWithCoveringSemanticIndex()
+    {
+        var generation = _generation with { SemanticIndexVersion = 4 };
+        var sourceIndex = Path.Combine(
+            Path.GetTempPath(),
+            generation.Id + "-" + Guid.NewGuid().ToString("N") + ".cidx");
+        var sourceSemanticIndex = Path.Combine(
+            Path.GetTempPath(),
+            generation.Id + "-" + Guid.NewGuid().ToString("N") + ".sidx");
+        try
+        {
+            CreateIndex(generation.Id).Save(sourceIndex);
+            new SemanticIndex
+            {
+                RepositoryId = _identity.RepositoryId,
+                GenerationId = generation.Id,
+                GitTree = _identity.HeadTree,
+                BaseCommit = _identity.HeadCommit,
+                IndexedAtUtc = DateTime.UnixEpoch,
+                Documents = [new SemanticDocument { RelPath = "Example.cs", Hash = new byte[32] }],
+                Symbols = [],
+                Occurrences = [],
+                Relationships = [],
+            }.Save(sourceSemanticIndex);
+            var store = new GenerationStore(_identity.RepositoryRuntimeRoot);
+            var manifest = store.PublishIndex(sourceIndex, generation, sourceSemanticIndex);
+            store.SetCurrent(manifest);
+        }
+        finally
+        {
+            File.Delete(sourceIndex);
+            File.Delete(sourceSemanticIndex);
+        }
+    }
+
     private void PublishGenerationWithEmptySemanticIndex()
     {
         var generation = _generation with { SemanticIndexVersion = 3 };

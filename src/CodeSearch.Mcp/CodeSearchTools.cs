@@ -676,13 +676,18 @@ public static class CodeSearchTools
             : "current";
 
     /// <summary>
-    /// Whether this generation can answer navigation precisely.
+    /// Whether navigation can answer precisely <em>here</em> — a question about this worktree,
+    /// not only about the generation.
     ///
     /// Retrieval and navigation are served by two files in the same generation, and a repository
     /// last synced before semantic indexing existed has only the first. Nothing else on this
     /// status line moves: the model is right, the commit has not drifted, the status reads
     /// "current" — and go_to_definition still answers with text matches. The state is fixed by a
     /// re-sync, so the line that reports it names the command.
+    ///
+    /// The worktree is the third thing that can be wrong, and it used to be invisible here: this
+    /// line said "precise" one second before a navigation call refused, because it read the
+    /// generation alone (#421).
     /// </summary>
     private static string Navigation(IndexStatus status) => status switch
     {
@@ -692,9 +697,18 @@ public static class CodeSearchTools
         // and every answer is a text match wearing the wrong label.
         { SemanticIndexPresent: true, SemanticIndexCoversNothing: true } =>
             CodeSearchText.NavigationHeuristicCoversNothing(status.RepositoryRoot),
-        { SemanticIndexPresent: true } => CodeSearchText.NavigationPrecise,
-        _ =>
+        // Ahead of the overlay branch on purpose: an overlay over a generation that cannot
+        // navigate rescues nothing, and one sync fixes both. It also keeps a legacy index — no
+        // generation id, so no semantic index, and RequiresOverlay decided by root instead —
+        // reading as HEURISTIC rather than as a worktree waiting for something.
+        { SemanticIndexPresent: false } =>
             CodeSearchText.NavigationHeuristicMissing(status.RepositoryRoot),
+        // The generation is sound and this checkout is not. SemanticNavigationGateway loads the
+        // base index alone only while the head tree matches the generation's and the tree is
+        // clean; otherwise it reaches for an overlay that has not been built.
+        { SemanticOverlayMissing: true } =>
+            CodeSearchText.NavigationOverlayNotBuilt(status.RepositoryRoot),
+        _ => CodeSearchText.NavigationPrecise,
     };
 
     /// <summary>

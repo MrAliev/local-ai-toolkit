@@ -120,6 +120,15 @@ public static class CodeSearchText
         Catalogue.Format(nameof(NavigationHeuristicMissing), root);
 
     /// <summary>
+    /// The third value of this field: the generation is sound and this worktree is not, because
+    /// the semantic overlay it needs has not been built. Neither of the two above it fits —
+    /// HEURISTIC would say answers arrive and are merely worse, and two of the four tools refuse
+    /// outright in this state.
+    /// </summary>
+    public static string NavigationOverlayNotBuilt(string root) =>
+        Catalogue.Format(nameof(NavigationOverlayNotBuilt), root);
+
+    /// <summary>
     /// What a build in flight says on the answers it changes, and what it says when it ends.
     ///
     /// The figures come from the keys <c>index_status</c> already prints, so the two faces cannot

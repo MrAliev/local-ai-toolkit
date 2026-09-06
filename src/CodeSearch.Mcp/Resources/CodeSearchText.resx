@@ -88,14 +88,18 @@
     <value>{0} ({1} dims)</value>
   </data>
   <data name="NavigationHeuristicCoversNothing" xml:space="preserve">
-    <value>HEURISTIC - this generation has a semantic.sidx that covers no document, so go_to_definition, find_references, find_implementations and find_relationships fall back to bounded text matching. Semantic indexing ran and produced nothing; the sync output says why. Re-sync after fixing that: localai-launcher.exe run localai sync --root {0}</value>
+    <value>HEURISTIC - this generation has a semantic.sidx that covers no document, so go_to_definition and find_references fall back to bounded text matching while find_implementations and find_relationships find nothing for any symbol. Semantic indexing ran and produced nothing; the sync output says why. Re-sync after fixing that: localai-launcher.exe run localai sync --root {0}</value>
   </data>
   <data name="NavigationHeuristicMissing" xml:space="preserve">
-    <value>HEURISTIC - this generation has no semantic.sidx, so go_to_definition, find_references, find_implementations and find_relationships fall back to bounded text matching. Re-sync to build it: localai-launcher.exe run localai sync --root {0}</value>
+    <value>HEURISTIC - this generation has no semantic.sidx, so go_to_definition and find_references fall back to bounded text matching while find_implementations and find_relationships refuse. Re-sync to build it: localai-launcher.exe run localai sync --root {0}</value>
+  </data>
+  <data name="NavigationOverlayNotBuilt" xml:space="preserve">
+    <value>NOT READY - this worktree has uncommitted changes, or a commit the published generation was not built from, and its semantic overlay has not been built, so go_to_definition and find_references fall back to bounded text matching while find_implementations and find_relationships refuse. Build one: localai-launcher.exe run localai sync --root {0}</value>
+    <comment>The third value of a field a reader scans. HEURISTIC would say answers arrive and are merely worse, which is false for find_implementations and find_relationships - they refuse - and precise is the promise #421 is about. NOT READY is spelled the way the semantic_navigation_not_ready token is, because that is what the next navigation call prints for this same state. The consequence clause is NavigationHeuristicMissing's to the word: the two states differ in what is absent, not in what happens. The trigger is described in commits rather than trees on purpose: two commits sharing a tree need no overlay, and then this line does not print.</comment>
   </data>
   <data name="NavigationPrecise" xml:space="preserve">
     <value>precise (semantic.sidx present)</value>
-    <comment>precise is the other value of a two-value field whose partner is HEURISTIC; only the parenthetical moves.</comment>
+    <comment>precise is one of three values of a field a reader scans: precise, HEURISTIC and NOT READY. All three tokens stay English in every language; only the parenthetical moves.</comment>
   </data>
   <data name="NoDefinition" xml:space="preserve">
     <value>No definition found.</value>
