@@ -416,10 +416,12 @@ public sealed class BrokerHost
                 executionException.Message,
                 CancellationToken.None);
         }
-        catch (LeaseLostException exception)
-        {
-            Report(lease, "fail", exception);
-        }
+        // One block, because a lost lease needs nothing of its own here and the branch that
+        // named it did nothing of its own either: Report records exception.GetType().Name, so
+        // the type is already what the diagnostic says, and re-reporting it under a separate
+        // catch distinguished nothing (#403). Where a lost lease does mean something different
+        // — the heartbeat loop and the completion path above — that branch cancels the attempt
+        // before reporting, and those stay as they are.
         catch (Exception exception)
         {
             Report(lease, "fail", exception);
