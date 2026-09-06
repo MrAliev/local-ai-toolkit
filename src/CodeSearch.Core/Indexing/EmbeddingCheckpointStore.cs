@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using CodeSearch.Core.Resources;
 
 namespace CodeSearch.Core.Indexing;
 
@@ -123,7 +124,7 @@ internal sealed class EmbeddingCheckpointStore
             catch (Exception exception) when (
                 exception is IOException or UnauthorizedAccessException or InvalidDataException)
             {
-                _log($"Ignoring invalid embedding checkpoint '{path}': {exception.Message}");
+                _log(IndexText.BuildCheckpointIgnored(path, exception.Message));
             }
         }
     }

@@ -1,9 +1,11 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using CodeSearch.Core.Chunking;
 using CodeSearch.Core.Embedding;
+using CodeSearch.Core.Resources;
 using LocalAi.Contracts;
 
 namespace CodeSearch.Core.Indexing;
@@ -95,17 +97,17 @@ public sealed class IndexBuilder(
         root = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar);
 
         var files = FileScanner.Enumerate(root);
-        _log($"Scanned {root}: {files.Count} indexable files.");
+        _log(IndexText.BuildScanned(root, files.Count));
 
         var existing = LoadReusable(indexPath, force);
         var previousByPath = BuildLookup(existing);
 
         var (reused, changed) = Partition(root, files, previousByPath, out var hashes);
-        _log($"Unchanged: {reused.Count}. New or changed: {changed.Count}.");
+        _log(IndexText.BuildPartitioned(reused.Count, changed.Count));
 
         var freshChunks = ChunkFiles(root, changed, ct);
         var totalToEmbed = freshChunks.Values.Sum(c => c.Count);
-        _log($"Chunked {changed.Count} files into {totalToEmbed} chunks to embed.");
+        _log(IndexText.BuildChunked(changed.Count, totalToEmbed));
         _progress(new IndexBuildProgress(0, totalToEmbed, 0, null));
 
         var checkpoint = embeddingCheckpointPath is null
@@ -146,8 +148,11 @@ public sealed class IndexBuilder(
         index.Save(indexPath);
         stopwatch.Stop();
 
-        _log($"Saved {indexPath} ({assembled.Chunks.Count} chunks, {assembled.Files.Count} files) " +
-             $"in {stopwatch.Elapsed.TotalSeconds:F1}s.");
+        _log(IndexText.BuildSaved(
+            indexPath,
+            assembled.Chunks.Count,
+            assembled.Files.Count,
+            stopwatch.Elapsed.TotalSeconds.ToString("F1", CultureInfo.InvariantCulture)));
 
         return new BuildResult(
             assembled.Files.Count,
@@ -188,7 +193,7 @@ public sealed class IndexBuilder(
 
         var files = FileScanner.Enumerate(workingRoot);
         var baseByPath = baseIndex.Files.ToDictionary(f => f.RelPath, StringComparer.OrdinalIgnoreCase);
-        _log($"Scanned {workingRoot}: {files.Count} files. Base holds {baseByPath.Count}.");
+        _log(IndexText.BuildOverlayScanned(workingRoot, files.Count, baseByPath.Count));
 
         var (changed, hashes) = SelectDivergent(workingRoot, files, baseByPath);
         var deleted = baseByPath.Keys
@@ -196,7 +201,7 @@ public sealed class IndexBuilder(
             .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        _log($"Differs from base: {changed.Count} files. Present in base but not here: {deleted.Count}.");
+        _log(IndexText.BuildOverlayDivergence(changed.Count, deleted.Count));
 
         var existingOverlay = LoadReusable(overlayPath, force: false);
         var overlayByPath = BuildLookup(existingOverlay);
@@ -206,7 +211,7 @@ public sealed class IndexBuilder(
                              prior.Hash.AsSpan().SequenceEqual(hashes[path])))
             .ToList();
 
-        _log($"Reused from previous overlay: {changed.Count - toChunk.Count}. To embed: {toChunk.Count}.");
+        _log(IndexText.BuildOverlayReuse(changed.Count - toChunk.Count, toChunk.Count));
 
         var freshChunks = ChunkFiles(workingRoot, toChunk, ct);
         var totalToEmbed = freshChunks.Values.Sum(c => c.Count);
@@ -253,8 +258,12 @@ public sealed class IndexBuilder(
         overlay.Save(overlayPath);
         stopwatch.Stop();
 
-        _log($"Saved overlay {overlayPath}: {assembled.Chunks.Count} chunks over {assembled.Files.Count} " +
-             $"files, {deleted.Count} deletions, in {stopwatch.Elapsed.TotalSeconds:F1}s.");
+        _log(IndexText.BuildOverlaySaved(
+            overlayPath,
+            assembled.Chunks.Count,
+            assembled.Files.Count,
+            deleted.Count,
+            stopwatch.Elapsed.TotalSeconds.ToString("F1", CultureInfo.InvariantCulture)));
 
         return new BuildResult(
             assembled.Files.Count,
@@ -330,6 +339,13 @@ public sealed class IndexBuilder(
         try
         {
             var index = CodeIndex.Load(indexPath);
+            // These two stay English literals rather than joining IndexText, for the reason
+            // that class's comment gives: neither can be reached by an entry point that
+            // follows the reader. Under `localai sync` a previous index reaches this path
+            // only after CanReuseCorpusFrom agreed, and that compares the embedding model and
+            // the index format version - so a mismatch in either was already refused upstream.
+            // The one face that does reach them, `codesearch index`, pins English for all of
+            // its output.
             if (index.FormatVersion < CodeIndex.CurrentVersion)
             {
                 _log($"Existing index is format v{index.FormatVersion}; v{CodeIndex.CurrentVersion} " +
@@ -345,12 +361,12 @@ public sealed class IndexBuilder(
                 return null;
             }
 
-            _log($"Existing index: {index.Chunks.Count} chunks over {index.Files.Count} files.");
+            _log(IndexText.BuildReusingIndex(index.Chunks.Count, index.Files.Count));
             return index;
         }
         catch (Exception ex)
         {
-            _log($"Could not reuse existing index ({ex.Message}) - rebuilding from scratch.");
+            _log(IndexText.BuildIndexNotReusable(ex.Message));
             return null;
         }
     }
@@ -503,7 +519,7 @@ public sealed class IndexBuilder(
 
         if (restored > 0)
         {
-            _log($"Restored {restored}/{total} chunks from the embedding checkpoint.");
+            _log(IndexText.BuildCheckpointRestored(restored, total));
             _progress(new IndexBuildProgress(
                 restored,
                 total,
@@ -587,7 +603,11 @@ public sealed class IndexBuilder(
                     // negative estimate to match — and the progress store rejects both, which
                     // killed the build after every chunk of it had already been embedded.
                     var remaining = TimeSpan.FromSeconds((total - done) / Math.Max(0.001, rate));
-                    _log($"Embedded {done}/{total} chunks ({rate:F1}/s, ~{remaining.TotalMinutes:F1} min left)");
+                    _log(IndexText.BuildEmbedded(
+                        done,
+                        total,
+                        rate.ToString("F1", CultureInfo.InvariantCulture),
+                        remaining.TotalMinutes.ToString("F1", CultureInfo.InvariantCulture)));
                     _progress(new IndexBuildProgress(done, total, rate, remaining));
                 }
 
@@ -670,8 +690,7 @@ public sealed class IndexBuilder(
                 not EmbeddingUnavailableException &&
             batch.Count > 1)
         {
-            _log($"Embedding {batch.Count} chunks failed ({exception.Message}); " +
-                 "halving the batch to isolate the chunk.");
+            _log(IndexText.BuildBatchHalved(batch.Count, exception.Message));
             var half = batch.Count / 2;
             var head = await EmbedBatchAsync([.. batch.Take(half)], ct);
             var tail = await EmbedBatchAsync([.. batch.Skip(half)], ct);
