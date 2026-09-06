@@ -122,6 +122,65 @@ public static class CodeSearchText
     public static string SyncReached(object phase, string when) =>
         Catalogue.Format(nameof(SyncReached), phase, when);
 
+    /// <summary>
+    /// What a build in flight says on the answers it changes, and what it says when it ends.
+    ///
+    /// The figures come from the keys <c>index_status</c> already prints, so the two faces cannot
+    /// disagree about the same build. These four are what the inline line adds: how long ago the
+    /// figures were written, what they mean for the answer they sit above, and — once — that the
+    /// build is over and the qualification can be dropped.
+    ///
+    /// <see cref="SyncEnded"/> and <see cref="SyncStopped"/> begin lower case: they follow the
+    /// literal <c>Sync: </c> prefix, which is a field name and stays English.
+    /// </summary>
+    public static string RecordedAgo(string age) => Catalogue.Format(nameof(RecordedAgo), age);
+
+    public static string SyncNotSearchableYet => Catalogue.Get(nameof(SyncNotSearchableYet));
+
+    /// <summary>
+    /// The two rungs above <see cref="EtaMinutes"/> on the ladder <see cref="RecordedAgo"/>
+    /// carries. They exist because a build whose process died leaves a record nobody clears, so
+    /// the age this reports is measured in hours and days rather than in minutes, and
+    /// <c>recorded 2880 min ago</c> is a number nobody reads.
+    /// </summary>
+    public static string Hours(string hours) => Catalogue.Format(nameof(Hours), hours);
+
+    public static string Days(string days) => Catalogue.Format(nameof(Days), days);
+
+    /// <summary>
+    /// What stands where the figures go when a build holds the gate and has written nothing yet -
+    /// the window between a sync starting and its first record. It is also the antecedent of "it"
+    /// in <see cref="SyncNotSearchableYet"/>, which names nothing without a line above it.
+    /// </summary>
+    public static string ProgressNotRecordedYet =>
+        Catalogue.Get(nameof(ProgressNotRecordedYet));
+
+    /// <summary>
+    /// Wraps the figures when a record is left behind by a build that is no longer running. The
+    /// ETA is dropped inside it: it was the dead process's prediction of a remaining time nobody
+    /// is spending.
+    /// </summary>
+    public static string ProgressStoppedAt(string figures) =>
+        Catalogue.Format(nameof(ProgressStoppedAt), figures);
+
+    /// <summary>
+    /// The end notice for a build that died rather than failed. A killed process never writes
+    /// <c>Failed</c>, so it never reaches <see cref="SyncStopped"/>.
+    /// </summary>
+    public static string SyncDidNotFinish => Catalogue.Get(nameof(SyncDidNotFinish));
+
+    /// <summary>
+    /// Replaces the instruction to start a build, on the paths that give one, while a build is
+    /// already running. That instruction is not merely redundant then - a second
+    /// <c>localai sync</c> exits 75 against the gate - and it is what a new machine shows on
+    /// every search for the whole of its first build.
+    /// </summary>
+    public static string BuildAlreadyRunning => Catalogue.Get(nameof(BuildAlreadyRunning));
+
+    public static string SyncEnded => Catalogue.Get(nameof(SyncEnded));
+
+    public static string SyncStopped => Catalogue.Get(nameof(SyncStopped));
+
     public static string ProgressNotCounted => Catalogue.Get(nameof(ProgressNotCounted));
 
     public static string ProgressChunks(int processed, int total, int remaining) =>

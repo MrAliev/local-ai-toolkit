@@ -12,6 +12,7 @@ public class SemanticNavigationMcpTests
 
         var response = CodeSearchTools.GoToDefinition(
             gateway,
+            NoBuildRunning.Notice,
             "Src/Use.cs",
             line: 5,
             column: 13);
@@ -30,6 +31,7 @@ public class SemanticNavigationMcpTests
 
         var response = CodeSearchTools.FindReferences(
             gateway,
+            NoBuildRunning.Notice,
             "Src/Use.cs",
             line: 5,
             column: 13,
@@ -45,6 +47,7 @@ public class SemanticNavigationMcpTests
     {
         var response = CodeSearchTools.FindImplementations(
             Gateway(),
+            NoBuildRunning.Notice,
             "Src/A.cs",
             line: 3,
             column: 18);
@@ -61,6 +64,7 @@ public class SemanticNavigationMcpTests
     {
         var response = CodeSearchTools.FindRelationships(
             Gateway(),
+            NoBuildRunning.Notice,
             "Src/Impl.cs",
             line: 4,
             column: 18,
@@ -81,6 +85,7 @@ public class SemanticNavigationMcpTests
 
         var response = CodeSearchTools.GoToDefinition(
             gateway,
+            NoBuildRunning.Notice,
             "Src/Use.cs",
             line: 5,
             column: 13);
@@ -106,6 +111,7 @@ public class SemanticNavigationMcpTests
 
         var response = CodeSearchTools.GoToDefinition(
             Gateway(),
+            NoBuildRunning.Notice,
             "Src/A.cs",
             line: printedStartLine);
 
@@ -122,7 +128,8 @@ public class SemanticNavigationMcpTests
     [InlineData(1, 0)]
     public void A_position_counted_from_zero_is_refused_by_name(int line, int column)
     {
-        var response = CodeSearchTools.GoToDefinition(Gateway(), "Src/A.cs", line, column);
+        var response = CodeSearchTools.GoToDefinition(
+            Gateway(), NoBuildRunning.Notice, "Src/A.cs", line, column);
 
         Assert.StartsWith("invalid_position:", response, StringComparison.Ordinal);
         Assert.DoesNotContain("<untrusted-content", response, StringComparison.Ordinal);
@@ -140,7 +147,8 @@ public class SemanticNavigationMcpTests
     [InlineData("Src/./A.cs")]
     public void A_path_that_is_not_repository_relative_is_refused_by_name(string path)
     {
-        var response = CodeSearchTools.GoToDefinition(Gateway(), path, line: 3);
+        var response = CodeSearchTools.GoToDefinition(
+            Gateway(), NoBuildRunning.Notice, path, line: 3);
 
         Assert.StartsWith("invalid_path:", response, StringComparison.Ordinal);
         Assert.Contains(path, response, StringComparison.Ordinal);
@@ -153,14 +161,16 @@ public class SemanticNavigationMcpTests
     {
         const string path = @"R:\LocalAi\Src\A.cs";
         var gateway = Gateway();
-        var expected = CodeSearchTools.GoToDefinition(gateway, path, line: 3);
+        var expected = CodeSearchTools.GoToDefinition(
+            gateway, NoBuildRunning.Notice, path, line: 3);
 
         Assert.All(
             new[]
             {
-                CodeSearchTools.FindReferences(gateway, path, line: 5),
-                CodeSearchTools.FindImplementations(gateway, path, line: 3),
-                CodeSearchTools.FindRelationships(gateway, path, line: 4),
+                CodeSearchTools.FindReferences(gateway, NoBuildRunning.Notice, path, line: 5),
+                CodeSearchTools.FindImplementations(
+                    gateway, NoBuildRunning.Notice, path, line: 3),
+                CodeSearchTools.FindRelationships(gateway, NoBuildRunning.Notice, path, line: 4),
             },
             answer => Assert.Equal(expected, answer));
     }

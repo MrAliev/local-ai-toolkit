@@ -45,6 +45,53 @@ public sealed class RepositorySyncGateTests : IDisposable
         Assert.NotNull(third);
     }
 
+    /// <summary>
+    /// Asking without taking. An answer that is about to tell a reader to start a sync needs to
+    /// know whether one would be refused, and only the gate knows that: a killed sync leaves its
+    /// last phase in progress.json for ever, because nothing writes an end for a process that is
+    /// gone. Reading the record instead would tell that reader a build is running while the gate
+    /// stands open, and take away the command that fixes it.
+    /// </summary>
+    [Fact]
+    public void A_held_gate_says_so_and_a_free_one_says_so()
+    {
+        var repositoryId = Guid.NewGuid().ToString("N");
+
+        Assert.False(RepositorySyncGate.IsHeld(repositoryId));
+
+        using var held = RepositorySyncGate.TryAcquire(
+            repositoryId,
+            TimeSpan.Zero,
+            TestContext.Current.CancellationToken);
+        Assert.NotNull(held);
+        Assert.True(RepositorySyncGate.IsHeld(repositoryId));
+    }
+
+    /// <summary>
+    /// The probe takes the gate to find out whether it was free, so a sync must still be able to
+    /// take it afterwards - repeatedly, because this runs once per answer.
+    ///
+    /// What this does NOT prove, and deliberately does not claim to: that the probe calls Release.
+    /// Closing an owned mutex abandons it, and an abandoned mutex is granted to the next waiter,
+    /// so dropping the Release passes this test unchanged - checked by mutation rather than
+    /// assumed. Release is still right, for the reason given where it is called, but the reason is
+    /// not one an assertion can reach from here.
+    /// </summary>
+    [Fact]
+    public void Asking_an_open_gate_leaves_it_open()
+    {
+        var repositoryId = Guid.NewGuid().ToString("N");
+
+        Assert.False(RepositorySyncGate.IsHeld(repositoryId));
+        Assert.False(RepositorySyncGate.IsHeld(repositoryId));
+
+        using var acquired = RepositorySyncGate.TryAcquire(
+            repositoryId,
+            TimeSpan.Zero,
+            TestContext.Current.CancellationToken);
+        Assert.NotNull(acquired);
+    }
+
     [Fact]
     public void Cancelling_the_wait_propagates_instead_of_reporting_busy()
     {

@@ -251,6 +251,7 @@ public sealed class UntrustedContentMcpTests : IDisposable
     {
         var response = await CodeSearchTools.SearchCode(
             _service,
+            NoBuildRunning.Notice,
             "source",
             _root,
             topK: 2,
@@ -285,6 +286,7 @@ public sealed class UntrustedContentMcpTests : IDisposable
     {
         var response = await CodeSearchTools.GetCodeChunk(
             _service,
+            NoBuildRunning.Notice,
             CurrentId(0).Encode(),
             _root,
             TestContext.Current.CancellationToken);
@@ -309,6 +311,7 @@ public sealed class UntrustedContentMcpTests : IDisposable
     {
         var response = await CodeSearchTools.GetCodeChunk(
             _service,
+            NoBuildRunning.Notice,
             "not-a-chunk-id",
             _root,
             TestContext.Current.CancellationToken);
@@ -320,7 +323,7 @@ public sealed class UntrustedContentMcpTests : IDisposable
     [Fact]
     public void Status_and_maintenance_output_remain_trusted_and_unwrapped()
     {
-        var status = CodeSearchTools.IndexStatus(_service, _root);
+        var status = CodeSearchTools.IndexStatus(_service, NoBuildRunning.Notice, _root);
         var maintenance = CodeSearchTools.IndexUnload(_service);
 
         Assert.Contains("Chunks:     2", status, StringComparison.Ordinal);
@@ -345,7 +348,7 @@ public sealed class UntrustedContentMcpTests : IDisposable
                 TimeSpan.FromSeconds(72),
                 DateTimeOffset.UtcNow));
 
-        var status = CodeSearchTools.IndexStatus(_service, _root);
+        var status = CodeSearchTools.IndexStatus(_service, NoBuildRunning.Notice, _root);
 
         Assert.Contains("Sync phase: EmbeddingBase", status, StringComparison.Ordinal);
         Assert.Contains("120/300 chunks (180 remaining)", status, StringComparison.Ordinal);
@@ -363,7 +366,7 @@ public sealed class UntrustedContentMcpTests : IDisposable
     {
         Assert.DoesNotContain(
             "Update:",
-            CodeSearchTools.IndexStatus(_service, _root),
+            CodeSearchTools.IndexStatus(_service, NoBuildRunning.Notice, _root),
             StringComparison.Ordinal);
 
         new UpdateCheckPolicyStore(_runtimeRoot).Write(
@@ -386,7 +389,7 @@ public sealed class UntrustedContentMcpTests : IDisposable
         new LocalAi.Contracts.Activation.InstalledReleaseStore(binRoot)
             .Write("be08af033a2a", "0.1.50");
 
-        var status = CodeSearchTools.IndexStatus(_service, _root);
+        var status = CodeSearchTools.IndexStatus(_service, NoBuildRunning.Notice, _root);
 
         Assert.Contains("Update:     LocalAi 99.0.0 is available", status, StringComparison.Ordinal);
         Assert.DoesNotContain("<untrusted-content", status, StringComparison.Ordinal);
@@ -398,7 +401,7 @@ public sealed class UntrustedContentMcpTests : IDisposable
         // The fixture publishes a base with no semantic.sidx, which is exactly the shape of a
         // repository last synced before semantic indexing shipped: model right, commit not
         // drifted, status "current", and navigation quietly answering from text matches.
-        var status = CodeSearchTools.IndexStatus(_service, _root);
+        var status = CodeSearchTools.IndexStatus(_service, NoBuildRunning.Notice, _root);
 
         Assert.Contains("Navigation: HEURISTIC", status, StringComparison.Ordinal);
         Assert.Contains("no semantic.sidx", status, StringComparison.Ordinal);
@@ -417,7 +420,7 @@ public sealed class UntrustedContentMcpTests : IDisposable
     {
         PublishGenerationWithEmptySemanticIndex();
 
-        var status = CodeSearchTools.IndexStatus(_service, _root);
+        var status = CodeSearchTools.IndexStatus(_service, NoBuildRunning.Notice, _root);
 
         Assert.Contains("Navigation: HEURISTIC", status, StringComparison.Ordinal);
         Assert.Contains("covers no document", status, StringComparison.Ordinal);
@@ -432,7 +435,7 @@ public sealed class UntrustedContentMcpTests : IDisposable
         // counter with nothing remaining, beside a phase that was not counting anything.
         Save(RepositoryIndexProgressPhase.SemanticBase, 1415, 1415);
 
-        var status = CodeSearchTools.IndexStatus(_service, _root);
+        var status = CodeSearchTools.IndexStatus(_service, NoBuildRunning.Notice, _root);
 
         Assert.Contains("Sync phase: SemanticBase", status, StringComparison.Ordinal);
         Assert.Contains("not counted in this phase", status, StringComparison.Ordinal);
@@ -445,7 +448,7 @@ public sealed class UntrustedContentMcpTests : IDisposable
     {
         Save(RepositoryIndexProgressPhase.PublishingGeneration, 1415, 1415);
 
-        var status = CodeSearchTools.IndexStatus(_service, _root);
+        var status = CodeSearchTools.IndexStatus(_service, NoBuildRunning.Notice, _root);
 
         Assert.Contains("Sync phase: PublishingGeneration", status, StringComparison.Ordinal);
         Assert.DoesNotContain("ETA:", status, StringComparison.Ordinal);
@@ -457,7 +460,7 @@ public sealed class UntrustedContentMcpTests : IDisposable
         DriftMainlinePastTheIndexedCommit();
         Save(RepositoryIndexProgressPhase.SemanticBase, 0, 0);
 
-        var status = CodeSearchTools.IndexStatus(_service, _root);
+        var status = CodeSearchTools.IndexStatus(_service, NoBuildRunning.Notice, _root);
 
         // Stale and mid-build are two facts, and printing only the first is what made a
         // generation that was minutes from publishing look like one nobody was building.
@@ -471,7 +474,7 @@ public sealed class UntrustedContentMcpTests : IDisposable
         DriftMainlinePastTheIndexedCommit();
         Save(RepositoryIndexProgressPhase.Completed, 1415, 1415);
 
-        var status = CodeSearchTools.IndexStatus(_service, _root);
+        var status = CodeSearchTools.IndexStatus(_service, NoBuildRunning.Notice, _root);
 
         Assert.Contains("STALE", status, StringComparison.Ordinal);
         Assert.DoesNotContain("a sync reached", status, StringComparison.Ordinal);
@@ -525,7 +528,7 @@ public sealed class UntrustedContentMcpTests : IDisposable
             Path.Combine(_identity.RepositoryRuntimeRoot.Value, "progress.json"),
             new byte[337]);
 
-        var status = CodeSearchTools.IndexStatus(_service, _root);
+        var status = CodeSearchTools.IndexStatus(_service, NoBuildRunning.Notice, _root);
 
         Assert.Contains("Chunks:     2", status, StringComparison.Ordinal);
         Assert.DoesNotContain("Sync phase:", status, StringComparison.Ordinal);

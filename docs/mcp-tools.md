@@ -27,10 +27,32 @@ else got a bare protocol error naming nothing.
 | `find_implementations` | Implementations, overrides, derived types. | No text fallback: an approximate answer is worse than none here. |
 | `find_relationships` | The snapshot's relationship graph. | SIDX only. Direction `incoming`/`outgoing`, kind `implementation`/`override`/`type-definition`. |
 | `index_status` | Whether an index exists, its model and size, drift behind HEAD, sync phase. Carries one trailing `Update:` line when a newer release has been verified. | Diagnostic — outside the untrusted boundary. The update line appears only if release lookups were switched on and the newest version is ahead of this one; it is read from the runtime's state file, never from the network. |
-| `index_refresh` | Incremental refresh after a commit. | Refuses to run large work inline and returns the background command instead. |
+| `index_refresh` | Incremental refresh after a commit. | Refuses to run large work inline. It returns the background command, unless a build already holds the repository's sync gate — that command would exit 75 `sync_busy`, so the refusal names the running build instead. |
 | `index_unload` | Frees a loaded index's memory immediately. | Leaves the file on disk; the next search reloads it in about a second. |
 | `lsp_open_document` | Opens a document in its language server, making it authoritative. | Versions must increase monotonically. Live servers are off by default. |
 | `lsp_close_document` | Closes it, returning authority to the snapshot. | — |
+
+### A build in flight
+
+While a sync holds a repository's gate, every answer it would change carries one block above
+it: a `Sync:` line with the phase, how far it has got, an ETA and how long ago that was
+recorded, and — once per build — a sentence saying what that means for the answer under it. The
+figures come from the same `progress.json` `index_status` reads, so the two faces cannot give
+two accounts of one build; the measured rate appears only on `index_status`. A phase that counts
+no chunks says so rather than repeating the previous phase's finished tally.
+
+The answers that would otherwise tell the reader to start a build — `search_code` and
+`index_status` where no index exists at all, and the `index_refresh` refusal — replace that
+instruction with the block rather than printing both. A second `localai sync` exits 75
+`sync_busy` against the gate, and on a machine building its first index that instruction was
+the whole of every answer for as long as the build ran.
+
+Whether a build is running is asked of the gate rather than of the record. A killed sync leaves
+its last phase in `progress.json` for ever, because nothing writes an end on behalf of a process
+that is gone; such a record reads as stopped, with no ETA, and the command to build comes back.
+
+The block is this installation talking about itself, so it sits outside the
+`<untrusted-content>` markers, as the `Update:` line does.
 
 ### Language servers
 

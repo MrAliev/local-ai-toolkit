@@ -118,6 +118,7 @@ public sealed class SearchEmbeddingFallbackTests : IDisposable
                 new EmbeddingUnavailableException(
                     "broker unavailable",
                     new TimeoutException())),
+            NoBuildRunning.Notice,
             "ExactSymbol",
             _root,
             cancellationToken: TestContext.Current.CancellationToken);
@@ -140,6 +141,7 @@ public sealed class SearchEmbeddingFallbackTests : IDisposable
                 new EmbeddingUnavailableException(
                     "broker unavailable",
                     new TimeoutException())),
+            NoBuildRunning.Notice,
             "ExactSymbol",
             _root,
             cancellationToken: TestContext.Current.CancellationToken);
@@ -164,6 +166,7 @@ public sealed class SearchEmbeddingFallbackTests : IDisposable
                 new EmbeddingUnavailableException(
                     "broker unavailable",
                     new TimeoutException())),
+            NoBuildRunning.Notice,
             "ExactSymbol",
             _root,
             cancellationToken: TestContext.Current.CancellationToken);
@@ -185,6 +188,7 @@ public sealed class SearchEmbeddingFallbackTests : IDisposable
                 new EmbeddingUnavailableException(
                     "broker unavailable",
                     new TimeoutException())),
+            NoBuildRunning.Notice,
             "where is payment cancellation handled",
             _root,
             cancellationToken: TestContext.Current.CancellationToken);
@@ -203,6 +207,7 @@ public sealed class SearchEmbeddingFallbackTests : IDisposable
             new SearchService(
                 model => new StubEmbeddingClient(model),
                 runtimeRoot: _runtimeRoot),
+            NoBuildRunning.Notice,
             "ExactSymbol",
             _root,
             cancellationToken: TestContext.Current.CancellationToken);
@@ -231,6 +236,7 @@ public sealed class SearchEmbeddingFallbackTests : IDisposable
                 TestContext.Current.CancellationToken));
         var mcpResponse = await CodeSearchTools.SearchCode(
             ServiceThrowing(unrelated),
+            NoBuildRunning.Notice,
             "ExactSymbol",
             _root,
             cancellationToken: TestContext.Current.CancellationToken);

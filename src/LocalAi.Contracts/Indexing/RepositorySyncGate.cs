@@ -24,6 +24,37 @@ public static class RepositorySyncGate
     private const string MutexPrefix = "LocalAi.CodeSearch.Sync.";
 
     /// <summary>
+    /// Whether a sync holds this repository's gate right now, without queueing for it.
+    ///
+    /// For the answers that would otherwise tell a reader to start a build. The question those
+    /// answers need is not "did something record progress" but "would a second sync be refused",
+    /// and only the gate knows it: a killed sync leaves its last phase in progress.json for ever,
+    /// because nothing writes an end on behalf of a process that is gone.
+    ///
+    /// A zero-wait acquire released before returning, on the thread that took it, so nothing waits
+    /// on the probe for longer than the probe takes. A mutex abandoned by a killed process is
+    /// granted rather than thrown by both implementations of the wait, and granted is the right
+    /// answer here: that gate is free.
+    /// </summary>
+    public static bool IsHeld(string repositoryId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryId);
+        using var mutex = SecureNamedMutexFactory.Instance.Create(
+            SecureNamedMutexName.Create(MutexPrefix, repositoryId));
+        if (!mutex.WaitOne(TimeSpan.Zero, CancellationToken.None))
+        {
+            return true;
+        }
+
+        // Released rather than left to the handle close. Closing an owned mutex abandons it, and
+        // the next waiter is granted it either way, so this changes no outcome - but abandoned
+        // means "a holder crashed", and a probe that says so on every answer is telling that lie
+        // several times a minute.
+        mutex.Release();
+        return false;
+    }
+
+    /// <summary>
     /// Acquires the repository's sync gate, waiting at most <paramref name="waitBudget"/>.
     /// Null means another sync holds it — the caller reports the named busy outcome rather
     /// than queueing behind a build that can run for minutes.
