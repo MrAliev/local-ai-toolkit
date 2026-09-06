@@ -41,7 +41,12 @@ public sealed class AnEmbeddingRefusalSaysWhatHappenedTests : IDisposable
         var embedder = new BackendGoesAwayEmbedder();
 
         var error = await Assert.ThrowsAsync<EmbeddingUnavailableException>(
-            () => new IndexBuilder(embedder).BuildAsync(
+            // A wait that returns at once. The build now waits out a backend that has gone
+            // (#412), and this test is about the sentence it prints when the waiting is over —
+            // with the shipped delay it would sit here for ten minutes to reach the same line.
+            () => new IndexBuilder(
+                embedder,
+                backendWait: (_, _) => Task.CompletedTask).BuildAsync(
                 sourceRoot,
                 Path.Combine(_root, "index.cidx"),
                 ct: TestContext.Current.CancellationToken,

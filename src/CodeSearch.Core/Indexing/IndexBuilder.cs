@@ -44,8 +44,67 @@ public sealed class IndexBuilder(
     IEmbeddingClient embedder,
     Action<string>? log = null,
     Action<IndexBuildProgress>? progress = null,
-    SymbolDefinitionCatalog? definitions = null)
+    SymbolDefinitionCatalog? definitions = null,
+    Func<TimeSpan, CancellationToken, Task>? backendWait = null)
 {
+    /// <summary>
+    /// How the build waits for a backend that has gone, in the shape <c>OllamaTransport</c>
+    /// already uses for its own retries: a delegate, so a test proves the trying rather than the
+    /// speed of the machine it runs on.
+    /// </summary>
+    private readonly Func<TimeSpan, CancellationToken, Task> _backendWait =
+        backendWait ?? Task.Delay;
+
+    /// <summary>
+    /// How long the build waits for a runner that died before giving up for real.
+    ///
+    /// Ten minutes, chosen by the owner and chosen for the slowest configuration this product
+    /// supports rather than for the machine the failure was seen on: on a processor with no
+    /// graphics card everything here takes substantially longer. The same figure already anchors
+    /// the batch-size reasoning below — the broker's watchdog starts probing a job that has been
+    /// silent for ten minutes.
+    ///
+    /// What it answers: a full build died twice in one day on a runner that had gone, and a third
+    /// run started by hand minutes later finished. The difference was time and nothing else
+    /// (#412).
+    /// </summary>
+    public static TimeSpan BackendWaitBudget { get; } = TimeSpan.FromMinutes(10);
+
+    /// <summary>
+    /// How the tries are spaced: short at first, because a runner that is already coming back
+    /// answers in seconds, then settling at half a minute.
+    ///
+    /// Thirty seconds is this product's own clock for silence — <c>ProgressQueued</c> uses it —
+    /// and the embedding line prints about every fifteen seconds, so a wait that says nothing for
+    /// longer than that is a silence of the kind #387 was about. The last interval is trimmed to
+    /// what is left of the budget: a line promising more time than remains would be a lie in the
+    /// one figure it carries.
+    /// </summary>
+    private static readonly TimeSpan[] BackendWaitLadder =
+    [
+        TimeSpan.FromSeconds(5),
+        TimeSpan.FromSeconds(10),
+        TimeSpan.FromSeconds(20),
+        TimeSpan.FromSeconds(30),
+    ];
+
+    /// <summary>
+    /// One waiter at a time for the whole build. Two batches are in flight — the next is posted
+    /// before the current is awaited — so an outage reaches both, and two unserialised waiters
+    /// would print two countdowns of one outage and knock twice on a runner that is not there.
+    /// The second waiter tries again the moment the first is let through, which is the moment the
+    /// backend is known to be back.
+    /// </summary>
+    private readonly SemaphoreSlim _backendGate = new(1, 1);
+
+    /// <summary>
+    /// How long this build has spent waiting, so the embedding rate can be measured against the
+    /// time it was embedding. Without this, a ninety-second outage lowers the average for the
+    /// rest of the run and the estimate a reader uses to decide whether to wait is inflated by
+    /// an event that is already over.
+    /// </summary>
+    private TimeSpan _backendWaited;
+
     /// <summary>
     /// Definition bodies for the tree being indexed, from the semantic phase that ran before
     /// this one. Empty for a build with no semantic data — an overlay, a repository whose
@@ -530,6 +589,14 @@ public sealed class IndexBuilder(
         var stopwatch = Stopwatch.StartNew();
         var done = restored;
         var embeddedThisRun = 0;
+
+        // A build that is waiting for a backend still has to look alive. Progress is what says
+        // so: `Sync:` prints how long ago the record was written precisely so that a build whose
+        // process died reads as stale, and a ten-minute pause with no write is indistinguishable
+        // from that. The counters are the ones already reached; the rate is zero and the estimate
+        // unknown, which is the shape a checkpoint restore already reports, so the reader is told
+        // "calculating" rather than an estimate nobody is earning.
+        void Pausing() => _progress(new IndexBuildProgress(done, total, 0, null));
         var position = 0;
         var budget = InitialBatchChars;
 
@@ -572,7 +639,7 @@ public sealed class IndexBuilder(
                         batch,
                         chars,
                         stopwatch.Elapsed,
-                        EmbedBatchAsync(batch, checkpoint, ct));
+                        EmbedBatchAsync(batch, checkpoint, Pausing, ct));
                 }
 
                 if (current is not null)
@@ -596,7 +663,12 @@ public sealed class IndexBuilder(
 
                     done += current.Items.Count;
                     embeddedThisRun += current.Items.Count;
-                    var rate = embeddedThisRun / Math.Max(0.001, stopwatch.Elapsed.TotalSeconds);
+                    // Time spent embedding, not wall clock: an outage the build waited out is
+                    // over, and leaving it in the denominator lowers the average for the whole
+                    // rest of the run. The estimate below is what a reader uses to decide whether
+                    // to wait, so it must not be inflated by an event that has finished.
+                    var embedding = stopwatch.Elapsed - _backendWaited;
+                    var rate = embeddedThisRun / Math.Max(0.001, embedding.TotalSeconds);
                     // Against everything this build has to produce, not against what is left to
                     // embed. `done` starts at the number the checkpoint restored, so counting it
                     // against the queue reports 21 075 of 20 980 on a resumed build, with a
@@ -711,19 +783,113 @@ public sealed class IndexBuilder(
     /// in the second half threw the first half away - up to 511 chunks of finished work, redone
     /// on the next run, and a deterministic failure means on every run after it as well.
     /// </summary>
-    private async Task<float[][]> EmbedBatchAsync(
-        IReadOnlyList<(string RelPath, int Slot, string Text)> batch,
-        EmbeddingCheckpointStore? checkpoint,
+    /// <summary>
+    /// One batch, waiting out a backend that has gone rather than ending the build with it.
+    ///
+    /// Here rather than above the build, because here the work already done is kept: the caller
+    /// checkpoints each batch, and a build that resumes from the batch it was on loses nothing.
+    /// The exception is the one <see cref="EmbedBatchAsync"/> deliberately refuses to halve on —
+    /// halving cannot make a missing runner answer (#369) — so this is the only place that can
+    /// treat it as a pause instead of an end.
+    ///
+    /// Cancellation is not caught: the wait is interruptible, and a build a person stopped must
+    /// stop.
+    /// </summary>
+    private async Task<float[][]> EmbedWaitingForABackendAsync(
+        IReadOnlyList<string> inputs,
+        Action pausing,
         CancellationToken ct)
     {
-        var inputs = batch.Select(b => b.Text).ToList();
+        var deduplicationKey = EmbeddingDeduplicationKey(inputs);
         try
         {
             return await embedder.EmbedAsync(
                 inputs,
                 LocalJobPriority.Background,
-                EmbeddingDeduplicationKey(inputs),
+                deduplicationKey,
                 ct);
+        }
+        catch (EmbeddingUnavailableException)
+        {
+            // Down to the patient path. Taking the gate only now keeps the ordinary case
+            // concurrent: batches are meant to overlap, and serialising them all to guard a
+            // failure that has not happened would cost every build the throughput.
+        }
+
+        await _backendGate.WaitAsync(ct);
+        try
+        {
+            return await WaitForABackendAsync(inputs, deduplicationKey, pausing, ct);
+        }
+        finally
+        {
+            _backendGate.Release();
+        }
+    }
+
+    /// <summary>
+    /// The patient path, entered holding the gate. Its first attempt is silent and immediate: for
+    /// the batch that arrived second the backend is usually already back, and a countdown printed
+    /// before finding that out would be a line about nothing.
+    /// </summary>
+    private async Task<float[][]> WaitForABackendAsync(
+        IReadOnlyList<string> inputs,
+        string deduplicationKey,
+        Action pausing,
+        CancellationToken ct)
+    {
+        var spent = TimeSpan.Zero;
+        var outage = Stopwatch.StartNew();
+        var waited = false;
+        for (var attempt = 0; ; attempt++)
+        {
+            try
+            {
+                var embeddings = await embedder.EmbedAsync(
+                    inputs,
+                    LocalJobPriority.Background,
+                    deduplicationKey,
+                    ct);
+                if (waited)
+                {
+                    _log(IndexText.BuildBackendAnswered(
+                        outage.Elapsed.TotalSeconds.ToString("F1", CultureInfo.InvariantCulture)));
+                    _backendWaited += outage.Elapsed;
+                }
+
+                return embeddings;
+            }
+            catch (EmbeddingUnavailableException) when (spent < BackendWaitBudget)
+            {
+                // Trimmed to what is left, so the figure the line prints is one the build will
+                // honour rather than one it rounds up to.
+                var interval = BackendWaitLadder[Math.Min(attempt, BackendWaitLadder.Length - 1)];
+                var remaining = BackendWaitBudget - spent;
+                if (interval > remaining)
+                {
+                    interval = remaining;
+                }
+
+                _log(IndexText.BuildBackendWaiting(
+                    remaining.TotalMinutes.ToString("F1", CultureInfo.InvariantCulture)));
+                pausing();
+                await _backendWait(interval, ct);
+                spent += interval;
+                waited = true;
+            }
+        }
+    }
+
+    private async Task<float[][]> EmbedBatchAsync(
+        IReadOnlyList<(string RelPath, int Slot, string Text)> batch,
+        EmbeddingCheckpointStore? checkpoint,
+        Action pausing,
+        CancellationToken ct)
+    {
+        var inputs = batch.Select(b => b.Text).ToList();
+        try
+        {
+            return await EmbedWaitingForABackendAsync(inputs, pausing, ct);
         }
         catch (Exception exception) when (
             exception is not OperationCanceledException and
@@ -733,10 +899,14 @@ public sealed class IndexBuilder(
             _log(IndexText.BuildBatchHalved(batch.Count, exception.Message));
             var half = batch.Count / 2;
             var headItems = batch.Take(half).ToArray();
-            var head = await EmbedBatchAsync(headItems, checkpoint, ct);
+            var head = await EmbedBatchAsync(headItems, checkpoint, pausing, ct);
             try
             {
-                var tail = await EmbedBatchAsync([.. batch.Skip(half)], checkpoint, ct);
+                var tail = await EmbedBatchAsync(
+                    [.. batch.Skip(half)],
+                    checkpoint,
+                    pausing,
+                    ct);
                 return [.. head, .. tail];
             }
             catch
