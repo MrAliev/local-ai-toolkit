@@ -1,1140 +1,652 @@
 ![LocalAi logo](docs/images/localai-mark.png)
 
-# Local AI Developer Toolkit
+# Local AI Toolkit
+
+**Local models that do the reading — for you, and for your cloud agent. A real saving in
+cloud tokens, and in your own time.**
 
 [Русская версия](README.ru.md)
 
-[![Build and test](https://github.com/MrAliev/local-ai-developer-toolkit/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/MrAliev/local-ai-developer-toolkit/actions/workflows/build-and-test.yml)
-[![Latest release](https://img.shields.io/github/v/release/MrAliev/local-ai-developer-toolkit?display_name=tag)](https://github.com/MrAliev/local-ai-developer-toolkit/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-## Overview
+A cloud agent spends most of its tokens looking rather than thinking: opening candidate
+files, searching the code, walking dependencies, scrolling a build log, describing a
+screenshot, translating a page. LocalAi does that part on your own machine and hands back
+the answer, so the agent starts from a result instead of paying to find one.
 
-Local AI Developer Toolkit is a .NET solution for running local-model developer tools
-through one durable, machine-wide broker. It combines repository-aware semantic code
-search, MCP integrations, local-model task helpers, and Git-aware index synchronization
-without changing source projects merely by opening the repository.
+**Reading this repository whole would cost a cloud agent about 1 480 000 tokens. A question
+answered from the local index costs about 2 000.**
 
-The source-level solution, namespaces, commands, and runtime directory remain named
-`LocalAi`, `CodeSearch`, and `LocalLm`. The repository name describes the complete
-toolkit rather than renaming those stable contracts.
+A subscription to any cloud agent is optional: the same tools answer from the command line,
+if you would rather work on your own.
 
-## Core capabilities
+---
 
-- A durable machine-wide FIFO broker is the only supported Ollama transport, keeping
-  concurrent Codex, Claude, CodeSearch, and LocalLm workloads sequential.
-- Ollama being down is a waiting condition rather than a failure: queued work is kept, the
-  broker retries, and a call that gives up says Ollama is not answering and at which address
-  instead of reporting a bare cancellation. Where the installer recorded a verified Ollama, the
-  broker starts it once — only that recorded executable, never one resolved at the moment of
-  use, and never for an endpoint on another machine.
-- A backend watchdog is separate from the lease heartbeat. Long-running jobs have no total
-  duration limit; after ten minutes without completion the broker probes backend/model residency and only
-  fails an attempt after two consecutive confirmed unhealthy results. Probe timeouts and
-  inconclusive results never classify a healthy multi-hour operation as failed.
-- Repository synchronization persists a safe progress snapshot. While a generation builds,
-  every search, navigation and status answer carries a `Sync:` line naming the phase,
-  processed/total/remaining chunks, an ETA and how long ago that was recorded; `index_status`
-  adds the measured rate. Neither exposes source chunks or job prompts.
-- Task-aware routing selects an eligible model by capability, current VRAM residency,
-  context limit, experiment state, and established fallback order.
-- Model-aware snapshots group work for the same model, run shorter compatible tasks
-  first, and prevent starvation after 15 minutes.
-- CodeSearch combines vector similarity with literal matching for repository-aware
-  semantic and lexical code search.
-- Immutable base generations represent the selected local mainline, while exact
-  per-worktree overlays contain branch and dirty-content differences.
-- CodeSearch and LocalLm expose stdio MCP servers for integration with compatible AI
-  clients.
-- Repository synchronization and shared Git hooks are explicit opt-in operations.
-- Recommended models are discovered and installed through MCP without removing
-  existing fallback models.
+## Two ways to use it
 
-## How the components fit together
+**As subagents to a cloud agent.** Claude Code, Codex and any other MCP client can call
+LocalAi's tools directly. The agent hands them the simple, repetitive work and starts from
+prepared results, instead of doing that drudgery itself on cloud tokens.
 
-```text
-Codex / Claude / MCP clients
-          |
-          +--> CodeSearch MCP/CLI --> repository index + worktree overlay
-          |
-          +--> LocalLm MCP --------> local task helpers
-                          |
-                          v
-                 LocalAi FIFO broker
-                          |
-                          v
-                        Ollama
+**Without a cloud agent, from the command line.** The same capabilities, but as helpers for
+you: search code by meaning, triage a log, read an image, translate a document. It is the
+same index and the same models either way, so nothing is lost by starting here and adding an
+agent later.
+
+![How LocalAi fits together: you reach its tools through a cloud agent over MCP or straight from the command line, and the tools use a broker for local models and a per-repository code index](docs/images/how-it-works.svg)
+
+**Why there is a broker in the middle.** There is one per machine and it holds the queue.
+That is how Claude, Codex and the command line all work at once without tripping over each
+other, and why one model sits in video memory rather than four fighting over it.
+
+**Nothing leaves the machine.** Ollama listens on `127.0.0.1`, and neither your code nor the
+prompts built from it go anywhere else. Left alone, the runtime makes no network calls at
+all: the update check is off by default. Models and missing prerequisites are downloaded
+when you ask for them.
+
+---
+
+## What a cloud agent gets
+
+Twenty tools over MCP. The agent calls them itself, whenever a question is cheaper to ask
+locally.
+
+| Tool | What it does |
+| --- | --- |
+| `search_code` | search by meaning and by exact name at once |
+| `get_code_chunk` | pull a match in full |
+| `go_to_definition` | where the symbol under the cursor is declared |
+| `find_references` | who calls it and where it is used |
+| `find_implementations` | who implements or overrides it |
+| `find_relationships` | the relationship graph: implementation, override, type |
+| `lsp_open_document` | hand navigation the text of an unsaved file |
+| `lsp_close_document` | give navigation back to the indexed snapshot |
+| `ask_local` | mechanical work over files you name |
+| `triage_log` | make sense of machine output of any length |
+| `read_image` | read an image from disk |
+| `translate_local` | translate, structure intact |
+| `index_status` | whether an index exists, what built it, how far behind HEAD |
+| `index_refresh` | refresh the index after a commit |
+| `index_unload` | free the memory a loaded index holds |
+| `local_models_status` | what is installed, what is resident, what is missing |
+| `local_model_preflight` | prove a model fits entirely in video memory |
+| `local_models_sync` | fetch the recommended models that are missing |
+| `local_model_experiment_report` | statistics for one task-and-model pair |
+| `local_model_feedback` | decide a model's fate: promote, keep as fallback, disable |
+
+## What the command line gets
+
+The set is **not the same**: some tools exist only here, some only over MCP.
+
+| Command | What it does |
+| --- | --- |
+| `codesearch search --query "…"` | the same search by meaning and by name |
+| `codesearch get-chunk --id …` | pull a match in full |
+| `codesearch status` | where the index is, whether it drifted, whether the repo is connected |
+| `codesearch scan` | what would go into the index at all |
+| `codesearch index` / `overlay` | build an index by hand, outside LocalAi's management |
+| `codesearch evaluate --cases …` | run the search-quality corpus |
+| `localai semantic definition` / `references` / `implementations` / `relationships` | navigate by symbol |
+| `localai ask "…" <file> …` | mechanical work over files |
+| `localai triage <log>` | make sense of a log |
+| `localai read-image "…" <image>` | read an image |
+| `localai translate --in <file> --from … --to …` | translate |
+| `localai sync` | build or refresh the index |
+| `localai hooks install` | install the hooks that keep the index current |
+| `localai repo status` | whether a repository is connected |
+| `localai doctor` | what is wrong with the installation, read-only |
+| `localai model status` / `pull` / `preflight` | models: installed, fetch, prove the fit |
+| `localai policy show` / `set` | the model residency policy |
+| `localai prune` | clear out stale generations and overlays |
+| `localai telemetry` | a summary of local jobs |
+| `localai update` | update the installation |
+
+**Not on the command line.** `lsp_open_document` and `lsp_close_document` take the text of an
+unsaved buffer — and in a shell there is no such buffer, so there is nothing to hand over.
+
+**Not over MCP.** Six commands are deliberately left to you, for exactly three reasons:
+
+**It already happens by itself — no need to call it.**
+
+- `localai prune` — tidying runs after every index build. Stale generations and overlays go
+  by themselves, and the build prints how much it freed.
+- `localai sync` — after a commit, checkout, merge or rebase the Git hooks run it. The agent
+  is left `index_refresh` for exactly one case: edits saved but not yet committed.
+
+**It is a product update, and it is run by hand.**
+
+- `localai update` installs new binaries and re-registers the MCP servers with your clients.
+  That is an install over an install, not an everyday operation, and you do it when you see
+  fit. While there are no published releases it goes the same way the first install did:
+  build a package and run `LocalAi.Installer.exe` over the top.
+
+**It is information for you, in a shape made for reading.**
+
+The agent has no use for it in that shape — it gets a report line for every call it makes,
+and `index_status` answers for the index. A person needs the wider picture:
+
+- `localai doctor` — what is wrong with the installation: reachability, models, permissions,
+  paths. Read-only; it starts nothing and repairs nothing.
+- `localai telemetry` — a summary over a period: how many jobs, how many succeeded, median
+  and p90 duration, the estimated saving — broken down by model and by kind of task.
+- `codesearch scan` — what would be indexed at all. You look at it while setting a repository
+  up, to see the size of the job, not while asking a question about code.
+- `codesearch evaluate` — the search-quality corpus. A tool for developing LocalAi itself,
+  not for working with your code.
+
+---
+
+## Code search is not text search
+
+A file is not sliced into equal slabs of text. It is **taken apart by declaration** — class,
+method, function — and each one enters the index whole, with its name, its signature and its
+exact lines. That is why a hit reads `OrderCloser.CloseAsync` with its whole body, rather
+than a line that happened to match in the middle of somebody else's method.
+
+- **C#** is parsed by **Roslyn**, the same compiler that builds the project. It walks a real
+  syntax tree, and a chunk is either a whole type or one executable member: a method, a
+  constructor, an operator, a property with a body.
+- **TypeScript and Python** are mapped by the **SCIP** indexers. They report where each
+  declaration begins and ends, and the chunk boundaries come from there — not guessed from
+  indentation.
+- **Everything else** — markup, configuration, documentation, any language with no indexer —
+  cannot be taken apart that way, so it gets an honest sliding window: 60 lines with 12 lines
+  of overlap, so a thought is not torn in half at a seam.
+
+One thing the index cannot see: a file you have edited but not saved. Navigation can still
+answer for it, but only when an agent hands over the buffer's text — there is no such path
+from the command line, and language servers stay off until you enable them.
+
+---
+
+## With a cloud agent: what stops costing tokens
+
+It is not only about volume. A question asked in words rarely maps onto a keyword — and a
+keyword is exactly what an agent is reduced to searching for when there is no index.
+
+**Measured on this repository.** The question "who is subscribed to a broker job finishing":
+
+- Grepping for `Subscribe` finds **one file** under `src`, and it is not the answer.
+- `search_code` returns `IBrokerQueue.CompleteAsync` and `BrokerJobPending` — neither of
+  which contains the word "subscribe" anywhere. It matched by meaning.
+
+| Question | Without LocalAi: where the tokens go | Tokens | With LocalAi: where the tokens go | Tokens |
+| --- | --- | --- | --- | --- |
+| "Who is subscribed to a job finishing?" | guess a keyword, open candidates whole — `DurableQueue.cs` alone is 49 KB | ≈ **12 400** for one file, and not the answer yet | three fragments, with paths and line ranges | ≈ **2 000** |
+| "How does the order pipeline work?" | read every file mentioning "Order" and assemble the picture yourself | tens of thousands | a fragment per link in the chain, each with its place | ≈ **2 000** |
+| "What does this codebase do?" | read all of it | ≈ **1 480 000** | index once, then ask | ≈ **2 000** a question |
+
+The difference is not that the agent reads faster. It is that **only the fragments that
+matched enter its context**, and the hunt through candidates is paid for by your GPU rather
+than by your subscription.
+
+### It works by default, and you can see it
+
+**Nothing to switch on.** The installer tells the agent these tools exist and that they come
+first. From there the agent decides for itself: it sees a "where does this live" question and
+reaches for `search_code` instead of opening files.
+
+**Every call prints what it saved.** Not at the end of the month and not on average — right
+there, with the answer:
+
+```
+🔧 Locally: qwen3.5:9b. Files processed: 1 — GenericTextChunker.cs. 9.4s (2.3s queued).
+   Saved negligibly few cloud tokens — under ~0.5K.
 ```
 
-The broker owns model transport and queue durability. CodeSearch owns chunking,
-embeddings, immutable index generations, overlays, and hybrid retrieval. LocalLm owns
-local chat/task helpers and token estimates. `LocalAi.Cli` owns repository registration,
-synchronization, compatibility transport, and opt-in hook installation.
+Here the product admits there was no saving: the file is small and was not worth delegating.
+That is the point — the figure is there so you see the truth, not so the tool looks good.
 
-### CodeSearch result workflow
+The estimate is deliberately coarse and reported as a range rather than a number: Latin text
+and source code at about **4 characters per token**, Cyrillic at about **2.2**, an image at
+**width × height ÷ 750**.
 
-`search_code` uses the embedding model recorded in the index. Production search resolves
-a measured relevance floor for that exact model and fails closed with
-`threshold not calibrated` when no profile exists; it never borrows a threshold from
-another model.
+### If something does not work the way you want
 
-What a hit *is* depends on the language, and the difference is worth knowing before
-reading results. C# is chunked by syntax: one chunk per type — carrying its fields and a
-table of contents of its members — and one per executable member, which means a method, a
-constructor, a destructor, an operator, a conversion operator, an indexer, or a property
-with a real body. Fields and auto-properties ride inside the type chunk rather than
-becoming vectors of their own, because a DTO with twenty properties must not become
-twenty-one of them. Generated C# is not indexed at all.
+Nothing is nailed down — the settings live in `%LOCALAPPDATA%\LocalAi\settings`:
 
-TypeScript and Python are chunked by symbol too, on the definition boundaries the external
-indexers report: one chunk per definition, carrying its real symbol and line span, with a
-definition that contains others listing its children rather than repeating their bodies.
-This depends on the indexer being installed. It does not depend on the indexer reporting a
-body: `scip-typescript` reports none for a declaration whose initialiser is a call —
-`export const X = memo(() => …)` — and that declaration still gets a chunk, its boundary
-read off the file as far as the line before the next thing the indexer named. What keeps
-the window is what has no boundary to read: a declaration inside a function body, which
-the indexer names `local N` and gives neither a name nor a span, and a declaration that
-ends on the line it starts on, where one line is not a body worth a vector of its own.
+| What to change | How |
+| --- | --- |
+| The model for a kind of task | `model-routing.json` — its own chain of models per profile: `CodeAnalysis`, `LogTriage`, `VisualAnalysis`, `PlainTranslation` and a dozen more |
+| The model for a single call | `localai ask "…" <file> --model <model>`, or `--profile <profile>` |
+| A model's fate after a trial | `local_model_feedback`: promote it, keep it as a fallback only, or disable it for that task |
+| Where a model is allowed to sit | `localai policy set --residency` — wholly in video memory, with offload, or on the processor |
+| How long a model stays loaded | `localai policy set --idle-model-keep-alive-seconds` |
+| Take the tools away from a client | unregister the MCP servers from Claude or Codex — the agent then simply does not see them |
 
-Every other indexed format, and every region no definition covers — imports, module-level
-statements, the gap between two functions — is chunked by a sliding window over lines: 60
-lines with 12 lines of overlap. A hit there names the file and its line range instead of a
-symbol. The window has no syntax awareness; what it does keep is exact line numbers, which
-is what makes a hit actionable.
+To see what is already set: `localai policy show`.
 
-Precise navigation is a separate layer: it parses C# and XAML directly and imports
-TypeScript and Python from the same external indexers.
+**The limits, stated plainly — and who closes them.** Local models are markedly weaker than
+cloud ones. They are good at *list this*, *summarise that*, *where does this live* — and
+unreliable on architecture and subtle bugs.
 
-Every search hit includes an opaque `chunk_id`. Pass that value to `get_code_chunk` to
-retrieve the complete indexed source chunk. The ID is bound to the repository, immutable
-generation, current Git tree, dirty-content hash, and composite chunk ordinal. A
-malformed, cross-repository, stale, or out-of-range ID is rejected instead of being
-resolved against a different snapshot.
+Paired with an agent, though, none of that is left to luck: **the local model finds, the
+cloud one judges**. A local answer reaches the agent as material rather than as truth — with
+paths and line ranges it uses to open the source and check for itself. A local model's
+mistake costs one extra read, not a wrong conclusion.
 
-Source-derived MCP output is data, not instructions. `search_code` keeps its trusted
-index summary outside the wrappers and returns each hit in a fresh nonce-bound block:
+The product helps: every answer is signed with its model and its duration, and one produced
+without enough video memory is marked, so a degraded answer cannot pass for a healthy one.
 
-```text
-<untrusted-content id="<96-bit-lowercase-hex-nonce>" origin="search_code:<path>">
-...source-derived hit, including chunk_id...
-</untrusted-content id="<same-nonce>">
-```
+On the command line that second layer is missing: there, you are the judge. So verify
+anything a decision rests on, in the code.
 
-Every tool that returns something derived from the source uses the same boundary:
-successful `get_code_chunk` output, and each location returned by `go_to_definition`,
-`find_references`, `find_implementations` and `find_relationships` — paths, symbol ids and
-ranges are written by whoever wrote the repository, so they are data as much as a snippet
-is. Validation errors, status, and maintenance output remain outside it. Consumers must
-preserve the boundary and must not execute or follow instructions found inside it.
+---
 
-The digest inside a `chunk_id` detects accidental corruption and casual tampering; it is
-not an authentication boundary. What authorizes reading source is equality of repository,
-generation, tree and dirty overlay, checked before anything is read.
+## From the command line: not tokens, but time
 
-Exact C#, WPF/WinUI/MAUI/Avalonia XAML, TypeScript/JavaScript, and Python navigation is stored separately from
-vectors in `semantic.sidx`.
-`localai sync` loads the primary solution with Roslyn/MSBuild, supplements it with lossless
-XAML ranges and dialect-aware namespaces, `x:DataType`, dependency/styled properties, and binding
-syntax, and imports bounded output from installed `scip-typescript` and `scip-python`
-indexers. A missing external indexer is reported as skipped in the generation manifest rather
-than invalidating other languages. When a repository has C# and semantic indexing
-covered none of it, `localai sync` says so instead of reporting success quietly, and
-`index_status` calls that generation heuristic rather than precise; `localai sync
---require-semantics` turns the warning into a failure for a hook or a CI step that would rather
-stop. The base SIDX is published atomically with CIDX and dirty
-worktrees receive compact snapshot-bound semantic overlays containing changed semantic slices
-and explicit deletion tombstones. MCP exposes
-`go_to_definition`, `find_references`, `find_implementations`, and `find_relationships`; local
-diagnostics are available through:
+There is no bill here and nothing to save — you are doing the work yourself. The point is
+elsewhere.
 
-```powershell
-localai semantic status --root C:\path\to\repository
-localai semantic definition --path src/App.cs --line 10 --column 15 --root C:\path\to\repository
-localai semantic references --path src/App.cs --line 10 --column 15 --root C:\path\to\repository
-localai semantic implementations --path src/IService.cs --line 4 --column 18 --root C:\path\to\repository
-localai semantic relationships --path src/Service.cs --line 8 --column 20 --direction outgoing --kind implementation --root C:\path\to\repository
-localai semantic config init
-localai semantic config show
-localai semantic lsp-config init
-localai semantic lsp-config show
-localai semantic fallback-config init
-localai semantic fallback-config show
-localai semantic evaluate --cases tests/CodeSearch.Tests/Fixtures/SemanticNavigation/cases.json --root C:\path\to\repository
-```
+**You do not have to remember what the thing is called.** Ask the way you think: "where is
+it decided how long to wait before retrying", "what happens when a download is cut off". You
+cannot put that question to grep.
 
-`--line` and `--column` are **counted from 1** — the same as the MCP tools, the same as
-`search_code` prints and an editor shows; the column is a UTF-16 offset. Line 0 or column 0
-is refused by name, because it can only be a position counted from zero. Positions that land
-on no symbol return nothing rather than an error, so an off-by-one reads as "there is nothing
-here" rather than as a mistake.
+**The answer comes with coordinates.** Not "here is a file", but a path, a line range and a
+symbol — open it exactly where it matters.
 
-The installation-wide `%LOCALAPPDATA%\LocalAi\settings\semantic-indexing.json` file configures adapter
-enablement, executable paths and arguments, output paths, timeout, captured process output, and
-all SCIP parser limits. The trusted adapter policy also makes legacy position fallback explicit:
-`Utf16` for `scip-typescript` and `Utf32` for `scip-python`; direct SCIP imports without that
-policy still reject ambiguous indexes. It is read on every sync, so changes do not require
-rebuilding LocalAi. On Windows, npm `.cmd` shims are resolved through PATH/PATHEXT while retaining
-bounded output and process-tree timeout handling.
+**The dull work leaves your hands.** Triage a thousand-line log, pull out the TODOs, read a
+screenshot of an error, translate a document — one command each, while you do something
+else.
 
-Live navigation is opt-in through `%LOCALAPPDATA%\LocalAi\settings\language-servers.json`; changing this
-file does not require rebuilding LocalAi. It configures the global enable switch, per-language
-executables and arguments, request/shutdown timeouts, maximum JSON-RPC message size, and bounded
-stderr capture. Defaults for TypeScript/JavaScript, Python, HTML, and C# are written disabled by
-`localai semantic lsp-config init`. MCP clients use `lsp_open_document` with monotonically
-increasing versions and `lsp_close_document`; while open, LSP definition/reference/implementation results are
-authoritative and precise, then navigation falls back to the exact snapshot-bound SIDX. A server
-that drops its transport is restarted once and receives every open document with its latest
-version and full text before the failed query is retried. Repository-relative paths remain `/`
-normalized on every OS; platform-specific absolute paths exist only at the `file://` LSP boundary.
-Persistent implementation and relationship queries use the exact SIDX graph. Incoming queries
-find implementations, overrides, and derived types; outgoing queries expose the corresponding
-base or interface symbols. Relationship queries never use heuristic text matching.
+**And it works with no internet.** A train, a plane, a VPN that is off: the models are on
+disk.
 
-When neither LSP nor the snapshot-bound SIDX can resolve a symbol, LocalAi can perform a bounded
-syntax/text scan. `%LOCALAPPDATA%\LocalAi\settings\semantic-navigation.json` controls whether this fallback
-is enabled and limits scanned files, file size, result count, identifier length, and case
-sensitivity. The file is read for every request, so edits require no rebuild. Fallback results are
-always marked `Heuristic`; they are never promoted to precise navigation.
+---
 
-A fallback also says why it happened. `go_to_definition` and `find_references` prefix a heuristic
-answer with `semantic_navigation_degraded:` naming the cause, and the two causes are worded apart
-because only one is repaired by re-syncing: a generation published before semantic indexing
-existed carries no `semantic.sidx` at all, whereas a current index may simply have no symbol at
-that position. `index_status` reports the same state on its `Navigation:` line, because nothing
-else there moves — a repository that has not been re-synced since semantic indexing shipped still
-reports the right model, an undrifted commit and `Status: current` while every navigation query
-answers from text matching.
-The marker-based `semantic evaluate` command reports correctness, process-cold load time,
-first/warm query percentiles, observed memory deltas, and combined base/overlay SIDX size.
+## Dependencies
 
-CLI equivalents are:
+The installer checks each one and offers to install what is missing. Nothing needs to be in
+place beforehand.
 
-```powershell
-dotnet run --project src/CodeSearch.Cli -- search --query "where is the broker queue" --root C:\path\to\repository
-dotnet run --project src/CodeSearch.Cli -- get-chunk --id "<chunk_id>" --root C:\path\to\repository
-```
+**Without these it does not work at all:**
 
-The complete inventory of all twenty MCP tools — what exists, what it is for, and the
-constraint that matters — is in the [tool reference](docs/mcp-tools.md).
+| | Why |
+| --- | --- |
+| **Windows** | the installer and the launcher are Windows-first |
+| **Git** | a repository is identified by its git directory, and the hooks live there |
+| **Ollama** | every model runs on it; LocalAi only ever reaches it through the broker |
+| **A GPU the model fits in** | by default a model that will not fit entirely in video memory is refused rather than run slowly |
 
-A connected walkthrough for the people who use this daily — what it does, how it works,
-what protects it, and what it saves — is in the
-[developer overview](docs/overview.md).
+**Needed per language — search works without them, but coarser:**
+
+| | Why |
+| --- | --- |
+| **.NET SDK 10** | Roslyn cuts C# into types and members. Without it C# falls back to the line window |
+| **Node.js 20** + **SCIP TypeScript** | declaration-level chunking for TypeScript and JavaScript |
+| **Python 3.10+** + **SCIP Python** | declaration-level chunking for Python |
+
+**Optional:**
+
+| | Why |
+| --- | --- |
+| **GitHub CLI** | only if releases are private, or the release host is unreachable while the API is not. An ordinary installation needs no account: releases are public and fetched over HTTPS |
+
+---
 
 ## Installing
 
-Download `LocalAi.Installer.exe` from the
-[latest release](https://github.com/MrAliev/local-ai-developer-toolkit/releases/latest) and
-run it. Nothing else is needed first: no GitHub account, no sign-in, no clone of this
-repository. Windows 10 or 11 on x64 is the only requirement the wizard refuses to proceed
-without.
+There are no published releases at the moment, so there is one path: build from the
+repository and install from the folder.
 
-There are exactly two supported ways to install: **online** — the wizard downloads the
-manifest, the signature and the package from the release itself — and **from a folder**,
-for a machine with no route to GitHub, described below. Building from source is a
-development activity, not a third way in: hand-made builds are never placed into the
-runtime, and delivery goes change → release → installer only.
-
-Neither way asks you to obtain any key or certificate. The public key that decides what to
-trust ships embedded in every binary this repository builds; the manifest is verified against it
-and the package against the SHA-256 recorded inside that manifest, whichever transport
-delivered them. The one file that embedded key cannot vouch for is the installer itself —
-which is what the two manual checks below are for, and both need nothing but the file.
-
-When the anonymous download fails — a fork kept private, a network that blocks the release
-host but not the API — the installer falls back to the GitHub CLI and reuses the sign-in
-already established on the machine with `gh auth login`. It never asks for, stores or even
-sees a token, and the verification is identical on either transport.
-
-The installer is not Authenticode-signed, so Windows shows *"Windows protected your PC"*.
-Choose **More info → Run anyway**. The SHA-256 of the file is printed in the release notes,
-so a download can be checked against it if it was passed on by someone else.
-
-The stronger check does not depend on the release page at all: publishing a release
-triggers a workflow that records every asset's digest in GitHub's attestation log, which
-the release page cannot rewrite. With the [GitHub CLI](https://cli.github.com/) installed:
+**1. Build a package.** Needs `pwsh` 7 and the .NET SDK 10.
 
 ```powershell
-gh attestation verify LocalAi.Installer.exe --repo MrAliev/local-ai-developer-toolkit
+pwsh scripts/publish-localai-release-win-x64-self-contained.ps1 -ReleaseVersion 0.1.0
 ```
 
-A swapped or corrupted download fails this check even if the SHA-256 beside it was swapped
-to match.
+You get a `publish/` folder holding `LocalAi.Installer.exe` and the package itself.
 
-The project's [code signing policy](docs/code-signing-policy.md) describes what will be
-Authenticode-signed, by whom and from what source once the application to the SignPath
-Foundation open source program completes — at which point the SmartScreen prompt above
-goes away.
+### What it will compute on
 
-The wizard walks through what it finds on the machine, which prerequisites to install (Git,
-Ollama and the language indexers — all through winget, each one consented to individually),
-which release to install, which local models fit the graphics adapter, and which AI clients to
-register. Nothing is applied until the confirmation page.
+The product is built for a graphics card but does not demand one. What you get is your
+choice at install time — you pick the residency policy — and it can be changed later with
+`localai policy set --residency`.
 
-Only Git and Ollama are required: Git is how a repository is identified, scanned and hooked,
-and Ollama is what computes the embeddings, without which there is no index at all. The .NET
-SDK, Node.js, Python and the two SCIP indexers each buy precise navigation for one language,
-and each can be skipped — the page says what skipping it gives up. Between them they are three
-to four gigabytes and several UAC prompts, because winget installs them machine-wide, which is
-a poor thing to demand from somebody who wants semantic search over C#.
-
-Expect the models to dominate the time and the disk: a machine with a 16 GB adapter and none
-of them installed downloads tens of gigabytes. Choosing **Skip** on the models page installs
-the tooling alone, and models can be added later by asking a registered client to run
-`local_models_sync`.
-
-### Installing from a folder
-
-The executable is a wizard; the product is the package it fetches while it runs. To install on
-a machine with no route to GitHub, download `release-manifest.json`, `release-manifest.sig` and
-`localai-package.zip` from the release on a machine that has one, put all three in a folder, and
-give that folder to the installer — either by typing its path on the package page, or by placing
-`LocalAi.Installer.exe` in the folder alongside them, which the wizard offers on its own.
-
-Nothing is trusted for coming from a folder. The manifest is verified against the key embedded
-in the installer and the package against the SHA-256 inside that manifest, exactly as over
-HTTPS. Models still come from the Ollama registry, so this makes an installation possible
-without GitHub, not without the internet.
-
-## Prerequisites
-
-These are for building the solution from source. Installing a release needs none of them.
-
-- .NET 10 SDK
-- Access to `https://api.nuget.org/v3/index.json` for a clean restore
-- Ollama and an installed compatible model only when running model-backed features;
-  builds and unit tests do not start Ollama
-
-`NuGet.config` deliberately clears inherited package sources so unrelated private feeds
-do not become build dependencies.
-
-## Quick start
-
-Restore and verify the solution:
-
-```powershell
-dotnet restore LocalAi.slnx
-dotnet test LocalAi.slnx --configuration Release --no-restore
-```
-
-Look at what connecting a repository involves, and at how this one stands. Neither command changes anything:
-
-```powershell
-dotnet run --project src/LocalAi.Cli -- bootstrap --dry-run
-dotnet run --project src/LocalAi.Cli -- repo status
-```
-
-Synchronize an authorized repository explicitly:
-
-```powershell
-dotnet run --project src/LocalAi.Cli -- sync --root C:\path\to\repository
-```
-
-After installing the MCP binaries, inspect and synchronize the model catalog through
-LocalLm:
-
-```text
-local_models_status
-local_models_sync
-```
-
-The sync command submits allowlisted maintenance jobs to the same durable queue. It
-does not expose a generic pull command and does not remove existing models.
-
-Install the shared chained Git hooks only after approving that external mutation:
-
-```powershell
-C:\path\to\LocalAi\bin\launcher\localai-launcher.exe run localai hooks install --root C:\path\to\repository
-```
-
-The dispatchers go wherever Git actually looks for hooks. A repository that sets
-`core.hooksPath` — husky, lefthook and simple-git-hooks all do — gets them there instead of
-in `$GIT_DIR/hooks`, where Git would never read them. For husky that means `.husky`, not the
-`.husky/_` it rewrites on every `npm install`. Dispatchers that land in the working tree are
-added to `.git/info/exclude`, so they stay out of `git status` without touching a `.gitignore`
-that belongs to the repository rather than to us.
-
-## What the installer sets up
-
-A finished installation is expected to leave a machine that can actually be used, so the
-wizard applies three things beyond copying binaries. Each is shown on the review page and
-none is applied before the run is confirmed.
-
-**Client integration.** For every AI client the wizard detects, it registers the `codesearch`
-and `locallm` MCP servers against the stable launcher path and writes a managed instruction
-block into that client's global instructions file — `~/.claude/CLAUDE.md` for Claude,
-`~/.codex/AGENTS.md` for Codex. A detected client defaults to both; a client that was not
-found is left alone, and an explicit choice always wins.
-
-For Codex, every tool the two servers expose gets a `[mcp_servers.<server>.tools.<tool>]` row
-from a per-tool approval matrix: reads and bounded local compute get `approve` — the value that
-skips the prompt — while the two heavyweights, `local_models_sync` (downloads models by the
-gigabyte) and `local_model_feedback` (changes persistent routing state), get `prompt`. The
-server default is `prompt`, so a tool added by a later release asks until that release
-classifies it in the matrix; the rows are what carry the approvals.
-
-On upgrade the managed sections are rebuilt to the matrix, and only the literal `approve` an
-earlier installer wrote is the installer's to rebuild. Anything else in an approval slot is the
-user's own decision and survives — `deny` always, and a stricter-than-matrix `prompt` too — so
-a deviation towards stricter is permanent and a deviation towards looser does not outlive an
-upgrade. The matrix is held to the servers by tests that reflect over their tool attributes, so
-a new tool cannot ship without a classification.
-
-The block is repository-agnostic on purpose. Indexing stays opt-in per repository, so rather
-than assuming the repositories that happened to be set up on the machine it was installed on,
-it states the check (`localai repo status`) and the two commands that connect any repository
-wherever it was cloned.
-
-The instruction block is delimited by `<!-- BEGIN LOCALAI MANAGED INSTRUCTIONS -->` and its
-matching end marker. Everything between them is replaced wholesale on the next install and
-everything outside them is preserved, so upgrading the rules never costs a user their own
-notes. The block covers routing — when to reach for `search_code` instead of a text search,
-which question goes to `find_references` rather than back to search, why a recursive sweep of
-the tree is the rule being broken rather than a shortcut to it, and what belongs to
-`read_image`, `triage_log` and `ask_local` — as well as the transport
-invariants: the shared broker only, never Ollama directly, full-VRAM validation. Routing is
-included because transport rules alone describe how a call must travel without saying when
-to make one.
-
-The two clients get different amounts of it. What has to be in context before a decision is
-taken stays in the block for both: the invariants, the routing, the read-only repository
-probe, and what to do when a local tool refuses. The reference material — the launcher
-commands that change the machine, where hooks live, how overlays are built — is a skill for
-Claude, written to `~/.claude/skills/localai/SKILL.md` and loaded when it is invoked rather
-than on every session. Codex has no import mechanism and no skills, so its block carries
-both halves inline. An import would not have helped either client: `CLAUDE.md` imports are
-expanded at launch, so they tidy a file without saving a token.
-
-**Models.** The wizard installs the models the machine can hold and skips the ones already
-present; the broker is asked what is installed rather than a list being assumed, and only
-missing models are pulled. Candidates come from the signed release manifest, never from the
-routing catalogue or the registry, because the broker installer refuses any model it cannot
-weigh against the signature. Automatic selection takes the largest context each model fits
-in; a model too large for the adapter at every context size is reported by name instead of
-being downloaded and left unusable. Anything downloaded is then preflighted, so a model that
-cannot load fully resident is reported rather than silently accepted.
-
-The model list is generated per release from the routing catalogue and the public registry,
-and signing demands it:
-
-```powershell
-localai-release-signer models --out publish\release\release-models.json
-localai-release-signer sign --models publish\release\release-models.json ...
-```
-
-`sign` refuses to run without `--models` (or an explicit `--no-models`), `release --publish`
-refuses a manifest whose model list is empty, and the wizard reports a run that installed
-no model as a failure rather than as a line in the log. Sizes are read from the registry at
-signing time rather than committed here: a tag republished with different quantisation keeps
-its name, so a size in the source tree goes stale without anyone noticing.
-
-**Residency policy.** The video-memory page writes `%LOCALAPPDATA%\LocalAi\settings\policy.json` —
-but only when LocalAi is installed. On a machine without an installation nothing is written:
-creating the LocalAi root as a side effect would give it inherited permissions, which the
-layout lease refuses without mutating. Relaxing the policy is deliberate and stays visible
-in the run report.
-
-**A run journal, and a rollback it can honestly offer.** Before each effect the wizard
-writes its intent to a journal in `%LOCALAPPDATA%\LocalAi-installer-logs` — atomically and
-write-through, so a run killed mid-effect still leaves a record — and the outcome after it.
-The journal also holds a live lock for as long as the wizard runs, so a second wizard can
-tell a killed run from one still installing in another window. After a failed or cancelled
-run the finish page offers "Roll back changes", and the next start offers the same for a
-run that never got to finish; continuing past that offer is recorded so it is made once.
-Rollback undoes only what it can prove: an upgrade's activation goes back through the
-launcher's guarded pointer swap, and the residency policy, the Ollama launch record and the
-client configuration files are restored only while they still hash to what the run wrote.
-What it will not undo is named plainly, effect by effect: winget and npm installs are shared
-machine software, pulled models live in Ollama's store, and a first installation's root
-holds runtime data as soon as the broker runs. A successful run writes the journal and
-nothing else; rollback is a recovery, not an uninstaller.
-
-**A way out that is easy to find.** The installer is also the uninstaller, the updater and
-the repair tool, so starting it asks which of those this run is — and offers only what the
-machine actually allows, saying why for the rest. An installation registers itself in Apps
-&amp; features, whose entry runs a copy of the installer parked inside the runtime root, so
-removal is still there long after the downloaded file has been cleared away. Removal itself
-is a matrix rather than one hammer: three presets — full uninstall, disconnect clients,
-reinstall-friendly — over rows you can change one at a time, with every removal listed on a
-review page first. The broker is asked to finish before the root is touched, the signing key
-directory needs its own separate confirmation, and what an uninstall deliberately leaves —
-winget prerequisites, Ollama models, the installer journal — is named with the commands to
-deal with it by hand.
-
-**No account, no sign-in.** Releases are public, so the installer downloads the manifest, its
-signature and the package over plain HTTPS with no credentials of any kind. A GitHub account
-is not needed to install this, and the GitHub CLI is listed as an optional prerequisite
-rather than a required one.
-
-The CLI remains as a fallback and is tried only when the anonymous path fails — a fork kept
-private is still installable through a sign-in its owner already has, and a network that
-blocks the release host may still allow the API. A verification failure is never retried
-through the other transport: a manifest that failed the embedded key is not a transport
-problem, and asking a second channel for the same document until one of them is believed is
-the shape of the attack this design refuses.
-
-What the transport never does is confer trust. The manifest is checked against the embedded
-key, and the package against the SHA-256 inside that manifest, whichever path fetched them —
-and by whichever component is asking: the installer, `localai update`, or the optional update
-check, which reads the manifest and installs nothing. An anonymous download of a signed document is exactly as trustworthy as an
-authenticated one.
-
-## Build and test
-
-From the repository root:
-
-```powershell
-dotnet restore LocalAi.slnx
-dotnet build LocalAi.slnx --configuration Release --no-restore
-dotnet test LocalAi.slnx --configuration Release --no-build
-```
-
-The single-command baseline verification is:
-
-```powershell
-dotnet test LocalAi.slnx --configuration Release
-```
-
-## Publishing executables
-
-Everything from here to the end of the release sections is for developing and releasing
-this repository — installing a release needs none of it.
-
-Publish only the executable projects that are needed. This first, framework-dependent form
-is for local development; a release ships the self-contained form below it, because the
-package layout has no room for dependency assemblies and the verifier refuses anything
-else:
-
-```powershell
-dotnet publish src/CodeSearch.Cli/CodeSearch.Cli.csproj --configuration Release --output publish/CodeSearch.Cli
-dotnet publish src/CodeSearch.Mcp/CodeSearch.Mcp.csproj --configuration Release --output publish/CodeSearch.Mcp
-dotnet publish src/LocalLm.Mcp/LocalLm.Mcp.csproj --configuration Release --output publish/LocalLm.Mcp
-dotnet publish src/LocalAi.Cli/LocalAi.Cli.csproj --configuration Release --output publish/LocalAi.Cli
-dotnet publish src/LocalAi.Launcher/LocalAi.Launcher.csproj --configuration Release --output publish/LocalAi.Launcher
-dotnet publish src/LocalAi.Broker/LocalAi.Broker.csproj --configuration Release --output publish/LocalAi.Broker
-```
-
-> The queue and the runtime ACL bootstrap live in `LocalAi.Broker.Core`, a library, and
-> `LocalAi.Broker.Client` references that rather than the broker executable. Keep it that
-> way: a project reference to an `OutputType=Exe` project drags the broker's `apphost.exe`,
-> `deps.json` and `runtimeconfig.json` into every dependent publish and breaks RID-specific
-> framework-dependent publishing with `NETSDK1152`. The `LocalAi.Broker.exe` that development
-> builds start is copied explicitly, in `src/BrokerBinary.props`, by the projects that need
-> it.
-
-For an installer that does not depend on preinstalled .NET runtime:
-
-```powershell
-dotnet publish src/CodeSearch.Cli/CodeSearch.Cli.csproj --configuration Release --runtime win-x64 --self-contained true --property:PublishSingleFile=true --output publish/CodeSearch.Cli
-dotnet publish src/CodeSearch.Mcp/CodeSearch.Mcp.csproj --configuration Release --runtime win-x64 --self-contained true --property:PublishSingleFile=true --output publish/CodeSearch.Mcp
-dotnet publish src/LocalLm.Mcp/LocalLm.Mcp.csproj --configuration Release --runtime win-x64 --self-contained true --property:PublishSingleFile=true --output publish/LocalLm.Mcp
-dotnet publish src/LocalAi.Cli/LocalAi.Cli.csproj --configuration Release --runtime win-x64 --self-contained true --property:PublishSingleFile=true --output publish/LocalAi.Cli
-dotnet publish src/LocalAi.Launcher/LocalAi.Launcher.csproj --configuration Release --runtime win-x64 --self-contained true --property:PublishSingleFile=true --output publish/LocalAi.Launcher
-dotnet publish src/LocalAi.Installer/LocalAi.Installer.csproj --configuration Release --runtime win-x64 --self-contained true --property:PublishSingleFile=true --output publish/LocalAi.Installer
-```
-
-The `publish/` directory is ignored. Publishing does not register executables with an
-AI client or install Git hooks.
-
-### Cutting a release
-
-```powershell
-dotnet run --project src/LocalAi.ReleaseSigner/LocalAi.ReleaseSigner.csproj -c Release -- `
-    release --version 0.1.36 --root .
-```
-
-The first run scaffolds `docs/releases/0.1.36.md` and `.ru.md` and stops. Write them — the notes
-are connected prose about what changed and why, and a list of commit subjects is a different and
-much less useful thing. Run it again and it opens the pull request that carries them.
-
-Once that pull request is merged, from `main`:
-
-```powershell
-dotnet run --project src/LocalAi.ReleaseSigner/LocalAi.ReleaseSigner.csproj -c Release -- `
-    release --version 0.1.36 --root . --publish
-```
-
-That builds, signs locally, checks the manifest against the release being published, and only
-then tags and uploads. It refuses a dirty tree, a branch other than `main`, a commit `origin`
-does not have, a commit without a green `build-and-test` run, a version already tagged, and notes
-still carrying the scaffold's TODO.
-
-The split is deliberate. Building and signing are repeatable; tagging and publishing are what
-other people's installers resolve, so they are a separate, explicit invocation rather than a
-later stage of the same one. Merging the pull request stays a human decision throughout. One
-command also means the version and the commit are stated once each: every place that needs
-them — note filenames, the publish script, the manifest's version directory, the tag — gets
-the same value, compared rather than retyped.
-
-### Signing a release manifest
-
-Everything in this section is the machinery behind `release --publish` above: for a real
-release it runs as that one command, and by hand it exists for the runbook's restore check
-and for understanding what is being trusted. The one thing that is done by hand, once, is
-creating a key pair — and only a fork needs to: this repository's releases are signed with
-its own key, whose public half is already committed as the trust anchor.
-
-An installed machine never needs a system-wide .NET runtime. Every component — the broker
-included — ships as a self-contained executable, and the broker is started as
-`LocalAi.Broker.exe` from the directory of whichever component needs it. That path is
-resolved through `AppContext.BaseDirectory`; **`Assembly.Location` must not be used**,
-because it returns an empty string in a single-file publish and the process dies with
-"The path is empty" before the broker is ever reached.
-
-The installer refuses any release whose manifest is not signed with the ECDSA P-256 key it
-trusts. This is a self-generated key pair, not a certificate: no certificate authority and
-no cost are involved. Generate it once and keep the private key outside the repository:
-
-```powershell
-$dir = "$env:LOCALAPPDATA\LocalAi\release-signing"
-New-Item -ItemType Directory -Force -Path $dir | Out-Null
-$ec = [System.Security.Cryptography.ECDsa]::Create(
-    [System.Security.Cryptography.ECCurve]::CreateFromFriendlyName("nistP256"))
-[IO.File]::WriteAllBytes("$dir\release-signing-private.pkcs8.der", $ec.ExportPkcs8PrivateKey())
-[IO.File]::WriteAllBytes("$dir\release-signing-public.spki.der", $ec.ExportSubjectPublicKeyInfo())
-$ec.Dispose()
-icacls $dir /inheritance:r /grant:r "$($env:USERNAME):(OI)(CI)F"
-```
-
-Once the offline backup of the raw key exists (see the
-[signing runbook](docs/release-signing-runbook.md)), convert the working copy to a
-DPAPI-wrapped one and let the signer destroy the raw file:
-
-```powershell
-localai-release-signer protect-key
-```
-
-Signing prefers `release-signing-private.pkcs8.dpapi`, still accepts the raw `.der` with a
-warning, and refuses to touch either while the key directory's ACL grants access to anyone
-beyond SYSTEM, Administrators and the current user — the refusal names the offender and
-the `icacls` command that fixes it.
-
-Build the package first. The verifier compares the archive contents against
-`LocalAiPackageLayout.PackageArtifactFiles` with `SetEquals`, so it must hold exactly six
-artifacts plus `localai-package.json`, flat and with nothing extra. **That is why the
-executables must be published self-contained**: the format has no room for sibling
-dependency assemblies, so a framework-dependent build cannot be shipped as a release.
-
-```powershell
-localai-release-signer pack `
-    --input publish\artifacts `
-    --release-version 0.1.22 `
-    --version-directory d9c52d2 `
-    --out publish\release\localai-package.zip
-```
-
-Build the model list the manifest will carry. Sizes come from the public model registry,
-so this step needs the network, and it fails rather than skipping a tag it could not
-size:
-
-```powershell
-localai-release-signer models --out publish\release\release-models.json
-```
-
-Then sign it with `localai-release-signer`. It builds the manifest through the same
-canonical serializer the verifier uses, normalises the signature to the canonical low-S
-form the verifier requires, and re-verifies the result before it can be published:
-
-```powershell
-localai-release-signer sign `
-    --package publish\release\localai-package.zip `
-    --package-uri https://github.com/MrAliev/local-ai-developer-toolkit/releases/download/0.1.22/localai-package.zip `
-    --release-version 0.1.22 `
-    --version-directory d9c52d2 `
-    --models publish\release\release-models.json `
-    --out publish\release
-```
-
-`--models` is not optional. A release signed without it installs no model at all, so
-the signer refuses to run unless the list is supplied or `--no-models` states that the
-omission is deliberate.
-
-Before publishing, run the finished artifacts through the installer's own package verifier.
-This exercises the archive inspection, extraction and metadata comparison an installer
-performs, so a structural mistake fails here rather than on someone else's machine:
-
-```powershell
-localai-release-signer verify-package `
-    --package publish\release\localai-package.zip `
-    --manifest publish\release\release-manifest.json `
-    --signature publish\release\release-manifest.sig
-```
-
-Verification uses the public key embedded in `LocalAi.Installer.Core`
-(`ReleaseTrustAnchor`), not a file next to the tool, so signing with a key the shipped
-installer does not trust fails immediately instead of on a user's machine. Nothing is
-written when verification fails. Commit the public half at
-`src/LocalAi.Contracts/Releases/release-signing-public.spki.der`; the private half
-must never enter the repository.
-
-Publish `release-manifest.json` and `release-manifest.sig` as release assets alongside the
-package. Field rules worth knowing before a release fails validation: `ReleaseVersion` is
-strict semver with **no leading `v`**, `PackageSha256` is **upper-case** hex, and
-`PackageUri` must be `https` without user info or a fragment.
-
-### Authenticode: two separate things
-
-Authenticode appears twice in this project, at different layers, and they are easy to
-confuse.
-
-**The installer executable.** `LocalAi.Installer.exe` is published unsigned. It is the file
-a person downloads and double-clicks, so it is the one Windows judges: an unsigned
-executable carrying the mark of the web produces the full-screen "Windows protected your
-PC" prompt, which is dismissed through *More info -> Run anyway*. Signing this file is the
-only thing that removes that prompt; nothing inside the release affects it. Until there is
-a certificate, `release --publish` prints the installer's SHA-256 so whoever passes the file
-on has something for the recipient to compare against.
-
-**The files inside the package.** `RequiresAuthenticode` in the signed manifest is a
-different check, performed by the installer rather than by Windows: with it set, every
-`.exe` and `.dll` extracted from the package must be signed by the publisher named in
-`AuthenticodePublisherPolicy`, and any file that is not fails the installation. That policy
-is currently a placeholder — subject `CN=LocalAi` and a SHA-256 of sixty-four zeroes — which
-no file can match. `--require-authenticode` therefore refuses to run while it is one, rather
-than stamping a release that every machine would reject with a signature mismatch; an
-installer that meets such a manifest says the same thing instead of blaming the package.
-Replace both values with the real signer's distinguished name and the SHA-256 of its
-SubjectPublicKeyInfo (not the certificate thumbprint) to turn the flag on.
-
-**Order, when a certificate exists.** Sign the artifacts before packing, never after:
-`pack` hashes the archive and `sign` hashes the package, so signing a binary afterwards
-invalidates both. The sequence is publish, `signtool` over `publish\artifacts` and over
-`LocalAi.Installer.exe`, then `pack`, `models`, `sign`, `verify-package`. Always
-countersign with a timestamp (`signtool /tr`), or every signature stops validating the day
-the certificate expires.
-
-### Immutable versions and atomic activation
-
-Publish the CLI, MCP servers, broker, contracts, and their runtime dependencies into a
-fresh staging directory. Merge every per-project publish output into that one directory
-**including the `runtimes\` subtree** — a framework-dependent publish without an explicit
-RID places Windows-only assemblies such as `System.Diagnostics.EventLog.dll` under
-`runtimes\win\lib\net10.0\`, and `deps.json` resolves them from exactly that path. A flat
-copy of the top-level files alone produces a directory that fails at startup with
-`FileNotFoundException`.
-
-Verify the complete output before activating: the staging directory must contain every
-component executable (`codesearch.exe`, `codesearch-mcp.exe`, `locallm-mcp.exe`,
-`localai.exe`, `localai-launcher.exe`, `LocalAi.Broker.exe`) and every dependency
-(`CodeSearch.Core.dll`, `LocalLm.Core.dll`, `LocalAi.Broker.Client.dll`,
-`LocalAi.Repository.dll`, `ModelContextProtocol.dll`, the `Microsoft.Extensions.*` set).
-A directory holding only a couple of dozen files is a partial publish, not a release —
-launching a tool from it fails with a `System.Runtime` load error that comes from the
-child process, not from the launcher.
-
-Then copy it once to
-`bin\versions\<version>`. A published version directory is immutable: activation never
-updates or deletes it, and historical versions remain available for rollback.
-
-Install the independently published launcher at
-`bin\launcher\localai-launcher.exe`. Codex, Claude, Git hooks, and delegation wrappers
-must register that stable executable plus a tool prefix, for example:
-
-```text
-localai-launcher.exe run codesearch-mcp
-localai-launcher.exe run locallm-mcp
-localai-launcher.exe run localai
-```
-
-The active version is the atomically replaced `bin\current.json` document:
-
-```json
-{"schemaVersion":1,"version":"<version>"}
-```
-
-After the candidate directory has been verified, activate it. Activation always requires
-an explicit expectation about the pointer you are replacing, so a concurrent activation
-cannot be overwritten silently:
-
-```powershell
-# Replacing a pointer that already exists: state its current SHA-256.
-$expected = (Get-FileHash bin\current.json -Algorithm SHA256).Hash
-bin\launcher\localai-launcher.exe activate <version> --if-current-sha256 $expected
-
-# First ever activation, when bin\current.json does not exist yet.
-bin\launcher\localai-launcher.exe activate <version> --if-current-missing
-
-# Add --stop-running when the previous version is still in use.
-bin\launcher\localai-launcher.exe activate <version> --if-current-sha256 $expected --stop-running
-```
-
-Omitting both guards is a usage error and exits with code 2. Activation also fails when
-the observed pointer does not match the stated expectation. Without `--stop-running` it
-fails while a launcher-managed version is in use; with it, only processes whose exact
-executable or fresh broker assembly identity belongs to the previous version are stopped,
-and then the pointer is switched. It does not stop Ollama or unrelated `dotnet`
-processes. Roll back by activating a previously verified immutable directory.
-All model requests, including compatibility commands, continue to use the shared FIFO
-broker; direct Ollama access is unsupported.
-
-Stopping the tools of a version is available on its own:
-
-```powershell
-bin\launcher\localai-launcher.exe stop [--version <version>]
-```
-
-The broker is asked to finish rather than killed. A shutdown request naming its process id and
-start time is written next to `host.json`; the broker notices it on the heartbeat it already
-publishes every second, stops leasing new work, lets the job in flight run to completion, and
-exits. Only a broker that has not gone by the deadline is terminated. It owns a durable queue
-and can be minutes into an inference, so destroying it is the answer of last resort rather than
-the mechanism. The request names a start time as well as an id so a stale one cannot shut down
-a healthy broker that inherited the id, and it is deleted as soon as it is accepted.
-
-The stdio tools have no durable state and no channel to be asked through, and their client
-restarts them on demand, so for those termination is all there is — and all that is needed.
-
-It stops the processes running out of the active version — or the named one — and does not
-touch the pointer. Activation stops them too, but only as part of switching. During an
-installation the tools are stopped when, and only when, they are in the way of replacing the
-stable launcher binary — Windows refuses to overwrite a running executable, and every
-connected client keeps one launcher process alive per tool it uses — so an upgrade on an
-idle machine touches nothing.
-
-Reading the pointer takes a **shared** lease; only the swap takes the lock exclusively.
-Every launcher-run tool holds a shared lease for its whole lifetime, so on any machine that
-is actually using LocalAi a connected client is holding one — an exclusive read would refuse
-exactly those machines. A read does not need exclusivity: the swap stays guarded by
-`--if-current-sha256`, which catches a pointer that changed in between rather than
-overwriting it.
-
-### Model residency policy
-
-By default a model must be **fully resident in video memory**; anything less is refused. This
-is not a performance preference. A model that spills into system memory does not fail — it
-just becomes several times slower. Nothing about the failure announces itself; the label
-is put there deliberately, by the report line, and only for the tools that print one.
-
-Machines without a usable discrete adapter can relax it:
-
-```powershell
-localai policy show
-localai policy set --residency AllowPartialOffload
-localai policy set --residency AllowCpu
-localai policy set --idle-model-keep-alive-seconds 0
-```
-
-| Setting | Admits | Refuses |
+| Policy | Where the model lives | Speed |
 | --- | --- | --- |
-| `RequireFullVram` (default) | fully resident loads | everything else |
-| `AllowPartialOffload` | part of the model on the adapter | pure CPU loads |
-| `AllowCpu` | anything that actually loaded | a model reporting no size |
+| `RequireFullVram` — the default | entirely in video memory | measured on this machine (RTX 5080, 16 GB): embedding **12–13 chunks/s**, a short question about one file **around 9 s** |
+| `AllowPartialOffload` | part in video memory, part in system memory | in the product's own words, **slower**. Needs an adapter that fits at least part of the model; integrated graphics will do |
+| `AllowCpu` | entirely on the processor | **much slower**, but it runs with no suitable adapter at all |
 
-The policy lives in `%LOCALAPPDATA%\LocalAi\settings\policy.json` and is read by the broker, the CLI
-and the installer alike. A missing, malformed or unknown-value document falls back to
-`RequireFullVram`: a parse error must never silently relax a safety check. A broker that is
-already running keeps the previous policy until it is restarted.
+The first row is today's measurement on this machine. For the other two I have no numbers,
+and did not invent any: those are the words the product itself uses for these modes in
+`localai policy show`.
 
-`IdleModelKeepAliveSeconds` controls how long the broker retains a resident model after it
-becomes idle. Its default is `0`: the model is unloaded immediately unless the queue still
-contains work routed to that same model. Jobs for other models do not retain it. Set a larger
-number with `localai policy set --idle-model-keep-alive-seconds <seconds>` when the latency of
-reloading is preferable to releasing video memory promptly.
+**The ceiling is the sum, not the biggest card.** Models run on Ollama, and it can spread one
+model across several adapters, so two cards pool their video memory. The price is traffic
+between them over the bus, which is why one card the model fits into entirely always beats
+two it is smeared across.
 
-Degradation stays visible, and visible where it is read: every load admitted below full
-residency carries a warning naming the share that reached video memory, `FullyResident`
-reports the truth rather than a constant, and the report line a local tool prints marks the
-shortfall beside the model on every answer produced that way — `qwen3-coder:30b (42% of the
-model in VRAM — answers are slower)` on an English system, and the same sentence in Russian on
-a Russian one. How to restore strict residency is said once per
-process rather than on every call. Note that the agent instruction block still asks for full-VRAM validation, so
-relaxing this diverges from what those instructions promise.
+**2. Run the installer.** The wizard walks through:
 
-An NPU does not help here. Everything runs through Ollama, whose backends are CPU, CUDA,
-ROCm, Metal and Vulkan; NPUs are driven by a separate stack (OpenVINO, DirectML, Windows ML),
-and the residency numbers this policy is built on do not map onto NPU memory.
+- which language you read — it continues in that one;
+- which prerequisites are missing — and installs the ones you pick;
+- which models to install — it offers the ones that fit your card;
+- which agent clients to register — Claude Code, Codex.
 
-### Knowing a release exists, and taking it
+It registers the MCP servers with those clients and adds an instruction block to
+`~/.claude/CLAUDE.md` and `~/.codex/AGENTS.md`, so the agent knows these tools exist and when
+to reach for them.
 
-Nothing on a machine ever said "a newer release exists". Checking is opt-in, off until somebody
-says otherwise on the installer's review page or with one command:
+**3. Connect a repository.** Indexing is opt-in per repository — nothing is read until you
+ask.
 
 ```powershell
-localai policy set --update-check on
-localai policy show
+& "$env:LOCALAPPDATA\LocalAi\bin\launcher\localai-launcher.exe" run localai sync --root <repo>
+& "$env:LOCALAPPDATA\LocalAi\bin\launcher\localai-launcher.exe" run localai hooks install --root <repo>
 ```
 
-What that permits is one request per interval — a day by default, with a per-machine offset so a
-fleet installed from one image does not arrive in a spike — for the latest release manifest and
-its signature. Nothing about the machine is sent: no identifier, no account, no usage. The version
-inside the manifest is believed only after the signature verifies against the key embedded in this
-build, so whoever answers the request cannot invent one. Every failure — no network, a proxy
-rewriting the body, a signature that does not verify — records the same thing: no update
-information, never a banner urging action.
-
-The check runs on the broker's own loop, never on the job path, so no queued work waits on GitHub.
-What it learns is written to a small state file, and every surface answers from that file rather
-than the network: `localai doctor` prints an `update` line, and `index_status` carries one trailing
-line when a newer verified release exists and only then.
-
-Applying stays an explicit act:
+**4. Check it landed.**
 
 ```powershell
-localai update            # refuses while the broker has queued jobs
-localai update --wait     # waits for them to finish first
+& "$env:LOCALAPPDATA\LocalAi\bin\launcher\localai-launcher.exe" run localai doctor
 ```
 
-It installs the newest signed release over the current one through the same machinery an
-installation uses — verified manifest, verified package, immutable version directory, atomic
-pointer swap — and touches nothing else. Prerequisites, models and client integrations stay as
-they are; the wizard is still where those are set up.
+---
 
-### Diagnostics and telemetry
+## Using it with a cloud agent
 
-`localai doctor [--root <repo>]` runs the checks anyone verifying an installation performs by
-hand: which version the pointer names and whether its binaries agree with it, the stable entry
-point, whether the broker is alive, the queue and its quarantine, the policy files actually in
-force, and — with `--root` — the repository index. It is read-only and starts nothing,
-including the broker. The exit code is non-zero only for a real fault; a stopped broker is a
-note, because it starts on demand.
+Nothing else to set up: the installer has registered the MCP servers and told the agent when
+to use them. From there the agent decides — it sees a "where does this live" question and
+reaches for `search_code` instead of reading files.
 
-An unexpected CLI failure prints one line naming the exception type and the whole inner chain.
-Setting `LOCALAI_STACK=1` (or `true`) appends the full exception with its stack trace under that
-line — the information a bug report needs, available without a local rebuild. The default output
-stays a single line, because that is what operators and hooks parse.
+What is worth knowing so it works fully rather than halfway:
 
-`localai telemetry` summarises the bounded per-job records the broker writes for every
-delegated job: how jobs ended, cold versus warm model loads, fallback frequency, queue and
-execution latencies as nearest-rank percentiles, and the estimated cloud tokens avoided —
-broken down by model and by task profile. A model that fails at least a quarter of its jobs
-and owns at least half of all recorded failures is named in one `attention` line: the
-fallback covers such a model well enough that nothing else makes it visible. Savings are
-ranges, never totals: the estimator counts characters, and there is no live token counter
-anywhere in the system.
+**Ask in words, not in names.** "Where is it decided how long to wait before retrying" beats
+guessing a class name. Questions like that are exactly where an index beats grep.
 
-### Retention
+**Uncommitted edits are visible, but not by themselves.** The index catches up on command:
+`index_refresh` from the agent, or `localai sync` by hand. After a commit the hook does it.
 
-Everything the runtime produces is bounded, and the bounds live in
-`%LOCALAPPDATA%\LocalAi\settings\retention.json`. A missing or malformed document yields the defaults
-below.
+**A refusal is not a breakage.** "No overlay matches this worktree" means the tree moved and
+the index is behind; the answer is to build it, not to route around it.
 
-| Bound | Default | Applies to |
+**Verify anything a decision rests on.** A local model is wrong more often than a cloud one,
+and the product does not hide it: every answer is signed with its model and its duration.
+
+---
+
+## Using it from the command line
+
+### Step 1. How to run anything
+
+Everything goes through the **launcher** — the stable entry point that does not move when the
+product updates. The version directory under `bin\versions\` changes with every release, so
+never write a path into it, neither in a script nor in a client:
+
+```powershell
+& "$env:LOCALAPPDATA\LocalAi\bin\launcher\localai-launcher.exe" run <command>
+```
+
+To stop repeating that, make an alias for the session:
+
+```powershell
+function lai { & "$env:LOCALAPPDATA\LocalAi\bin\launcher\localai-launcher.exe" run @args }
+```
+
+The examples below use `lai <command>`.
+
+### Step 2. Where to run it from
+
+**From anywhere.** Commands that work on a repository take `--root`:
+
+```powershell
+lai localai repo status --root C:\work\myapp
+```
+
+With no `--root`, the repository containing the current directory is used. So this works too:
+
+```powershell
+cd C:\work\myapp
+lai localai repo status
+```
+
+**A worktree is the same repository.** A repository is identified by its shared git
+directory, so all of its worktrees, Claude, Codex and the command line see one index. But for
+a build, point `--root` at **the tree you are editing**: an overlay is built for one exact
+state of the files.
+
+### Step 3. Connect a repository
+
+Indexing is opt-in per repository. Until you ask, nothing is read.
+
+```powershell
+lai localai repo status --root C:\work\myapp
+```
+
+```
+NOT CONFIGURED: C:\WORK\MYAPP\.GIT
+```
+
+Connect it and install the hooks:
+
+```powershell
+lai localai sync --root C:\work\myapp
+lai localai hooks install --root C:\work\myapp
+```
+
+The first build reads the whole repository and prints its progress in figures — the phase,
+the number of chunks, the rate and an estimate of what is left. On a large project that is
+minutes; you do not have to watch the window.
+
+From then on the hooks keep the index current by themselves: after a commit, checkout, merge
+or rebase. Hooks you already had are not overwritten — LocalAi joins the chain and calls them
+first.
+
+Check:
+
+```powershell
+lai codesearch status --root C:\work\myapp
+```
+
+### Step 4. Use it
+
+The full list of commands is in the [What the command line gets](#what-the-command-line-gets)
+table above. Here is what they look like in use.
+
+#### Find code by meaning
+
+```powershell
+lai codesearch search --query "who is subscribed to a broker job finishing" --top 3
+```
+
+```
+src\LocalAi.Broker.Core\DurableQueue.cs:1318-1323  [Method]  cos=0.616
+  IBrokerQueue.CompleteAsync
+  Task CompleteAsync( Guid jobId, string workerId, Guid leaseId, JsonElement body, …)
+  chunk_id: cs1.AUAwZWNjOTAx…
+
+src\LocalAi.Contracts\LocalRunObserver.cs:27-27  [Type]  cos=0.604
+  BrokerJobPending
+  public sealed record BrokerJobPending(bool Running): LocalRunStep
+  chunk_id: cs1.AUAwZWNjOTAx…
+```
+
+The word "subscribe" appears nowhere in the code that was found — it matched by meaning.
+`cos` is how close; `chunk_id` goes to `codesearch get-chunk` to pull the fragment in full:
+
+```powershell
+lai codesearch get-chunk --id cs1.AUAwZWNjOTAx…
+```
+
+#### Walk from a symbol
+
+Once you have a place, keep going with navigation rather than another search. Lines and
+columns count from one — exactly as search prints them and an editor shows them:
+
+```powershell
+lai localai semantic references --path src/LocalAi.Broker.Core/DurableQueue.cs --line 1318 --column 1
+lai localai semantic implementations --path src/LocalAi.Broker.Core/DurableQueue.cs --line 1318 --column 1
+```
+
+#### Ask about files you already know
+
+```powershell
+lai localai ask "List the public members of this class, one per line." src/CodeSearch.Core/Chunking/GenericTextChunker.cs
+```
+
+```
+🔧 Locally: qwen3.5:9b. Files processed: 1 — GenericTextChunker.cs. 9.4s (2.3s queued).
+   Saved negligibly few cloud tokens — under ~0.5K.
+
+public IEnumerable<Chunk> Split(string relPath, string content)
+```
+
+The first line is the product's own report: which model, how long, and how much of that was
+spent waiting in the queue. Here it says plainly that there was almost nothing to save — the
+file is small and was not worth delegating.
+
+#### Triage a log
+
+```powershell
+lai localai triage build.log --question "why did the build fail"
+```
+
+Reads output of any length: it measures free video memory and works through the file in
+bounded pieces. It takes a stream too, so the log need not be saved at all:
+
+```powershell
+dotnet build 2>&1 | lai localai triage -
+```
+
+#### Read an image, translate a document
+
+```powershell
+lai localai read-image "What error is on this screenshot, and in which window?" C:\shots\error.png
+lai localai translate --in docs\notes.md --from Russian --to English --markdown --out docs\notes.en.md
+```
+
+Languages are given as **names**, not codes: `--to Russian`, not `--to ru`.
+
+#### Look at the state of things
+
+```powershell
+lai localai repo status --root C:\work\myapp   # is the repository connected
+lai codesearch status --root C:\work\myapp     # where the index is, how far behind HEAD
+lai localai model status                       # which models are installed and resident
+lai localai policy show                        # residency and update policy
+lai localai telemetry                          # a summary of local jobs
+lai localai doctor                             # what is wrong with the installation
+```
+
+#### When something refuses
+
+A refusal is a message, not a breakage. Three common ones:
+
+| What you see | What it means | What to do |
 | --- | --- | --- |
-| `ResponseGraceMinutes` | 10 | floor: no response body younger than this is ever dropped |
-| `ResponseRetentionMinutes` | 60 | age at which an archived response body is dropped |
-| `ResponseBudgetBytes` | 512 MB | total retained response bodies, oldest dropped first |
-| `ArchiveRetentionDays` | 14 | age at which an archived job is deleted outright |
-| `ArchiveEntryLimit` | 2000 | archived jobs kept, oldest deleted first |
-| `GenerationsPerRepository` | 1 | index generations kept, including the current one; anything published in the last day is kept as well, because it may be a build in progress |
-| `InstalledVersions` | 3 | version directories kept under `bin\versions` |
-| `LauncherBackups` | 3 | launcher backups kept under `installer\backups` |
-| `TelemetryRetentionDays` | 30 | age at which a job telemetry record under `telemetry\metrics` is deleted |
-| `QuarantineRetentionDays` | 14 | age at which a quarantined job record is deleted |
-| `QuarantineEntryLimit` | 200 | quarantined records kept, oldest deleted first |
-| `QuarantineBudgetBytes` | 256 MB | total quarantined bytes, oldest deleted first |
-| `QuarantineGraceHours` | 24 | floor: no quarantined record younger than this is ever dropped, so what just broke can still be inspected |
+| `No overlay matches this worktree` | edits are saved, the index is behind | `lai localai sync --root <repo>` |
+| `NOT CONFIGURED` | the repository is not connected | `lai localai sync --root <repo>`, then `hooks install` |
+| `The model backend was not available` | the model did not come up | `lai localai doctor`, then try again — what was computed is kept in a checkpoint |
 
-The archive is a handover, not a record: a client collects its response on the next poll after
-the job turns terminal and never asks again, yet one embedding batch leaves megabytes of
-vectors behind. The broker applies the archive bounds continuously — throttled to one pass a
-minute and capped per pass, so the queue never stalls behind housekeeping — and drops the body
-while keeping the request and state documents as the audit trail.
+---
 
-`ResponseGraceMinutes` is the one value here that protects correctness rather than disk.
-Nothing may remove a body inside it, whatever the other bounds ask for, and a hand-edited
-document that sets it to zero is clamped rather than obeyed.
+## What language it answers in
 
-To reclaim a backlog, or to reach the parts a background sweep does not own:
+There are **two: English and Russian**. English is not one of two equals but the neutral one:
+a locale with no translation is answered in English rather than refused.
+
+**By default it follows the system.** The order is: an explicit choice if there is a usable
+one, otherwise the operating system's language, otherwise English. Regional names resolve to
+their language — `ru-RU`, `ru-KZ` and `ru` all read the same strings.
+
+**How to change it.** Two ways, for two different situations:
 
 ```powershell
-localai prune --dry-run
-localai prune
+lai localai policy set --language ru        # remembered: ru, en or system
+$env:LOCALAI_LANGUAGE = "ru"                # for one session, over the remembered choice
 ```
 
-`prune` never removes the generation a repository's pointer names, the version
-`bin\current.json` names, or a job that has not been terminal for longer than the response
-grace. A version whose files are still mapped by a running tool refuses to be deleted, which is
-the right answer — the next prune collects it. It also forgets repository records in two
-cases, and the report says which: a checkout that no longer exists, which is what a
-throwaway worktree leaves behind, and a record that started indexing and never finished. A
-checkout whose volume is merely offline — an external disk, a share, a subst mapping from
-another session — is not gone, and its record is left alone.
+The environment variable is not decoration: the MCP servers are started by the launcher and
+read no settings file of their own before their first line of output. So the variable is the
+only way to switch languages for someone whose machine speaks one language while they work in
+another.
 
-Most of what accumulates is overlays. Each is keyed by worktree and by the tree its commit
-named, so every commit on every branch leaves one behind, and they outnumber the generation
-they hang off several times over. `prune` keeps the overlay each live worktree is currently
-on and collects the rest — but only when it can establish what those worktrees are. A
-repository whose manifest does not read, names no worktrees, or names one on a volume that
-is not mounted has its overlays left alone rather than guessed at: a wrong guess costs a
-live checkout its index.
+The installer asks on its first screen and remembers the answer — removal opens in that same
+language, even months later.
 
-### Broker compatibility and startup
+**What is never translated.** Commands, option names, identifiers, enum values, paths, wire
+formats, numbers and dates: the same in every language, because they are quoted verbatim and
+parsed by programs. For the same reason `--json` **always answers in English** — output meant
+for a program must not depend on whose machine produced it.
 
-The broker `host.json` schema 3 publishes an explicit protocol version and stable build
-compatibility family. Its assembly path remains a diagnostic and launcher
-version-ownership record; client health does not depend on DLL-path affinity. Therefore,
-compatible installed and development clients share the one machine-wide broker even when
-their DLL paths differ.
+---
 
-A fresh live incompatible or legacy host remains running, but the observing client fails
-immediately as `broker_incompatible` and does not attempt to start a second broker. During
-startup, an early nonzero child exit is
-`broker_start_failed`, while a bounded wait that never observes compatible health is
-`broker_start_timeout` and includes the last observation. A zero-exit child likely lost
-`broker.lock` to another process, so the client observes that lock owner's host state only
-within that same bound. CodeSearch retains its lexical fallback for `broker_start_timeout`.
+## Updating and removing
 
-These rules do not change the singleton FIFO, runtime ACL, immutable-version activation,
-full-VRAM/zero-offload, or direct-Ollama prohibition.
+### Update
 
-## Model-aware routing
+```powershell
+lai localai update
+```
 
-The embedded `model-routing.json` catalog maps each local task profile to one or more
-eligible models. Profiles cover plain, technical, and image translation; OCR and visual
-analysis; vector embedding and deterministic exact search; code analysis, editing,
-review, and reranking; log triage; extraction and classification; summaries,
-multi-file synthesis, and planning.
+It downloads a release, **verifies its signature**, installs a new version directory and
+points the launcher at it. The paths written into your clients do not change — they point at
+the launcher, not at a version.
 
-The broker enforces these invariants:
+The update check is **off** by default, so the installation never goes looking for new
+versions on its own. To turn it on and set how often:
 
-- Context tiers range from 2K to each model's official maximum (up to 256K).
-  A tier is usable only when live preflight proves the complete runner fits in VRAM.
-- A cold model is preflighted with empty content before the real task is sent.
-- `/api/ps` must report `size_vram == size`; CPU or system-RAM offload disables that
-  exact model/context combination and triggers an established fallback.
-- The scheduler prefers compatible work for the resident model, freezes each selected
-  snapshot, orders its jobs by predicted duration, waits at most two seconds to collect
-  related work before a switch or long task, and forces work older than 15 minutes into
-  the next compatible snapshot. Successful execution feeds its actual duration back
-  into the content-free rolling estimate.
-- Resident models are unloaded after the configurable idle keep-alive (zero seconds by
-  default) when no queued work targets that model. A dependency-blocked workflow step for
-  the resident model still retains it; work routed to another model does not.
-- Before a cold model switch, the broker unloads every other catalog-managed runner.
-  Unknown external Ollama processes are left untouched.
-- Experiments are tracked independently per task profile and model. A new candidate is
-  tried for the first ten completed logical tasks of each applicable profile, then
-  paused for owner review; feedback is rejected before that report gate. Technical,
-  structural, and context failures run an established fallback. Translation chunks
-  share one workflow ID and consume only one attempt after final validation, while
-  preserving the candidate's failure category if the broker used a fallback. The sole
-  early exception is `continue_experiment`, which may reset a circuit opened by two
-  consecutive technical failures.
-- Experiment telemetry is retained for thirty days (`TelemetryRetentionDays`) and contains only workflow/task/model
-  identifiers, counts, outcomes, timings, and token estimates. It reports local input
-  and output, total local processing, avoided cloud generation, and net cloud-context
-  reduction separately. Prompts, answers, file contents, image bytes, paths, and
-  secrets are excluded.
+```powershell
+lai localai policy set --update-check on
+lai localai policy set --update-check-interval-hours 24
+```
 
-LocalLm exposes these model-management and translation MCP tools:
+While there are no published releases, `update` has nothing to find — updating goes the same
+way installing does: build a package and run the installer over the top.
 
-| Tool | Purpose |
-|---|---|
-| `translate_local` | Translate text or a whole file, validate protected Markdown structure, and append the actual model attribution. |
-| `local_models_status` | Show installed, resident, missing recommended, and experiment state. |
-| `local_model_preflight` | Load one model/context without task content and return full-VRAM residency proof. |
-| `local_models_sync` | Queue allowlisted recommended-model installation. |
-| `local_model_experiment_report` | Show logical-task attempts, errors, fallbacks, timing, warm/cold counts, local processing, avoided cloud generation, and net context reduction. |
-| `local_model_feedback` | Promote, continue, restrict to fallback, or disable one task/model pair. |
+### Clear the index, keep the product
 
-`local_model_experiment_report` takes its `Attempts`, `Successes` and `Errors` from the
-experiment state — the same counts `local_models_status` shows and the router uses to decide
-when an experiment pauses. Timings and token figures can only be measured over the per-task
-telemetry that still exists, which is bounded to a week, so `ObservedTasks` says how many
-records they rest on. Reading the report never discards telemetry; the week-long bound is
-applied by the write that records a new task.
+```powershell
+lai localai prune            # drop stale generations and overlays
+lai localai prune --dry-run  # see what would go first
+```
 
-`translate_local` is the validated local translation path. The calling agent decides
-whether a translation runs locally or in the cloud; LocalAi does not impose that policy.
-It takes either text as `source` or a file as `path`, and with `outPath` it writes the
-translation to disk instead of returning it - which is what keeps a 200 KB document out
-of the caller's context entirely, and what a document over 48000 characters requires.
+`prune` also removes the records of repositories whose working directories are gone.
 
-`read_image` accepts `VisualAnalysis`, `Ocr`, or `ImageTranslation`; `ask_local`
-accepts an explicit text task profile. An explicit model is an override subject to the
-same capability, installation, context, and full-VRAM checks.
+### Remove it entirely
 
-The notice each tool returns states the saving as a sentence, not a number to interpret. A job
-small enough to save nothing says so — a 336x52 screenshot is worth about two dozen tokens to
-look at directly, and any useful answer about it is longer than that, so delegating it is
-honest work with no saving attached. That is advice about what to delegate, not a counter that
-failed.
+LocalAi registers in **Apps & features** as `LocalAi Developer Toolkit` — remove it from
+there like any program. A wizard opens, and each part is decided **separately**, not with one
+"yes":
 
-## Runtime and security
+| Part | What it is |
+| --- | --- |
+| Binaries, launcher, version pointer | the uninstall proper |
+| Repository indexes and their overlays | hours of GPU work; only worth dropping if you are leaving for good |
+| Runtime settings | residency, updates, language servers — what a reinstall would otherwise honour |
+| Git hooks | per connected repository |
+| Claude and Codex integration | separately for each: unregister the MCP servers and remove the instruction block |
+| Release signing keys | **always asked** — never removed by default under any preset |
 
-- CodeSearch and LocalLm submit all model work through the durable LocalAi FIFO broker.
-  Direct agent-facing Ollama endpoints are unsupported.
-- The immutable base generation is built from local `dev` when present, otherwise local
-  `main`. The selected mainline ref remains stable in the repository manifest.
-- Each worktree receives an exact generation/tree/dirty-content overlay under
-  `%LOCALAPPDATA%\LocalAi`, so a branch stores only its differences from the base.
-- CodeSearch canonicalizes indexed text to Windows CRLF in memory for hashing, chunking,
-  and embedding. Source files are never rewritten.
-- Existing vectors are reused only when the model, dimensions, chunk format, index
-  format, and normalization contract all match.
-- Semantic indexing always uses the embedding model recorded in the index header.
-  Exact lexical search remains deterministic and never invokes a chat model.
-- Shared post-commit, post-merge, post-rewrite, and post-checkout hooks call
-  `localai sync`; installation is always explicit.
-- The allowlisted `native` compatibility command still routes through the broker.
-- MCP projects reserve standard output for stdio protocol messages.
-- Generated indexes, logs, process files, credentials, and runtime state stay outside
-  Git.
-- `RuntimeAcl.Ensure` tolerates broker paths that are atomically moved during traversal
-  while still propagating ACL failures for paths that continue to exist.
+There are ready-made presets: remove everything; remove the binaries and keep the indexes;
+stop the agents using LocalAi without touching the runtime. A preset is just a set of boxes
+already ticked, and any of them can be changed.
 
-## Projects
+**Models stay.** They belong to Ollama rather than to LocalAi, and you may want them for
+something else. Remove those through Ollama.
 
-| Project | Purpose |
-|---|---|
-| `src/LocalAi.Contracts` | Broker, index, and repository wire contracts. |
-| `src/LocalAi.Broker` | Durable machine-wide FIFO and exclusive Ollama transport. |
-| `src/LocalAi.Broker.Core` | The queue, the runtime ACL bootstrap, and everything the client shares with the broker process. |
-| `src/LocalAi.Broker.Client` | Client and broker-process integration. |
-| `src/LocalAi.Launcher` | Stable tool dispatch and atomic immutable-version activation. |
-| `src/LocalAi.Repository` | Repository identity, manifest, and worktree state. |
-| `src/LocalAi.Cli` | Repository synchronization, compatibility transport, and hook installation. |
-| `src/CodeSearch.Core` | Chunking, embeddings, index storage, overlays, and hybrid search. |
-| `src/CodeSearch.Cli` | Index, overlay, status, scan, and search commands. |
-| `src/CodeSearch.Mcp` | Stdio MCP server exposing CodeSearch operations. |
-| `src/LocalLm.Core` | Local-model task helpers, image metadata, and token estimates. |
-| `src/LocalLm.Mcp` | Stdio MCP server exposing LocalLm operations. |
-| `src/LocalAi.Installer` | The GUI installer: system check, prerequisites, package, models, residency, client registration. |
-| `src/LocalAi.Installer.Core` | What the installer does rather than shows — signature verification, layout leases, dependencies, agent instruction blocks. |
-| `src/LocalAi.ReleaseSigner` | Packing, signing and publishing a release, and verifying a published manifest. |
-| `tests/*` | Unit and integration coverage for all toolkit components. |
+**The installation record stays too** — deliberately, outside the runtime directory. It is
+the log of what installs did to this machine.
 
-## Development rules
+---
 
-- Keep existing namespaces, commands, runtime paths, and package versions unless a
-  separate change explicitly approves an update.
-- Route Ollama work only through the shared broker.
-- Add focused tests alongside behavior changes and run the full solution baseline
-  before publishing.
-- Never let a test assert how fast the machine is. Wait for the condition rather than for
-  a duration, prefer a purpose-built child process over an interpreter whose startup cost
-  is unbounded, and leave hang detection to the run timeout CI applies to the whole
-  solution. A deadline a correct run can miss proves nothing and reports itself
-  as a fault in the code under test.
-- Branch a pull request from `main`, and give it one subject. Two subjects in one branch cannot
-  be reviewed apart or reverted apart. Stacking a pull request on another one is worse than the
-  rebase it saves: GitHub closes it when its base branch is deleted on merge rather than moving
-  it to `main`. When two changes touch the same file, land the first and rebase the second.
-- Every document in the repository exists in English and in Russian, as `name.md` and
-  `name.ru.md`, and each one links to the other in its opening lines. A document that
-  exists in one language only is unfinished.
-- Every string the software itself prints is chosen by the reader's machine, not written into
-  the code: English by default, Russian on a Russian system, English again wherever a language
-  has no translation. They live in `.resx` pairs, a language is added by adding a file beside
-  the neutral one, and a test refuses a language that carries only some of the strings. One
-  text sits outside that on purpose: the update-check disclosure is consent, and a parity test
-  can prove a key exists in both languages but never that two paragraphs still make the same
-  promises — so it is a pair of constants chosen by `OutputCulture.Pick`, and its own test
-  refuses a supported language that method has no answer for.
-  `localai policy set --language <en|ru|system>` overrides the machine. Commands, option names,
-  identifiers and tool descriptions are never translated, and numbers, durations and dates stay
-  invariant in every language — the lines are quoted verbatim by agents and parsed by tests. The
-  rule above is about documents; this one is about program output, and they are not the same
-  rule.
-- Preserve UTF-8 without BOM and Windows CRLF line endings for repository documentation.
+## Building and testing
 
-## Contributing
+```powershell
+dotnet test LocalAi.slnx --configuration Release --max-parallel-test-modules 1 --timeout 20m
+```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for how changes are built, tested and reviewed, and
-[SECURITY.md](SECURITY.md) for what the product promises and how to report a vulnerability
-privately.
+That is the answer before a pull request. While iterating, a single test project is
+faster — `dotnet test tests/<name>/<name>.csproj --configuration Release`.
 
-## License
+A test never asserts how fast the machine is. Wait for the condition, not for a duration —
+a deadline a correct run can miss proves nothing, and reports itself as a fault in the code
+under test.
+
+---
+
+## Licence
 
 MIT. See [LICENSE](LICENSE).

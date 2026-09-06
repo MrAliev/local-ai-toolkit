@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 424" width="1180" height="424" role="img" aria-label="You reach the LocalAi tools two ways: through a cloud agent over MCP, or straight from the command line. The tools use a broker, which runs local models on your GPU, and the code index at the heart of the project. The index answers by meaning and by exact name at once, cuts code into chunks by symbol, knows dependencies, and picks up uncommitted work in an overlay of its own.">
+  <title>How LocalAi fits together</title>
+  <style>
+    .box   { fill: #f6f8fa; stroke: #8c959f; stroke-width: 1.5; }
+    .lead  { fill: #ddf4ff; stroke: #4493f8; stroke-width: 1.8; }
+    .star  { fill: #dafbe1; stroke: #2da44e; stroke-width: 2.2; }
+    .name  { font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+             font-size: 16px; font-weight: 600; fill: #1f2328; }
+    .big   { font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+             font-size: 18px; font-weight: 700; fill: #1f2328; }
+    .note  { font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+             font-size: 12.5px; fill: #59636e; }
+    .item  { font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+             font-size: 15px; fill: #1f2328; }
+    .dim   { font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+             font-size: 13.5px; fill: #59636e; font-style: italic; }
+    .edgelbl { font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+             font-size: 12.5px; fill: #59636e; font-style: italic; }
+    .edge  { stroke: #8c959f; stroke-width: 1.7; fill: none; }
+    .head  { fill: #8c959f; }
+    .tick  { fill: #2da44e; }
+    .rule  { stroke: #2da44e; stroke-width: 1; opacity: 0.35; }
+    @media (prefers-color-scheme: dark) {
+      .box  { fill: #161b22; stroke: #6e7681; }
+      .lead { fill: #121d2f; stroke: #316dca; }
+      .star { fill: #0f2417; stroke: #3fb950; }
+      .name, .big, .item { fill: #e6edf3; }
+      .note, .dim, .edgelbl { fill: #9198a1; }
+      .edge { stroke: #6e7681; }
+      .head { fill: #6e7681; }
+      .tick { fill: #3fb950; }
+      .rule { stroke: #3fb950; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" class="head"/>
+    </marker>
+  </defs>
+
+  <!-- edges first, so the boxes sit on top of them -->
+  <path class="edge" d="M 118 106 C 142 106 146 54 166 54" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 118 130 L 416 130" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 376 66 C 396 66 400 110 416 110" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 624 108 C 646 108 650 54 664 54" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 882 54 L 922 54" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 524 152 L 524 202" marker-end="url(#arrow)"/>
+
+  <text class="edgelbl" x="264" y="122" text-anchor="middle">command line</text>
+  <text class="edgelbl" x="386" y="60">MCP</text>
+
+  <!-- you -->
+  <rect class="box lead" x="14" y="92" width="104" height="56" rx="28"/>
+  <text class="name" x="66" y="126" text-anchor="middle">You</text>
+
+  <!-- cloud agent -->
+  <rect class="box" x="166" y="24" width="210" height="60" rx="10"/>
+  <text class="name" x="271" y="50" text-anchor="middle">Cloud agent</text>
+  <text class="note" x="271" y="70" text-anchor="middle">Claude Code · Codex</text>
+
+  <!-- localai tools -->
+  <rect class="box lead" x="424" y="92" width="200" height="60" rx="10"/>
+  <text class="name" x="524" y="118" text-anchor="middle">LocalAi tools</text>
+  <text class="note" x="524" y="138" text-anchor="middle">20 over MCP</text>
+
+  <!-- broker -->
+  <rect class="box" x="666" y="24" width="216" height="60" rx="10"/>
+  <text class="name" x="774" y="50" text-anchor="middle">Broker</text>
+  <text class="note" x="774" y="70" text-anchor="middle">one queue, one model at a time</text>
+
+  <!-- local models -->
+  <rect class="box" x="924" y="24" width="238" height="60" rx="10"/>
+  <text class="name" x="1043" y="50" text-anchor="middle">Local models</text>
+  <text class="note" x="1043" y="70" text-anchor="middle">your GPU</text>
+
+  <!-- the code index: the heart of it -->
+  <rect class="box star" x="424" y="204" width="738" height="200" rx="12"/>
+  <text class="big"  x="452" y="240">Vector code index</text>
+  <text class="dim"  x="452" y="262">the heart of the project - one per repository, built from your code by localai sync</text>
+
+  <circle class="tick" cx="458" cy="289" r="3.5"/>
+  <text class="item" x="474" y="294">Answers by meaning and by exact name at once, from a single query</text>
+
+  <circle class="tick" cx="458" cy="321" r="3.5"/>
+  <text class="item" x="474" y="326">A chunk is a type or a method, not a line: C#, TypeScript and Python are cut by symbol</text>
+
+  <circle class="tick" cx="458" cy="353" r="3.5"/>
+  <text class="item" x="474" y="358">Dependencies: where it is declared, who calls it, who implements it, what relates to what</text>
+
+  <circle class="tick" cx="458" cy="385" r="3.5"/>
+  <text class="item" x="474" y="390">Uncommitted work gets an overlay of its own - a dirty tree is searchable too</text>
+</svg>

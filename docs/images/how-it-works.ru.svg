@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 424" width="1180" height="424" role="img" aria-label="К инструментам LocalAi ведут два пути: через облачного агента по MCP и напрямую из командной строки. Инструменты обращаются к брокеру, который запускает локальные модели на видеокарте, и к индексу кода — ядру проекта. Индекс даёт векторный поиск по смыслу вместе с точным совпадением имён, режет код на чанки по символам, знает зависимости и подхватывает незакоммиченные правки отдельным overlay.">
+  <title>Как устроен LocalAi</title>
+  <style>
+    .box   { fill: #f6f8fa; stroke: #8c959f; stroke-width: 1.5; }
+    .lead  { fill: #ddf4ff; stroke: #4493f8; stroke-width: 1.8; }
+    .star  { fill: #dafbe1; stroke: #2da44e; stroke-width: 2.2; }
+    .name  { font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+             font-size: 16px; font-weight: 600; fill: #1f2328; }
+    .big   { font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+             font-size: 18px; font-weight: 700; fill: #1f2328; }
+    .note  { font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+             font-size: 12.5px; fill: #59636e; }
+    .item  { font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+             font-size: 15px; fill: #1f2328; }
+    .dim   { font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+             font-size: 13.5px; fill: #59636e; font-style: italic; }
+    .edgelbl { font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+             font-size: 12.5px; fill: #59636e; font-style: italic; }
+    .edge  { stroke: #8c959f; stroke-width: 1.7; fill: none; }
+    .head  { fill: #8c959f; }
+    .tick  { fill: #2da44e; }
+    .rule  { stroke: #2da44e; stroke-width: 1; opacity: 0.35; }
+    @media (prefers-color-scheme: dark) {
+      .box  { fill: #161b22; stroke: #6e7681; }
+      .lead { fill: #121d2f; stroke: #316dca; }
+      .star { fill: #0f2417; stroke: #3fb950; }
+      .name, .big, .item { fill: #e6edf3; }
+      .note, .dim, .edgelbl { fill: #9198a1; }
+      .edge { stroke: #6e7681; }
+      .head { fill: #6e7681; }
+      .tick { fill: #3fb950; }
+      .rule { stroke: #3fb950; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" class="head"/>
+    </marker>
+  </defs>
+
+  <!-- стрелки рисуются первыми, чтобы блоки легли поверх них -->
+  <path class="edge" d="M 118 106 C 142 106 146 54 166 54" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 118 130 L 416 130" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 376 66 C 396 66 400 110 416 110" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 624 108 C 646 108 650 54 664 54" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 882 54 L 922 54" marker-end="url(#arrow)"/>
+  <path class="edge" d="M 524 152 L 524 202" marker-end="url(#arrow)"/>
+
+  <text class="edgelbl" x="264" y="122" text-anchor="middle">командная строка</text>
+  <text class="edgelbl" x="386" y="60">MCP</text>
+
+  <!-- вы -->
+  <rect class="box lead" x="14" y="92" width="104" height="56" rx="28"/>
+  <text class="name" x="66" y="126" text-anchor="middle">Вы</text>
+
+  <!-- облачный агент -->
+  <rect class="box" x="166" y="24" width="210" height="60" rx="10"/>
+  <text class="name" x="271" y="50" text-anchor="middle">Облачный агент</text>
+  <text class="note" x="271" y="70" text-anchor="middle">Claude Code · Codex</text>
+
+  <!-- инструменты localai -->
+  <rect class="box lead" x="424" y="92" width="200" height="60" rx="10"/>
+  <text class="name" x="524" y="118" text-anchor="middle">Инструменты LocalAi</text>
+  <text class="note" x="524" y="138" text-anchor="middle">20 по MCP</text>
+
+  <!-- брокер -->
+  <rect class="box" x="666" y="24" width="216" height="60" rx="10"/>
+  <text class="name" x="774" y="50" text-anchor="middle">Брокер</text>
+  <text class="note" x="774" y="70" text-anchor="middle">одна очередь, одна модель зараз</text>
+
+  <!-- локальные модели -->
+  <rect class="box" x="924" y="24" width="238" height="60" rx="10"/>
+  <text class="name" x="1043" y="50" text-anchor="middle">Локальные модели</text>
+  <text class="note" x="1043" y="70" text-anchor="middle">Ваша видеокарта</text>
+
+  <!-- индекс кода: ядро проекта -->
+  <rect class="box star" x="424" y="204" width="738" height="200" rx="12"/>
+  <text class="big"  x="452" y="240">Векторный индекс кода</text>
+  <text class="dim"  x="452" y="262">ядро проекта: один на репозиторий, строится из Вашего кода командой localai sync</text>
+
+  <circle class="tick" cx="458" cy="289" r="3.5"/>
+  <text class="item" x="474" y="294">Поиск по смыслу и точное совпадение имён — одновременно, одним запросом</text>
+
+  <circle class="tick" cx="458" cy="321" r="3.5"/>
+  <text class="item" x="474" y="326">Чанк — это тип или метод, а не строка: C#, TypeScript, Python режутся по символам</text>
+
+  <circle class="tick" cx="458" cy="353" r="3.5"/>
+  <text class="item" x="474" y="358">Зависимости: где объявлено, кто вызывает, кто реализует, что с чем связано</text>
+
+  <circle class="tick" cx="458" cy="385" r="3.5"/>
+  <text class="item" x="474" y="390">Незакоммиченные правки попадают в свой overlay — грязное дерево тоже ищется</text>
+</svg>
