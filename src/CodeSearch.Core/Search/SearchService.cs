@@ -70,10 +70,26 @@ public sealed record IndexStatus(
     // that is missing, and used to report itself as precise. That is the shape a broken C#
     // workspace leaves behind: the file is written, the generation is published, and every
     // definition query quietly falls back to text.
-    bool SemanticIndexCoversNothing = false)
+    bool SemanticIndexCoversNothing = false,
+    // Whether the semantic overlay for this worktree is on disk. A fact about a file, so it is
+    // false when no overlay is needed and none was looked for; SemanticOverlayMissing below is
+    // the question anybody actually asks.
+    bool SemanticOverlayPresent = false)
 {
     public bool CommitDrifted =>
         Exists && IndexedCommit.Length > 0 && CurrentCommit.Length > 0 && IndexedCommit != CurrentCommit;
+
+    /// <summary>
+    /// True when navigation needs an overlay for this worktree and it has not been built.
+    ///
+    /// Precision is a property of the worktree, not of the generation.
+    /// <c>SemanticNavigationGateway</c> loads the base semantic index alone only when the head
+    /// tree matches the generation's and the tree is clean; otherwise it reaches for the semantic
+    /// overlay and refuses when that file is absent. Both the other semantic fields here describe
+    /// the generation, and reporting from them alone promised precision one second before a
+    /// navigation call refused (#421).
+    /// </summary>
+    public bool SemanticOverlayMissing => RequiresOverlay && !SemanticOverlayPresent;
 
     /// <summary>True when the caller is working in the very checkout the base was built from.</summary>
     public bool WorkingRootIsBase =>
@@ -480,7 +496,38 @@ public sealed class SearchService : IDisposable
             requiresOverlay,
             overlay,
             presence.Present,
-            presence.CoversNothing);
+            presence.CoversNothing,
+            SemanticOverlayPresent(index, identity));
+    }
+
+    /// <summary>
+    /// Whether the semantic overlay for this worktree exists, at the path
+    /// <c>SemanticNavigationGateway</c> loads it from. Asked unconditionally: when no overlay is
+    /// needed the file is not there and the answer is false, which is why
+    /// <see cref="IndexStatus.SemanticOverlayMissing"/> asks about need first.
+    /// </summary>
+    private static bool SemanticOverlayPresent(
+        CodeIndex index,
+        WorkingIndexIdentity? identity)
+    {
+        if (identity is null || string.IsNullOrWhiteSpace(index.GenerationId))
+        {
+            return false;
+        }
+
+        try
+        {
+            return File.Exists(
+                RuntimeIndexLayout.SemanticOverlayPath(identity, index.GenerationId));
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            // Unreadable is reported as absent, and it costs the reader a line saying the overlay
+            // is not built rather than a promise of precision. That is the safe direction: the
+            // navigation call would refuse either way.
+            return false;
+        }
     }
 
     /// <summary>
