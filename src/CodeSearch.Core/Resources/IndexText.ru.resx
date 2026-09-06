@@ -44,6 +44,14 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a2c561934e089</value>
   </resheader>
+  <data name="BuildBackendAnswered" xml:space="preserve">
+    <value>Ollama ответила через {0} с. Эмбеддинг продолжается.</value>
+    <comment>RoslynRestored's shape and its rule: printed only where the wait ended in an answer, so a run that shows the waiting line, then a stop, and no answered line is telling the truth. Seconds rather than the waiting line's minutes, for the same reason RoslynRestored takes seconds where RoslynLoading takes minutes: one figure is a budget and the other is measured, and this one is subtracted from SyncFinished's own seconds. Deliberately not one total at the end of the build: a total over concurrent waiters is a wall clock rather than a sum of their waits, and a breakdown printed once the run is over is what SyncFinished's own comment already refuses.</comment>
+  </data>
+  <data name="BuildBackendWaiting" xml:space="preserve">
+    <value>Ollama недоступна. Сборка ждёт — не дольше {0} мин.</value>
+    <comment>Said before the wait, not after it - RoslynLoading's rule, for the same reason: a line printed once the wait is over explains a silence the reader has already sat through. The opening clause is EmbeddingBackendUnavailable's own, to the word, because it is the same state; what differs is that this one is handled rather than fatal, so nothing here says failed. One hole, and it counts down: the figure that changes from line to line is what tells a reader the build is alive, and a second changing number in a line that prints a dozen times in a row is noise - not the attempt number, and not the chunk count, which BuildEmbedded printed immediately above. Minutes, F1 and invariant. Printed from one place: the builder posts the next batch before awaiting the current one, so two batches are in flight when the backend goes away, and two unserialised waiters would print two countdowns of one outage.</comment>
+  </data>
   <data name="BuildBatchHalved" xml:space="preserve">
     <value>Не удалось посчитать эмбеддинги для {0} чанков ({1}); партия делится пополам, чтобы найти виноватый чанк.</value>
     <comment>batch is партия in Russian, following docs/overview.ru.md and the 0.1.53 release notes, which both write it that way for this exact line.</comment>

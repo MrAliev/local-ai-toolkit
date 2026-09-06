@@ -71,6 +71,19 @@ public static class IndexText
     public static string BuildBatchHalved(int chunks, string reason) =>
         Catalogue.Format(nameof(BuildBatchHalved), chunks, reason);
 
+    /// <param name="minutesLeft">
+    /// What is left of the waiting budget, F1 and invariant. The one figure that moves from line
+    /// to line, which is what tells a reader the build is alive rather than hung.
+    /// </param>
+    public static string BuildBackendWaiting(string minutesLeft) =>
+        Catalogue.Format(nameof(BuildBackendWaiting), minutesLeft);
+
+    /// <param name="seconds">
+    /// How long the outage actually lasted, measured rather than budgeted, F1 and invariant.
+    /// </param>
+    public static string BuildBackendAnswered(string seconds) =>
+        Catalogue.Format(nameof(BuildBackendAnswered), seconds);
+
     /// <summary>
     /// What a build says when the embedding backend went away under it. The figures live here
     /// rather than beside the exception because only the build loop knows them, and they are the
