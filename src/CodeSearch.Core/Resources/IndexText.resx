@@ -133,13 +133,21 @@
   <data name="ChunkWrongRepository" xml:space="preserve">
     <value>The chunk id belongs to another repository.</value>
   </data>
-  <data name="GenerationNotPublished" xml:space="preserve">
-    <value>No index generation is published for this repository. Build one: localai sync --root {0}</value>
-    <comment>localai sync and --root are typed, so they stay as they are; {0} is a path and never moves.</comment>
+  <data name="GenerationNotPublishedFact" xml:space="preserve">
+    <value>No index generation is published for this repository.</value>
+    <comment>localai sync and --root are typed, so they stay as they are; {0} is a path and never moves. The command that repairs this lives in the matching Remedy key, and IndexText joins the two back with a single space for every caller that prints the whole sentence - so what this product has always printed is byte-identical. A caller that knows a build already holds the sync gate prints this half alone, because a second localai sync exits 75 sync_busy and the block that stands where the command was says so instead.</comment>
   </data>
-  <data name="GenerationWithoutSemanticIndex" xml:space="preserve">
-    <value>Generation '{0}' has no semantic.sidx, so definitions and references are answered by bounded text matching. Sync again to build it: localai sync --root {1}</value>
-    <comment>The second clause is the wording CodeSearchText.NavigationHeuristicMissing already uses for the same fact on the Navigation: line; two spellings of one fact is how they drift. It replaces 'Rebuild it with semantic indexing enabled', which named a route no option offers: localai sync takes no such flag, and the real cause is a generation published before semantic indexing existed.</comment>
+  <data name="GenerationNotPublishedRemedy" xml:space="preserve">
+    <value>Build one: localai sync --root {0}</value>
+    <comment>localai sync and --root are typed, so they stay as they are; {0} is a path and never moves. The command that repairs this lives in the matching Remedy key, and IndexText joins the two back with a single space for every caller that prints the whole sentence - so what this product has always printed is byte-identical. A caller that knows a build already holds the sync gate prints this half alone, because a second localai sync exits 75 sync_busy and the block that stands where the command was says so instead.</comment>
+  </data>
+  <data name="GenerationWithoutSemanticIndexFact" xml:space="preserve">
+    <value>Generation '{0}' has no semantic.sidx, so definitions and references are answered by bounded text matching.</value>
+    <comment>The command that repairs this lives in the matching Remedy key, and IndexText joins the two back with a single space for every caller that prints the whole sentence - so what this product has always printed is byte-identical. A caller that knows a build already holds the sync gate prints this half alone, because a second localai sync exits 75 sync_busy and the block that stands where the command was says so instead.</comment>
+  </data>
+  <data name="GenerationWithoutSemanticIndexRemedy" xml:space="preserve">
+    <value>Sync again to build it: localai sync --root {0}</value>
+    <comment>The wording CodeSearchText.NavigationHeuristicMissing already uses for the same fact on the Navigation: line; two spellings of one fact is how they drift. It replaces 'Rebuild it with semantic indexing enabled', which named a route no option offers: localai sync takes no such flag, and the real cause is a generation published before semantic indexing existed. The hole is {0} here, not the {1} it carried inside the whole sentence: the generation id stayed with the half that names it. The command that repairs this lives in the matching Remedy key, and IndexText joins the two back with a single space for every caller that prints the whole sentence - so what this product has always printed is byte-identical. A caller that knows a build already holds the sync gate prints this half alone, because a second localai sync exits 75 sync_busy and the block that stands where the command was says so instead.</comment>
   </data>
   <data name="IndexBelongsToAnotherRepository" xml:space="preserve">
     <value>The published index belongs to another repository, so nothing here was searched. Sync this one: localai sync --root {0}</value>
@@ -167,9 +175,13 @@
     <value>No overlay matches this worktree as it is now, so no stale or mixed result was returned. Build one: localai sync --root {0}</value>
     <comment>It used to end 'Diagnose/restart MCP, use the LocalAi CLI through the same broker, or continue with rg', which named nothing the reader could type and contradicted ConsoleJson's own comment that this state is answered by syncing this worktree and that the message says so. Now it does.</comment>
   </data>
-  <data name="SemanticIndexUnreadable" xml:space="preserve">
-    <value>The semantic index for generation '{0}' could not be read. Rebuild it: localai sync --root {1}</value>
-    <comment>The cause it used to interpolate is now the InnerException: none of the twenty ways to be unreadable changes what the reader does, and 'Semantic index ended inside a document hash' is not a sentence to put in front of anybody.</comment>
+  <data name="SemanticIndexUnreadableFact" xml:space="preserve">
+    <value>The semantic index for generation '{0}' could not be read.</value>
+    <comment>The cause it used to interpolate is now the InnerException: none of the twenty ways to be unreadable changes what the reader does, and 'Semantic index ended inside a document hash' is not a sentence to put in front of anybody. The command that repairs this lives in the matching Remedy key, and IndexText joins the two back with a single space for every caller that prints the whole sentence - so what this product has always printed is byte-identical. A caller that knows a build already holds the sync gate prints this half alone, because a second localai sync exits 75 sync_busy and the block that stands where the command was says so instead.</comment>
+  </data>
+  <data name="SemanticIndexUnreadableRemedy" xml:space="preserve">
+    <value>Rebuild it: localai sync --root {0}</value>
+    <comment>The hole is {0} here, not the {1} it carried inside the whole sentence: the generation id stayed with the half that names it. The command that repairs this lives in the matching Remedy key, and IndexText joins the two back with a single space for every caller that prints the whole sentence - so what this product has always printed is byte-identical. A caller that knows a build already holds the sync gate prints this half alone, because a second localai sync exits 75 sync_busy and the block that stands where the command was says so instead.</comment>
   </data>
   <data name="SnapshotMismatch" xml:space="preserve">
     <value>The semantic index snapshot does not match the requested repository generation and worktree. Run localai sync in this worktree.</value>

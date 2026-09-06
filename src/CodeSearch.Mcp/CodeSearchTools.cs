@@ -77,8 +77,7 @@ public static class CodeSearchTools
                 position.Line,
                 position.Utf16Column,
                 root);
-            return notice.Above(root, SyncNoticeAudience.Answer) +
-                Degradation(outcome) +
+            return Degraded(outcome, notice, root) +
                 (outcome.Locations.Count == 0
                     ? CodeSearchText.NoDefinition
                     : FormatSemanticLocations(
@@ -88,7 +87,7 @@ public static class CodeSearchTools
         }
         catch (SemanticNavigationNotReadyException ex)
         {
-            return $"semantic_navigation_not_ready: {ex.Message}";
+            return NotReady(ex, notice, root);
         }
         catch (SemanticSnapshotMismatchException ex)
         {
@@ -142,8 +141,7 @@ public static class CodeSearchTools
                 position.Utf16Column,
                 includeDefinition,
                 root);
-            return notice.Above(root, SyncNoticeAudience.Answer) +
-                Degradation(outcome) +
+            return Degraded(outcome, notice, root) +
                 (outcome.Locations.Count == 0
                     ? CodeSearchText.NoReferences
                     : FormatSemanticLocations(
@@ -153,7 +151,7 @@ public static class CodeSearchTools
         }
         catch (SemanticNavigationNotReadyException ex)
         {
-            return $"semantic_navigation_not_ready: {ex.Message}";
+            return NotReady(ex, notice, root);
         }
         catch (SemanticSnapshotMismatchException ex)
         {
@@ -213,7 +211,7 @@ public static class CodeSearchTools
         }
         catch (SemanticNavigationNotReadyException ex)
         {
-            return $"semantic_navigation_not_ready: {ex.Message}";
+            return NotReady(ex, notice, root);
         }
         catch (SemanticSnapshotMismatchException ex)
         {
@@ -300,7 +298,7 @@ public static class CodeSearchTools
         }
         catch (SemanticNavigationNotReadyException ex)
         {
-            return $"semantic_navigation_not_ready: {ex.Message}";
+            return NotReady(ex, notice, root);
         }
         catch (SemanticSnapshotMismatchException ex)
         {
@@ -700,16 +698,71 @@ public static class CodeSearchTools
     };
 
     /// <summary>
-    /// Puts the reason a result is heuristic above the result, when there is one.
+    /// Puts the reason a result is heuristic above the result, when there is one, and the build
+    /// that explains it above or inside that reason.
     ///
     /// Trusted diagnostic, so it stays outside the untrusted-content boundary — it describes the
     /// index, never repository content. Every location already carries its own precision tag; what
     /// was missing is the one line that turns "these look like the wrong matches" into a repair.
+    ///
+    /// Three of the four reasons end in `localai sync`, which a build holding the repository's gate
+    /// refuses. Those take the shape every other command-naming answer takes — the block stands
+    /// where the command was — with one difference: here the command is the tail of a sentence
+    /// rather than a line of its own, so the block goes on the line under it rather than above it.
+    /// It is the completion of that sentence, not a header for the answer.
+    ///
+    /// The fourth reason names no command. It is a fact about a position, it is true whatever the
+    /// gate is doing, and the answer under it really does come from the published index — so it
+    /// keeps the ordinary block above the answer.
     /// </summary>
-    private static string Degradation(SemanticNavigationOutcome outcome) =>
-        outcome.Degradation is null
-            ? string.Empty
-            : $"semantic_navigation_degraded: {outcome.Degradation}\n\n";
+    private static string Degraded(
+        SemanticNavigationOutcome outcome,
+        SyncNotice notice,
+        string? root)
+    {
+        if (outcome.Degradation is not { } degradation)
+        {
+            return notice.Above(root, SyncNoticeAudience.Answer);
+        }
+
+        if (degradation.Remedy is null)
+        {
+            return notice.Above(root, SyncNoticeAudience.Answer) +
+                $"semantic_navigation_degraded: {degradation.Fact}\n\n";
+        }
+
+        // With nothing running this is the answer it has always been: an empty block collapses the
+        // two newlines back into the blank line the reason already had.
+        var sync = notice.InsteadOf(root);
+        return "semantic_navigation_degraded: " +
+            (sync.BuildIsRunning ? degradation.Fact : degradation.Sentence) +
+            "\n" + sync.Above + "\n";
+    }
+
+    /// <summary>
+    /// The same reason as a refusal rather than a caveat, for the two tools with no text fallback.
+    ///
+    /// A refusal whose only route is a command that cannot run is worse than a caveat carrying one,
+    /// not better: there is no answer underneath it to fall back on.
+    /// </summary>
+    private static string NotReady(
+        SemanticNavigationNotReadyException exception,
+        SyncNotice notice,
+        string? root)
+    {
+        if (exception.Degradation.Remedy is null)
+        {
+            return $"semantic_navigation_not_ready: {exception.Message}";
+        }
+
+        var sync = notice.InsteadOf(root);
+        var reason = sync.BuildIsRunning
+            ? exception.Degradation.Fact
+            : exception.Degradation.Sentence;
+        return sync.Above.Length == 0
+            ? $"semantic_navigation_not_ready: {reason}"
+            : $"semantic_navigation_not_ready: {reason}\n" + sync.Above.TrimEnd('\n');
+    }
 
     /// <summary>
     /// What the sync behind this repository is doing, as rows of the same aligned gutter.

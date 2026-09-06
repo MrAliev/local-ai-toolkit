@@ -42,10 +42,17 @@ two accounts of one build; the measured rate appears only on `index_status`. A p
 no chunks says so rather than repeating the previous phase's finished tally.
 
 The answers that would otherwise tell the reader to start a build — `search_code` and
-`index_status` where no index exists at all, and the `index_refresh` refusal — replace that
-instruction with the block rather than printing both. A second `localai sync` exits 75
-`sync_busy` against the gate, and on a machine building its first index that instruction was
-the whole of every answer for as long as the build ran.
+`index_status` where no index exists at all, the `index_refresh` refusal, and the
+`semantic_navigation_degraded:` and `semantic_navigation_not_ready:` lines on the navigation tools
+when their reason names a command — replace that instruction with the block rather than printing
+both. A second `localai sync` exits 75 `sync_busy` against the gate, and on a machine building its
+first index that instruction was the whole of every answer for as long as the build ran.
+
+On a navigation answer the block follows the reason rather than heading the answer: it stands one
+line under `semantic_navigation_degraded:`, in place of the command that sentence ends with when a
+build is not running. Three of the four reasons end in one. The fourth — no symbol at that
+position — names no command, is true whatever the gate is doing, and keeps the ordinary block above
+the answer.
 
 Whether a build is running is asked of the gate rather than of the record. A killed sync leaves
 its last phase in `progress.json` for ever, because nothing writes an end on behalf of a process
