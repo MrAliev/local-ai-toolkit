@@ -51,6 +51,13 @@ Whether a build is running is asked of the gate rather than of the record. A kil
 its last phase in `progress.json` for ever, because nothing writes an end on behalf of a process
 that is gone; such a record reads as stopped, with no ETA, and the command to build comes back.
 
+`index_status` asks the same gate and reports the same way. Its block keeps the aligned
+`Sync phase:` / `Progress:` / `Rate:` / `ETA:` / `Updated:` rows, and which of them appear is what
+carries the state: a build that died keeps its rate — a measured average over work that happened —
+and loses its ETA; a build that has taken the gate and written nothing yet is one `Sync phase:`
+row and no more; a build that ended keeps its row and loses its tally. `Updated:` carries the
+timestamp and how long ago it was, so the two faces spell one age one way.
+
 The block is this installation talking about itself, so it sits outside the
 `<untrusted-content>` markers, as the `Update:` line does.
 

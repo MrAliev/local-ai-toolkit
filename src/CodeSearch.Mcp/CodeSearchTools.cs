@@ -603,55 +603,85 @@ public static class CodeSearchTools
         """)]
     public static string IndexStatus(
         SearchService service,
-        SyncNotice notice,
+        RepositoryProgressReader reader,
         [Description("Repository root. Defaults to the repository containing the working directory.")]
         string? root = null)
     {
         var status = service.Status(root);
-        var progress = ReadProgress(status.WorkingRoot, service.RuntimeRoot);
-        var progressText = FormatProgress(progress);
+
+        // The reader rather than the notice, and one look rather than two.
+        //
+        // A status reads the world; it never says any of the once-only sentences. Asking the notice
+        // was worse than untidy: composing is what spends them, so a status taken after a build
+        // ended consumed the end-of-build line the next answer owed its reader and threw it away.
+        //
+        // One look also keeps the gate answer and the figures from different moments: the record is
+        // rewritten every batch, and two reads milliseconds apart can straddle a write.
+        var sighting = reader.Look(root);
+        var progressText = FormatProgress(sighting);
         if (!status.Exists)
         {
             // The same defect as on a search, on the surface a reader reaches for when a search
-            // looks wrong: a command that a running build would refuse. This status prints the
-            // figures itself, so only the instruction changes here.
-            var sync = notice.InsteadOf(status.RepositoryRoot);
-            var build = sync.BuildIsRunning
+            // looks wrong: a command that a running build would refuse.
+            var build = sighting is { BuildIsRunning: true }
                 ? CodeSearchText.BuildAlreadyRunning
                 : $"""
                     {CodeSearchText.BuildItWith}
                       {IndexCommand(status.RepositoryRoot)}
                     """;
-            return $"""
-                Repository: {status.RepositoryRoot}
-                Index:      {status.IndexPath}
-                Status:     NOT BUILT
-                {progressText}
-
-                {build}
-                """;
+            return Rows(
+                $"Repository: {status.RepositoryRoot}",
+                $"Index:      {status.IndexPath}",
+                "Status:     NOT BUILT",
+                progressText,
+                string.Empty,
+                build);
         }
 
-        var staleness = status.CommitDrifted
-            ? CodeSearchText.StatusStale(
-                  Short(status.IndexedCommit),
-                  Short(status.CurrentCommit)) +
-              InFlight(progress)
-            : "current";
-
-        return $"""
-            Repository: {status.RepositoryRoot}
-            Index:      {status.IndexPath}
-            Model:      {CodeSearchText.ModelWithDims(status.Model, status.Dim)}
-            Files:      {status.FileCount}
-            Chunks:     {status.ChunkCount}
-            Size:       {CodeSearchText.SizeMegabytes((status.SizeBytes / 1024.0 / 1024.0).ToString("F1", CultureInfo.InvariantCulture))}
-            Built:      {CodeSearchText.BuiltAtCommit(status.IndexedAtUtc.ToString("u", CultureInfo.InvariantCulture), Short(status.IndexedCommit))}
-            Status:     {staleness}
-            Navigation: {Navigation(status)}
-            {progressText}
-            """ + UpdateNotice.ForStatus(service.RuntimeRoot);
+        return Rows(
+            $"Repository: {status.RepositoryRoot}",
+            $"Index:      {status.IndexPath}",
+            $"Model:      {CodeSearchText.ModelWithDims(status.Model, status.Dim)}",
+            $"Files:      {status.FileCount}",
+            $"Chunks:     {status.ChunkCount}",
+            $"Size:       {CodeSearchText.SizeMegabytes((status.SizeBytes / 1024.0 / 1024.0).ToString("F1", CultureInfo.InvariantCulture))}",
+            $"Built:      {CodeSearchText.BuiltAtCommit(status.IndexedAtUtc.ToString("u", CultureInfo.InvariantCulture), Short(status.IndexedCommit))}",
+            $"Status:     {Staleness(status)}",
+            $"Navigation: {Navigation(status)}",
+            progressText) + UpdateNotice.ForStatus(service.RuntimeRoot);
     }
+
+    /// <summary>
+    /// The block, dropping the rows that have nothing in them.
+    ///
+    /// Which rows appear is what carries the state here, so an absent row is meaningful and an
+    /// empty one is not. A deliberate blank line is passed as one, and survives, because a caller
+    /// that wants a paragraph break says so.
+    /// </summary>
+    private static string Rows(params string[] rows) =>
+        string.Join(
+            "\n",
+            rows.Where((row, index) => row.Length > 0 || IsDeliberateBlank(rows, index)));
+
+    /// <summary>A blank between two rows that both have something in them.</summary>
+    private static bool IsDeliberateBlank(string[] rows, int index) =>
+        index > 0 &&
+        index < rows.Length - 1 &&
+        rows[index - 1].Length > 0 &&
+        rows[index + 1].Length > 0;
+
+    /// <summary>
+    /// Drift, and nothing about a sync. The clause that used to be appended here said a sync had
+    /// reached a phase without saying whether anything was still running, which is the defect the
+    /// block below now answers - four rows lower, from the same record, and with the gate asked.
+    /// Two accounts of one build can only disagree.
+    /// </summary>
+    private static string Staleness(IndexStatus status) =>
+        status.CommitDrifted
+            ? CodeSearchText.StatusStale(
+                Short(status.IndexedCommit),
+                Short(status.CurrentCommit))
+            : "current";
 
     /// <summary>
     /// Whether this generation can answer navigation precisely.
@@ -688,78 +718,76 @@ public static class CodeSearchTools
             : $"semantic_navigation_degraded: {outcome.Degradation}\n\n";
 
     /// <summary>
-    /// Says that a sync got somewhere short of publishing, when the recorded phase says so.
+    /// What the sync behind this repository is doing, as rows of the same aligned gutter.
     ///
-    /// Staleness and an unfinished sync are separate facts that look like one contradiction when
-    /// only the first is printed: a generation is built well before the pointer moves to it, and
-    /// during that window the index really is stale and really is about to stop being. This
-    /// states what was recorded and when, and claims nothing about whether the process behind it
-    /// is still alive — a killed sync leaves its last phase behind, and inferring liveness from
-    /// that would trade one misleading line for another.
+    /// Which rows appear is what carries the state, so `Sync phase:` is present whenever the block
+    /// prints at all: the row a reader looks at to answer "is a sync happening" must never be the
+    /// one that is missing.
+    ///
+    /// `ETA:` is the only prediction here, and it goes when the process that made it is gone - it
+    /// was that process's estimate of a remaining time nobody is spending. `Rate:` stays, because a
+    /// measured average over work that happened is still a fact, and it is the number this reader
+    /// came for: 26480 chunks at 10.2/s is what a restart will cost.
     /// </summary>
-    private static string InFlight(RepositoryIndexProgress? progress) =>
-        progress is null ||
-        progress.Phase is RepositoryIndexProgressPhase.Completed
-            or RepositoryIndexProgressPhase.Failed
-            ? string.Empty
-            : CodeSearchText.SyncReached(
-                progress.Phase,
-                progress.UpdatedAtUtc.ToString("u", CultureInfo.InvariantCulture));
-
-    private static RepositoryIndexProgress? ReadProgress(
-        string workingRoot,
-        string? runtimeRoot)
+    private static string FormatProgress(SyncSighting? sighting)
     {
-        try
-        {
-            var identity = RuntimeIndexLayout.Inspect(workingRoot, runtimeRoot);
-            return new RepositoryIndexProgressStore(
-                identity.RepositoryRuntimeRoot).Read();
-        }
-        catch (Exception exception) when (
-            exception is IOException or
-                UnauthorizedAccessException or
-                InvalidDataException or
-                InvalidOperationException)
-        {
-            return null;
-        }
-    }
-
-    private static string FormatProgress(RepositoryIndexProgress? progress)
-    {
-        if (progress is null)
+        if (sighting is null)
         {
             return string.Empty;
+        }
+
+        if (sighting.Progress is not { } progress)
+        {
+            // A sync that has taken the gate and written nothing yet - the whole of a first
+            // build's first seconds. One row, because the state has exactly one fact and there is
+            // nothing to date.
+            return sighting.BuildHoldsTheGate
+                ? "Sync phase: " + CodeSearchText.ProgressNotRecordedYet
+                : string.Empty;
         }
 
         // Chunk counters belong to embedding. A semantic build or a generation publish counts
         // nothing, and printing the previous phase's finished tally next to it is what made a
         // build that still had minutes to run read as one that had finished and stalled.
-        if (!progress.Phase.CountsChunks())
-        {
-            return $"""
-                Sync phase: {progress.Phase}
-                Progress:   {CodeSearchText.ProgressNotCounted}
-                Updated:    {progress.UpdatedAtUtc:u}
-                """;
-        }
+        var counts = progress.Phase.CountsChunks();
+        return Rows(
+            "Sync phase: " + (sighting.BuildHoldsTheGate || sighting.Ended
+                ? progress.Phase.ToString()
+                : CodeSearchText.ProgressStoppedAt(progress.Phase.ToString())),
+            // Nothing about a build that has ended: the tally it stopped at says nothing about it,
+            // and the honest alternative - a full counter with nothing remaining - is the exact
+            // reading the CountsChunks guard exists to prevent.
+            sighting.Ended
+                ? string.Empty
+                : "Progress:   " + (counts
+                    ? CodeSearchText.ProgressChunks(
+                        progress.ProcessedChunks,
+                        progress.TotalChunks,
+                        Math.Max(0, progress.TotalChunks - progress.ProcessedChunks))
+                    : CodeSearchText.ProgressNotCounted),
+            counts && !sighting.Ended
+                ? "Rate:       " + CodeSearchText.RateChunks(
+                    progress.ChunksPerSecond.ToString("F1", CultureInfo.InvariantCulture))
+                : string.Empty,
+            counts && sighting.BuildIsRunning
+                ? "ETA:        " + Eta(progress.EstimatedRemaining)
+                : string.Empty,
+            "Updated:    " +
+                progress.UpdatedAtUtc.ToString("u", CultureInfo.InvariantCulture) + ", " +
+                CodeSearchText.RecordedAgo(RecordedAge.Of(progress.UpdatedAtUtc)));
+    }
 
-        var remaining = Math.Max(0, progress.TotalChunks - progress.ProcessedChunks);
-        var eta = progress.EstimatedRemaining is { } estimate
+    /// <summary>
+    /// Zero is a figure rather than a duration: a build with nothing left to do has not estimated
+    /// a tenth of a minute, it has finished the part that counts.
+    /// </summary>
+    private static string Eta(TimeSpan? remaining) =>
+        remaining is { } estimate
             ? estimate == TimeSpan.Zero
                 ? "0"
                 : CodeSearchText.EtaMinutes(
                     estimate.TotalMinutes.ToString("F1", CultureInfo.InvariantCulture))
             : CodeSearchText.EtaCalculating;
-        return $"""
-            Sync phase: {progress.Phase}
-            Progress:   {CodeSearchText.ProgressChunks(progress.ProcessedChunks, progress.TotalChunks, remaining)}
-            Rate:       {CodeSearchText.RateChunks(progress.ChunksPerSecond.ToString("F1", CultureInfo.InvariantCulture))}
-            ETA:        {eta}
-            Updated:    {progress.UpdatedAtUtc:u}
-            """;
-    }
 
     [McpServerTool(Name = "index_unload")]
     [Description("""

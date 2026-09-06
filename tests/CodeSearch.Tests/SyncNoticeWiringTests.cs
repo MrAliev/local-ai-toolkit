@@ -97,16 +97,39 @@ public sealed class SyncNoticeWiringTests : IDisposable
     [Fact]
     public void A_status_with_no_index_is_not_told_to_start_the_build_that_is_running()
     {
-        var status = CodeSearchTools.IndexStatus(Service(), Watching(Running()), _root);
+        var status = CodeSearchTools.IndexStatus(Service(), Reader(building: true), _root);
 
         Assert.Contains(CodeSearchText.BuildAlreadyRunning, status, StringComparison.Ordinal);
         Assert.DoesNotContain(CodeSearchText.BuildItWith, status, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// A status reads the world; it does not get to spend what the answers owe a reader.
+    ///
+    /// The end of a build is said once, to whoever was told it started. `index_status` used to ask
+    /// the composer for its build flag, and composing is what spends that once - so a session that
+    /// saw a build start, asked for a status and then searched was never told the build had
+    /// finished, and went on qualifying answers that no longer needed it. It now reads the world
+    /// directly, and this holds it there.
+    /// </summary>
+    [Fact]
+    public void A_status_does_not_spend_the_end_of_a_build_owed_to_the_next_answer()
+    {
+        var sighting = Running();
+        var notice = new SyncNotice(_ => sighting);
+        notice.Above(_root, SyncNoticeAudience.Answer);
+
+        sighting = Finished();
+        CodeSearchTools.IndexStatus(Service(), Reader(building: false), _root);
+        var next = notice.Above(_root, SyncNoticeAudience.Answer);
+
+        Assert.Contains(CodeSearchText.SyncEnded, next, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void A_status_with_no_index_and_nothing_running_still_says_how_to_build_one()
     {
-        var status = CodeSearchTools.IndexStatus(Service(), NoBuildRunning.Notice, _root);
+        var status = CodeSearchTools.IndexStatus(Service(), Reader(building: false), _root);
 
         Assert.Contains(CodeSearchText.BuildItWith, status, StringComparison.Ordinal);
         Assert.Contains("sync --root", status, StringComparison.Ordinal);
@@ -180,10 +203,28 @@ public sealed class SyncNoticeWiringTests : IDisposable
 
     private SearchService Service() => new(runtimeRoot: _runtimeRoot);
 
+    /// <summary>
+    /// A reader over this fixture's own runtime, with the gate answered rather than probed. No
+    /// progress is written here, so a held gate is a build that has started and recorded nothing -
+    /// which is exactly the state a machine building its first index passes through.
+    /// </summary>
+    private RepositoryProgressReader Reader(bool building) =>
+        new(_runtimeRoot, gateHeld: _ => building);
+
     private static SyncNotice Watching(SyncSighting sighting) => new(_ => sighting);
 
     private static SyncSighting Running() =>
         new(Repository, BuildHoldsTheGate: true, Progress(DateTimeOffset.UtcNow));
+
+    private static SyncSighting Finished() =>
+        new(
+            Repository,
+            BuildHoldsTheGate: false,
+            Progress(DateTimeOffset.UtcNow) with
+            {
+                Phase = RepositoryIndexProgressPhase.Completed,
+                ProcessedChunks = 26480,
+            });
 
     private static SyncSighting Died() =>
         new(
