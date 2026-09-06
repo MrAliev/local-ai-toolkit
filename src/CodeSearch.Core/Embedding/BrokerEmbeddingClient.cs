@@ -1,4 +1,5 @@
 using CodeSearch.Core.Chunking;
+using CodeSearch.Core.Resources;
 using LocalAi.Broker.Client;
 using LocalAi.Contracts;
 
@@ -47,14 +48,26 @@ public sealed class BrokerEmbeddingClient(
         }
         catch (BrokerBootstrapException exception) when (exception.Code == "broker_start_timeout")
         {
+            // The bootstrap diagnostic - phase, last observation - is carried rather than
+            // dropped: it is the only thing that says which step of starting the broker did not
+            // finish. It arrives in English because BrokerProcess has no catalogue of its own,
+            // which is a reason to catalogue those messages, not to drop this sentence.
             throw new EmbeddingUnavailableException(
-                "The LocalAi broker did not become available for embedding.",
+                IndexText.EmbeddingBrokerNotStarted(exception.Message),
                 exception);
         }
+        // Nothing in src/ reaches this: BrokerClient turns its own deadline into an
+        // OperationCanceledException or a BrokerBackendUnreachableException, and there is no
+        // HttpClient or WaitAsync in that chain. It stays because deleting the catch would let
+        // the indexer halve a batch against an absent backend, and it stays an English literal
+        // because a string translated for a reader who cannot exist is cost with a parity test
+        // guarding it - the argument this catalogue already makes for two other refusals. The
+        // wording differs from the one above so that, if it ever does fire, the line says which
+        // branch produced it.
         catch (TimeoutException exception)
         {
             throw new EmbeddingUnavailableException(
-                "The LocalAi broker did not become available for embedding.",
+                "The LocalAi broker did not answer in time.",
                 exception);
         }
         // A backend that is not there is not a chunk that cannot be embedded. IndexBuilder
@@ -71,8 +84,20 @@ public sealed class BrokerEmbeddingClient(
             when (exception.FailureCode.Equals(BackendUnavailable, StringComparison.Ordinal))
         {
             throw new EmbeddingUnavailableException(
-                "The model backend was not available for embedding.",
+                IndexText.EmbeddingBackendUnavailable(Model, exception.Message),
                 exception);
+        }
+        // The same rule, by the route nobody guarded. An Ollama that is not running does not fail
+        // a job - the job never runs at all, and the wait ends here. This is an
+        // InvalidOperationException, so it was neither caught nor excluded from halving: the
+        // indexer divided a batch against an absent backend down to a single chunk, then reported
+        // that chunk as rejected with exit 65, naming a file that was never the problem.
+        //
+        // Its own message already names the cause and what to do, so it travels whole rather than
+        // being replaced by a sentence that knows less.
+        catch (BrokerBackendUnreachableException exception)
+        {
+            throw new EmbeddingUnavailableException(exception.Message, exception);
         }
 
         if (result.Value.Embeddings.Count != inputs.Count)

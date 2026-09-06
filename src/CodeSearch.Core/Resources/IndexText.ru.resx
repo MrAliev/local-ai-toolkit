@@ -187,4 +187,20 @@
     <value>Снимок семантического индекса не совпадает с запрошенным поколением репозитория и рабочим деревом. Запустить localai sync в этом рабочем дереве.</value>
     <comment>No path hole: neither call site has a working root to name, and threading one through for a --root the reader may omit is not worth the parameter.</comment>
   </data>
+  <data name="EmbeddingBrokerNotStarted" xml:space="preserve">
+    <value>Брокер LocalAi не запустился вовремя. {0}</value>
+    <comment>{0} is BrokerBootstrapException's own diagnostic - phase and last observation - which is English in every language because BrokerProcess has no catalogue of its own. It restates this sentence in English, and that duplication goes away when those messages are catalogued rather than by dropping this one: dropping it is the defect #393 names.</comment>
+  </data>
+  <data name="EmbeddingBackendUnavailable" xml:space="preserve">
+    <value>Ollama недоступна, поэтому задание на эмбеддинг для модели '{0}' не завершилось. {1}</value>
+    <comment>Ollama by name, because it is the only transport and the only thing the reader can act on. {0} is the embedding model id and is never translated. {1} is BrokerJobFailedException's message, already catalogued and already cut to 200 characters, so the job id and the marker before Ollama's own words come with it - do not re-derive them from FailureReason.</comment>
+  </data>
+  <data name="BuildEmbeddingStopped" xml:space="preserve">
+    <value>Эмбеддинг остановился на {0} из {1} чанков. Посчитанное сохранено — повторный запуск этой сборки продолжит с этого места.</value>
+    <comment>The count is what #389 was filed for, and the second clause is the fact that makes running it again cheap. Both holes are counts and stay invariant. Said only where an embedding checkpoint is configured, and understated by construction: SaveBatch runs before done is incremented, and the halving path saves more, so what the checkpoint holds is never less than what this claims.</comment>
+  </data>
+  <data name="BuildEmbeddingStoppedAtStart" xml:space="preserve">
+    <value>Ни один из {0} чанков не посчитан.</value>
+    <comment>No remedy clause: nothing was finished, so there is nothing to tell the reader is kept.</comment>
+  </data>
 </root>
