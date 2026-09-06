@@ -10,6 +10,7 @@ namespace LocalAi.IntegrationTests;
 /// The last four CLI files that still spoke English only. Each carried a sentence that was wrong
 /// on its own terms before any question of language came up, so those are asserted first.
 /// </summary>
+[Collection(ConsoleCaptureCollection.Name)]
 public sealed class LastFourCommandsFollowTheReaderTests : IDisposable
 {
     private readonly string _root = Path.Combine(

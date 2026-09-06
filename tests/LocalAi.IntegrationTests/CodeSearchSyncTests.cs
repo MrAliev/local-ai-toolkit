@@ -7,6 +7,7 @@ using LocalAi.Repository;
 
 namespace LocalAi.IntegrationTests;
 
+[Collection(ConsoleCaptureCollection.Name)]
 public sealed class CodeSearchSyncTests : IDisposable
 {
     private readonly string _root = Path.Combine(
