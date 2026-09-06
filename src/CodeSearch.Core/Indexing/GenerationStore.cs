@@ -283,9 +283,15 @@ public sealed class GenerationStore
     public static TimeSpan PublishRetryBudget { get; } = TimeSpan.FromSeconds(2);
 
     /// <summary>
-    /// Unconditional pointer write, for test setup and repair paths. A sync publishes
-    /// through the expectation overload below: an unconditional write is how an older run
-    /// used to move the index backwards over a newer one (#199).
+    /// Unconditional pointer write. Nothing in <c>src/</c> calls it: of its thirty-one
+    /// references, one is this declaration and thirty are test setup. It used to say "and repair
+    /// paths" as well, which named <c>GenerationPublisher</c> — a class no path reached, deleted
+    /// with the rest of the readiness subsystem (#394).
+    ///
+    /// A sync publishes through the expectation overload below, and that is the point: an
+    /// unconditional write is how an older run used to move the index backwards over a newer one
+    /// (#199). If this overload acquires a caller in <c>src/</c>, that caller is the defect —
+    /// #199 again, wearing a different name.
     /// </summary>
     public void SetCurrent(GenerationManifest generation) =>
         SetCurrent(generation, PublishRetryBudget);
