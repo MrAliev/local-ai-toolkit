@@ -10,6 +10,13 @@ public sealed class BrokerProcessTests
     private static readonly string BrokerAssemblyPath =
         Path.GetFullPath("LocalAi.Broker.dll");
 
+    /// <summary>
+    /// The startup budget the blocked process is given, named rather than repeated so the one
+    /// assertion in this file that still looks at a clock can be written against it instead of
+    /// against a number chosen by hand.
+    /// </summary>
+    private static readonly TimeSpan BlockedStartupBudget = TimeSpan.FromSeconds(5);
+
     public static TheoryData<Exception> UnreadableStateExceptions =>
         new()
         {
@@ -776,15 +783,18 @@ public sealed class BrokerProcessTests
         using var safetyCancellation = CancellationTokenSource.CreateLinkedTokenSource(
             TestContext.Current.CancellationToken);
         safetyCancellation.CancelAfter(TimeSpan.FromSeconds(2));
-        var stopwatch = Stopwatch.StartNew();
         try
         {
             var exception = await Assert.ThrowsAsync<BrokerBootstrapException>(
                 () => second.EnsureRunningAsync(safetyCancellation.Token));
 
+            // Which deadline won is proved by the exception, not by a stopwatch. Had the
+            // two-second safety cancellation got there first, AcquireStartupSemaphore's
+            // ThrowIfCancellationRequested would have raised OperationCanceledException and
+            // never reached this type; and this message is written at exactly one place, where
+            // the 75ms startup budget is found spent.
             Assert.Equal("broker_start_timeout", exception.Code);
             Assert.Contains("startup semaphore contention", exception.Message);
-            Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(1));
             Assert.Equal(0, secondStarts);
         }
         finally
@@ -843,7 +853,7 @@ public sealed class BrokerProcessTests
             },
             TimeProvider.System,
             static (_, token) => Task.Delay(5, token),
-            startupTimeout: TimeSpan.FromSeconds(5));
+            startupTimeout: BlockedStartupBudget);
 
         var firstTask = first.EnsureRunningAsync(TestContext.Current.CancellationToken);
         Assert.True(
@@ -862,7 +872,23 @@ public sealed class BrokerProcessTests
         {
             await Assert.ThrowsAnyAsync<OperationCanceledException>(
                 () => blockedTask);
-            Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(1));
+
+            // This one deadline stays, and it is not about how fast the machine is. The type
+            // above cannot tell a prompt cancellation from a late one: a wait that noticed the
+            // token only when the whole five-second budget ran out would still surface as
+            // OperationCanceledException, because AcquireStartupSemaphore checks the token
+            // again before it declares a timeout.
+            //
+            // What is actually under test is that the semaphore wait is cut into slices —
+            // MaximumSemaphoreWaitSlice is 100ms — so cancellation is seen within one slice
+            // rather than at the end of the budget. Remove the slicing and this test still
+            // throws the right type, five seconds later. The bound is therefore the budget
+            // itself rather than a number picked by hand: half of it leaves a correct run
+            // twenty-five slices of headroom and still fails a run that waited the budget out.
+            Assert.True(
+                stopwatch.Elapsed < BlockedStartupBudget / 2,
+                $"cancellation took {stopwatch.Elapsed}, which is not within one wait slice of " +
+                $"being asked — the semaphore wait is no longer sliced.");
             Assert.Equal(0, blockedStarts);
         }
         finally
