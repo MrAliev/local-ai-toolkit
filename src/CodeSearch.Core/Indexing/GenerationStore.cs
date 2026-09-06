@@ -250,15 +250,42 @@ public sealed class GenerationStore
     }
 
     /// <summary>
+    /// How long the rename keeps retrying while a reader holds the pointer open.
+    ///
+    /// <c>TryReadCurrent</c> reads through <c>File.ReadAllText</c>, which takes
+    /// <c>FileShare.Read</c> and so denies <c>FILE_SHARE_DELETE</c>: while that handle is open the
+    /// publish cannot replace the file. This pointer has more readers than anything else in the
+    /// runtime tree — every search, every navigation call, every <c>index_status</c>, every
+    /// retention pass — and it was the one with no patience at all, so a lost race threw out of
+    /// the sync after the whole build.
+    ///
+    /// The number is <c>BrokerRuntimeStateStore</c>'s, carried over rather than measured
+    /// here, and the two cases differ: a missed heartbeat costs one tick, a refused publish costs
+    /// the build that produced it. What the budget has to outlast is the same in both — a reader
+    /// parsing a document of a few hundred bytes — but nobody has measured that on a loaded
+    /// machine for this file, and this comment should not pretend otherwise.
+    /// </summary>
+    public static TimeSpan PublishRetryBudget { get; } = TimeSpan.FromSeconds(2);
+
+    /// <summary>
     /// Unconditional pointer write, for test setup and repair paths. A sync publishes
     /// through the expectation overload below: an unconditional write is how an older run
     /// used to move the index backwards over a newer one (#199).
     /// </summary>
-    public void SetCurrent(GenerationManifest generation)
+    public void SetCurrent(GenerationManifest generation) =>
+        SetCurrent(generation, PublishRetryBudget);
+
+    /// <param name="retryBudget">
+    /// A duration rather than a number of attempts, for the reason
+    /// <c>BrokerRuntimeStateStore</c> gives: an attempt count silently means different
+    /// amounts of waiting depending on what else the machine is doing.
+    /// </param>
+    public void SetCurrent(GenerationManifest generation, TimeSpan retryBudget)
     {
         ArgumentNullException.ThrowIfNull(generation);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(retryBudget, TimeSpan.Zero);
         ReadManifest(generation.Identity.Id);
-        WriteCurrent(generation);
+        WriteCurrent(generation, retryBudget);
     }
 
     /// <summary>
@@ -296,16 +323,29 @@ public sealed class GenerationStore
                 "publish a stale result. Run sync again.");
         }
 
-        WriteCurrent(generation);
+        WriteCurrent(generation, PublishRetryBudget);
     }
 
-    private void WriteCurrent(GenerationManifest generation) =>
+    /// <summary>
+    /// Written without <c>FileOptions.WriteThrough</c> and without a flush to disk, unlike
+    /// <c>RepositoryIndexProgressStore.Save</c> — which is the difference #392 asks about. The
+    /// answer for this file: nothing in a pointer is observed once. It carries a generation id,
+    /// the dev tree it was built from, and when that was decided, and the id is a hash of the
+    /// repository id, dev commit, dev tree, embedding model, dimension and the format versions —
+    /// every one of which the next run derives again from the same repository. What a lost
+    /// pointer costs is recomputation, not a fact that existed only here.
+    ///
+    /// The axis is recoverable or not, rather than important or not: this pointer is as important
+    /// as anything in the runtime tree, and still does not need the flush.
+    /// </summary>
+    private void WriteCurrent(GenerationManifest generation, TimeSpan retryBudget) =>
         AtomicWriteJson(
             _currentPath,
             new GenerationPointer(
                 generation.Identity.Id,
                 generation.Identity.DevTree,
-                DateTimeOffset.UtcNow));
+                DateTimeOffset.UtcNow),
+            retryBudget);
 
     public string IndexPath(string generationId) =>
         Path.Combine(_generationsRoot, generationId, "base.cidx");
@@ -319,7 +359,12 @@ public sealed class GenerationStore
         return Convert.ToHexString(SHA256.HashData(stream));
     }
 
-    private static void AtomicWriteJson<T>(string path, T value)
+    /// <param name="retryBudget">
+    /// How long the rename keeps trying while a reader holds the destination open. Null for the
+    /// manifest, which is written into a staging directory nothing has opened yet — only the
+    /// pointer has readers to lose a race with.
+    /// </param>
+    private static void AtomicWriteJson<T>(string path, T value, TimeSpan? retryBudget = null)
     {
         var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
@@ -327,7 +372,27 @@ public sealed class GenerationStore
             File.WriteAllText(
                 temporary,
                 JsonSerializer.Serialize(value, LocalAiJson.Strict));
-            File.Move(temporary, path, overwrite: true);
+            if (retryBudget is not { } budget)
+            {
+                File.Move(temporary, path, overwrite: true);
+                return;
+            }
+
+            var deadline = DateTime.UtcNow + budget;
+            while (true)
+            {
+                try
+                {
+                    File.Move(temporary, path, overwrite: true);
+                    return;
+                }
+                catch (Exception error) when (
+                    error is IOException or UnauthorizedAccessException &&
+                    DateTime.UtcNow < deadline)
+                {
+                    Thread.Sleep(TimeSpan.FromMilliseconds(25));
+                }
+            }
         }
         finally
         {
