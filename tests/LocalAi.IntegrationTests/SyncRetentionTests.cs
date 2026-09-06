@@ -32,7 +32,10 @@ public sealed class SyncRetentionTests : IDisposable
         store.SetCurrent(store.ReadManifest(newest));
         WriteRetention(generationsPerRepository: 2);
 
-        CodeSearchSyncCommand.PruneSupersededGenerations(RepositoryRoot, RuntimeRoot);
+        CodeSearchSyncCommand.PruneSupersededGenerations(
+            RepositoryRoot,
+            RuntimeRoot,
+            TextWriter.Null);
 
         Assert.False(Directory.Exists(Generation(oldest)));
         Assert.True(Directory.Exists(Generation(middle)));
@@ -53,7 +56,10 @@ public sealed class SyncRetentionTests : IDisposable
         store.SetCurrent(store.ReadManifest(oldest));
         WriteRetention(generationsPerRepository: 1);
 
-        CodeSearchSyncCommand.PruneSupersededGenerations(RepositoryRoot, RuntimeRoot);
+        CodeSearchSyncCommand.PruneSupersededGenerations(
+            RepositoryRoot,
+            RuntimeRoot,
+            TextWriter.Null);
 
         Assert.True(Directory.Exists(Generation(oldest)));
     }
@@ -69,7 +75,10 @@ public sealed class SyncRetentionTests : IDisposable
         var missing = Path.Combine(_root, "no-such-repository");
 
         var failure = Record.Exception(
-            () => CodeSearchSyncCommand.PruneSupersededGenerations(missing, RuntimeRoot));
+            () => CodeSearchSyncCommand.PruneSupersededGenerations(
+                missing,
+                RuntimeRoot,
+                TextWriter.Null));
 
         Assert.Null(failure);
     }

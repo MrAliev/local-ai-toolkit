@@ -8,32 +8,36 @@ namespace LocalAi.Cli;
 
 internal static class SemanticNavigationCommand
 {
+    /// <param name="streams">
+    /// Where this command writes. Required rather than defaulted to the console, for the reason
+    /// <see cref="CommandStreams"/> gives.
+    /// </param>
     /// <param name="runtimeRoot">
     /// The installation whose policy files and published generation this command reads. Null
     /// means the machine's own, which is the only value the CLI passes.
     /// </param>
-    public static int Execute(string[] args, string? runtimeRoot = null)
+    public static int Execute(string[] args, CommandStreams streams, string? runtimeRoot = null)
     {
         var operation = args.FirstOrDefault() ?? "status";
         var root = Option(args, "--root");
         if (string.Equals(operation, "config", StringComparison.Ordinal))
         {
-            return Configure(args.Skip(1).ToArray(), runtimeRoot);
+            return Configure(args.Skip(1).ToArray(), streams, runtimeRoot);
         }
 
         if (string.Equals(operation, "lsp-config", StringComparison.Ordinal))
         {
-            return ConfigureLanguageServers(args.Skip(1).ToArray(), runtimeRoot);
+            return ConfigureLanguageServers(args.Skip(1).ToArray(), streams, runtimeRoot);
         }
 
         if (string.Equals(operation, "fallback-config", StringComparison.Ordinal))
         {
-            return ConfigureFallback(args.Skip(1).ToArray(), runtimeRoot);
+            return ConfigureFallback(args.Skip(1).ToArray(), streams, runtimeRoot);
         }
 
         if (string.Equals(operation, "evaluate", StringComparison.Ordinal))
         {
-            return Evaluate(args, root, runtimeRoot);
+            return Evaluate(args, streams, root, runtimeRoot);
         }
 
         if (string.Equals(operation, "status", StringComparison.Ordinal))
@@ -41,17 +45,17 @@ internal static class SemanticNavigationCommand
             try
             {
                 var index = Load(root, runtimeRoot);
-                Console.WriteLine($"semantic documents: {index.Documents.Count}");
-                Console.WriteLine($"semantic symbols: {index.Symbols.Count}");
-                Console.WriteLine($"semantic occurrences: {index.Occurrences.Count}");
-                Console.WriteLine($"semantic relationships: {index.Relationships.Count}");
-                Console.WriteLine($"snapshot tree: {index.GitTree}");
-                Console.WriteLine($"snapshot dirty: {index.DirtyHash ?? "clean"}");
+                streams.Out.WriteLine($"semantic documents: {index.Documents.Count}");
+                streams.Out.WriteLine($"semantic symbols: {index.Symbols.Count}");
+                streams.Out.WriteLine($"semantic occurrences: {index.Occurrences.Count}");
+                streams.Out.WriteLine($"semantic relationships: {index.Relationships.Count}");
+                streams.Out.WriteLine($"snapshot tree: {index.GitTree}");
+                streams.Out.WriteLine($"snapshot dirty: {index.DirtyHash ?? "clean"}");
                 return 0;
             }
             catch (Exception exception)
             {
-                Console.Error.WriteLine(
+                streams.Error.WriteLine(
                     CliText.SemanticCommandFailed("status", exception.Message));
                 return 1;
             }
@@ -59,8 +63,8 @@ internal static class SemanticNavigationCommand
 
         if (!NavigationOperations.Contains(operation, StringComparer.Ordinal))
         {
-            Console.Error.WriteLine(CliText.SemanticOperationUnknown(operation));
-            return Usage();
+            streams.Error.WriteLine(CliText.SemanticOperationUnknown(operation));
+            return Usage(streams);
         }
 
         var path = Option(args, "--path");
@@ -68,7 +72,7 @@ internal static class SemanticNavigationCommand
             !int.TryParse(Option(args, "--line"), out var line) ||
             !int.TryParse(Option(args, "--column"), out var column))
         {
-            return Usage();
+            return Usage(streams);
         }
 
         // The same path rule and the same numbering the MCP tools take, because this command is
@@ -77,13 +81,13 @@ internal static class SemanticNavigationCommand
         // moment somebody is already dealing with a breakage.
         if (!SemanticDocumentPath.IsRepositoryRelative(path))
         {
-            Console.Error.WriteLine(CliText.PathNotRelative(path));
+            streams.Error.WriteLine(CliText.PathNotRelative(path));
             return 2;
         }
 
         if (!SourcePosition.TryFromOneBased(line, column, out var position))
         {
-            Console.Error.WriteLine(CliText.PositionNotFromOne(line, column));
+            streams.Error.WriteLine(CliText.PositionNotFromOne(line, column));
             return 2;
         }
 
@@ -108,7 +112,7 @@ internal static class SemanticNavigationCommand
                              path, position.Line, position.Utf16Column, direction, kind, root))
                 {
                     var location = related.Location;
-                    Console.WriteLine(
+                    streams.Out.WriteLine(
                         $"{location.DocumentPath}:" +
                         $"{SourcePosition.ToOneBased(location.Range.StartLine)}:" +
                         $"{SourcePosition.ToOneBased(location.Range.StartCharacter)}-" +
@@ -140,7 +144,7 @@ internal static class SemanticNavigationCommand
             };
             foreach (var location in locations)
             {
-                Console.WriteLine(
+                streams.Out.WriteLine(
                     $"{location.DocumentPath}:" +
                     $"{SourcePosition.ToOneBased(location.Range.StartLine)}:" +
                     $"{SourcePosition.ToOneBased(location.Range.StartCharacter)}-" +
@@ -153,7 +157,7 @@ internal static class SemanticNavigationCommand
         }
         catch (Exception exception)
         {
-            Console.Error.WriteLine(
+            streams.Error.WriteLine(
                 CliText.SemanticCommandFailed(operation, exception.Message));
             return 1;
         }
@@ -203,13 +207,13 @@ internal static class SemanticNavigationCommand
         return null;
     }
 
-    private static int Configure(string[] args, string? runtimeRoot)
+    private static int Configure(string[] args, CommandStreams streams, string? runtimeRoot)
     {
         var store = new SemanticIndexingPolicyStore(Runtime(runtimeRoot));
         var operation = args.FirstOrDefault() ?? "show";
         if (string.Equals(operation, "path", StringComparison.Ordinal))
         {
-            Console.WriteLine(store.Path);
+            streams.Out.WriteLine(store.Path);
             return 0;
         }
 
@@ -220,29 +224,29 @@ internal static class SemanticNavigationCommand
                 store.Write(SemanticIndexingPolicy.Default);
             }
 
-            Console.WriteLine(store.Path);
+            streams.Out.WriteLine(store.Path);
             return 0;
         }
 
         if (string.Equals(operation, "show", StringComparison.Ordinal))
         {
-            Console.WriteLine($"config: {store.Path}");
-            Console.WriteLine(JsonSerializer.Serialize(
+            streams.Out.WriteLine($"config: {store.Path}");
+            streams.Out.WriteLine(JsonSerializer.Serialize(
                 store.Read(),
                 new JsonSerializerOptions { WriteIndented = true }));
             return 0;
         }
 
-        return Usage();
+        return Usage(streams);
     }
 
-    private static int ConfigureLanguageServers(string[] args, string? runtimeRoot)
+    private static int ConfigureLanguageServers(string[] args, CommandStreams streams, string? runtimeRoot)
     {
         var store = new LanguageServerPolicyStore(Runtime(runtimeRoot));
         var operation = args.FirstOrDefault() ?? "show";
         if (string.Equals(operation, "path", StringComparison.Ordinal))
         {
-            Console.WriteLine(store.Path);
+            streams.Out.WriteLine(store.Path);
             return 0;
         }
 
@@ -253,29 +257,29 @@ internal static class SemanticNavigationCommand
                 store.Write(LanguageServerPolicy.Default);
             }
 
-            Console.WriteLine(store.Path);
+            streams.Out.WriteLine(store.Path);
             return 0;
         }
 
         if (string.Equals(operation, "show", StringComparison.Ordinal))
         {
-            Console.WriteLine($"config: {store.Path}");
-            Console.WriteLine(JsonSerializer.Serialize(
+            streams.Out.WriteLine($"config: {store.Path}");
+            streams.Out.WriteLine(JsonSerializer.Serialize(
                 store.Read(),
                 new JsonSerializerOptions { WriteIndented = true }));
             return 0;
         }
 
-        return Usage();
+        return Usage(streams);
     }
 
-    private static int ConfigureFallback(string[] args, string? runtimeRoot)
+    private static int ConfigureFallback(string[] args, CommandStreams streams, string? runtimeRoot)
     {
         var store = new HeuristicNavigationPolicyStore(Runtime(runtimeRoot));
         var operation = args.FirstOrDefault() ?? "show";
         if (string.Equals(operation, "path", StringComparison.Ordinal))
         {
-            Console.WriteLine(store.Path);
+            streams.Out.WriteLine(store.Path);
             return 0;
         }
 
@@ -286,28 +290,28 @@ internal static class SemanticNavigationCommand
                 store.Write(HeuristicNavigationPolicy.Default);
             }
 
-            Console.WriteLine(store.Path);
+            streams.Out.WriteLine(store.Path);
             return 0;
         }
 
         if (string.Equals(operation, "show", StringComparison.Ordinal))
         {
-            Console.WriteLine($"config: {store.Path}");
-            Console.WriteLine(JsonSerializer.Serialize(
+            streams.Out.WriteLine($"config: {store.Path}");
+            streams.Out.WriteLine(JsonSerializer.Serialize(
                 store.Read(),
                 new JsonSerializerOptions { WriteIndented = true }));
             return 0;
         }
 
-        return Usage();
+        return Usage(streams);
     }
 
-    private static int Evaluate(string[] args, string? root, string? runtimeRoot)
+    private static int Evaluate(string[] args, CommandStreams streams, string? root, string? runtimeRoot)
     {
         var casesPath = Option(args, "--cases");
         if (string.IsNullOrWhiteSpace(casesPath))
         {
-            return Usage();
+            return Usage(streams);
         }
 
         try
@@ -365,12 +369,12 @@ internal static class SemanticNavigationCommand
                 result.Correctness,
                 result.Cases,
             };
-            Console.WriteLine(JsonSerializer.Serialize(report, options));
+            streams.Out.WriteLine(JsonSerializer.Serialize(report, options));
             return result.Passed == result.Total ? 0 : 1;
         }
         catch (Exception exception)
         {
-            Console.Error.WriteLine(
+            streams.Error.WriteLine(
                 CliText.SemanticCommandFailed("evaluate", exception.Message));
             return 1;
         }
@@ -394,9 +398,9 @@ internal static class SemanticNavigationCommand
     private static readonly string[] NavigationOperations =
         ["definition", "references", "implementations", "relationships"];
 
-    private static int Usage()
+    private static int Usage(CommandStreams streams)
     {
-        Console.Error.WriteLine(
+        streams.Error.WriteLine(
             "Usage: localai semantic status [--root <path>]\n" +
             "       localai semantic config show|path|init\n" +
             "       localai semantic lsp-config show|path|init\n" +

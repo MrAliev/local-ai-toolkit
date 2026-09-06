@@ -477,7 +477,7 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
 
     if (args is ["semantic", .. var semanticArguments])
     {
-        return SemanticNavigationCommand.Execute(semanticArguments);
+        return SemanticNavigationCommand.Execute(semanticArguments, CommandStreams.Standard);
     }
 
     if (args is ["bootstrap", "--dry-run", ..])
@@ -522,6 +522,7 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
         }
         var result = await CodeSearchSyncCommand.ExecuteAsync(
             root,
+            Console.Error,
             includeOverlays: !args.Contains("--base-only", StringComparer.Ordinal),
             requireSemantics: args.Contains("--require-semantics", StringComparer.Ordinal),
             refuseInlineOverFiles: inlineLimit);
@@ -578,7 +579,7 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
             return 2;
         }
 
-        var result = await CodeSearchSyncCommand.ExecuteAsync(root);
+        var result = await CodeSearchSyncCommand.ExecuteAsync(root, Console.Error);
         Console.Error.WriteLine(
             $"LocalAi index synchronized: generation={result.GenerationId}, " +
             $"overlays={result.OverlaysBuilt}" +

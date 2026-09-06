@@ -10,7 +10,6 @@ namespace LocalAi.IntegrationTests;
 /// The last four CLI files that still spoke English only. Each carried a sentence that was wrong
 /// on its own terms before any question of language came up, so those are asserted first.
 /// </summary>
-[Collection(ConsoleCaptureCollection.Name)]
 public sealed class LastFourCommandsFollowTheReaderTests : IDisposable
 {
     private readonly string _root = Path.Combine(
@@ -93,9 +92,13 @@ public sealed class LastFourCommandsFollowTheReaderTests : IDisposable
     [Fact]
     public void The_same_semantic_typo_gets_the_same_answer_either_way()
     {
-        var bare = SemanticNavigationCommand.Execute(["bogus"], _root);
+        // Its own streams even though only the exit codes are read: the usage text these two
+        // print went to the console of whatever else was running, and appeared in the suite's
+        // output as if something had failed.
+        var bare = SemanticNavigationCommand.Execute(["bogus"], Discarded(), _root);
         var positioned = SemanticNavigationCommand.Execute(
             ["bogus", "--path", "a.cs", "--line", "1", "--column", "1"],
+            Discarded(),
             _root);
 
         Assert.Equal(bare, positioned);
@@ -191,25 +194,23 @@ public sealed class LastFourCommandsFollowTheReaderTests : IDisposable
     public void A_path_that_is_not_repository_relative_is_refused_before_anything_is_loaded()
     {
         using var reading = TestCulture.Reading("en");
-        var original = Console.Error;
+        // The command's own streams, not the process's. Replacing Console.Error replaced it for
+        // every test running beside this one, which is how this test once read another test's
+        // output and that test read nothing (#405).
         var error = new StringWriter();
-        Console.SetError(error);
-        int exit;
-        try
-        {
-            exit = SemanticNavigationCommand.Execute(
-                ["definition", "--path", @"R:\LocalAi\a.cs", "--line", "1", "--column", "1"],
-                _root);
-        }
-        finally
-        {
-            Console.SetError(original);
-        }
+
+        var exit = SemanticNavigationCommand.Execute(
+            ["definition", "--path", @"R:\LocalAi\a.cs", "--line", "1", "--column", "1"],
+            new CommandStreams(TextWriter.Null, error),
+            _root);
 
         Assert.Equal(2, exit);
         Assert.StartsWith("invalid_path:", error.ToString(), StringComparison.Ordinal);
         Assert.DoesNotContain("Parameter", error.ToString(), StringComparison.Ordinal);
     }
+
+    /// <summary>For a call whose exit code is the whole answer and whose text nobody reads.</summary>
+    private static CommandStreams Discarded() => new(TextWriter.Null, TextWriter.Null);
 
     private static string Value(string resx, string key) =>
         XDocument.Load(resx)

@@ -42,7 +42,8 @@ public sealed class OverlayDriftTests : IDisposable
             captured,
             overlay,
             semantic,
-            _runtime);
+            _runtime,
+            TextWriter.Null);
 
         Assert.False(discarded);
         Assert.True(File.Exists(overlay));
@@ -61,7 +62,8 @@ public sealed class OverlayDriftTests : IDisposable
             captured,
             overlay,
             semantic,
-            _runtime);
+            _runtime,
+            TextWriter.Null);
 
         Assert.True(discarded);
         Assert.False(File.Exists(overlay));
@@ -80,7 +82,8 @@ public sealed class OverlayDriftTests : IDisposable
             captured,
             overlay,
             semantic,
-            _runtime);
+            _runtime,
+            TextWriter.Null);
 
         Assert.True(discarded);
         Assert.False(File.Exists(overlay));

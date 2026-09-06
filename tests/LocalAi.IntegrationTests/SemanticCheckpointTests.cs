@@ -32,7 +32,8 @@ public sealed class SemanticCheckpointTests : IDisposable
             checkpoint,
             checkpoint + ".adapters.json",
             generation,
-            Dev());
+            Dev(),
+            TextWriter.Null);
 
         Assert.NotNull(resumed);
         Assert.Equal(generation.Id, resumed!.Index.GenerationId);
@@ -53,7 +54,8 @@ public sealed class SemanticCheckpointTests : IDisposable
             checkpoint,
             checkpoint + ".adapters.json",
             generation,
-            Dev()));
+            Dev(),
+            TextWriter.Null));
     }
 
     [Fact]
@@ -69,7 +71,8 @@ public sealed class SemanticCheckpointTests : IDisposable
             checkpoint,
             checkpoint + ".adapters.json",
             generation,
-            Dev()));
+            Dev(),
+            TextWriter.Null));
     }
 
     [Fact]
@@ -85,7 +88,8 @@ public sealed class SemanticCheckpointTests : IDisposable
             checkpoint,
             checkpoint + ".adapters.json",
             generation,
-            Dev()));
+            Dev(),
+            TextWriter.Null));
     }
 
     [Fact]
@@ -101,7 +105,8 @@ public sealed class SemanticCheckpointTests : IDisposable
             checkpoint,
             checkpoint + ".adapters.json",
             generation,
-            Dev()));
+            Dev(),
+            TextWriter.Null));
     }
 
     [Fact]
@@ -118,7 +123,8 @@ public sealed class SemanticCheckpointTests : IDisposable
                 checkpoint,
                 checkpoint + ".adapters.json",
                 generation,
-                Dev()));
+                Dev(),
+                TextWriter.Null));
 
         Assert.Contains("typescript: bad shim", exception.Message);
     }
