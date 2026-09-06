@@ -629,13 +629,15 @@ public static class CodeSearchTools
                     {CodeSearchText.BuildItWith}
                       {IndexCommand(status.RepositoryRoot)}
                     """;
+            // The instruction is a paragraph of its own, whether or not there is a sync to report
+            // above it. Passing the break as a row of the block made it depend on the row above
+            // surviving, so the ordinary machine - no index, nothing running - ran the instruction
+            // straight on from the status line.
             return Rows(
                 $"Repository: {status.RepositoryRoot}",
                 $"Index:      {status.IndexPath}",
                 "Status:     NOT BUILT",
-                progressText,
-                string.Empty,
-                build);
+                progressText) + "\n\n" + build;
         }
 
         return Rows(
@@ -655,20 +657,12 @@ public static class CodeSearchTools
     /// The block, dropping the rows that have nothing in them.
     ///
     /// Which rows appear is what carries the state here, so an absent row is meaningful and an
-    /// empty one is not. A deliberate blank line is passed as one, and survives, because a caller
-    /// that wants a paragraph break says so.
+    /// empty one is not. A paragraph break is not a row and is not passed as one: a caller that
+    /// wants one joins with it, so it cannot be dropped along with whatever happened to precede
+    /// it.
     /// </summary>
     private static string Rows(params string[] rows) =>
-        string.Join(
-            "\n",
-            rows.Where((row, index) => row.Length > 0 || IsDeliberateBlank(rows, index)));
-
-    /// <summary>A blank between two rows that both have something in them.</summary>
-    private static bool IsDeliberateBlank(string[] rows, int index) =>
-        index > 0 &&
-        index < rows.Length - 1 &&
-        rows[index - 1].Length > 0 &&
-        rows[index + 1].Length > 0;
+        string.Join("\n", rows.Where(row => row.Length > 0));
 
     /// <summary>
     /// Drift, and nothing about a sync. The clause that used to be appended here said a sync had
