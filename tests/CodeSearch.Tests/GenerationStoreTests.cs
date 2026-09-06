@@ -168,6 +168,31 @@ public sealed class GenerationStoreTests : IDisposable
     }
 
     /// <summary>
+    /// A document whose members are absent is not a pointer. Without required members the
+    /// deserializer fills the constructor parameters with defaults, so `{}` parses into a
+    /// <see cref="GenerationPointer"/> whose <c>GenerationId</c> is null — which reads as a valid
+    /// pointer and is then handed to <c>Path.Combine</c> and <c>ReadManifest</c>, neither of which
+    /// is guarded against null.
+    ///
+    /// Every other document this runtime writes already says so: <c>ProgressDocument</c> and
+    /// <c>JobStateDocument</c> mark every member required, including the nullable ones. This was
+    /// the exception, and it is the file whose loss costs the most.
+    /// </summary>
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("{\"DevTree\":\"tree\",\"UpdatedAtUtc\":\"2026-09-06T00:00:00+00:00\"}")]
+    public void A_pointer_missing_its_generation_id_is_not_a_pointer(string content)
+    {
+        var runtimeRoot = Path.Combine(_root, "repo");
+        Directory.CreateDirectory(runtimeRoot);
+        File.WriteAllText(Path.Combine(runtimeRoot, "current.json"), content);
+        var store = new GenerationStore(FsPath.From(runtimeRoot));
+
+        Assert.False(store.TryReadCurrent(out var pointer));
+        Assert.Null(pointer);
+    }
+
+    /// <summary>
     /// A pointer that cannot be read is not a different kind of answer from a pointer that is not
     /// there: in both cases nothing is known to be current. It used to be the difference between
     /// an empty repository and a broken installation — `File.Exists` said yes, `Deserialize` threw
