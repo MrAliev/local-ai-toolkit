@@ -335,7 +335,7 @@ public static class CodeSearchSyncCommand
                     WarnDegradedSemanticOverlay(
                         semanticBuild.AdapterStatuses,
                         identity.WorkingRoot.Value,
-                        Console.Error);
+                        error);
                     var baseSemanticIndex = SemanticIndex.Load(
                         store.SemanticIndexPath(generation.Identity.Id));
                     var semanticOverlay = SemanticIndexOverlay.Create(
@@ -365,7 +365,7 @@ public static class CodeSearchSyncCommand
                         BrokerClientFactory.CreateDefault());
                     var builder = new IndexBuilder(
                         embedder,
-                        Console.Error.WriteLine,
+                        error.WriteLine,
                         progress => ReportProgress(
                             RepositoryIndexProgressPhase.EmbeddingOverlay,
                             identity.WorkingRoot.Value,
@@ -794,7 +794,7 @@ public static class CodeSearchSyncCommand
                 semanticIndex.Index,
                 semanticIndex.UncoveredProjects,
                 requireSemantics,
-                Console.Error);
+                error);
 
             phase(RepositoryIndexProgressPhase.EmbeddingBase);
             var embedder = new BrokerEmbeddingClient(
@@ -802,7 +802,7 @@ public static class CodeSearchSyncCommand
                 BrokerClientFactory.CreateDefault());
             var builder = new IndexBuilder(
                 embedder,
-                Console.Error.WriteLine,
+                error.WriteLine,
                 progress,
                 // The definition bodies the phase above just produced. This is the whole reason
                 // it runs first: a file the adapters covered is cut on its definitions instead
