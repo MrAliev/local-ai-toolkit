@@ -426,7 +426,17 @@ public sealed class PruneCommandTests : IDisposable
             document[..start] + new string('0', 64) + document[(start + 64)..]);
     }
 
-    private const string Generation = "gen-0000000000000000";
+    /// <summary>
+    /// Shaped like an id a publish writes — <c>GenerationIdentity.Id</c> is the hex of a SHA-256,
+    /// lowercased — because <c>TryReadCurrent</c> refuses anything else, and retention reads a
+    /// refused pointer as one it must not prune against.
+    ///
+    /// A readable name was easier to follow and costs more than it is worth: with the pointer
+    /// unreadable the overlay pass leaves everything alone, so the four tests here that assert an
+    /// overlay survives would pass whatever the reason each of them names.
+    /// </summary>
+    private const string Generation =
+        "0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0";
 
     /// <summary>A repository whose generation is current and whose worktrees are recorded.</summary>
     private void LiveRepository(
