@@ -83,6 +83,7 @@ public static class CodeSearchSyncCommand
     /// </param>
     public static async Task<CodeSearchSyncResult> ExecuteAsync(
         string workingRoot,
+        TextWriter error,
         string model = DefaultModel,
         CancellationToken cancellationToken = default,
         bool includeOverlays = true,
@@ -247,6 +248,7 @@ public static class CodeSearchSyncCommand
                     phase => ReportPhase(phase, mainline.Identity.WorkingRoot.Value),
                     runtimeRoot,
                     requireSemantics,
+                    error,
                     cancellationToken);
             }
 
@@ -259,7 +261,7 @@ public static class CodeSearchSyncCommand
             var overlaysBuilt = 0;
             var present = SelectPresentWorktrees(
                 targets.Where(item => !item.IsPrunable),
-                path => Console.Error.WriteLine(CliText.WorktreeGone(path)));
+                path => error.WriteLine(CliText.WorktreeGone(path)));
             var worktreesSkipped = present.Skipped;
             foreach (var worktree in present.Worktrees)
             {
@@ -273,7 +275,7 @@ public static class CodeSearchSyncCommand
                         UnauthorizedAccessException &&
                     !Directory.Exists(worktree.Path))
                 {
-                    Console.Error.WriteLine(
+                    error.WriteLine(
                         CliText.WorktreeVanished(worktree.Path));
                     worktreesSkipped++;
                     continue;
@@ -315,6 +317,7 @@ public static class CodeSearchSyncCommand
                         identity,
                         generation.Identity,
                         runtimeRoot,
+                        error,
                         cancellationToken);
 
                     // A failed adapter aborts the base generation and deliberately does not abort
@@ -331,7 +334,8 @@ public static class CodeSearchSyncCommand
                     // left to be inferred from the adapter line above.
                     WarnDegradedSemanticOverlay(
                         semanticBuild.AdapterStatuses,
-                        identity.WorkingRoot.Value);
+                        identity.WorkingRoot.Value,
+                        Console.Error);
                     var baseSemanticIndex = SemanticIndex.Load(
                         store.SemanticIndexPath(generation.Identity.Id));
                     var semanticOverlay = SemanticIndexOverlay.Create(
@@ -381,7 +385,7 @@ public static class CodeSearchSyncCommand
                             identity.DirtyHash),
                         embeddingCheckpointPath,
                         generation.Identity.EmbeddingDimension);
-                    DeleteEmbeddingCheckpoint(embeddingCheckpointPath);
+                    DeleteEmbeddingCheckpoint(embeddingCheckpointPath, error);
                     builtOverlay = true;
                 }
 
@@ -391,7 +395,8 @@ public static class CodeSearchSyncCommand
                             identity,
                             overlayPath,
                             semanticOverlayPath,
-                            runtimeRoot))
+                            runtimeRoot,
+                            error))
                     {
                         worktreesSkipped++;
                     }
@@ -427,7 +432,8 @@ public static class CodeSearchSyncCommand
             PruneSupersededGenerations(
                 requested.RepositoryRuntimeRoot.Value,
                 runtimeRoot,
-                ReachableOverlays(worktrees, runtimeRoot));
+                error,
+                ReachableOverlays(worktrees, runtimeRoot, error));
 
             progressStore.Save(lastProgress = lastProgress with
             {
@@ -437,7 +443,7 @@ public static class CodeSearchSyncCommand
                 UpdatedAtUtc = DateTimeOffset.UtcNow,
             });
 
-            Console.Error.WriteLine(CliText.SyncFinished(Seconds(elapsed)));
+            error.WriteLine(CliText.SyncFinished(Seconds(elapsed)));
             return new CodeSearchSyncResult(
                 requested.RepositoryId,
                 generation.Identity.Id,
@@ -452,7 +458,7 @@ public static class CodeSearchSyncCommand
             // The fact first, then Program.cs prints the cause. A run that stopped after four
             // hundred seconds is precisely the one whose cost the reader wants named, and it is
             // the run that never reaches the line above.
-            Console.Error.WriteLine(CliText.SyncStoppedAfter(Seconds(elapsed)));
+            error.WriteLine(CliText.SyncStoppedAfter(Seconds(elapsed)));
             try
             {
                 progressStore.Save(lastProgress with
@@ -492,7 +498,8 @@ public static class CodeSearchSyncCommand
         WorkingIndexIdentity captured,
         string overlayPath,
         string semanticOverlayPath,
-        string? runtimeRoot)
+        string? runtimeRoot,
+        TextWriter error)
     {
         var drifted = false;
         try
@@ -527,7 +534,7 @@ public static class CodeSearchSyncCommand
             }
         }
 
-        Console.Error.WriteLine(
+        error.WriteLine(
             CliText.OverlayDiscarded(captured.WorkingRoot.Value));
         return true;
     }
@@ -557,7 +564,8 @@ public static class CodeSearchSyncCommand
     /// </summary>
     private static IReadOnlySet<(string WorktreeId, string HeadTree)>? ReachableOverlays(
         IReadOnlyList<GitWorktree> worktrees,
-        string? runtimeRoot)
+        string? runtimeRoot,
+        TextWriter error)
     {
         var reachable = new HashSet<(string, string)>();
         foreach (var worktree in worktrees.Where(item => !item.IsPrunable))
@@ -578,7 +586,7 @@ public static class CodeSearchSyncCommand
                 // files, so the throw lands exactly on a worktree with uncommitted work — the
                 // one whose overlay matters most. Abandoning the sweep costs disk until the
                 // next sync; guessing costs that worktree its index.
-                Console.Error.WriteLine(CliText.WorktreeNotInspectable(
+                error.WriteLine(CliText.WorktreeNotInspectable(
                     worktree.Path,
                     exception.Message));
                 return null;
@@ -591,6 +599,7 @@ public static class CodeSearchSyncCommand
     internal static void PruneSupersededGenerations(
         string repositoryRuntimeRoot,
         string? runtimeRoot,
+        TextWriter error,
         IReadOnlySet<(string WorktreeId, string HeadTree)>? reachable = null)
     {
         try
@@ -606,7 +615,7 @@ public static class CodeSearchSyncCommand
                 reachable: reachable);
             if (result.ActionCount > 0)
             {
-                Console.Error.WriteLine(CliText.RetentionRemoved(
+                error.WriteLine(CliText.RetentionRemoved(
                     result.GenerationsRemoved.Count,
                     result.OverlaysRemoved.Count,
                     result.StagingRemoved.Count,
@@ -619,7 +628,7 @@ public static class CodeSearchSyncCommand
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException or InvalidDataException)
         {
-            Console.Error.WriteLine(
+            error.WriteLine(
                 CliText.RetentionSweepSkipped(exception.Message));
         }
     }
@@ -710,6 +719,7 @@ public static class CodeSearchSyncCommand
         Action<RepositoryIndexProgressPhase> phase,
         string? runtimeRoot,
         bool requireSemantics,
+        TextWriter error,
         CancellationToken cancellationToken)
     {
         var stagingRoot = Path.Combine(
@@ -762,7 +772,8 @@ public static class CodeSearchSyncCommand
                 workSemanticIndex,
                 semanticAdapterStatusPath,
                 generation,
-                dev);
+                dev,
+                error);
             if (semanticIndex is null)
             {
                 var built = await BuildSemanticIndexAsync(
@@ -770,6 +781,7 @@ public static class CodeSearchSyncCommand
                     dev,
                     generation,
                     runtimeRoot,
+                    error,
                     cancellationToken);
                 EnsureSemanticAdaptersSucceeded(built.AdapterStatuses);
                 built.Index.Save(workSemanticIndex);
@@ -781,7 +793,8 @@ public static class CodeSearchSyncCommand
                 snapshot.Root,
                 semanticIndex.Index,
                 semanticIndex.UncoveredProjects,
-                requireSemantics);
+                requireSemantics,
+                Console.Error);
 
             phase(RepositoryIndexProgressPhase.EmbeddingBase);
             var embedder = new BrokerEmbeddingClient(
@@ -823,8 +836,8 @@ public static class CodeSearchSyncCommand
                 generation,
                 workSemanticIndex,
                 semanticAdapterStatuses: semanticIndex.AdapterStatuses);
-            DeleteEmbeddingCheckpoint(embeddingCheckpointPath);
-            DeleteSemanticCheckpoint(workSemanticIndex, semanticAdapterStatusPath);
+            DeleteEmbeddingCheckpoint(embeddingCheckpointPath, error);
+            DeleteSemanticCheckpoint(workSemanticIndex, semanticAdapterStatusPath, error);
             return published;
         }
         finally
@@ -862,7 +875,8 @@ public static class CodeSearchSyncCommand
         string path,
         string statusPath,
         GenerationIdentity generation,
-        WorkingIndexIdentity dev)
+        WorkingIndexIdentity dev,
+        TextWriter error)
     {
         if (!File.Exists(path) || !File.Exists(statusPath))
         {
@@ -891,7 +905,7 @@ public static class CodeSearchSyncCommand
             // the file was edited. Checked anyway: publishing a generation whose adapters failed
             // is the one thing the semantic phase exists to prevent.
             EnsureSemanticAdaptersSucceeded(statuses);
-            Console.Error.WriteLine(
+            error.WriteLine(
                 CliText.SemanticPhaseResumed(Path.GetFileName(path)));
             return new SemanticBuildResult(index, statuses);
         }
@@ -899,7 +913,7 @@ public static class CodeSearchSyncCommand
             exception is IOException or UnauthorizedAccessException or
                 InvalidDataException or JsonException)
         {
-            Console.Error.WriteLine(
+            error.WriteLine(
                 CliText.SemanticCheckpointUnusable(path, exception.Message));
             return null;
         }
@@ -926,7 +940,10 @@ public static class CodeSearchSyncCommand
         }
     }
 
-    private static void DeleteSemanticCheckpoint(string path, string statusPath)
+    private static void DeleteSemanticCheckpoint(
+        string path,
+        string statusPath,
+        TextWriter error)
     {
         foreach (var file in new[] { path, statusPath })
         {
@@ -940,7 +957,7 @@ public static class CodeSearchSyncCommand
             catch (Exception exception) when (
                 exception is IOException or UnauthorizedAccessException)
             {
-                Console.Error.WriteLine(
+                error.WriteLine(
                     CliText.SemanticCheckpointNotRemoved(file, exception.Message));
             }
         }
@@ -951,11 +968,18 @@ public static class CodeSearchSyncCommand
     /// during an overlay build. The base generation refuses to publish in that situation; a
     /// branch carries on, and the difference has to be visible to whoever reads the sync output.
     /// </summary>
+    /// <param name="error">
+    /// Where the warning goes, for the reason <see cref="CommandStreams"/> gives. This one matters
+    /// most of the three: the test that reads it asserts that nothing was written when no adapter
+    /// failed, and on a process-wide stream that assertion could only ever be true by luck (#405).
+    /// </param>
     internal static void WarnDegradedSemanticOverlay(
         IReadOnlyList<SemanticAdapterStatus> statuses,
-        string workingRoot)
+        string workingRoot,
+        TextWriter error)
     {
         ArgumentNullException.ThrowIfNull(statuses);
+        ArgumentNullException.ThrowIfNull(error);
         var failures = statuses
             .Where(status => status.State == SemanticAdapterState.Failed)
             .ToArray();
@@ -964,7 +988,7 @@ public static class CodeSearchSyncCommand
             return;
         }
 
-        Console.Error.WriteLine(CliText.OverlayDegraded(
+        error.WriteLine(CliText.OverlayDegraded(
             workingRoot,
             string.Join("; ", failures.Select(failure => $"{failure.Name}: {failure.Message}"))));
     }
@@ -984,14 +1008,21 @@ public static class CodeSearchSyncCommand
     /// keeps test fixtures under tests/Fixtures -- and a check that warned about those would be
     /// ignored within a week.
     /// </summary>
+    /// <param name="error">
+    /// Where the warning goes. Required rather than defaulted to <c>Console.Error</c>, for the
+    /// reason <see cref="CommandStreams"/> gives: a test that replaced the process's stream to
+    /// read this warning replaced it for every test running beside it (#405).
+    /// </param>
     internal static void ReportCsharpSemanticCoverage(
         string sourceRoot,
         SemanticIndex index,
         IReadOnlyList<string>? uncoveredProjects,
-        bool requireSemantics)
+        bool requireSemantics,
+        TextWriter error)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceRoot);
         ArgumentNullException.ThrowIfNull(index);
+        ArgumentNullException.ThrowIfNull(error);
 
         if (uncoveredProjects is { Count: > 0 })
         {
@@ -999,7 +1030,8 @@ public static class CodeSearchSyncCommand
                 CliText.CoverageProjectsUncovered(
                     uncoveredProjects.Count,
                     string.Join(", ", uncoveredProjects)),
-                requireSemantics);
+                requireSemantics,
+                error);
             return;
         }
 
@@ -1009,17 +1041,17 @@ public static class CodeSearchSyncCommand
             return;
         }
 
-        Report(CliText.CoverageNoCsharp, requireSemantics);
+        Report(CliText.CoverageNoCsharp, requireSemantics, error);
     }
 
-    private static void Report(string message, bool requireSemantics)
+    private static void Report(string message, bool requireSemantics, TextWriter error)
     {
         if (requireSemantics)
         {
             throw new InvalidOperationException(message);
         }
 
-        Console.Error.WriteLine("WARNING: " + message);
+        error.WriteLine("WARNING: " + message);
     }
 
     private static bool IsCsharp(string path) =>
@@ -1043,7 +1075,7 @@ public static class CodeSearchSyncCommand
         throw new InvalidOperationException(CliText.AdaptersFailed(details));
     }
 
-    private static void DeleteEmbeddingCheckpoint(string path)
+    private static void DeleteEmbeddingCheckpoint(string path, TextWriter error)
     {
         try
         {
@@ -1054,7 +1086,7 @@ public static class CodeSearchSyncCommand
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            Console.Error.WriteLine(
+            error.WriteLine(
                 CliText.EmbeddingCheckpointNotRemoved(path, exception.Message));
         }
     }
@@ -1064,11 +1096,12 @@ public static class CodeSearchSyncCommand
         WorkingIndexIdentity snapshot,
         GenerationIdentity generation,
         string? runtimeRoot,
+        TextWriter error,
         CancellationToken cancellationToken)
     {
         await using var loaded = await RoslynSolutionLoader.LoadAsync(
             sourceRoot,
-            message => Console.Error.WriteLine($"Roslyn: {message}"),
+            message => error.WriteLine($"Roslyn: {message}"),
             cancellationToken);
         SemanticIndex languageIndex;
         if (loaded is null)
@@ -1100,6 +1133,7 @@ public static class CodeSearchSyncCommand
             languageIndex,
             sourceRoot,
             runtimeRoot,
+            error,
             cancellationToken);
         return built with { UncoveredProjects = loaded?.UncoveredProjects };
     }
@@ -1134,6 +1168,7 @@ public static class CodeSearchSyncCommand
         SemanticIndex index,
         string sourceRoot,
         string? runtimeRoot,
+        TextWriter error,
         CancellationToken cancellationToken)
     {
         // The adapter policy belongs to the installation, so it is read from the same one the
@@ -1215,7 +1250,7 @@ public static class CodeSearchSyncCommand
                     cancellationToken);
                 index = result.Index;
                 statuses.Add(result.Status);
-                ReportAdapter(result.Status);
+                ReportAdapter(result.Status, error);
             }
             finally
             {
@@ -1248,7 +1283,7 @@ public static class CodeSearchSyncCommand
                 cancellationToken);
             index = result.Index;
             statuses.Add(result.Status);
-            ReportAdapter(result.Status);
+            ReportAdapter(result.Status, error);
         }
 
         return new SemanticBuildResult(index, statuses);
@@ -1361,8 +1396,8 @@ public static class CodeSearchSyncCommand
     private static SemanticAdapterStatus Skipped(string name, string message) =>
         new(name, SemanticAdapterState.Skipped, message, 0);
 
-    private static void ReportAdapter(SemanticAdapterStatus status) =>
-        Console.Error.WriteLine(AdapterLine(status));
+    private static void ReportAdapter(SemanticAdapterStatus status, TextWriter error) =>
+        error.WriteLine(AdapterLine(status));
 
     /// <summary>
     /// An English literal rather than a catalogue key, deliberately: every element of it is a

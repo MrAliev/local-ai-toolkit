@@ -7,7 +7,6 @@ using LocalAi.Repository;
 
 namespace LocalAi.IntegrationTests;
 
-[Collection(ConsoleCaptureCollection.Name)]
 public sealed class CodeSearchSyncTests : IDisposable
 {
     private readonly string _root = Path.Combine(
@@ -45,6 +44,7 @@ public sealed class CodeSearchSyncTests : IDisposable
         var error = await Assert.ThrowsAsync<InvalidOperationException>(
             () => CodeSearchSyncCommand.ExecuteAsync(
                 _root,
+                TextWriter.Null,
                 cancellationToken: TestContext.Current.CancellationToken,
                 runtimeRoot: _runtimeRoot));
         Assert.Contains("Nothing was embedded", error.Message);
@@ -95,13 +95,12 @@ public sealed class CodeSearchSyncTests : IDisposable
         // fails, because its boundaries are immutable, and a branch carries on, because refusing
         // would fail the post-commit hook on every commit until someone repairs a Node package.
         // What a branch owes in exchange is saying which worktree it just degraded.
-        var written = CaptureError(() =>
-            CodeSearchSyncCommand.WarnDegradedSemanticOverlay(
+        var written = Warned(
                 [
                     Status("typescript", SemanticAdapterState.Failed, "bad shim"),
                     Status("python", SemanticAdapterState.Skipped, "no files"),
                 ],
-                @"D:\repo\worktree"));
+                @"D:\repo\worktree");
 
         Assert.Contains(@"D:\repo\worktree", written);
         Assert.Contains("typescript: bad shim", written);
@@ -121,12 +120,11 @@ public sealed class CodeSearchSyncTests : IDisposable
     {
         var source = SourceTree("Widget.cs");
 
-        var written = CaptureError(() =>
-            CodeSearchSyncCommand.ReportCsharpSemanticCoverage(
+        var written = Reported(
                 source,
                 SemanticIndexCovering(),
                 uncoveredProjects: null,
-                requireSemantics: false));
+                requireSemantics: false);
 
         Assert.Contains("covered no C# document", written);
         Assert.Contains("text matching", written);
@@ -137,12 +135,11 @@ public sealed class CodeSearchSyncTests : IDisposable
     {
         var source = SourceTree("Widget.cs");
 
-        var written = CaptureError(() =>
-            CodeSearchSyncCommand.ReportCsharpSemanticCoverage(
+        var written = Reported(
                 source,
                 SemanticIndexCovering("src/Widget.cs"),
                 uncoveredProjects: null,
-                requireSemantics: false));
+                requireSemantics: false);
 
         Assert.DoesNotContain("covered no C# document", written, StringComparison.Ordinal);
     }
@@ -156,12 +153,11 @@ public sealed class CodeSearchSyncTests : IDisposable
     {
         var source = SourceTree("README.md");
 
-        var written = CaptureError(() =>
-            CodeSearchSyncCommand.ReportCsharpSemanticCoverage(
+        var written = Reported(
                 source,
                 SemanticIndexCovering(),
                 uncoveredProjects: null,
-                requireSemantics: false));
+                requireSemantics: false);
 
         Assert.DoesNotContain("covered no C# document", written, StringComparison.Ordinal);
     }
@@ -175,12 +171,11 @@ public sealed class CodeSearchSyncTests : IDisposable
     {
         var source = SourceTree("Widget.cs");
 
-        var written = CaptureError(() =>
-            CodeSearchSyncCommand.ReportCsharpSemanticCoverage(
+        var written = Reported(
                 source,
                 SemanticIndexCovering("src/app.ts"),
                 uncoveredProjects: null,
-                requireSemantics: false));
+                requireSemantics: false);
 
         Assert.Contains("covered no C# document", written);
     }
@@ -195,7 +190,8 @@ public sealed class CodeSearchSyncTests : IDisposable
                 source,
                 SemanticIndexCovering(),
                 uncoveredProjects: null,
-                requireSemantics: true));
+                requireSemantics: true,
+                TextWriter.Null));
 
         Assert.Contains("covered no C# document", exception.Message);
     }
@@ -210,12 +206,11 @@ public sealed class CodeSearchSyncTests : IDisposable
     {
         var source = SourceTree("Widget.cs");
 
-        var written = CaptureError(() =>
-            CodeSearchSyncCommand.ReportCsharpSemanticCoverage(
+        var written = Reported(
                 source,
                 SemanticIndexCovering("src/Legacy/Helper.cs"),
                 uncoveredProjects: [@"src\Modern\Modern.csproj", @"src\Other\Other.csproj"],
-                requireSemantics: false));
+                requireSemantics: false);
 
         Assert.Contains("2 more", written, StringComparison.Ordinal);
         Assert.Contains("Modern.csproj", written, StringComparison.Ordinal);
@@ -232,7 +227,8 @@ public sealed class CodeSearchSyncTests : IDisposable
                 source,
                 SemanticIndexCovering("src/Legacy/Helper.cs"),
                 uncoveredProjects: [@"src\Modern\Modern.csproj"],
-                requireSemantics: true));
+                requireSemantics: true,
+                TextWriter.Null));
 
         Assert.Contains("not covered", exception.Message, StringComparison.Ordinal);
     }
@@ -247,12 +243,11 @@ public sealed class CodeSearchSyncTests : IDisposable
     {
         var source = SourceTree("src/Widget.cs", "fixtures/NotInAnyProject.cs");
 
-        var written = CaptureError(() =>
-            CodeSearchSyncCommand.ReportCsharpSemanticCoverage(
+        var written = Reported(
                 source,
                 SemanticIndexCovering("src/Widget.cs"),
                 uncoveredProjects: [],
-                requireSemantics: false));
+                requireSemantics: false);
 
         Assert.DoesNotContain("covered no C# document", written, StringComparison.Ordinal);
         Assert.DoesNotContain("not covered", written, StringComparison.Ordinal);
@@ -290,37 +285,49 @@ public sealed class CodeSearchSyncTests : IDisposable
     [Fact]
     public void A_branch_whose_adapters_worked_says_nothing()
     {
-        var written = CaptureError(() =>
-            CodeSearchSyncCommand.WarnDegradedSemanticOverlay(
+        var written = Warned(
                 [
                     Status("typescript", SemanticAdapterState.Succeeded, "indexed"),
                     Status("python", SemanticAdapterState.Skipped, "no files"),
                 ],
-                @"D:\repo\worktree"));
+                @"D:\repo\worktree");
 
         Assert.Empty(written);
     }
 
     /// <summary>
-    /// Console.Error belongs to the process, not to one test, and tests in this module run in
-    /// parallel -- so this buffer can catch a line another test wrote. Assert on what the code
-    /// under test would have said, never on the buffer being empty.
+    /// The warning, read from a writer this test owns rather than from Console.Error, which
+    /// belongs to the process. Two classes replacing it at the same moment took each other's
+    /// buffer: one assertion saw an empty string and the other saw the first one's text (#405).
+    ///
+    /// Nothing is shared now, which is what makes "nothing was written" a fact about the code
+    /// under test rather than about the timing. The old helper's own comment said never to assert
+    /// that, and the test below it did.
     /// </summary>
-    private static string CaptureError(Action action)
+    private static string Reported(
+        string sourceRoot,
+        SemanticIndex index,
+        IReadOnlyList<string>? uncoveredProjects,
+        bool requireSemantics)
     {
-        var original = Console.Error;
-        var writer = new StringWriter();
-        Console.SetError(writer);
-        try
-        {
-            action();
-        }
-        finally
-        {
-            Console.SetError(original);
-        }
+        var error = new StringWriter();
+        CodeSearchSyncCommand.ReportCsharpSemanticCoverage(
+            sourceRoot,
+            index,
+            uncoveredProjects,
+            requireSemantics,
+            error);
+        return error.ToString();
+    }
 
-        return writer.ToString();
+    /// <summary>The degradation warning, into this test's own writer.</summary>
+    private static string Warned(
+        IReadOnlyList<SemanticAdapterStatus> statuses,
+        string workingRoot)
+    {
+        var error = new StringWriter();
+        CodeSearchSyncCommand.WarnDegradedSemanticOverlay(statuses, workingRoot, error);
+        return error.ToString();
     }
 
     [Fact]

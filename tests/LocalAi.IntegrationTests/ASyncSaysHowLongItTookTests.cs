@@ -18,7 +18,6 @@ namespace LocalAi.IntegrationTests;
 /// these tests never start one. The failure is the more useful of the two anyway: a run that
 /// stopped after four hundred seconds is exactly the one whose cost the reader wants named.
 /// </summary>
-[Collection(ConsoleCaptureCollection.Name)]
 public sealed class ASyncSaysHowLongItTookTests : IDisposable
 {
     private readonly string _root = Path.Combine(
@@ -39,14 +38,19 @@ public sealed class ASyncSaysHowLongItTookTests : IDisposable
         Git("commit", "--allow-empty", "-m", "main");
 
         using var reading = TestCulture.Reading("en");
-        var error = await CaptureErrorAsync(
-            () => Assert.ThrowsAsync<InvalidOperationException>(
-                () => CodeSearchSyncCommand.ExecuteAsync(
-                    _root,
-                    cancellationToken: TestContext.Current.CancellationToken,
-                    runtimeRoot: _runtimeRoot)));
+        // The sync's own writer, not the process's. Replacing Console.Error made this class race
+        // every other one that did the same, and the collection that stopped it held only while
+        // everybody remembered the attribute (#405).
+        var written = new StringWriter();
 
-        Assert.Contains("Sync stopped after", error, StringComparison.Ordinal);
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => CodeSearchSyncCommand.ExecuteAsync(
+                _root,
+                written,
+                cancellationToken: TestContext.Current.CancellationToken,
+                runtimeRoot: _runtimeRoot));
+
+        Assert.Contains("Sync stopped after", written.ToString(), StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -67,23 +71,6 @@ public sealed class ASyncSaysHowLongItTookTests : IDisposable
         Assert.NotEqual(english.Item2, russian.Item2, StringComparer.Ordinal);
         Assert.Contains("49.7", russian.Item1, StringComparison.Ordinal);
         Assert.Contains("402.6", russian.Item2, StringComparison.Ordinal);
-    }
-
-    private static async Task<string> CaptureErrorAsync(Func<Task> action)
-    {
-        var original = Console.Error;
-        var writer = new StringWriter();
-        Console.SetError(writer);
-        try
-        {
-            await action();
-        }
-        finally
-        {
-            Console.SetError(original);
-        }
-
-        return writer.ToString();
     }
 
     private void Git(params string[] arguments)
