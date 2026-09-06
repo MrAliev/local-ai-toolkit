@@ -3,7 +3,8 @@ using LocalAi.Contracts.Localization;
 namespace CodeSearch.Core.Resources;
 
 /// <summary>
-/// What this assembly refuses with, in the language the reader's machine is set to.
+/// What this assembly refuses with, and what it says while it builds, in the language the reader's
+/// machine is set to.
 ///
 /// These sentences do not stay inside the process that throws them: the MCP tools print them as
 /// the <c>{ex.Message}</c> half of <c>semantic_navigation_not_ready:</c> and its siblings, and
@@ -26,6 +27,70 @@ public static class IndexText
     public static TextCatalogue Catalogue { get; } = new(
         "CodeSearch.Core.Resources.IndexText",
         typeof(IndexText).Assembly);
+
+    /// <summary>
+    /// The narration of a build, in the order a run produces it.
+    ///
+    /// Two of the sixteen lines this class could have taken are deliberately still literals in
+    /// <c>IndexBuilder</c>: the format-version and model-change lines in <c>LoadReusable</c>. Under
+    /// <c>localai sync</c> — the only face that follows the reader — a previous index is copied in
+    /// only when <c>CanReuseCorpusFrom</c> agrees, and that compares both the embedding model and
+    /// the index format version, so neither branch can be reached. The one face that does reach
+    /// them, <c>codesearch index</c>, pins English for its whole output. That is the same rule the
+    /// class comment above already states: a line no reader-following entry point can print is a
+    /// translation for nobody, with a parity test guarding it.
+    ///
+    /// Durations and rates arrive already formatted, to one decimal and invariantly, so a machine
+    /// that would write <c>10,2</c> still writes <c>10.2</c> here. Counts need nothing:
+    /// <c>TextCatalogue.Format</c> is invariant.
+    /// </summary>
+    public static string BuildScanned(string root, int files) =>
+        Catalogue.Format(nameof(BuildScanned), root, files);
+
+    public static string BuildPartitioned(int unchanged, int changed) =>
+        Catalogue.Format(nameof(BuildPartitioned), unchanged, changed);
+
+    public static string BuildChunked(int files, int chunks) =>
+        Catalogue.Format(nameof(BuildChunked), files, chunks);
+
+    public static string BuildReusingIndex(int chunks, int files) =>
+        Catalogue.Format(nameof(BuildReusingIndex), chunks, files);
+
+    public static string BuildIndexNotReusable(string reason) =>
+        Catalogue.Format(nameof(BuildIndexNotReusable), reason);
+
+    public static string BuildCheckpointRestored(int restored, int total) =>
+        Catalogue.Format(nameof(BuildCheckpointRestored), restored, total);
+
+    public static string BuildCheckpointIgnored(string path, string reason) =>
+        Catalogue.Format(nameof(BuildCheckpointIgnored), path, reason);
+
+    public static string BuildEmbedded(int done, int total, string rate, string minutesLeft) =>
+        Catalogue.Format(nameof(BuildEmbedded), done, total, rate, minutesLeft);
+
+    public static string BuildBatchHalved(int chunks, string reason) =>
+        Catalogue.Format(nameof(BuildBatchHalved), chunks, reason);
+
+    public static string BuildSaved(string indexPath, int chunks, int files, string seconds) =>
+        Catalogue.Format(nameof(BuildSaved), indexPath, chunks, files, seconds);
+
+    public static string BuildOverlayScanned(string workingRoot, int files, int inBase) =>
+        Catalogue.Format(nameof(BuildOverlayScanned), workingRoot, files, inBase);
+
+    public static string BuildOverlayDivergence(int changed, int deleted) =>
+        Catalogue.Format(nameof(BuildOverlayDivergence), changed, deleted);
+
+    public static string BuildOverlayReuse(int reused, int toEmbed) =>
+        Catalogue.Format(nameof(BuildOverlayReuse), reused, toEmbed);
+
+    public static string BuildOverlaySaved(
+        string overlayPath,
+        int chunks,
+        int files,
+        int deletions,
+        string seconds) =>
+        Catalogue.Format(
+            nameof(BuildOverlaySaved), overlayPath, chunks, files, deletions, seconds);
 
     public static string GenerationNotPublished(string workingRoot) =>
         Catalogue.Format(nameof(GenerationNotPublished), workingRoot);

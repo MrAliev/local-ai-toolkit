@@ -44,6 +44,55 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a2c561934e089</value>
   </resheader>
+  <data name="BuildBatchHalved" xml:space="preserve">
+    <value>Не удалось посчитать эмбеддинги для {0} чанков ({1}); партия делится пополам, чтобы найти виноватый чанк.</value>
+    <comment>batch is партия in Russian, following docs/overview.ru.md and the 0.1.53 release notes, which both write it that way for this exact line.</comment>
+  </data>
+  <data name="BuildCheckpointIgnored" xml:space="preserve">
+    <value>Некорректный checkpoint эмбеддингов '{0}' пропущен: {1}</value>
+    <comment>checkpoint stays Latin in Russian, verbatim from CliText.ru.resx - one spelling per concept, and контрольная точка is not the one this product uses.</comment>
+  </data>
+  <data name="BuildCheckpointRestored" xml:space="preserve">
+    <value>Из checkpoint эмбеддингов восстановлено чанков {0}/{1}.</value>
+  </data>
+  <data name="BuildChunked" xml:space="preserve">
+    <value>Файлов разобрано на чанки: {0}; чанков для эмбеддинга: {1}.</value>
+  </data>
+  <data name="BuildEmbedded" xml:space="preserve">
+    <value>Эмбеддинги: чанков {0}/{1} ({2}/с, осталось ~{3} мин)</value>
+    <comment>The line a person actually watches: it prints once per completed batch, which is roughly every fifteen seconds, and on a hook run it is the only progress there is. 2 and 3 arrive already formatted to one decimal, invariantly, so a Russian machine writes 10.2 rather than 10,2. One line in both languages, same four facts in the same order: two would put the count and its estimate on different lines, which is where a reader loses the pairing.</comment>
+  </data>
+  <data name="BuildIndexNotReusable" xml:space="preserve">
+    <value>Существующий индекс не удалось прочитать ({0}) — пересборка с нуля.</value>
+  </data>
+  <data name="BuildOverlayDivergence" xml:space="preserve">
+    <value>Отличается от базового индекса: файлов {0}. Есть в базовом индексе, но не здесь: {1}.</value>
+    <comment>base index rather than bare base: base is the code's word, and the product's own is base index - CodeSearch.Cli already prints `Base index:`.</comment>
+  </data>
+  <data name="BuildOverlayReuse" xml:space="preserve">
+    <value>Переиспользовано из прежнего overlay: {0}. Для эмбеддинга: {1}.</value>
+    <comment>overlay stays Latin and indeclinable in Russian, as IndexText.ru.resx already has it.</comment>
+  </data>
+  <data name="BuildOverlaySaved" xml:space="preserve">
+    <value>Overlay сохранён: {0}. Чанков {1}, файлов {2}, удалений {3}, за {4} с.</value>
+    <comment>The last hole arrives already formatted to one decimal, invariantly.</comment>
+  </data>
+  <data name="BuildOverlayScanned" xml:space="preserve">
+    <value>Просмотрено {0}: файлов {1}. В базовом индексе {2}.</value>
+  </data>
+  <data name="BuildPartitioned" xml:space="preserve">
+    <value>Без изменений: {0}. Новых или изменённых: {1}.</value>
+  </data>
+  <data name="BuildReusingIndex" xml:space="preserve">
+    <value>Существующий индекс: чанков {0}, файлов {1}.</value>
+  </data>
+  <data name="BuildSaved" xml:space="preserve">
+    <value>Сохранено {0}: чанков {1}, файлов {2}, за {3} с.</value>
+    <comment>The last hole arrives already formatted to one decimal, invariantly.</comment>
+  </data>
+  <data name="BuildScanned" xml:space="preserve">
+    <value>Просмотрено {0}: индексируемых файлов {1}.</value>
+  </data>
   <data name="ChunkIdMalformed" xml:space="preserve">
     <value>Идентификатор чанка имеет неверный формат.</value>
   </data>
