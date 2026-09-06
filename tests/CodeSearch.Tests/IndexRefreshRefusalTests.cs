@@ -19,7 +19,8 @@ public sealed class IndexRefreshRefusalTests
             Root,
             "REFUSED repository=abc files=612 limit=200 overlays=0",
             Command,
-            limit: 200);
+            limit: 200,
+            NoBuildRunning.Notice);
 
         Assert.NotNull(message);
         Assert.Contains("612", message);
@@ -39,7 +40,8 @@ public sealed class IndexRefreshRefusalTests
             Root,
             "SYNCED repository=abc generation=def overlays=1",
             Command,
-            limit: 200));
+            limit: 200,
+            NoBuildRunning.Notice));
     }
 
     /// <summary>
@@ -53,7 +55,8 @@ public sealed class IndexRefreshRefusalTests
             Root,
             "REFUSED repository=abc files=350 limit=200 overlays=0",
             Command,
-            limit: 200);
+            limit: 200,
+            NoBuildRunning.Notice);
 
         Assert.Contains("350 files", message);
     }

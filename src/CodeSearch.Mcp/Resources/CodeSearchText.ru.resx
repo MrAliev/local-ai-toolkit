@@ -44,6 +44,10 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a2c561934e089</value>
   </resheader>
+  <data name="BuildAlreadyRunning" xml:space="preserve">
+    <value>Для этого репозитория уже идёт сборка; вторая будет отклонена, пока эта не закончится.</value>
+    <comment>Replaces BuildItBackground and its command line while a build is in flight: the instruction to start one is wrong then, and a second sync exits 75 sync_busy against the gate. Said on the paths that tell a reader to build, not on the ones that return content. Printed on every call for as long as the build runs, unlike SyncNotSearchableYet: it stands in for an instruction line, and an instruction said once is missing every time after.</comment>
+  </data>
   <data name="BuildItBackground" xml:space="preserve">
     <value>Собрать (на большом репозитории это минуты — запускать в фоне):</value>
   </data>
@@ -56,11 +60,19 @@
   <data name="CliUnavailable" xml:space="preserve">
     <value>LocalAi CLI недоступен. Ожидался: {0}</value>
   </data>
+  <data name="Days" xml:space="preserve">
+    <value>{0} д</value>
+    <comment>The top of the age ladder RecordedAgo carries: Seconds under a minute, EtaMinutes under an hour, Hours under a day, Days above it, one decimal throughout. A record left behind by a build whose process died is dated in days, and 2880 min is a number nobody reads.</comment>
+  </data>
   <data name="EtaCalculating" xml:space="preserve">
     <value>рассчитывается</value>
   </data>
   <data name="EtaMinutes" xml:space="preserve">
     <value>{0} мин</value>
+  </data>
+  <data name="Hours" xml:space="preserve">
+    <value>{0} ч</value>
+    <comment>Part of the age ladder RecordedAgo carries; see Days. Follows EtaMinutes in taking a space before the unit.</comment>
   </data>
   <data name="LocationNumbering" xml:space="preserve">
     <value>(путь:строка:колонка, счёт с единицы)</value>
@@ -126,8 +138,20 @@
   <data name="ProgressNotCounted" xml:space="preserve">
     <value>в этой фазе не считается</value>
   </data>
+  <data name="ProgressNotRecordedYet" xml:space="preserve">
+    <value>запущена, ход работы ещё не записан</value>
+    <comment>Fills the figures slot when the gate is held and no progress record has been written yet - the window between a sync starting and its first write. 'started' is the antecedent of 'it' in the sentence below; without it SyncNotSearchableYet names nothing. No age: nothing was recorded, so there is nothing to date.</comment>
+  </data>
+  <data name="ProgressStoppedAt" xml:space="preserve">
+    <value>прервана на {0}</value>
+    <comment>Wraps the whole figures slot when a progress record exists, is neither Completed nor Failed, and the gate is free - a sync that died without writing an end. 0 carries the phase name, ProgressChunks and RecordedAgo in that order; the ETA is dropped here, because it was the dead process's prediction of a remaining time nobody is spending. Subjectless in both languages, like ProgressNotCounted beside it.</comment>
+  </data>
   <data name="RateChunks" xml:space="preserve">
     <value>{0} чанк/с</value>
+  </data>
+  <data name="RecordedAgo" xml:space="preserve">
+    <value>записано {0} назад</value>
+    <comment>{0} is an age carried by Seconds under a minute and by EtaMinutes at a minute or more. It is how long ago the figures were written, never a claim that anything is still running: a killed sync reads as recorded 3.2 h ago rather than as a build.</comment>
   </data>
   <data name="ReloadsInASecond" xml:space="preserve">
     <value>Следующий поиск перезагрузит индекс за ~1 с.</value>
@@ -165,12 +189,28 @@
     <value>STALE - собран на {0}, HEAD сейчас {1}</value>
     <comment>The token and the ASCII separator are a contract; only the clause after it moves.</comment>
   </data>
+  <data name="SyncDidNotFinish" xml:space="preserve">
+    <value>сборка оборвалась, и сейчас ничего не идёт. Ответы будут приходить из того же индекса, что и раньше, пока синхронизацию не запустят заново.</value>
+    <comment>The end notice for a build that died rather than failed: a killed process never writes Failed, so it never reaches SyncStopped. Printed once, on the answers that return content, and only to a caller that was already told this build was running - that caller is holding SyncNotSearchableYet's promise of a finish that is not coming. A caller who never heard it start sees today's answer unchanged: a record nobody clears would otherwise ride above every search answer for weeks. Lower case: it follows the literal 'Sync: ' prefix.</comment>
+  </data>
+  <data name="SyncEnded" xml:space="preserve">
+    <value>сборка завершена. Дальнейшие ответы идут по опубликованному ею индексу.</value>
+    <comment>Printed once, on the first answer after the phase reaches Completed. Having told a caller that answers come from the last published index, the product owes it the moment that stops being true. Lower case: it follows the literal 'Sync: ' prefix.</comment>
+  </data>
   <data name="SyncFailed" xml:space="preserve">
     <value>Сбой синхронизации LocalAi, код {0}: {1}</value>
+  </data>
+  <data name="SyncNotSearchableYet" xml:space="preserve">
+    <value>Пока сборка не закончится, ответы приходят из последнего опубликованного индекса.</value>
+    <comment>Said once per build, on the answers that return content. The figures alone do not say what they mean for this answer.</comment>
   </data>
   <data name="SyncReached" xml:space="preserve">
     <value>; синхронизация дошла до {0} в {1}</value>
     <comment>0 is a phase enum name and stays Latin.</comment>
+  </data>
+  <data name="SyncStopped" xml:space="preserve">
+    <value>сборка завершилась ошибкой. Запустите синхронизацию снова - причину назовёт её вывод.</value>
+    <comment>The counterpart of SyncEnded for a build that failed - only when the record itself says Failed. A killed build never writes that; SyncDidNotFinish is its counterpart. Lower case: it follows the literal 'Sync: ' prefix.</comment>
   </data>
   <data name="TooBigForToolCall" xml:space="preserve">
     <value>Обновление такого объёма идёт минутами, и внутри вызова инструмента ему не место.</value>
@@ -187,7 +227,7 @@
     <comment>The `Update:` label and its padding stay literal, aligned to the same column as the rest.</comment>
   </data>
   <data name="WhileItRuns" xml:space="preserve">
-    <value>Пока оно идёт, index_status показывает фазу синхронизации, скорость в чанк/с и ETA.</value>
+    <value>Пока идёт сборка, каждый ответ поиска и навигации говорит, докуда она дошла; index_status добавляет скорость в чанк/с.</value>
   </data>
   <data name="WorkingSetNotTrimmed" xml:space="preserve">
     <value>рабочий набор не сжимался (не Windows или вызов отклонён)</value>

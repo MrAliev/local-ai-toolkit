@@ -43,8 +43,14 @@ public sealed class InstructionSkillTests
     [InlineData("localai hooks install --root")]
     [InlineData("passing the worktree as its root")]
     [InlineData("Full-VRAM, zero-offload validation is the default")]
-    [InlineData("processed and total chunks")]
-    [InlineData("not counted in this phase")]
+    // The same two rules - what the figures are, and that a phase can count none of them -
+    // said without quoting the product's English back at a reader whose product is not in
+    // English. `not counted in this phase` prints as `в этой фазе не считается` on a Russian
+    // machine, so an agent told to look for the literal was looking for something it would
+    // never see there. This block is English-only by design, and these two rows were the one
+    // place that fact leaked into an instruction about translated output.
+    [InlineData("chunk counts where the phase counts them")]
+    [InlineData("words where it does not")]
     public void The_skill_holds_what_is_read_after_the_decision(string rule) =>
         Assert.Contains(rule, Flat(ManagedInstructionBlock.SkillBody), StringComparison.Ordinal);
 
@@ -146,10 +152,16 @@ public sealed class InstructionSkillTests
     /// <summary>
     /// The core is always resident, so its size is a recurring cost on every session. It was
     /// the whole block before; splitting is only worth doing if the core is materially smaller.
+    ///
+    /// The ceiling moved from 6_500 on purpose. The first way forward this core offers a
+    /// refused tool is to start a build, and that is the one command a build already running
+    /// refuses — so the clause naming it belongs where the decision is made rather than in a
+    /// skill loaded afterwards. It was cut to its shortest form first, and the claim this test
+    /// exists for is untouched: the core is still under half the Codex block.
     /// </summary>
     [Fact]
     public void The_core_is_materially_smaller_than_the_block_it_replaced()
     {
-        Assert.InRange(ManagedInstructionBlock.Block.Length, 1_000, 6_500);
+        Assert.InRange(ManagedInstructionBlock.Block.Length, 1_000, 6_700);
     }
 }

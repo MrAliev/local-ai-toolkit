@@ -50,6 +50,7 @@ public static class CodeSearchTools
         """)]
     public static string GoToDefinition(
         SemanticNavigationGateway gateway,
+        SyncNotice notice,
         [Description("Repository-relative source path.")]
         string path,
         [Description("Line number as search_code prints it and an editor shows it, counted from 1.")]
@@ -76,12 +77,14 @@ public static class CodeSearchTools
                 position.Line,
                 position.Utf16Column,
                 root);
-            return Degradation(outcome) + (outcome.Locations.Count == 0
-                ? CodeSearchText.NoDefinition
-                : FormatSemanticLocations(
-                    "Definitions",
-                    "go_to_definition",
-                    outcome.Locations));
+            return notice.Above(root, SyncNoticeAudience.Answer) +
+                Degradation(outcome) +
+                (outcome.Locations.Count == 0
+                    ? CodeSearchText.NoDefinition
+                    : FormatSemanticLocations(
+                        "Definitions",
+                        "go_to_definition",
+                        outcome.Locations));
         }
         catch (SemanticNavigationNotReadyException ex)
         {
@@ -109,6 +112,7 @@ public static class CodeSearchTools
         """)]
     public static string FindReferences(
         SemanticNavigationGateway gateway,
+        SyncNotice notice,
         [Description("Repository-relative source path.")]
         string path,
         [Description("Line number as search_code prints it and an editor shows it, counted from 1.")]
@@ -138,12 +142,14 @@ public static class CodeSearchTools
                 position.Utf16Column,
                 includeDefinition,
                 root);
-            return Degradation(outcome) + (outcome.Locations.Count == 0
-                ? CodeSearchText.NoReferences
-                : FormatSemanticLocations(
-                    "References",
-                    "find_references",
-                    outcome.Locations));
+            return notice.Above(root, SyncNoticeAudience.Answer) +
+                Degradation(outcome) +
+                (outcome.Locations.Count == 0
+                    ? CodeSearchText.NoReferences
+                    : FormatSemanticLocations(
+                        "References",
+                        "find_references",
+                        outcome.Locations));
         }
         catch (SemanticNavigationNotReadyException ex)
         {
@@ -170,6 +176,7 @@ public static class CodeSearchTools
         """)]
     public static string FindImplementations(
         SemanticNavigationGateway gateway,
+        SyncNotice notice,
         [Description("Repository-relative source path.")]
         string path,
         [Description("Line number as search_code prints it and an editor shows it, counted from 1.")]
@@ -196,12 +203,13 @@ public static class CodeSearchTools
                 position.Line,
                 position.Utf16Column,
                 root);
-            return locations.Count == 0
-                ? CodeSearchText.NoImplementations
-                : FormatSemanticLocations(
-                    "Implementations",
-                    "find_implementations",
-                    locations);
+            return notice.Above(root, SyncNoticeAudience.Answer) +
+                (locations.Count == 0
+                    ? CodeSearchText.NoImplementations
+                    : FormatSemanticLocations(
+                        "Implementations",
+                        "find_implementations",
+                        locations));
         }
         catch (SemanticNavigationNotReadyException ex)
         {
@@ -227,6 +235,7 @@ public static class CodeSearchTools
         """)]
     public static string FindRelationships(
         SemanticNavigationGateway gateway,
+        SyncNotice notice,
         [Description("Repository-relative source path.")]
         string path,
         [Description("Line number as search_code prints it and an editor shows it, counted from 1.")]
@@ -266,12 +275,13 @@ public static class CodeSearchTools
                 parsedDirection,
                 parsedKind,
                 root);
+            var above = notice.Above(root, SyncNoticeAudience.Answer);
             if (locations.Count == 0)
             {
-                return CodeSearchText.NoRelationships;
+                return above + CodeSearchText.NoRelationships;
             }
 
-            var report = new StringBuilder()
+            var report = new StringBuilder(above)
                 .Append("Relationships: ").Append(locations.Count)
                 .Append("  ").Append(CodeSearchText.LocationNumbering).AppendLine();
             foreach (var related in locations)
@@ -378,6 +388,7 @@ public static class CodeSearchTools
         """)]
     public static async Task<string> SearchCode(
         SearchService service,
+        SyncNotice notice,
         [Description("What you're looking for. A natural-language description works best; exact symbol names also work.")]
         string query,
         [Description("Repository root. Defaults to the git repository containing the working directory; a worktree resolves to its main repository.")]
@@ -408,12 +419,18 @@ public static class CodeSearchTools
         }
         catch (FileNotFoundException)
         {
+            // The answer this whole notice exists for. On a new machine this is what every search
+            // says for the whole of the first build, and the command it named would have exited
+            // 75 sync_busy against the gate.
             var status = service.Status(root);
-            return $"""
-                {CodeSearchText.NoIndexForRoot(status.RepositoryRoot)}
-                {CodeSearchText.BuildItBackground}
-                  {IndexCommand(status.RepositoryRoot)}
-                """;
+            var sync = notice.InsteadOf(status.RepositoryRoot);
+            return sync.BuildIsRunning
+                ? CodeSearchText.NoIndexForRoot(status.RepositoryRoot) + "\n" + sync.Above
+                : $"""
+                    {CodeSearchText.NoIndexForRoot(status.RepositoryRoot)}
+                    {sync.Above}{CodeSearchText.BuildItBackground}
+                      {IndexCommand(status.RepositoryRoot)}
+                    """;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -435,12 +452,13 @@ public static class CodeSearchTools
             // in this repository", which is the opposite of what happened: a plain-language
             // query has almost nothing literal to match, so an empty result is the expected
             // shape of the degradation rather than an answer about the repository.
-            return outcome.EmbeddingsUsed
-                ? CodeSearchText.NoMatches
-                : CodeSearchText.NoMatches + "\n\n" + CodeSearchText.SearchDegraded;
+            return notice.Above(root, SyncNoticeAudience.Answer) +
+                (outcome.EmbeddingsUsed
+                    ? CodeSearchText.NoMatches
+                    : CodeSearchText.NoMatches + "\n\n" + CodeSearchText.SearchDegraded);
         }
 
-        var report = new StringBuilder();
+        var report = new StringBuilder(notice.Above(root, SyncNoticeAudience.Answer));
         var status2 = service.Status(root);
         // The model comes out of the index header, so it is a fact about the index rather than
         // about this search: printed unqualified after nothing was embedded, it reports a
@@ -505,6 +523,7 @@ public static class CodeSearchTools
         """)]
     public static async Task<string> GetCodeChunk(
         SearchService service,
+        SyncNotice notice,
         [Description("Opaque chunk_id returned by search_code.")]
         string chunkId,
         [Description(
@@ -537,13 +556,17 @@ public static class CodeSearchTools
                 report.ToString(),
                 $"get_code_chunk:{chunk.RelPath}");
         }
+        // On the refusals only. A successful chunk is bytes validated against the generation and
+        // the tree, and the build in flight did not change them; a refusal is where a reader asks
+        // why an id that worked a minute ago has stopped, and a build publishing mid-session is
+        // exactly what rotates one.
         catch (SearchChunkIdException ex)
         {
-            return $"{ex.Code}: {ex.Message}";
+            return notice.Above(root, SyncNoticeAudience.Answer) + $"{ex.Code}: {ex.Message}";
         }
         catch (SearchChunkResolutionException ex)
         {
-            return ex.Message;
+            return notice.Above(root, SyncNoticeAudience.Answer) + ex.Message;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -580,6 +603,7 @@ public static class CodeSearchTools
         """)]
     public static string IndexStatus(
         SearchService service,
+        SyncNotice notice,
         [Description("Repository root. Defaults to the repository containing the working directory.")]
         string? root = null)
     {
@@ -588,14 +612,23 @@ public static class CodeSearchTools
         var progressText = FormatProgress(progress);
         if (!status.Exists)
         {
+            // The same defect as on a search, on the surface a reader reaches for when a search
+            // looks wrong: a command that a running build would refuse. This status prints the
+            // figures itself, so only the instruction changes here.
+            var sync = notice.InsteadOf(status.RepositoryRoot);
+            var build = sync.BuildIsRunning
+                ? CodeSearchText.BuildAlreadyRunning
+                : $"""
+                    {CodeSearchText.BuildItWith}
+                      {IndexCommand(status.RepositoryRoot)}
+                    """;
             return $"""
                 Repository: {status.RepositoryRoot}
                 Index:      {status.IndexPath}
                 Status:     NOT BUILT
                 {progressText}
 
-                {CodeSearchText.BuildItWith}
-                  {IndexCommand(status.RepositoryRoot)}
+                {build}
                 """;
         }
 
@@ -762,12 +795,14 @@ public static class CodeSearchTools
         since the last build. Run it after committing, so search stops answering for code that no
         longer looks like that. The size of the work is bounded and the bound is enforced: a cold
         build, or a branch switch that changes most of the tree, is refused before anything is
-        embedded, and the reply carries the command to run in the background instead. Relay that
-        command; the refusal is a decision, not a transient failure, so calling again changes
-        nothing.
+        embedded. The refusal carries the command to run in the background instead — unless a
+        build already holds this repository's sync gate, where it names that build instead,
+        because a second sync would exit 75 sync_busy. Relay whichever it gives you; the refusal
+        is a decision, not a transient failure, so calling again changes nothing.
         """)]
     public static async Task<string> IndexRefresh(
         SearchService service,
+        SyncNotice notice,
         [Description("Repository root. Defaults to the repository containing the working directory.")]
         string? root = null,
         CancellationToken cancellationToken = default)
@@ -807,7 +842,8 @@ public static class CodeSearchTools
                 resolvedRoot,
                 output,
                 IndexCommand(resolvedRoot),
-                InlineRefreshFileLimit)
+                InlineRefreshFileLimit,
+                notice)
             ?? output.Trim();
     }
 
@@ -892,21 +928,34 @@ public static class CodeSearchTools
         string root,
         string syncOutput,
         string command,
-        int limit)
+        int limit,
+        SyncNotice notice)
     {
         if (SyncRefusal.Files(syncOutput) is not { } files)
         {
             return null;
         }
 
+        // The refusal already says "not inside a tool call, run this instead". While a build holds
+        // the gate that instruction names the one command that cannot run, so the block takes its
+        // slot: the reason for the refusal above it stays true either way, and the blank line
+        // under it was already there.
+        var sync = notice.InsteadOf(root);
+        var instead = sync.BuildIsRunning
+            // The block's own last newline would land on top of the one this template already
+            // puts after the slot, and the paragraph would gain a blank line it never had.
+            ? sync.Above.TrimEnd('\n')
+            : $"""
+                {sync.Above}{CodeSearchText.RunInBackground}
+                  {command}
+                """;
         return $"""
             Repository: {root}
             Status:     {CodeSearchText.StatusNotRefreshed(files, limit)}
             {CodeSearchText.NothingHappened}
 
             {CodeSearchText.TooBigForToolCall}
-            {CodeSearchText.RunInBackground}
-              {command}
+            {instead}
 
             {CodeSearchText.WhileItRuns}
             """;

@@ -306,7 +306,16 @@ public sealed class ManagedInstructionBlockTests
         // drift: it was one change that argued for its length, after the section had already
         // been cut to the shortest form that keeps every rule in it. The next one argues the
         // same way, or prunes.
-        const int budget = 13_600;
+        //
+        // Raised from 13_600 once more, and by the same rule. A sync now writes its phase and
+        // figures onto every answer it would change, so the paragraph that used to send an
+        // agent to index_status and tell it to check back had to say what arrives unasked
+        // instead - including that a `Sync:` line can name a build nothing will resume, which
+        // an agent reading figures alone would report as a live one. The refusal section gained
+        // one clause for the same reason: its first way forward is to start a build, and that
+        // is the one command a running build refuses. Both were cut to their shortest form
+        // that keeps the rule before this number moved.
+        const int budget = 14_000;
 
         var measured = ManagedInstructionBlock.CodexBlock.Length
             - ManagedInstructionBlock.CodexBlock.Count(character => character == (char)13);

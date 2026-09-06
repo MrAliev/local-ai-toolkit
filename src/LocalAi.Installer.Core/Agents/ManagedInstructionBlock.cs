@@ -214,7 +214,8 @@ public static class ManagedInstructionBlock
         and offer three ways forward — then wait for an answer:
 
         1. index it — force a refresh, or commit and let the hook run. An accurate answer, and
-           it costs minutes.
+           it costs minutes. A `Sync:` line already on the answer means a build is doing this
+           and a second would be refused: report its figures instead of offering one.
         2. fix the cause, where it is fixable — restart the MCP server, run `localai sync`,
            free disk space.
         3. work with cloud tools instead — grep, reading files whole — said plainly to be
@@ -271,7 +272,7 @@ public static class ManagedInstructionBlock
         After CodeSearch work, name `index_unload` so the user can free the cached index at
         once — it leaves the on-disk index alone. Indexing is reported while it runs, not
         summarised once it is over: say what is being indexed the moment it starts, report the
-        phase and figures `index_status` prints without converting them into a claim they do
+        phase and figures the tools print without converting them into a claim they do
         not make, and never filter the indexer's own progress away to keep a reply tidy.
         Hidden indexing is indistinguishable from a hung machine.
         """;
@@ -418,10 +419,13 @@ public static class ManagedInstructionBlock
         beside the model, as the share of it that reached video memory or as a note that it ran
         on the processor.
 
-        `index_status` prints the phase when there is one, and while embedding it adds
-        processed and total chunks with an ETA; the other phases print `not counted in this
-        phase`. The phase name is what says whether work is still running. On a long build
-        check back rather than going quiet.
+        While a sync runs the answers say so: a `Sync:` line above the answer names the
+        phase, how far it has got and how long ago that was recorded — chunk counts where
+        the phase counts them, words where it does not. The answer under it comes from the
+        index published before that build started. No `Sync:` line means nothing is running,
+        which is almost always. `index_status` is the fuller view and the only place the
+        rate in chunks/s appears. A line saying a build stopped part-way is one nothing
+        will resume: a sync has to be started again.
         """;
 
     /// <summary>Both halves inline: Codex has no import mechanism, so it carries everything.</summary>
@@ -480,7 +484,8 @@ public static class ManagedInstructionBlock
         and offer three ways forward — then wait for an answer:
 
         1. index it — force a refresh, or commit and let the hook run. An accurate answer, and
-           it costs minutes.
+           it costs minutes. A `Sync:` line already on the answer means a build is doing this
+           and a second would be refused: report its figures instead of offering one.
         2. fix the cause, where it is fixable — restart the MCP server, run `localai sync`,
            free disk space.
         3. work with cloud tools instead — grep, reading files whole — said plainly to be
@@ -537,7 +542,7 @@ public static class ManagedInstructionBlock
         After CodeSearch work, name `index_unload` so the user can free the cached index at
         once — it leaves the on-disk index alone. Indexing is reported while it runs, not
         summarised once it is over: say what is being indexed the moment it starts, report the
-        phase and figures `index_status` prints without converting them into a claim they do
+        phase and figures the tools print without converting them into a claim they do
         not make, and never filter the indexer's own progress away to keep a reply tidy.
         Hidden indexing is indistinguishable from a hung machine.
 
@@ -680,10 +685,13 @@ public static class ManagedInstructionBlock
         beside the model, as the share of it that reached video memory or as a note that it ran
         on the processor.
 
-        `index_status` prints the phase when there is one, and while embedding it adds
-        processed and total chunks with an ETA; the other phases print `not counted in this
-        phase`. The phase name is what says whether work is still running. On a long build
-        check back rather than going quiet.
+        While a sync runs the answers say so: a `Sync:` line above the answer names the
+        phase, how far it has got and how long ago that was recorded — chunk counts where
+        the phase counts them, words where it does not. The answer under it comes from the
+        index published before that build started. No `Sync:` line means nothing is running,
+        which is almost always. `index_status` is the fuller view and the only place the
+        rate in chunks/s appears. A line saying a build stopped part-way is one nothing
+        will resume: a sync has to be started again.
         """;
 
 
