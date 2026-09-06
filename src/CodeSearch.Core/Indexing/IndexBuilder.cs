@@ -614,6 +614,19 @@ public sealed class IndexBuilder(
                 current = next;
             }
         }
+        // The figures live only here, so the sentence that carries them is composed here. The
+        // layer that raises the refusal knows the model and the backend's own words and nothing
+        // about how far the build got - and how far it got is what decides whether the reader
+        // starts again or gives up (#389). Figures first: the cause ends in a quoted response
+        // body of unbounded shape, so nothing can safely follow it.
+        catch (EmbeddingUnavailableException exception)
+        {
+            Observe(current?.Embeddings);
+            Observe(next?.Embeddings);
+            throw new EmbeddingUnavailableException(
+                StoppedAt(done, total, checkpoint is not null) + " " + exception.Message,
+                exception);
+        }
         catch
         {
             // The batch behind the one that failed is already on the queue and cannot be
@@ -626,6 +639,27 @@ public sealed class IndexBuilder(
 
         return vectors;
     }
+
+    /// <summary>
+    /// How far the embedding got, and whether that is worth anything to the reader.
+    ///
+    /// With a checkpoint the count is a promise: everything counted is on disk, and running the
+    /// build again continues from there. The promise is understated by construction - a batch is
+    /// saved before <c>done</c> is incremented, and the halving path saves more - so it can be
+    /// short of the truth but never ahead of it.
+    ///
+    /// Without one there is no promise to make, and the sentence says so instead of implying the
+    /// work survived. That branch is reachable only from <c>codesearch</c>, which pins its whole
+    /// output to English, so it stays a literal rather than a translated string no reader can
+    /// ever be shown.
+    /// </summary>
+    private static string StoppedAt(int done, int total, bool checkpointed) =>
+        done == 0
+            ? IndexText.BuildEmbeddingStoppedAtStart(total)
+            : checkpointed
+                ? IndexText.BuildEmbeddingStopped(done, total)
+                : $"Embedding stopped at {done} of {total} chunks. This run keeps no embedding " +
+                  "checkpoint, so the next run embeds them again.";
 
     private sealed record InFlightBatch(
         IReadOnlyList<(string RelPath, int Slot, string Text)> Items,

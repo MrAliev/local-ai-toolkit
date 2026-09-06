@@ -114,6 +114,36 @@ public sealed class BrokerEmbeddingClientTests
     }
 
     /// <summary>
+    /// The same rule, reached by the route nobody guarded. An Ollama that is simply not running
+    /// does not fail a job — the job never runs at all, and the wait ends in
+    /// <c>BrokerBackendUnreachableException</c>, which is an <see cref="InvalidOperationException"/>
+    /// and so was neither caught here nor excluded from halving.
+    ///
+    /// That is the behaviour #369 was closed to prevent, arrived at the other way: a batch of 512
+    /// against an absent Ollama becomes 256 and 256, then 128s, each waiting out its own broker
+    /// timeout. And the single chunk it finally reaches takes the builder's other catch, so the
+    /// run ends as `chunk_rejected` with exit 65 — "this input will never work" — naming a file
+    /// that was never the problem, when the truth is `broker_unavailable` and exit 75.
+    /// </summary>
+    [Fact]
+    public async Task Translates_an_unreachable_backend_to_embedding_unavailable()
+    {
+        var failure = new BrokerBackendUnreachableException("http://127.0.0.1:11434/");
+        var client = new BrokerEmbeddingClient(
+            "embed-model",
+            new ThrowingBrokerClient(failure));
+
+        var error = await Assert.ThrowsAsync<EmbeddingUnavailableException>(
+            () => client.EmbedAsync(
+                ["text"],
+                LocalJobPriority.Background,
+                "index:tree:batch-1",
+                TestContext.Current.CancellationToken));
+
+        Assert.Same(failure, error.InnerException);
+    }
+
+    /// <summary>
     /// The other half: a job that failed for a reason of its own is still the indexer's to
     /// isolate, and halving is the right answer to it.
     /// </summary>

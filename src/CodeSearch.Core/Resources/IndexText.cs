@@ -71,6 +71,24 @@ public static class IndexText
     public static string BuildBatchHalved(int chunks, string reason) =>
         Catalogue.Format(nameof(BuildBatchHalved), chunks, reason);
 
+    /// <summary>
+    /// What a build says when the embedding backend went away under it. The figures live here
+    /// rather than beside the exception because only the build loop knows them, and they are the
+    /// whole of what #389 asked for: a refusal that said nothing but "the model backend was not
+    /// available" left a reader with no idea whether nine minutes of work had survived.
+    /// </summary>
+    public static string BuildEmbeddingStopped(int done, int total) =>
+        Catalogue.Format(nameof(BuildEmbeddingStopped), done, total);
+
+    public static string BuildEmbeddingStoppedAtStart(int total) =>
+        Catalogue.Format(nameof(BuildEmbeddingStoppedAtStart), total);
+
+    public static string EmbeddingBrokerNotStarted(string detail) =>
+        Catalogue.Format(nameof(EmbeddingBrokerNotStarted), detail);
+
+    public static string EmbeddingBackendUnavailable(string model, string detail) =>
+        Catalogue.Format(nameof(EmbeddingBackendUnavailable), model, detail);
+
     public static string BuildSaved(string indexPath, int chunks, int files, string seconds) =>
         Catalogue.Format(nameof(BuildSaved), indexPath, chunks, files, seconds);
 
