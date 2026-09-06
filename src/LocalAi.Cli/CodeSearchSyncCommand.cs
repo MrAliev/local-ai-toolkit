@@ -1363,8 +1363,21 @@ public static class CodeSearchSyncCommand
         new(name, SemanticAdapterState.Skipped, message, 0);
 
     private static void ReportAdapter(SemanticAdapterStatus status) =>
-        Console.Error.WriteLine(
-            $"SCIP {status.Name}: {status.State.ToString().ToLowerInvariant()} — {status.Message}");
+        Console.Error.WriteLine(AdapterLine(status));
+
+    /// <summary>
+    /// An English literal rather than a catalogue key, deliberately: every element of it is a
+    /// token, a number, or the adapter's own English message, and a translated clause welded to
+    /// <c>SCIP typescript: succeeded</c> would be the odd thing on the line.
+    ///
+    /// The duration was measured by <c>ScipAdapterRunner</c> all along and dropped here. Printing
+    /// it is what would have let the 36.72 seconds of silence be measured phase by phase instead
+    /// of as one lump (#387), and it costs one interpolation.
+    /// </summary>
+    internal static string AdapterLine(SemanticAdapterStatus status) =>
+        $"SCIP {status.Name}: {status.State.ToString().ToLowerInvariant()} in " +
+        (status.DurationMilliseconds / 1000d).ToString("F1", CultureInfo.InvariantCulture) +
+        $"s — {status.Message}";
 
     private static SemanticIndex EmptySemanticIndex(GenerationIdentity generation) =>
         new()
