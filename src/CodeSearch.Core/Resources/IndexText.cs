@@ -92,14 +92,54 @@ public static class IndexText
         Catalogue.Format(
             nameof(BuildOverlaySaved), overlayPath, chunks, files, deletions, seconds);
 
+    /// <summary>
+    /// Three reasons a navigation answer is not the precise one, each in two halves.
+    ///
+    /// The command that repairs each of them is a key of its own, and the three whole-sentence
+    /// accessors join the halves back with a single space — so every face that prints the sentence
+    /// prints exactly what it always did, to the byte. The MCP navigation tools are the one caller
+    /// that prints a half: while a build holds the repository's sync gate that command exits 75
+    /// <c>sync_busy</c>, and a block naming the running build stands where it was.
+    ///
+    /// The hole numbering differs between a half and the whole on two of them, deliberately: the
+    /// generation id belongs to the fact, so the remedy's only hole is the working root.
+    /// </summary>
     public static string GenerationNotPublished(string workingRoot) =>
-        Catalogue.Format(nameof(GenerationNotPublished), workingRoot);
+        Sentence(GenerationNotPublishedFact, GenerationNotPublishedRemedy(workingRoot));
+
+    public static string GenerationNotPublishedFact =>
+        Catalogue.Get(nameof(GenerationNotPublishedFact));
+
+    public static string GenerationNotPublishedRemedy(string workingRoot) =>
+        Catalogue.Format(nameof(GenerationNotPublishedRemedy), workingRoot);
 
     public static string GenerationWithoutSemanticIndex(string generationId, string workingRoot) =>
-        Catalogue.Format(nameof(GenerationWithoutSemanticIndex), generationId, workingRoot);
+        Sentence(
+            GenerationWithoutSemanticIndexFact(generationId),
+            GenerationWithoutSemanticIndexRemedy(workingRoot));
+
+    public static string GenerationWithoutSemanticIndexFact(string generationId) =>
+        Catalogue.Format(nameof(GenerationWithoutSemanticIndexFact), generationId);
+
+    public static string GenerationWithoutSemanticIndexRemedy(string workingRoot) =>
+        Catalogue.Format(nameof(GenerationWithoutSemanticIndexRemedy), workingRoot);
 
     public static string SemanticIndexUnreadable(string generationId, string workingRoot) =>
-        Catalogue.Format(nameof(SemanticIndexUnreadable), generationId, workingRoot);
+        Sentence(
+            SemanticIndexUnreadableFact(generationId),
+            SemanticIndexUnreadableRemedy(workingRoot));
+
+    public static string SemanticIndexUnreadableFact(string generationId) =>
+        Catalogue.Format(nameof(SemanticIndexUnreadableFact), generationId);
+
+    public static string SemanticIndexUnreadableRemedy(string workingRoot) =>
+        Catalogue.Format(nameof(SemanticIndexUnreadableRemedy), workingRoot);
+
+    /// <summary>
+    /// One space, in one place. The join is what makes the split invisible to every face that did
+    /// not ask for the halves, so it is not spelled three times.
+    /// </summary>
+    private static string Sentence(string fact, string remedy) => fact + " " + remedy;
 
     public static string NoSymbolAtPosition => Catalogue.Get(nameof(NoSymbolAtPosition));
 

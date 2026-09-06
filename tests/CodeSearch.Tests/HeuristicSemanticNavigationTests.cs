@@ -147,17 +147,33 @@ public sealed class HeuristicSemanticNavigationTests : IDisposable
         // reach the text fallback, so the caller saw README and docs matches and no reason.
         var heuristic = new FakeHeuristic([HeuristicLocation]);
         var gateway = new SemanticNavigationGateway(
-            // The production sentence rather than a copy of it: a fixture that quotes a
-            // message the product no longer prints reads like a promise about the product.
-            _ => throw new SemanticNavigationNotReadyException(
-                IndexText.GenerationWithoutSemanticIndex("ff114b066164", @"R:epo")),
+            // The production sentence rather than a copy of it, and in the two halves
+            // production builds it from: a fixture that quotes a message the product no
+            // longer prints reads like a promise about the product, and one that composes it
+            // differently hides which half a caller is allowed to drop.
+            _ => throw new SemanticNavigationNotReadyException(new SemanticDegradation(
+                IndexText.GenerationWithoutSemanticIndexFact("ff114b066164"),
+                IndexText.GenerationWithoutSemanticIndexRemedy(@"R:\repo"))),
             heuristicNavigation: heuristic);
 
         var outcome = await gateway.ResolveReferencesAsync("Use.cs", 0, 1, true, _root, Ct);
 
         Assert.Equal(NavigationPrecision.Heuristic, Assert.Single(outcome.Locations).Precision);
         Assert.NotNull(outcome.Degradation);
-        Assert.Contains("has no semantic.sidx", outcome.Degradation, StringComparison.Ordinal);
+        Assert.Contains(
+            "has no semantic.sidx",
+            outcome.Degradation.Sentence,
+            StringComparison.Ordinal);
+        // The command is the half a running build takes away, so it has to be a half.
+        Assert.NotNull(outcome.Degradation.Remedy);
+        Assert.Contains(
+            "localai sync --root",
+            outcome.Degradation.Remedy,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "localai sync --root",
+            outcome.Degradation.Fact,
+            StringComparison.Ordinal);
     }
 
     [Fact]
@@ -171,9 +187,15 @@ public sealed class HeuristicSemanticNavigationTests : IDisposable
         Assert.NotNull(outcome.Degradation);
         Assert.Contains(
             "no symbol at this position",
-            outcome.Degradation,
+            outcome.Degradation.Sentence,
             StringComparison.Ordinal);
-        Assert.DoesNotContain("semantic.sidx", outcome.Degradation, StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "semantic.sidx",
+            outcome.Degradation.Sentence,
+            StringComparison.Ordinal);
+        // And no remedy at all: nothing about this reason is repaired by a sync, so there is no
+        // command for a running build to take away.
+        Assert.Null(outcome.Degradation.Remedy);
     }
 
     private static SemanticLocation HeuristicLocation => new(

@@ -19,14 +19,46 @@ public sealed record SemanticNavigationContext(
 public sealed class SemanticNavigationNotReadyException : InvalidOperationException
 {
     public SemanticNavigationNotReadyException(string message)
-        : base(message)
+        : this(new SemanticDegradation(message, null))
     {
     }
 
     public SemanticNavigationNotReadyException(string message, Exception innerException)
-        : base(message, innerException)
+        : this(new SemanticDegradation(message, null), innerException)
     {
     }
+
+    /// <summary>
+    /// The two halves kept apart, so a caller that must not print the command can drop it. The
+    /// message stays the whole sentence, because that is what every face printing
+    /// <c>Message</c> has always printed.
+    /// </summary>
+    public SemanticNavigationNotReadyException(
+        SemanticDegradation degradation,
+        Exception? innerException = null)
+        : base(degradation.Sentence, innerException)
+    {
+        Degradation = degradation;
+    }
+
+    public SemanticDegradation Degradation { get; }
+}
+
+/// <summary>
+/// Why an answer is not the precise one, in the two halves a caller may need apart: what is true,
+/// and the command that repairs it where there is one.
+///
+/// One reason has no remedy — the index loaded and answered nothing at that position — and it is
+/// the reason that needs none: nothing about it changes while a build runs. The other three end in
+/// <c>localai sync</c>, which is refused while a build holds the repository's gate, so the caller
+/// that knows about the gate prints the fact alone and names the running build instead.
+/// </summary>
+public sealed record SemanticDegradation(string Fact, string? Remedy)
+{
+    /// <summary>The sentence every face has always printed.</summary>
+    public string Sentence => Remedy is null ? Fact : Fact + " " + Remedy;
+
+    public override string ToString() => Sentence;
 }
 
 /// <summary>
@@ -41,7 +73,7 @@ public sealed class SemanticNavigationNotReadyException : InvalidOperationExcept
 /// </summary>
 public sealed record SemanticNavigationOutcome(
     IReadOnlyList<SemanticLocation> Locations,
-    string? Degradation)
+    SemanticDegradation? Degradation)
 {
     public static SemanticNavigationOutcome Precise(
         IReadOnlyList<SemanticLocation> locations) =>
@@ -125,7 +157,7 @@ public sealed class SemanticNavigationGateway
             }
         }
 
-        string degradation;
+        SemanticDegradation degradation;
         try
         {
             var context = _contextFactory(root);
@@ -144,7 +176,7 @@ public sealed class SemanticNavigationGateway
         catch (SemanticNavigationNotReadyException exception) when (
             _heuristicNavigation is not null)
         {
-            degradation = exception.Message;
+            degradation = exception.Degradation;
         }
 
         return new SemanticNavigationOutcome(
@@ -220,7 +252,7 @@ public sealed class SemanticNavigationGateway
             }
         }
 
-        string degradation;
+        SemanticDegradation degradation;
         try
         {
             var context = _contextFactory(root);
@@ -240,7 +272,7 @@ public sealed class SemanticNavigationGateway
         catch (SemanticNavigationNotReadyException exception) when (
             _heuristicNavigation is not null)
         {
-            degradation = exception.Message;
+            degradation = exception.Degradation;
         }
 
         return new SemanticNavigationOutcome(
@@ -314,7 +346,12 @@ public sealed class SemanticNavigationGateway
     /// and simply has nothing at that position. Worth distinguishing from a missing index, because
     /// only one of the two is fixed by re-syncing.
     /// </summary>
-    private static string EmptyPreciseResult => IndexText.NoSymbolAtPosition;
+    /// <summary>
+    /// The one reason with no command in it: the index loaded and answered nothing here.
+    /// Nothing about it changes while a build runs, which is why it keeps the shape it has.
+    /// </summary>
+    private static SemanticDegradation EmptyPreciseResult =>
+        new(IndexText.NoSymbolAtPosition, null);
 
     private static string ResolveLiveRoot(string? root) =>
         root is null
@@ -327,13 +364,15 @@ public sealed class SemanticNavigationGateway
         var identity = RuntimeIndexLayout.Inspect(workingRoot, runtimeRoot);
         var store = new GenerationStore(identity.RepositoryRuntimeRoot);
         var current = store.ReadCurrent()
-            ?? throw new SemanticNavigationNotReadyException(
-                IndexText.GenerationNotPublished(workingRoot));
+            ?? throw new SemanticNavigationNotReadyException(new SemanticDegradation(
+                IndexText.GenerationNotPublishedFact,
+                IndexText.GenerationNotPublishedRemedy(workingRoot)));
         var manifest = store.ReadManifest(current.GenerationId);
         if (manifest.SemanticIndexFile is null)
         {
-            throw new SemanticNavigationNotReadyException(
-                IndexText.GenerationWithoutSemanticIndex(current.GenerationId, workingRoot));
+            throw new SemanticNavigationNotReadyException(new SemanticDegradation(
+                IndexText.GenerationWithoutSemanticIndexFact(current.GenerationId),
+                IndexText.GenerationWithoutSemanticIndexRemedy(workingRoot)));
         }
 
         var usesBaseSnapshot =
@@ -353,7 +392,9 @@ public sealed class SemanticNavigationGateway
             exception is IOException or UnauthorizedAccessException or InvalidDataException)
         {
             throw new SemanticNavigationNotReadyException(
-                IndexText.SemanticIndexUnreadable(current.GenerationId, workingRoot),
+                new SemanticDegradation(
+                    IndexText.SemanticIndexUnreadableFact(current.GenerationId),
+                    IndexText.SemanticIndexUnreadableRemedy(workingRoot)),
                 exception);
         }
 
