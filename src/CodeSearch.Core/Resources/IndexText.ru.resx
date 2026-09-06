@@ -231,4 +231,12 @@
     <value>Пересобрать: localai sync --root {0}</value>
     <comment>The same words as SemanticIndexUnreadableRemedy, in a key of its own: the two states repair identically today and are free to diverge without dragging each other.</comment>
   </data>
+  <data name="GenerationUnreadableFact" xml:space="preserve">
+    <value>Опубликованное поколение '{0}' не читается.</value>
+    <comment>One sentence for every way ReadManifest refuses - the directory gone, the manifest gone or unparseable, an identity that does not match its directory, a checksum that does not match - because none of them changes what the reader does, which is the argument SemanticIndexUnreadableFact's own comment makes and CodeSearchSyncCommand.TryReadManifest already acts on. No file is named: ReadManifest reads manifest.json, then checksums base.cidx, then semantic.sidx, so no single one of them is known to be the one that failed. 'Published' is backed by the pointer read that succeeded a line earlier - which is why GenerationNotPublishedFact would be false here. No consequence clause, matching the other unreadable fact rather than the two absent ones. The command lives in the matching Remedy key: this is the first pair whose commonest occurrence is while a build runs, so the fact is the half that usually prints alone.</comment>
+  </data>
+  <data name="GenerationUnreadableRemedy" xml:space="preserve">
+    <value>Пересобрать: localai sync --root {0}</value>
+    <comment>Rebuild it, not Build one: the generation is present and broken rather than absent. Same words as SemanticIndexUnreadableRemedy and SemanticOverlayUnreadableRemedy, in a key of its own so that rewording one cannot move the others.</comment>
+  </data>
 </root>

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CodeSearch.Core.Indexing;
 using CodeSearch.Core.Resources;
 using LocalAi.Repository;
@@ -49,7 +50,7 @@ public sealed class SemanticNavigationNotReadyException : InvalidOperationExcept
 /// and the command that repairs it where there is one.
 ///
 /// One reason has no remedy — the index loaded and answered nothing at that position — and it is
-/// the reason that needs none: nothing about it changes while a build runs. The other five end in
+/// the reason that needs none: nothing about it changes while a build runs. The other six end in
 /// <c>localai sync</c>, which is refused while a build holds the repository's gate, so the caller
 /// that knows about the gate prints the fact alone and names the running build instead.
 /// </summary>
@@ -367,7 +368,31 @@ public sealed class SemanticNavigationGateway
             ?? throw new SemanticNavigationNotReadyException(new SemanticDegradation(
                 IndexText.GenerationNotPublishedFact,
                 IndexText.GenerationNotPublishedRemedy(workingRoot)));
-        var manifest = store.ReadManifest(current.GenerationId);
+        // Its own block, for the same reason the two below it are separate: which line ran is the
+        // only thing that says which file failed. One sentence for every way ReadManifest refuses
+        // — the directory gone, the manifest gone or unparseable, a checksum that does not match —
+        // because none of them changes what the reader does.
+        //
+        // This was the one call in this method outside every try, so all of it left the gateway as
+        // a raw exception rather than a degraded answer. The state is produced by the product's own
+        // repair path: a sync quarantines the generation the pointer names and does not rewrite the
+        // pointer until the rebuild finishes.
+        GenerationManifest manifest;
+        try
+        {
+            manifest = store.ReadManifest(current.GenerationId);
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException or InvalidDataException
+                or JsonException)
+        {
+            throw new SemanticNavigationNotReadyException(
+                new SemanticDegradation(
+                    IndexText.GenerationUnreadableFact(current.GenerationId),
+                    IndexText.GenerationUnreadableRemedy(workingRoot)),
+                exception);
+        }
+
         if (manifest.SemanticIndexFile is null)
         {
             throw new SemanticNavigationNotReadyException(new SemanticDegradation(
