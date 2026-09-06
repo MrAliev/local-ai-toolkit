@@ -202,9 +202,8 @@ public sealed class GenerationStore
     /// That used to escape as an exception, and it escaped through everybody. Of the eight callers
     /// only <see cref="GenerationRetention"/> guarded itself, and two of the unguarded ones —
     /// <c>RuntimeIndexLayout</c> and the semantic navigation gateway — are on the read path, so a
-    /// zero-length <c>current.json</c> took search and navigation down along with the sync. That
-    /// is precisely the file a power cut between the rename and the flush leaves behind, and the
-    /// swallow belongs here rather than at seven call sites.
+    /// <c>current.json</c> that does not parse took search and navigation down along with the
+    /// sync. The swallow belongs here rather than at seven call sites.
     ///
     /// Retention is the one caller that must not have them collapsed, and it asks through
     /// <see cref="TryReadCurrent(out GenerationPointer?)"/> instead.

@@ -5,9 +5,8 @@ namespace LocalAi.Broker.Tests;
 /// <summary>
 /// The heartbeat is how every client tells a live broker from a dead one, and this loop is also
 /// the only reader of the shutdown request. Both were riding on a bare <c>store.Publish</c>: the
-/// first <see cref="IOException"/> — an antivirus holding <c>host.json</c> for a moment, the
-/// ordinary contention the store's own retry budget exists for — ended the loop for the life of
-/// the process.
+/// first <see cref="IOException"/> it let out ended the loop for the life of the process — and
+/// the store raises one only after spending its whole retry budget on the rename.
 ///
 /// What follows from that is worse than a missing heartbeat. Clients see one older than five
 /// seconds, decide the broker is dead and start a replacement, which finds <c>broker.lock</c>

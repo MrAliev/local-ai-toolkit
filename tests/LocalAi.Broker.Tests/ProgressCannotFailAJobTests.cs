@@ -11,9 +11,8 @@ namespace LocalAi.Broker.Tests;
 /// `IOException` from its own atomic write — went straight out of the executor and into the
 /// host's catch-all, which records the job as Failed.
 ///
-/// The shape that matters is a nine-gigabyte model pull at seventy per cent: an antivirus holds
-/// the temporary progress file for a moment, `File.Move` throws, and the download is reported as
-/// failed while it is still running.
+/// The shape that matters is a long model pull: one `File.Move` under the progress write throws
+/// an `IOException`, and the download is reported as failed while it is still running.
 /// </summary>
 public sealed class ProgressCannotFailAJobTests
 {
