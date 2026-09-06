@@ -9,6 +9,7 @@ using LocalAi.Contracts.Security;
 using CodeSearch.Core.Search;
 using CodeSearch.Core.Semantics;
 using CodeSearch.Mcp;
+using CodeSearch.Mcp.Resources;
 using LocalAi.Contracts;
 using LocalAi.Repository;
 
@@ -246,6 +247,17 @@ public sealed class UntrustedContentMcpTests : IDisposable
         PublishIndex();
     }
 
+    /// <summary>
+    /// A reader over this fixture's own runtime, with the gate answered rather than probed.
+    ///
+    /// A real gate on a temporary repository nobody is syncing is always open, and open is a
+    /// different state with a different block — a record left over an open gate is a build that
+    /// died. The tests that are about what a running build prints say <see cref="Building"/>.
+    /// </summary>
+    private RepositoryProgressReader Reader() => new(_runtimeRoot, gateHeld: _ => false);
+
+    private RepositoryProgressReader Building() => new(_runtimeRoot, gateHeld: _ => true);
+
     [Fact]
     public async Task Search_code_keeps_the_index_header_trusted_and_wraps_each_hit()
     {
@@ -323,7 +335,7 @@ public sealed class UntrustedContentMcpTests : IDisposable
     [Fact]
     public void Status_and_maintenance_output_remain_trusted_and_unwrapped()
     {
-        var status = CodeSearchTools.IndexStatus(_service, NoBuildRunning.Notice, _root);
+        var status = CodeSearchTools.IndexStatus(_service, Reader(), _root);
         var maintenance = CodeSearchTools.IndexUnload(_service);
 
         Assert.Contains("Chunks:     2", status, StringComparison.Ordinal);
@@ -348,12 +360,84 @@ public sealed class UntrustedContentMcpTests : IDisposable
                 TimeSpan.FromSeconds(72),
                 DateTimeOffset.UtcNow));
 
-        var status = CodeSearchTools.IndexStatus(_service, NoBuildRunning.Notice, _root);
+        var status = CodeSearchTools.IndexStatus(_service, Building(), _root);
 
         Assert.Contains("Sync phase: EmbeddingBase", status, StringComparison.Ordinal);
         Assert.Contains("120/300 chunks (180 remaining)", status, StringComparison.Ordinal);
         Assert.Contains("2.5 chunks/s", status, StringComparison.Ordinal);
         Assert.Contains("ETA:        1.2 min", status, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The defect this block had from the day it was written. Nothing writes Failed on behalf of a
+    /// process that was killed, so a sync that died leaves its phase and its estimate in the file
+    /// for ever - and this status reported both as a build in progress until it started asking the
+    /// gate. The rate stays: it is a measured average over work that happened, and it is the
+    /// number a reader deciding whether to start again has come for. The estimate goes, because it
+    /// was that dead process's prediction of a remaining time nobody is spending.
+    /// </summary>
+    [Fact]
+    public void A_build_that_died_is_not_reported_as_one_still_running()
+    {
+        new RepositoryIndexProgressStore(_identity.RepositoryRuntimeRoot).Save(
+            new RepositoryIndexProgress(
+                _identity.RepositoryId,
+                RepositoryIndexProgressPhase.EmbeddingBase,
+                _root,
+                120,
+                300,
+                2.5,
+                TimeSpan.FromSeconds(72),
+                DateTimeOffset.UtcNow - TimeSpan.FromHours(3.2)));
+
+        var status = CodeSearchTools.IndexStatus(_service, Reader(), _root);
+
+        Assert.Contains(
+            "Sync phase: " + CodeSearchText.ProgressStoppedAt("EmbeddingBase"),
+            status,
+            StringComparison.Ordinal);
+        Assert.Contains("120/300 chunks (180 remaining)", status, StringComparison.Ordinal);
+        Assert.Contains("2.5 chunks/s", status, StringComparison.Ordinal);
+        Assert.DoesNotContain("ETA:", status, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The window a machine building its first index passes through, and the one a status is most
+    /// likely to be asked in. The gate is taken before the first byte of shared state, so between
+    /// a sync starting and its first write there is a build with no figures at all - and a reader
+    /// scanning `Sync phase:` for whether anything is running must not find that row missing.
+    /// </summary>
+    [Fact]
+    public void A_build_that_has_recorded_nothing_yet_still_says_it_is_there()
+    {
+        var status = CodeSearchTools.IndexStatus(_service, Building(), _root);
+
+        Assert.Contains(
+            "Sync phase: " + CodeSearchText.ProgressNotRecordedYet,
+            status,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("Progress:", status, StringComparison.Ordinal);
+        Assert.DoesNotContain("Updated:", status, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A build that ended keeps its row, because a status is asked deliberately and absence would
+    /// then mean either "it finished" or "nothing could be read". What it loses is the tally: the
+    /// count it stopped at says nothing about a build that is over, and the honest alternative -
+    /// a full counter with nothing remaining - is the exact reading that made a running build look
+    /// finished.
+    /// </summary>
+    [Fact]
+    public void A_finished_build_keeps_its_row_and_drops_its_tally()
+    {
+        Save(RepositoryIndexProgressPhase.Completed, 1415, 1415);
+
+        var status = CodeSearchTools.IndexStatus(_service, Reader(), _root);
+
+        Assert.Contains("Sync phase: Completed", status, StringComparison.Ordinal);
+        Assert.Contains("Updated:", status, StringComparison.Ordinal);
+        Assert.DoesNotContain("Progress:", status, StringComparison.Ordinal);
+        Assert.DoesNotContain("Rate:", status, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -366,7 +450,7 @@ public sealed class UntrustedContentMcpTests : IDisposable
     {
         Assert.DoesNotContain(
             "Update:",
-            CodeSearchTools.IndexStatus(_service, NoBuildRunning.Notice, _root),
+            CodeSearchTools.IndexStatus(_service, Reader(), _root),
             StringComparison.Ordinal);
 
         new UpdateCheckPolicyStore(_runtimeRoot).Write(
@@ -389,7 +473,7 @@ public sealed class UntrustedContentMcpTests : IDisposable
         new LocalAi.Contracts.Activation.InstalledReleaseStore(binRoot)
             .Write("be08af033a2a", "0.1.50");
 
-        var status = CodeSearchTools.IndexStatus(_service, NoBuildRunning.Notice, _root);
+        var status = CodeSearchTools.IndexStatus(_service, Reader(), _root);
 
         Assert.Contains("Update:     LocalAi 99.0.0 is available", status, StringComparison.Ordinal);
         Assert.DoesNotContain("<untrusted-content", status, StringComparison.Ordinal);
@@ -401,7 +485,7 @@ public sealed class UntrustedContentMcpTests : IDisposable
         // The fixture publishes a base with no semantic.sidx, which is exactly the shape of a
         // repository last synced before semantic indexing shipped: model right, commit not
         // drifted, status "current", and navigation quietly answering from text matches.
-        var status = CodeSearchTools.IndexStatus(_service, NoBuildRunning.Notice, _root);
+        var status = CodeSearchTools.IndexStatus(_service, Reader(), _root);
 
         Assert.Contains("Navigation: HEURISTIC", status, StringComparison.Ordinal);
         Assert.Contains("no semantic.sidx", status, StringComparison.Ordinal);
@@ -420,7 +504,7 @@ public sealed class UntrustedContentMcpTests : IDisposable
     {
         PublishGenerationWithEmptySemanticIndex();
 
-        var status = CodeSearchTools.IndexStatus(_service, NoBuildRunning.Notice, _root);
+        var status = CodeSearchTools.IndexStatus(_service, Reader(), _root);
 
         Assert.Contains("Navigation: HEURISTIC", status, StringComparison.Ordinal);
         Assert.Contains("covers no document", status, StringComparison.Ordinal);
@@ -435,7 +519,7 @@ public sealed class UntrustedContentMcpTests : IDisposable
         // counter with nothing remaining, beside a phase that was not counting anything.
         Save(RepositoryIndexProgressPhase.SemanticBase, 1415, 1415);
 
-        var status = CodeSearchTools.IndexStatus(_service, NoBuildRunning.Notice, _root);
+        var status = CodeSearchTools.IndexStatus(_service, Building(), _root);
 
         Assert.Contains("Sync phase: SemanticBase", status, StringComparison.Ordinal);
         Assert.Contains("not counted in this phase", status, StringComparison.Ordinal);
@@ -448,24 +532,30 @@ public sealed class UntrustedContentMcpTests : IDisposable
     {
         Save(RepositoryIndexProgressPhase.PublishingGeneration, 1415, 1415);
 
-        var status = CodeSearchTools.IndexStatus(_service, NoBuildRunning.Notice, _root);
+        var status = CodeSearchTools.IndexStatus(_service, Building(), _root);
 
         Assert.Contains("Sync phase: PublishingGeneration", status, StringComparison.Ordinal);
         Assert.DoesNotContain("ETA:", status, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// Stale and mid-build are two facts, and printing only the first is what made a generation
+    /// that was minutes from publishing look like one nobody was building. The `Status:` row used
+    /// to carry a clause about the sync; it no longer does, because the block four rows below says
+    /// the same thing and says in addition whether anything is still running. Two accounts of one
+    /// build can only disagree.
+    /// </summary>
     [Fact]
-    public void Staleness_names_the_unfinished_sync_that_explains_it()
+    public void Staleness_leaves_the_sync_to_the_block_that_can_say_whether_it_runs()
     {
         DriftMainlinePastTheIndexedCommit();
         Save(RepositoryIndexProgressPhase.SemanticBase, 0, 0);
 
-        var status = CodeSearchTools.IndexStatus(_service, NoBuildRunning.Notice, _root);
+        var status = CodeSearchTools.IndexStatus(_service, Building(), _root);
 
-        // Stale and mid-build are two facts, and printing only the first is what made a
-        // generation that was minutes from publishing look like one nobody was building.
         Assert.Contains("STALE", status, StringComparison.Ordinal);
-        Assert.Contains("a sync reached SemanticBase at", status, StringComparison.Ordinal);
+        Assert.DoesNotContain("a sync reached", status, StringComparison.Ordinal);
+        Assert.Contains("Sync phase: SemanticBase", status, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -474,7 +564,7 @@ public sealed class UntrustedContentMcpTests : IDisposable
         DriftMainlinePastTheIndexedCommit();
         Save(RepositoryIndexProgressPhase.Completed, 1415, 1415);
 
-        var status = CodeSearchTools.IndexStatus(_service, NoBuildRunning.Notice, _root);
+        var status = CodeSearchTools.IndexStatus(_service, Reader(), _root);
 
         Assert.Contains("STALE", status, StringComparison.Ordinal);
         Assert.DoesNotContain("a sync reached", status, StringComparison.Ordinal);
@@ -528,7 +618,7 @@ public sealed class UntrustedContentMcpTests : IDisposable
             Path.Combine(_identity.RepositoryRuntimeRoot.Value, "progress.json"),
             new byte[337]);
 
-        var status = CodeSearchTools.IndexStatus(_service, NoBuildRunning.Notice, _root);
+        var status = CodeSearchTools.IndexStatus(_service, Reader(), _root);
 
         Assert.Contains("Chunks:     2", status, StringComparison.Ordinal);
         Assert.DoesNotContain("Sync phase:", status, StringComparison.Ordinal);

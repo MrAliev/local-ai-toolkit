@@ -33,7 +33,27 @@ public enum SyncNoticeAudience
 public sealed record SyncSighting(
     string RepositoryId,
     bool BuildHoldsTheGate,
-    RepositoryIndexProgress? Progress);
+    RepositoryIndexProgress? Progress)
+{
+    /// <summary>
+    /// A recorded phase past which nothing more will be written. Not a claim that the process is
+    /// gone: it is what the last write said, which is all the record ever says.
+    /// </summary>
+    public bool Ended =>
+        Progress is
+        {
+            Phase: RepositoryIndexProgressPhase.Completed
+                or RepositoryIndexProgressPhase.Failed,
+        };
+
+    /// <summary>
+    /// Whether a build is working right now. Not quite "would a second sync be refused": in the
+    /// moment between a sync stamping its terminal record and letting go of the gate, one still
+    /// would be — but that moment follows every successful build, and treating it as a running
+    /// build would withhold a command from a reader who has no sync to wait for.
+    /// </summary>
+    public bool BuildIsRunning => BuildHoldsTheGate && !Ended;
+}
 
 /// <summary>
 /// The line a build in flight puts above every answer it would change.
@@ -96,8 +116,7 @@ public sealed class SyncNotice(Func<string?, SyncSighting?> look)
         var sighting = look(root);
         return new BuildNotice(
             Compose(sighting, SyncNoticeAudience.Instruction, separated: false),
-            sighting is { BuildHoldsTheGate: true } &&
-                (sighting.Progress is null || !Ended(sighting.Progress)));
+            sighting is { BuildIsRunning: true });
     }
 
     /// <summary>
@@ -125,7 +144,7 @@ public sealed class SyncNotice(Func<string?, SyncSighting?> look)
             // Completed and returns - a moment that follows every successful build, and reading it
             // as "a build has started" would announce a beginning to every reader who just saw an
             // end.
-            if (sighting.Progress is { } recorded && Ended(recorded))
+            if (sighting is { Ended: true, Progress: { } recorded })
             {
                 return Closing(sighting, said, EndOf(recorded), separated);
             }
@@ -216,14 +235,6 @@ public sealed class SyncNotice(Func<string?, SyncSighting?> look)
             : CodeSearchText.SyncEnded;
 
     /// <summary>
-    /// A recorded phase past which nothing more will be written. Not a claim that the process is
-    /// gone: it is what the last write said, which is all the record ever says.
-    /// </summary>
-    private static bool Ended(RepositoryIndexProgress progress) =>
-        progress.Phase is RepositoryIndexProgressPhase.Completed
-            or RepositoryIndexProgressPhase.Failed;
-
-    /// <summary>
     /// Phase, figures and age. The figures use the keys `index_status` prints, so a reader who
     /// sees both never sees two accounts of one build.
     ///
@@ -242,7 +253,7 @@ public sealed class SyncNotice(Func<string?, SyncSighting?> look)
             : CodeSearchText.ProgressNotCounted;
 
         return $"{progress.Phase} - {counted}, " +
-            CodeSearchText.RecordedAgo(Age(DateTimeOffset.UtcNow - progress.UpdatedAtUtc));
+            CodeSearchText.RecordedAgo(RecordedAge.Of(progress.UpdatedAtUtc));
     }
 
     private static string Eta(TimeSpan? remaining) =>
@@ -250,30 +261,6 @@ public sealed class SyncNotice(Func<string?, SyncSighting?> look)
             ? "ETA " + CodeSearchText.EtaMinutes(
                   estimate.TotalMinutes.ToString("F1", CultureInfo.InvariantCulture))
             : CodeSearchText.EtaCalculating;
-
-    /// <summary>
-    /// The age in the unit a reader reads, and never negative: a clock that disagrees with the
-    /// writer of the file by a second would otherwise report the future.
-    ///
-    /// It climbs all the way to days because this is the one figure here that is routinely large.
-    /// A build whose process died leaves a record nothing ever clears, so the honest report of it
-    /// is `recorded 2.4 d ago` rather than `recorded 3456.0 min ago`.
-    /// </summary>
-    private static string Age(TimeSpan since)
-    {
-        var age = since < TimeSpan.Zero ? TimeSpan.Zero : since;
-        return age switch
-        {
-            _ when age < TimeSpan.FromMinutes(1) => CodeSearchText.Seconds(
-                age.TotalSeconds.ToString("0", CultureInfo.InvariantCulture)),
-            _ when age < TimeSpan.FromHours(1) => CodeSearchText.EtaMinutes(
-                age.TotalMinutes.ToString("F1", CultureInfo.InvariantCulture)),
-            _ when age < TimeSpan.FromDays(1) => CodeSearchText.Hours(
-                age.TotalHours.ToString("F1", CultureInfo.InvariantCulture)),
-            _ => CodeSearchText.Days(
-                age.TotalDays.ToString("F1", CultureInfo.InvariantCulture)),
-        };
-    }
 
     /// <summary>
     /// The blank line under the block, when an answer follows it. Nothing when the block is the

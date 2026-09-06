@@ -119,9 +119,6 @@ public static class CodeSearchText
     public static string NavigationHeuristicMissing(string root) =>
         Catalogue.Format(nameof(NavigationHeuristicMissing), root);
 
-    public static string SyncReached(object phase, string when) =>
-        Catalogue.Format(nameof(SyncReached), phase, when);
-
     /// <summary>
     /// What a build in flight says on the answers it changes, and what it says when it ends.
     ///
