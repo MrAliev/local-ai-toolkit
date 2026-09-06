@@ -203,4 +203,16 @@
     <value>None of the {0} chunks were embedded.</value>
     <comment>No remedy clause: nothing was finished, so there is nothing to tell the reader is kept.</comment>
   </data>
+  <data name="RoslynLoading" xml:space="preserve">
+    <value>Loading C# from '{0}'. Restoring dependencies first — up to {1} min.</value>
+    <comment>Said before the wait, not after it: a line printed once the restore is over explains a silence the reader has already sat through. {1} is the same constant the restore actually waits on, passed in rather than written twice, so the sentence cannot drift from the timeout it describes.</comment>
+  </data>
+  <data name="RoslynRestored" xml:space="preserve">
+    <value>Dependencies restored in {0}s. Opening the projects.</value>
+    <comment>Printed only when the restore process exited 0. The failure and timeout paths print their own diagnostics, so a run that shows the loading line, then a failure, and no restored line is telling the truth.</comment>
+  </data>
+  <data name="RoslynOpened" xml:space="preserve">
+    <value>Opened {0} projects in {1}s.</value>
+    <comment>The count is honest only after the call - MSBuildWorkspace.OpenSolutionAsync is one opaque operation with no per-project callback, so this is the first moment the number exists. Both holes are invariant.</comment>
+  </data>
 </root>

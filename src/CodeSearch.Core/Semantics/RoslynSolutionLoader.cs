@@ -2,6 +2,8 @@ using Microsoft.Build.Locator;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.MSBuild;
 using System.Diagnostics;
+using System.Globalization;
+using CodeSearch.Core.Resources;
 using LocalAi.Contracts;
 
 namespace CodeSearch.Core.Semantics;
@@ -56,6 +58,20 @@ public sealed class LoadedRoslynSolution : IAsyncDisposable
 /// <summary>Loads the repository's primary solution using the installed dotnet SDK.</summary>
 public static class RoslynSolutionLoader
 {
+    /// <summary>
+    /// How long the dependency restore is allowed to take. Named because the line that
+    /// announces the wait quotes it: two copies of ten minutes would drift apart, and the
+    /// sentence would then describe a bound that is not the one being waited on.
+    /// </summary>
+    private static readonly TimeSpan RestoreTimeout = TimeSpan.FromMinutes(10);
+
+    /// <summary>
+    /// One decimal, invariant, as every other duration this product prints — these lines are
+    /// quoted verbatim and parsed, so no comma or group separator may appear in any language.
+    /// </summary>
+    private static string Seconds(Stopwatch elapsed) =>
+        elapsed.Elapsed.TotalSeconds.ToString("F1", CultureInfo.InvariantCulture);
+
     private static readonly object RegistrationLock = new();
     private static readonly IDictionary<string, string> WorkspaceProperties =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -96,10 +112,22 @@ public static class RoslynSolutionLoader
             return null;
         }
 
-        await RestoreProjectDependenciesAsync(
+        // Before the wait rather than after it. Everything from here to the first line the sync
+        // used to print is one silence — 36.72 s on this repository — and a line explaining it
+        // afterwards explains a wait the reader has already sat through (#387).
+        diagnostic?.Invoke(IndexText.RoslynLoading(selected, (int)RestoreTimeout.TotalMinutes));
+        var restoring = Stopwatch.StartNew();
+        var restored = await RestoreProjectDependenciesAsync(
             selected,
             diagnostic,
             cancellationToken).ConfigureAwait(false);
+        if (restored)
+        {
+            // Only on success. The failure and timeout paths print their own diagnostics, so a
+            // run that shows the line above, then a failure, and no line here is telling the
+            // truth rather than hiding half of it.
+            diagnostic?.Invoke(IndexText.RoslynRestored(Seconds(restoring)));
+        }
 
         using (await RoslynBuildHostLease.AcquireLoadLockAsync(cancellationToken))
         {
@@ -138,6 +166,7 @@ public static class RoslynSolutionLoader
             });
             try
             {
+                var opening = Stopwatch.StartNew();
                 var solution = selected.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase)
                     ? (await workspace.OpenProjectAsync(
                         selected,
@@ -145,6 +174,10 @@ public static class RoslynSolutionLoader
                     : await workspace.OpenSolutionAsync(
                         selected,
                         cancellationToken: cancellationToken);
+                // After the call, because that is the first moment the count exists: opening a
+                // solution is one opaque operation with no per-project callback to count from.
+                diagnostic?.Invoke(
+                    IndexText.RoslynOpened(solution.Projects.Count(), Seconds(opening)));
                 if (candidates.Length + projectCandidates.Length > 1)
                 {
                     diagnostic?.Invoke(
@@ -200,7 +233,12 @@ public static class RoslynSolutionLoader
         }
     }
 
-    private static async Task RestoreProjectDependenciesAsync(
+    /// <returns>
+    /// <see langword="true"/> when the restore process exited 0. Every other outcome - not
+    /// started, timed out, non-zero - has already reported itself through the diagnostic
+    /// sink, and the caller uses this only to decide whether to say the restore finished.
+    /// </returns>
+    private static async Task<bool> RestoreProjectDependenciesAsync(
         string entryPoint,
         Action<string>? diagnostic,
         CancellationToken cancellationToken)
@@ -238,19 +276,19 @@ public static class RoslynSolutionLoader
             {
                 diagnostic?.Invoke(
                     $"Project dependency restore did not start for '{entryPoint}'.");
-                return;
+                return false;
             }
         }
         catch (System.ComponentModel.Win32Exception exception)
         {
             diagnostic?.Invoke(
                 $"Project dependencies were not restored: {exception.Message}");
-            return;
+            return false;
         }
 
         var stdout = process.StandardOutput.ReadToEndAsync(CancellationToken.None);
         var stderr = process.StandardError.ReadToEndAsync(CancellationToken.None);
-        using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+        using var timeout = new CancellationTokenSource(RestoreTimeout);
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(
             cancellationToken,
             timeout.Token);
@@ -269,7 +307,7 @@ public static class RoslynSolutionLoader
 
             diagnostic?.Invoke(
                 $"Project dependency restore timed out for '{entryPoint}'.");
-            return;
+            return false;
         }
 
         var output = await stdout.ConfigureAwait(false);
@@ -286,7 +324,10 @@ public static class RoslynSolutionLoader
             diagnostic?.Invoke(
                 $"Project dependency restore failed for '{entryPoint}' " +
                 $"with exit code {process.ExitCode}: {detail}");
+            return false;
         }
+
+        return true;
     }
 
     private static void TryKill(Process process)

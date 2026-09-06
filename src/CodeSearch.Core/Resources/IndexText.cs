@@ -83,6 +83,24 @@ public static class IndexText
     public static string BuildEmbeddingStoppedAtStart(int total) =>
         Catalogue.Format(nameof(BuildEmbeddingStoppedAtStart), total);
 
+    /// <summary>
+    /// What the semantic phase says while it works, which was nothing at all: 36.72 seconds from
+    /// the start of a sync to its first line, all of it inside <c>dotnet restore</c> and
+    /// <c>MSBuildWorkspace.OpenSolutionAsync</c>, and hidden indexing is indistinguishable from a
+    /// hung machine (#387).
+    ///
+    /// Both of those are single opaque calls with no per-project callback, so what is honest to
+    /// print is that they started and what they cost — not a fraction nobody can compute.
+    /// </summary>
+    public static string RoslynLoading(string solutionPath, int timeoutMinutes) =>
+        Catalogue.Format(nameof(RoslynLoading), solutionPath, timeoutMinutes);
+
+    public static string RoslynRestored(string seconds) =>
+        Catalogue.Format(nameof(RoslynRestored), seconds);
+
+    public static string RoslynOpened(int projects, string seconds) =>
+        Catalogue.Format(nameof(RoslynOpened), projects, seconds);
+
     public static string EmbeddingBrokerNotStarted(string detail) =>
         Catalogue.Format(nameof(EmbeddingBrokerNotStarted), detail);
 
