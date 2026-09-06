@@ -336,14 +336,10 @@ public sealed class SystemProcessRunner : IProcessRunner, IProcessFileRunner
         string executable,
         IReadOnlyList<string> arguments)
     {
-        var isCommandScript = OperatingSystem.IsWindows() &&
-            (executable.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase) ||
-             executable.EndsWith(".bat", StringComparison.OrdinalIgnoreCase));
+        var isCommandScript = WindowsCommandScript.Is(executable);
         var startInfo = new ProcessStartInfo
         {
-            FileName = isCommandScript
-                ? Environment.GetEnvironmentVariable("ComSpec") ?? "cmd.exe"
-                : executable,
+            FileName = isCommandScript ? WindowsCommandScript.Interpreter : executable,
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
@@ -355,8 +351,10 @@ public sealed class SystemProcessRunner : IProcessRunner, IProcessFileRunner
         };
         if (isCommandScript)
         {
-            startInfo.Arguments =
-                "/d /s /c \"" + CommandScriptInvocation(executable, arguments) + "\"";
+            startInfo.Arguments = WindowsCommandScript.Arguments(
+                executable,
+                arguments,
+                "Windows command-script paths and arguments contain unsafe characters.");
             return startInfo;
         }
 
@@ -366,20 +364,6 @@ public sealed class SystemProcessRunner : IProcessRunner, IProcessFileRunner
         }
 
         return startInfo;
-    }
-
-    private static string CommandScriptInvocation(
-        string executable,
-        IReadOnlyList<string> arguments)
-    {
-        var values = new[] { executable }.Concat(arguments).ToArray();
-        if (values.Any(value => value.IndexOfAny(['\"', '\r', '\n', '%', '!']) >= 0))
-        {
-            throw new ArgumentException(
-                "Windows command-script paths and arguments contain unsafe characters.");
-        }
-
-        return string.Join(" ", values.Select(value => $"\"{value}\""));
     }
 
     /// <summary>

@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using LocalAi.Contracts;
 
 namespace CodeSearch.Core.Semantics;
 
@@ -116,13 +117,9 @@ public sealed class StdioLanguageServerClient : ILanguageServerClient
         spec.Validate();
         var root = Path.GetFullPath(workspaceRoot);
         var executable = ExecutableResolver.Resolve(spec.Executable);
-        var commandScript = OperatingSystem.IsWindows() &&
-            (executable.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase) ||
-             executable.EndsWith(".bat", StringComparison.OrdinalIgnoreCase));
+        var commandScript = WindowsCommandScript.Is(executable);
         var start = new ProcessStartInfo(
-            commandScript
-                ? Environment.GetEnvironmentVariable("ComSpec") ?? "cmd.exe"
-                : executable)
+            commandScript ? WindowsCommandScript.Interpreter : executable)
         {
             WorkingDirectory = root,
             RedirectStandardInput = true,
@@ -133,7 +130,11 @@ public sealed class StdioLanguageServerClient : ILanguageServerClient
         };
         if (commandScript)
         {
-            start.Arguments = "/d /s /c \"" + CommandScriptInvocation(executable, spec.Arguments) + "\"";
+            start.Arguments = WindowsCommandScript.Arguments(
+                executable,
+                spec.Arguments,
+                "Windows language-server command paths and arguments contain unsafe " +
+                "characters.");
         }
         else
         {
@@ -684,20 +685,6 @@ public sealed class StdioLanguageServerClient : ILanguageServerClient
         }
 
         return Encoding.UTF8.GetString(captured.GetBuffer(), 0, checked((int)captured.Length));
-    }
-
-    private static string CommandScriptInvocation(
-        string executable,
-        IReadOnlyList<string> arguments)
-    {
-        var values = new[] { executable }.Concat(arguments).ToArray();
-        if (values.Any(value => value.IndexOfAny(['"', '\r', '\n', '%', '!']) >= 0))
-        {
-            throw new ArgumentException(
-                "Windows language-server command paths and arguments contain unsafe characters.");
-        }
-
-        return string.Join(" ", values.Select(value => $"\"{value}\""));
     }
 
     private static Uri ToUri(string fullPath) => new(fullPath, UriKind.Absolute);
