@@ -215,4 +215,20 @@
     <value>Открыто проектов {0}, за {1} с.</value>
     <comment>The count is honest only after the call - MSBuildWorkspace.OpenSolutionAsync is one opaque operation with no per-project callback, so this is the first moment the number exists. Both holes are invariant.</comment>
   </data>
+  <data name="SemanticOverlayNotBuiltFact" xml:space="preserve">
+    <value>У этого рабочего дерева нет семантического overlay для поколения '{0}', поэтому устаревший или смешанный результат не выдан.</value>
+    <comment>The ordinary state of an edited or unsynced worktree, not a fault: what is absent is the worktree's overlay, not generation '{0}'s semantic.sidx, which loaded a line earlier. Reported as SemanticIndexUnreadable until #409, which is why an everyday edit read as a corrupt index. The closing clause is OverlayMissing's, to the byte, in both languages - the same fact on the search path, and one spelling per concept. It stays true here too: the overlay load throws rather than materialising anything, and the heuristic locations that follow are computed live and tagged Heuristic. The command that repairs this lives in the matching Remedy key, and IndexText joins the two back with a single space; a caller that knows a build already holds the sync gate prints this half alone, because a second localai sync exits 75 sync_busy.</comment>
+  </data>
+  <data name="SemanticOverlayNotBuiltRemedy" xml:space="preserve">
+    <value>Собрать: localai sync --root {0}</value>
+    <comment>Build one, not Rebuild it: nothing exists to rebuild. The same words as GenerationNotPublishedRemedy for the same shape of state, in a key of its own so that rewording either cannot move the other.</comment>
+  </data>
+  <data name="SemanticOverlayUnreadableFact" xml:space="preserve">
+    <value>Семантический overlay этого рабочего дерева не читается.</value>
+    <comment>An overlay that is present and will not load - InvalidDataException from SemanticIndexOverlay.Load or Materialize, a sharing violation, a denied read. Rare, and a real fault. It names the worktree rather than the generation, because the file that failed is the worktree's and the working root is in the matching Remedy. The cause is the InnerException, as with SemanticIndexUnreadableFact.</comment>
+  </data>
+  <data name="SemanticOverlayUnreadableRemedy" xml:space="preserve">
+    <value>Пересобрать: localai sync --root {0}</value>
+    <comment>The same words as SemanticIndexUnreadableRemedy, in a key of its own: the two states repair identically today and are free to diverge without dragging each other.</comment>
+  </data>
 </root>

@@ -705,13 +705,13 @@ public static class CodeSearchTools
     /// index, never repository content. Every location already carries its own precision tag; what
     /// was missing is the one line that turns "these look like the wrong matches" into a repair.
     ///
-    /// Three of the four reasons end in `localai sync`, which a build holding the repository's gate
+    /// Five of the six reasons end in `localai sync`, which a build holding the repository's gate
     /// refuses. Those take the shape every other command-naming answer takes — the block stands
     /// where the command was — with one difference: here the command is the tail of a sentence
     /// rather than a line of its own, so the block goes on the line under it rather than above it.
     /// It is the completion of that sentence, not a header for the answer.
     ///
-    /// The fourth reason names no command. It is a fact about a position, it is true whatever the
+    /// The sixth reason names no command. It is a fact about a position, it is true whatever the
     /// gate is doing, and the answer under it really does come from the published index — so it
     /// keeps the ordinary block above the answer.
     /// </summary>

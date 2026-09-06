@@ -129,15 +129,15 @@ public static class IndexText
             nameof(BuildOverlaySaved), overlayPath, chunks, files, deletions, seconds);
 
     /// <summary>
-    /// Three reasons a navigation answer is not the precise one, each in two halves.
+    /// Five reasons a navigation answer is not the precise one, each in two halves.
     ///
-    /// The command that repairs each of them is a key of its own, and the three whole-sentence
+    /// The command that repairs each of them is a key of its own, and the whole-sentence
     /// accessors join the halves back with a single space — so every face that prints the sentence
     /// prints exactly what it always did, to the byte. The MCP navigation tools are the one caller
     /// that prints a half: while a build holds the repository's sync gate that command exits 75
     /// <c>sync_busy</c>, and a block naming the running build stands where it was.
     ///
-    /// The hole numbering differs between a half and the whole on two of them, deliberately: the
+    /// The hole numbering differs between a half and the whole on three of them, deliberately: the
     /// generation id belongs to the fact, so the remedy's only hole is the working root.
     /// </summary>
     public static string GenerationNotPublished(string workingRoot) =>
@@ -170,6 +170,35 @@ public static class IndexText
 
     public static string SemanticIndexUnreadableRemedy(string workingRoot) =>
         Catalogue.Format(nameof(SemanticIndexUnreadableRemedy), workingRoot);
+
+    /// <summary>
+    /// The overlay this worktree needs has not been built. Ordinary after any edit — and until
+    /// #409 it was reported as the generation's own semantic index being unreadable, which is a
+    /// different file, at a different path, that had just loaded successfully a line earlier.
+    /// </summary>
+    public static string SemanticOverlayNotBuilt(string generationId, string workingRoot) =>
+        Sentence(
+            SemanticOverlayNotBuiltFact(generationId),
+            SemanticOverlayNotBuiltRemedy(workingRoot));
+
+    public static string SemanticOverlayNotBuiltFact(string generationId) =>
+        Catalogue.Format(nameof(SemanticOverlayNotBuiltFact), generationId);
+
+    public static string SemanticOverlayNotBuiltRemedy(string workingRoot) =>
+        Catalogue.Format(nameof(SemanticOverlayNotBuiltRemedy), workingRoot);
+
+    /// <summary>
+    /// The overlay is there and will not load. Rare, and a real fault — which is precisely why it
+    /// must not share a sentence with the everyday state above it.
+    /// </summary>
+    public static string SemanticOverlayUnreadable(string workingRoot) =>
+        Sentence(SemanticOverlayUnreadableFact, SemanticOverlayUnreadableRemedy(workingRoot));
+
+    public static string SemanticOverlayUnreadableFact =>
+        Catalogue.Get(nameof(SemanticOverlayUnreadableFact));
+
+    public static string SemanticOverlayUnreadableRemedy(string workingRoot) =>
+        Catalogue.Format(nameof(SemanticOverlayUnreadableRemedy), workingRoot);
 
     /// <summary>
     /// One space, in one place. The join is what makes the split invisible to every face that did

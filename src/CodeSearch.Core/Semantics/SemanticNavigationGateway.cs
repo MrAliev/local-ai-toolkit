@@ -49,7 +49,7 @@ public sealed class SemanticNavigationNotReadyException : InvalidOperationExcept
 /// and the command that repairs it where there is one.
 ///
 /// One reason has no remedy — the index loaded and answered nothing at that position — and it is
-/// the reason that needs none: nothing about it changes while a build runs. The other three end in
+/// the reason that needs none: nothing about it changes while a build runs. The other five end in
 /// <c>localai sync</c>, which is refused while a build holds the repository's gate, so the caller
 /// that knows about the gate prints the fact alone and names the running build instead.
 /// </summary>
@@ -378,15 +378,15 @@ public sealed class SemanticNavigationGateway
         var usesBaseSnapshot =
             string.Equals(identity.HeadTree, manifest.Identity.DevTree, StringComparison.Ordinal) &&
             identity.DirtyHash is null;
-        SemanticIndex semanticIndex;
+        // Two blocks rather than one catch with more filters, and that is load-bearing: both loads
+        // open a file, so a base semantic.sidx the manifest names and the disk lacks throws
+        // FileNotFoundException exactly as an absent overlay does. Telling them apart by exception
+        // type would report a missing generation index as a missing overlay — the same conflation
+        // #409 is about, in mirror image. Which file failed is known only from which line ran.
+        SemanticIndex baseIndex;
         try
         {
-            var baseIndex = SemanticIndex.Load(store.SemanticIndexPath(current.GenerationId));
-            semanticIndex = usesBaseSnapshot
-                ? baseIndex
-                : SemanticIndexOverlay.Load(
-                    RuntimeIndexLayout.SemanticOverlayPath(identity, current.GenerationId))
-                    .Materialize(baseIndex);
+            baseIndex = SemanticIndex.Load(store.SemanticIndexPath(current.GenerationId));
         }
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException or InvalidDataException)
@@ -396,6 +396,47 @@ public sealed class SemanticNavigationGateway
                     IndexText.SemanticIndexUnreadableFact(current.GenerationId),
                     IndexText.SemanticIndexUnreadableRemedy(workingRoot)),
                 exception);
+        }
+
+        SemanticIndex semanticIndex;
+        if (usesBaseSnapshot)
+        {
+            semanticIndex = baseIndex;
+        }
+        else
+        {
+            var overlayPath = RuntimeIndexLayout.SemanticOverlayPath(
+                identity,
+                current.GenerationId);
+            try
+            {
+                semanticIndex = SemanticIndexOverlay.Load(overlayPath).Materialize(baseIndex);
+            }
+            // Before the IOException filter, because FileNotFoundException is one and the first
+            // match wins. This is the everyday state of an edited worktree, not a fault: the
+            // generation's own index loaded a line above, and saying it could not be read was
+            // false in the ordinary case and contradicted index_status a second earlier.
+            catch (Exception exception) when (
+                exception is FileNotFoundException or DirectoryNotFoundException)
+            {
+                throw new SemanticNavigationNotReadyException(
+                    new SemanticDegradation(
+                        IndexText.SemanticOverlayNotBuiltFact(current.GenerationId),
+                        IndexText.SemanticOverlayNotBuiltRemedy(workingRoot)),
+                    exception);
+            }
+            // Present and will not load. Rare, and a real fault — which is why it must not share
+            // a sentence with the state above it. Materialize is inside the try on purpose: its
+            // content failures are the overlay's, not the generation's.
+            catch (Exception exception) when (
+                exception is IOException or UnauthorizedAccessException or InvalidDataException)
+            {
+                throw new SemanticNavigationNotReadyException(
+                    new SemanticDegradation(
+                        IndexText.SemanticOverlayUnreadableFact,
+                        IndexText.SemanticOverlayUnreadableRemedy(workingRoot)),
+                    exception);
+            }
         }
 
         return new SemanticNavigationContext(
