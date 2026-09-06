@@ -539,9 +539,8 @@ public sealed class BrokerHost
 /// claimed it. Everything <see cref="IBrokerQueue.ReportProgressAsync"/> can refuse with —
 /// a lost lease from either of the two checks, an <see cref="IOException"/> from the atomic
 /// write underneath — travelled out of the executor into the host's catch-all and was
-/// recorded as the job's own failure. A nine-gigabyte pull at seventy per cent, an antivirus
-/// holding the temporary file for one moment, and the download is reported as failed while
-/// it is still running.
+/// recorded as the job's own failure. One refused progress report during a long model pull is
+/// then the difference between a download that is running and one reported as failed.
 /// </summary>
 internal sealed class LeasedJobProgress(IBrokerQueue queue, LeasedJob lease) : IJobProgress
 {

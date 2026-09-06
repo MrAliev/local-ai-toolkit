@@ -174,10 +174,9 @@ public sealed class GenerationStoreTests : IDisposable
     /// `JsonException`, and it escaped through every caller.
     ///
     /// Seven of the eight call sites had no guard, and two of those are on the read path —
-    /// `RuntimeIndexLayout` and `SemanticNavigationGateway` — so a zero-length `current.json`,
-    /// which is what a power cut between the rename and the flush leaves behind, took search and
-    /// navigation down with the sync. Guarding seven callers is the wrong shape; the swallow
-    /// belongs here, once.
+    /// `RuntimeIndexLayout` and `SemanticNavigationGateway` — so a `current.json` that does not
+    /// parse took search and navigation down with the sync. Guarding seven callers is the wrong
+    /// shape; the swallow belongs here, once.
     /// </summary>
     [Theory]
     [InlineData("")]

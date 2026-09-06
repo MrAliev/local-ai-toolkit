@@ -677,8 +677,7 @@ public static class CodeSearchSyncCommand
     /// The four ways it refuses are one situation to a caller that is deciding whether to rebuild:
     /// the directory is gone, the manifest file is gone, the manifest is not valid JSON, or the
     /// index it names does not match its checksum. Only the first two were ever caught, so the
-    /// other two — which is what a truncated copy or a bad sector produces — left the sync as an
-    /// unexpected failure and did so again on every run after it.
+    /// other two left the sync as an unexpected failure and did so again on every run after it.
     /// </summary>
     /// <summary>
     /// One decimal, invariant, as every other duration this product prints: these lines are
@@ -734,8 +733,8 @@ public static class CodeSearchSyncCommand
         {
             // Reuse is an optimisation, so a previous generation that cannot be read costs this
             // build its head start and nothing else. It used to cost the build: `ReadManifest`
-            // validates the checksum, and a `base.cidx` truncated by a failed copy or a bad
-            // sector made this line throw `InvalidDataException` out of the sync entirely — where
+            // validates the checksum, so a `base.cidx` whose bytes no longer match its manifest
+            // made this line throw `InvalidDataException` out of the sync entirely — where
             // `Program.cs` reported the one recoverable state it has as `unexpected_failure`, and
             // every sync after it took the same path (#390).
             if (current is not null && TryReadManifest(store, current.GenerationId) is { } previous)

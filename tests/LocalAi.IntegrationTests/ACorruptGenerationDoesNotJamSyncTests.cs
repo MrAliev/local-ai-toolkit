@@ -7,9 +7,9 @@ using LocalAi.Repository;
 namespace LocalAi.IntegrationTests;
 
 /// <summary>
-/// A generation is immutable and checksum-validated, so a `base.cidx` truncated by a failed copy,
-/// a bad sector or an antivirus quarantine makes `ReadManifest` throw `InvalidDataException` —
-/// and the sync catches only `DirectoryNotFoundException` and `FileNotFoundException` (#390).
+/// A generation is immutable and checksum-validated, so a `base.cidx` whose bytes no longer
+/// match its manifest makes `ReadManifest` throw `InvalidDataException` — and the sync catches
+/// only `DirectoryNotFoundException` and `FileNotFoundException` (#390).
 ///
 /// It surfaces through `Program.cs`'s last-resort handler as `unexpected_failure`, which is the
 /// one thing it is not: the state is recoverable by rebuilding the generation. Every sync after
@@ -47,8 +47,8 @@ public sealed class ACorruptGenerationDoesNotJamSyncTests : IDisposable
         var manifest = store.PublishIndex(source, Identity());
         store.SetCurrent(manifest);
 
-        // What a failed copy or a bad sector leaves: the directory and the manifest are intact,
-        // so neither caught exception fires, and only the checksum says anything is wrong.
+        // The directory and the manifest are intact, so neither caught exception fires, and only
+        // the checksum says anything is wrong.
         File.WriteAllText(store.IndexPath(manifest.Identity.Id), "TRUNCATED");
 
         var error = await Record.ExceptionAsync(
