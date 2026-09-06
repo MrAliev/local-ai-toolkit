@@ -129,7 +129,7 @@ public static class IndexText
             nameof(BuildOverlaySaved), overlayPath, chunks, files, deletions, seconds);
 
     /// <summary>
-    /// Five reasons a navigation answer is not the precise one, each in two halves.
+    /// Six reasons a navigation answer is not the precise one, each in two halves.
     ///
     /// The command that repairs each of them is a key of its own, and the whole-sentence
     /// accessors join the halves back with a single space — so every face that prints the sentence
@@ -159,6 +159,25 @@ public static class IndexText
 
     public static string GenerationWithoutSemanticIndexRemedy(string workingRoot) =>
         Catalogue.Format(nameof(GenerationWithoutSemanticIndexRemedy), workingRoot);
+
+    /// <summary>
+    /// The pointer names a generation, and that generation will not load — its directory gone,
+    /// its manifest gone or unparseable, its checksum not matching. One sentence for all of them,
+    /// because none changes what the reader does.
+    ///
+    /// Until this existed the read threw out of the navigation gateway instead of degrading: the
+    /// one call in <c>LoadCurrent</c> that sat outside every try.
+    /// </summary>
+    public static string GenerationUnreadable(string generationId, string workingRoot) =>
+        Sentence(
+            GenerationUnreadableFact(generationId),
+            GenerationUnreadableRemedy(workingRoot));
+
+    public static string GenerationUnreadableFact(string generationId) =>
+        Catalogue.Format(nameof(GenerationUnreadableFact), generationId);
+
+    public static string GenerationUnreadableRemedy(string workingRoot) =>
+        Catalogue.Format(nameof(GenerationUnreadableRemedy), workingRoot);
 
     public static string SemanticIndexUnreadable(string generationId, string workingRoot) =>
         Sentence(
