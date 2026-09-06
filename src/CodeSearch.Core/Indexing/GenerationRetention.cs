@@ -67,19 +67,22 @@ public static class GenerationRetention
         }
 
         var store = new GenerationStore(FsPath.From(root));
-        string? current = null;
-        try
+
+        // An unreadable pointer means nothing can be proved safe to remove. Removing the wrong
+        // generation costs an hour of embedding; keeping them all costs disk.
+        //
+        // This is the one caller that asks the question this way. Everywhere else an unreadable
+        // pointer reads as no pointer, which is the right answer for search, for navigation and
+        // for the sync that republishes over the damage — but here it would licence exactly the
+        // pruning the damaged pointer cannot vouch for: with nothing current, nothing has been
+        // superseded, and the pass would go on to remove a generation that may well be the one
+        // being answered from.
+        if (!store.TryReadCurrent(out var pointer))
         {
-            current = store.ReadCurrent()?.GenerationId;
-        }
-        catch (Exception exception) when (
-            exception is System.Text.Json.JsonException or IOException or
-                UnauthorizedAccessException)
-        {
-            // An unreadable pointer means nothing can be proved safe to remove. Removing the
-            // wrong generation costs an hour of embedding; keeping them all costs disk.
             return GenerationRetentionResult.Empty;
         }
+
+        var current = pointer?.GenerationId;
 
         var candidates = Directory.EnumerateDirectories(generationsRoot)
             .Select(directory => new
