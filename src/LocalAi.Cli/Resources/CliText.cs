@@ -360,6 +360,23 @@ public static class CliText
     // here and never will be: another process parses them out of stdout, so they are a wire
     // format rather than prose, and they stay ASCII for every reader.
 
+    /// <summary>
+    /// How long the whole run took, which nothing said before. The only number a sync printed was
+    /// the overlay builder's, timing its own call — 6.7 s where the run had taken 49.67 s — and a
+    /// reader deciding whether there was time to rebuild before searching took it for the total
+    /// (#386).
+    ///
+    /// Here rather than in <c>IndexText</c> because this is the CLI's account of its own
+    /// orchestration; the builder is right to time only what it does. The total and nothing else:
+    /// a breakdown printed once the run is over is the summary that reporting-while-it-runs
+    /// exists instead of.
+    /// </summary>
+    public static string SyncFinished(string seconds) =>
+        Catalogue.Format(nameof(SyncFinished), seconds);
+
+    public static string SyncStoppedAfter(string seconds) =>
+        Catalogue.Format(nameof(SyncStoppedAfter), seconds);
+
     public static string AdaptersFailed(string reasons) =>
         Catalogue.Format(nameof(AdaptersFailed), reasons);
 
