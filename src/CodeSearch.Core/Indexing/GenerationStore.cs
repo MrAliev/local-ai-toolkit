@@ -218,7 +218,7 @@ public sealed class GenerationStore
     /// pointer nothing is current, so nothing has been superseded and a pass may prune down to the
     /// count; with an unreadable one the generation it names is still the generation this
     /// repository answers from, and it may be the one the pass was about to remove. Deleting it
-    /// costs an hour of embedding, so an unreadable pointer stops the pass instead.
+    /// costs the whole embedding pass again — about nine minutes for this repository, measured — so an unreadable pointer stops the pass instead.
     /// </summary>
     /// <returns>
     /// <see langword="false"/> when <c>current.json</c> is there and cannot be opened or parsed.

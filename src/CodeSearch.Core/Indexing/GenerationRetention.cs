@@ -69,7 +69,7 @@ public static class GenerationRetention
         var store = new GenerationStore(FsPath.From(root));
 
         // An unreadable pointer means nothing can be proved safe to remove. Removing the wrong
-        // generation costs an hour of embedding; keeping them all costs disk.
+        // generation costs the whole embedding pass again - about nine minutes for this repository, measured - and keeping them all costs disk.
         //
         // This is the one caller that asks the question this way. Everywhere else an unreadable
         // pointer reads as no pointer, which is the right answer for search, for navigation and

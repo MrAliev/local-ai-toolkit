@@ -75,11 +75,24 @@ public sealed record GenerationManifest(
     string? SemanticIndexChecksum = null,
     IReadOnlyList<SemanticAdapterStatus>? SemanticAdapters = null);
 
+/// <summary>
+/// Which generation this repository answers from, and when that was decided.
+///
+/// Every member is required, as they are on <c>ProgressDocument</c> and <c>JobStateDocument</c>.
+/// Without that the deserializer fills the constructor parameters with defaults, so a document as
+/// empty as <c>{}</c> parsed into a pointer whose <c>GenerationId</c> was null — a valid pointer
+/// to every caller, handed straight to <c>Path.Combine</c> and <c>ReadManifest</c>, neither of
+/// which is guarded against null.
+///
+/// <c>DevTree</c> and <c>UpdatedAtUtc</c> are required too, though nothing reads them today: a
+/// document missing them is not one this product wrote, and taking it for a pointer would be
+/// guessing at what it meant.
+/// </summary>
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record GenerationPointer(
-    string GenerationId,
-    string DevTree,
-    DateTimeOffset UpdatedAtUtc);
+    [property: JsonRequired] string GenerationId,
+    [property: JsonRequired] string DevTree,
+    [property: JsonRequired] DateTimeOffset UpdatedAtUtc);
 
 public sealed record OverlayReadiness(
     string Worktree,
