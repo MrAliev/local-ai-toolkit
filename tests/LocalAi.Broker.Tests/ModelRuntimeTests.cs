@@ -315,8 +315,16 @@ public sealed class ModelRuntimeTests
         }
     }
 
+    /// <summary>
+    /// A clock the test moves, so a test about something expiring waits for the condition rather
+    /// than for a duration.
+    /// </summary>
     internal sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
     {
-        public override DateTimeOffset GetUtcNow() => now;
+        private DateTimeOffset current = now;
+
+        public override DateTimeOffset GetUtcNow() => current;
+
+        public void Advance(TimeSpan by) => current += by;
     }
 }

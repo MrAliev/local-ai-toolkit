@@ -1,4 +1,4 @@
-namespace LocalAi.Contracts;
+﻿namespace LocalAi.Contracts;
 
 /// <summary>
 /// How strictly a model must live in video memory before the broker will serve it.
@@ -53,13 +53,19 @@ public static class ModelResidencyPolicyExtensions
             return null;
         }
 
-        if (sizeVramBytes <= 0)
+        var residentPercent = (int)(sizeVramBytes * 100L / sizeBytes);
+
+        // Under one percent is the processor running the model, whatever the arithmetic rounds to
+        // — the same rule `ResidencyShortfall.Shortfall()` applies, and for the reason its comment
+        // gives. Triggering the CPU branch on `sizeVramBytes <= 0` alone left 40 MB of a 20 GB
+        // model printing "only 0% of the model is in video memory, so responses are slower",
+        // which says "slower" about the case that is slowest.
+        if (residentPercent <= 0)
         {
             return "running on CPU: the model is not in video memory at all, " +
                 "so responses are far slower than a fully resident load.";
         }
 
-        var residentPercent = (int)(sizeVramBytes * 100L / sizeBytes);
         return $"partially offloaded: only {residentPercent}% of the model is in video " +
             "memory, so responses are slower than a fully resident load.";
     }

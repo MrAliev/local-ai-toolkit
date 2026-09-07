@@ -39,6 +39,38 @@ public sealed class ManagedInstructionBlockTests
         Assert.Equal(existing, result.Content[..existing.Length]);
     }
 
+    /// <summary>
+    /// Replacing an existing block writes the block it was given, not the default one.
+    ///
+    /// The overload exists precisely because the two clients no longer receive the same text —
+    /// Claude gets the core and loads the rest from a skill, Codex gets both halves inline
+    /// because it has no import mechanism. Only the insert branch honoured that. A first install
+    /// on a fresh `AGENTS.md` was therefore correct and every install after it overwrote Codex's
+    /// file with Claude's block, telling Codex to invoke a skill that does not exist for it and
+    /// dropping the reference material it was given instead. Idempotent afterwards, so it never
+    /// corrected itself.
+    ///
+    /// The two Codex adapter tests could not see it: both run against an empty home directory, so
+    /// both only ever take the insert branch.
+    /// </summary>
+    [Fact]
+    public void Replacing_a_block_writes_the_one_it_was_given()
+    {
+        var stale = "Header\n" +
+            ManagedInstructionBlock.BeginMarker + "\nold\n" +
+            ManagedInstructionBlock.EndMarker + "\nFooter\n";
+
+        var updated = ManagedInstructionBlock.Upsert(stale, ManagedInstructionBlock.CodexBlock);
+
+        Assert.Contains(
+            ManagedInstructionBlock.CodexBlock,
+            updated.Content,
+            StringComparison.Ordinal);
+        // And not the other client's, which is what it used to write: the sentence sending the
+        // reader to a skill is the half Codex cannot act on.
+        Assert.DoesNotContain("Invoke it before", updated.Content, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void Replaces_existing_managed_block_and_reports_no_change_when_current()
     {
