@@ -173,6 +173,7 @@ public sealed class SemanticCheckpointTests : IDisposable
         FsPath.From("R:/Runtime"),
         "b609fcfdfc4087d04d7ee8a06a12c99ae94ab236",
         Tree,
+        null,
         null);
 
     private static SemanticIndex Index(string generationId) => new()

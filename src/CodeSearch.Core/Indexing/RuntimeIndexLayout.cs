@@ -12,6 +12,20 @@ namespace CodeSearch.Core.Indexing;
 /// string carries no evidence that it was normalised, and a comparison that forgets still
 /// compiles.
 /// </summary>
+/// <param name="DirtyHash">
+/// What the corpus contains beyond the commit: every uncommitted file the index may hold, hashed
+/// by content. Null when the worktree is clean.
+/// </param>
+/// <param name="SemanticDirtyHash">
+/// The same, over the subset of those files a change to which would change what the semantic layer
+/// knows — <see cref="SemanticCorpusPolicy"/> draws that line. Null when none of them is dirty,
+/// which includes a clean worktree.
+///
+/// Two hashes rather than one because the two overlays answer different questions and cost
+/// different amounts. Editing prose changes the corpus and nothing the semantic layer could see,
+/// and keying both overlays by one hash made every such edit pay for a solution load, an analysis
+/// and the SCIP adapters — 36.72 seconds of a 49.67-second sync (#385).
+/// </param>
 public sealed record WorkingIndexIdentity(
     FsPath WorkingRoot,
     FsPath RepositoryRoot,
@@ -19,7 +33,8 @@ public sealed record WorkingIndexIdentity(
     FsPath RepositoryRuntimeRoot,
     string HeadCommit,
     string HeadTree,
-    string? DirtyHash);
+    string? DirtyHash,
+    string? SemanticDirtyHash);
 
 public static class RuntimeIndexLayout
 {
@@ -65,6 +80,16 @@ public static class RuntimeIndexLayout
         var dirtyHash = dirtyPaths.Count == 0
             ? null
             : DirtyCorpusPolicy.ComputeWorkingContentHash(root.Value, dirtyPaths);
+        // The same hash over the subset that can change what the semantic layer knows, so that an
+        // edit it cannot see leaves its overlay where it is. ComputeWorkingContentHash rather than
+        // a second kind of hash: it already answers for a file that was deleted, which a semantic
+        // change very much is.
+        var semanticDirtyPaths = dirtyPaths
+            .Where(SemanticCorpusPolicy.ChangesSemantics)
+            .ToList();
+        var semanticDirtyHash = semanticDirtyPaths.Count == 0
+            ? null
+            : DirtyCorpusPolicy.ComputeWorkingContentHash(root.Value, semanticDirtyPaths);
 
         return new WorkingIndexIdentity(
             root,
@@ -73,7 +98,8 @@ public static class RuntimeIndexLayout
             repositoryRuntimeRoot,
             head,
             tree,
-            dirtyHash);
+            dirtyHash,
+            semanticDirtyHash);
     }
 
     public static string ResolveBaseIndexPath(
@@ -103,10 +129,28 @@ public static class RuntimeIndexLayout
             (identity.DirtyHash ?? "clean") + ".cidx");
     }
 
+    /// <summary>
+    /// Beside the corpus overlay and in the same directory — same generation, same worktree, same
+    /// head tree — but named by the semantic hash rather than the corpus one.
+    ///
+    /// That is the difference #385 is about. Two states of one worktree that a saved `.md` apart
+    /// share this file, correctly: they differ from the base generation in exactly the same way as
+    /// far as the semantic layer is concerned, so one overlay is the true answer for both, and the
+    /// sync that finds it already there skips the solution load, the analysis and the adapters.
+    /// </summary>
     public static string SemanticOverlayPath(
         WorkingIndexIdentity identity,
-        string generationId) =>
-        Path.ChangeExtension(OverlayPath(identity, generationId), ".sidx");
+        string generationId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(generationId);
+        return Path.Combine(
+            identity.RepositoryRuntimeRoot.Value,
+            "overlays",
+            generationId,
+            WorktreeKey(identity.WorkingRoot),
+            identity.HeadTree,
+            (identity.SemanticDirtyHash ?? "clean") + ".sidx");
+    }
 
     public static List<string> GetDirtyPaths(string workingRoot)
     {

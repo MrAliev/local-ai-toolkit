@@ -343,10 +343,14 @@ public static class CodeSearchSyncCommand
                         error);
                     var baseSemanticIndex = SemanticIndex.Load(
                         store.SemanticIndexPath(generation.Identity.Id));
+                    // The dirty paths this layer can see, not every dirty path: feeding it the
+                    // corpus list would record a saved `.md` as a document this overlay speaks
+                    // for, which it does not (#385).
                     var semanticOverlay = SemanticIndexOverlay.Create(
                         baseSemanticIndex,
                         semanticBuild.Index,
-                        RuntimeIndexLayout.GetDirtyPaths(identity.WorkingRoot.Value));
+                        RuntimeIndexLayout.GetDirtyPaths(identity.WorkingRoot.Value)
+                            .Where(SemanticCorpusPolicy.ChangesSemantics));
                     semanticOverlay.Save(semanticOverlayPath);
                     worktreeSemantics = semanticBuild.Index;
                     builtOverlay = true;
@@ -1150,7 +1154,9 @@ public static class CodeSearchSyncCommand
                     generation.RepositoryId,
                     generation.Id,
                     snapshot.HeadTree,
-                    snapshot.DirtyHash,
+                    // What this index was built for is the state of the files the semantic layer
+                    // reads, which is what everything downstream compares it against (#385).
+                    snapshot.SemanticDirtyHash,
                     snapshot.HeadCommit,
                     CommitTimestamp(snapshot.WorkingRoot.Value, snapshot.HeadCommit)),
                 roslyn,
@@ -1167,7 +1173,14 @@ public static class CodeSearchSyncCommand
         return built with { UncoveredProjects = loaded?.UncoveredProjects };
     }
 
-    private static bool IsCurrentSemanticOverlay(
+    /// <summary>
+    /// Whether the overlay already on disk still describes this worktree's semantics.
+    ///
+    /// Internal rather than private because it is the line that decides whether a sync costs
+    /// 36 seconds or none, and it cannot be reached from a test any other way: everything around
+    /// it needs an embedding backend, and the suite never starts one.
+    /// </summary>
+    internal static bool IsCurrentSemanticOverlay(
         string path,
         WorkingIndexIdentity snapshot,
         GenerationIdentity generation)
@@ -1184,7 +1197,13 @@ public static class CodeSearchSyncCommand
                    string.Equals(overlay.GenerationId, generation.Id, StringComparison.Ordinal) &&
                    string.Equals(overlay.BaseGitTree, generation.DevTree, StringComparison.Ordinal) &&
                    string.Equals(overlay.GitTree, snapshot.HeadTree, StringComparison.Ordinal) &&
-                   string.Equals(overlay.DirtyHash, snapshot.DirtyHash, StringComparison.Ordinal);
+                   // The semantic hash: this overlay describes what the semantic layer knows, and
+                   // an edit that layer cannot see leaves it true. Comparing the corpus hash here
+                   // is what made every saved `.md` pay for a solution load (#385).
+                   string.Equals(
+                       overlay.DirtyHash,
+                       snapshot.SemanticDirtyHash,
+                       StringComparison.Ordinal);
         }
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException or InvalidDataException)
