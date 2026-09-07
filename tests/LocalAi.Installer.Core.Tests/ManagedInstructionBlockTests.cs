@@ -111,6 +111,10 @@ public sealed class ManagedInstructionBlockTests
     // Hidden indexing is indistinguishable from a hung machine, and the person watching has
     // no other way to tell the two apart.
     [InlineData("never filter the indexer")]
+    // The precondition of "reported while it runs", which was stated without it: an agent that
+    // waited out an hour-long sync could not have reported anything during it. Pinned by name
+    // because a phrase nothing pins is a phrase that can be deleted with the suite green.
+    [InlineData("A build is the one thing here nobody waits on")]
     // The index covers commits. Edits still in the working tree need an overlay that nothing
     // builds on its own, and without this the refusal reads as a broken tool rather than a
     // missing step — which is how a text search gets reached for instead.
@@ -333,7 +337,17 @@ public sealed class ManagedInstructionBlockTests
         // one clause for the same reason: its first way forward is to start a build, and that
         // is the one command a running build refuses. Both were cut to their shortest form
         // that keeps the rule before this number moved.
-        const int budget = 14_000;
+        //
+        // Raised from 14_000 a third time, and this one paid for a precondition the block had
+        // been missing rather than for new material. "Indexing is reported while it runs" was
+        // already here, and an agent that waited out an hour-long sync could not have obeyed
+        // it: there was no reply to report into until the build was over. So the paragraph now
+        // says a build is started and not waited on, names the two channels that carry its
+        // figures across a process boundary, and states the breach as something visible - a
+        // reply that lands with the build already finished and nothing said while it ran. The
+        // rest of the paragraph was rewritten rather than extended, and the sentences it
+        // replaced are gone.
+        const int budget = 14_600;
 
         var measured = ManagedInstructionBlock.CodexBlock.Length
             - ManagedInstructionBlock.CodexBlock.Count(character => character == (char)13);
