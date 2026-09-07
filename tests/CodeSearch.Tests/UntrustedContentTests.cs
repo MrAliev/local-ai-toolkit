@@ -369,6 +369,54 @@ public sealed class UntrustedContentMcpTests : IDisposable
     }
 
     /// <summary>
+    /// A build that has stopped moving and a build that is merely slow write the same counters:
+    /// zero rate, no estimate, the tally it reached. Which of the two it is was in the build's own
+    /// log and nowhere a reader of this status could see it, so five outages in one build read
+    /// here as five stretches of a machine that might equally have died.
+    ///
+    /// The token, not a sentence: it crosses a process boundary like the phase does.
+    /// </summary>
+    [Fact]
+    public void Status_says_a_build_is_paused_and_what_it_is_waiting_for()
+    {
+        new RepositoryIndexProgressStore(_identity.RepositoryRuntimeRoot).Save(
+            new RepositoryIndexProgress(
+                _identity.RepositoryId,
+                RepositoryIndexProgressPhase.EmbeddingBase,
+                _root,
+                120,
+                300,
+                0,
+                null,
+                DateTimeOffset.UtcNow,
+                IndexBuildPause.BackendUnavailable));
+
+        var status = CodeSearchTools.IndexStatus(_service, Building(), _root);
+
+        Assert.Contains("Paused:     BackendUnavailable", status, StringComparison.Ordinal);
+    }
+
+    /// <summary>A build that is moving says nothing about a pause.</summary>
+    [Fact]
+    public void Status_says_nothing_about_a_pause_while_the_build_is_moving()
+    {
+        new RepositoryIndexProgressStore(_identity.RepositoryRuntimeRoot).Save(
+            new RepositoryIndexProgress(
+                _identity.RepositoryId,
+                RepositoryIndexProgressPhase.EmbeddingBase,
+                _root,
+                120,
+                300,
+                2.5,
+                TimeSpan.FromSeconds(72),
+                DateTimeOffset.UtcNow));
+
+        var status = CodeSearchTools.IndexStatus(_service, Building(), _root);
+
+        Assert.DoesNotContain("Paused:", status, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// The defect this block had from the day it was written. Nothing writes Failed on behalf of a
     /// process that was killed, so a sync that died leaves its phase and its estimate in the file
     /// for ever - and this status reported both as a build in progress until it started asking the

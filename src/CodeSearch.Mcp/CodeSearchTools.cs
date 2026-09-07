@@ -847,6 +847,13 @@ public static class CodeSearchTools
             counts && sighting.BuildIsRunning
                 ? "ETA:        " + Eta(progress.EstimatedRemaining)
                 : string.Empty,
+            // Only while the build is running: on one that died this would report it as waiting
+            // for something, which is the reading the row above this one exists to prevent. The
+            // token is printed as it stands, like the phase — it is written by one process and
+            // read by another, and the two need not be set to the same language.
+            progress.Pause is { } pause && sighting.BuildIsRunning
+                ? "Paused:     " + pause
+                : string.Empty,
             "Updated:    " +
                 progress.UpdatedAtUtc.ToString("u", CultureInfo.InvariantCulture) + ", " +
                 CodeSearchText.RecordedAgo(RecordedAge.Of(progress.UpdatedAtUtc)));

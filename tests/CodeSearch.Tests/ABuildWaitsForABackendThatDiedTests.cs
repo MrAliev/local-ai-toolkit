@@ -128,6 +128,34 @@ public sealed class ABuildWaitsForABackendThatDiedTests : IDisposable
     }
 
     /// <summary>
+    /// Looking alive is not enough. A build that has stopped moving and a build that is merely
+    /// slow write the same counters, and the only thing that told them apart was a line in a log
+    /// nobody watching `index_status` can see. So the pause is on the record, and it names itself.
+    ///
+    /// And it is cleared: a build that waited and then finished must not leave the last thing a
+    /// reader sees saying it is still waiting.
+    /// </summary>
+    [Fact]
+    public async Task A_waiting_build_says_what_it_is_waiting_for()
+    {
+        var sourceRoot = SourceTree();
+        var reports = new List<IndexBuildProgress>();
+
+        await new IndexBuilder(
+            new BackendAwayFor(2),
+            progress: reports.Add,
+            backendWait: NoWait).BuildAsync(
+            sourceRoot,
+            Path.Combine(_root, "index.cidx"),
+            ct: TestContext.Current.CancellationToken,
+            embeddingCheckpointPath: Path.Combine(_root, "checkpoint"),
+            expectedEmbeddingDimension: 2);
+
+        Assert.Contains(reports, report => report.Pause == IndexBuildPause.BackendUnavailable);
+        Assert.Null(reports[^1].Pause);
+    }
+
+    /// <summary>
     /// And the patience is finite and is the budget it claims. A backend that never returns still
     /// ends in the refusal the reader can act on, not in a build that waits for ever.
     /// </summary>
