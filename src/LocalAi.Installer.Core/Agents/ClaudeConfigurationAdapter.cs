@@ -387,123 +387,19 @@ public sealed class ClaudeConfigurationAdapter(
         return jsonObjectBody[..removeStart] + jsonObjectBody[removeEnd..];
     }
 
-    private static int NextNonWhitespace(string value, int start)
-    {
-        for (var index = start; index < value.Length; index++)
-        {
-            if (!char.IsWhiteSpace(value[index]))
-            {
-                return index;
-            }
-        }
-
-        return -1;
-    }
+    // The three scanners these call live in JsonTextSurgery now: settings.json needs the same
+    // splicing, and a second brace matcher is a second set of quoting bugs (#423).
+    private static int NextNonWhitespace(string value, int start) =>
+        JsonTextSurgery.NextNonWhitespace(value, start);
 
     private static int FindTopLevelPropertyInBody(string body, string name) =>
-        FindTopLevelProperty(body, 0, body.Length, name);
+        JsonTextSurgery.FindTopLevelProperty(body, 0, body.Length, name);
 
-    private static int FindTopLevelProperty(string value, int start, int end, string name)
-    {
-        var depth = 0;
-        var inString = false;
-        var escaped = false;
-        for (var index = start; index < end; index++)
-        {
-            var character = value[index];
-            if (inString)
-            {
-                if (escaped)
-                {
-                    escaped = false;
-                }
-                else if (character == '\\')
-                {
-                    escaped = true;
-                }
-                else if (character == '"')
-                {
-                    inString = false;
-                }
+    private static int FindTopLevelProperty(string value, int start, int end, string name) =>
+        JsonTextSurgery.FindTopLevelProperty(value, start, end, name);
 
-                continue;
-            }
-
-            if (character == '"')
-            {
-                var quoted = "\"" + name + "\"";
-                if (depth == 0 &&
-                    index + quoted.Length <= end &&
-                    string.Equals(value.Substring(index, quoted.Length), quoted, StringComparison.Ordinal))
-                {
-                    var afterName = NextNonWhitespace(value, index + quoted.Length);
-                    if (afterName >= 0 && afterName < end && value[afterName] == ':')
-                    {
-                        return index;
-                    }
-                }
-
-                inString = true;
-            }
-            else if (character is '{' or '[')
-            {
-                depth++;
-            }
-            else if (character is '}' or ']')
-            {
-                depth--;
-            }
-        }
-
-        return -1;
-    }
-
-    private static int FindMatching(string value, int start, char open, char close)
-    {
-        var depth = 0;
-        var inString = false;
-        var escaped = false;
-        for (var index = start; index < value.Length; index++)
-        {
-            var character = value[index];
-            if (inString)
-            {
-                if (escaped)
-                {
-                    escaped = false;
-                }
-                else if (character == '\\')
-                {
-                    escaped = true;
-                }
-                else if (character == '"')
-                {
-                    inString = false;
-                }
-
-                continue;
-            }
-
-            if (character == '"')
-            {
-                inString = true;
-            }
-            else if (character == open)
-            {
-                depth++;
-            }
-            else if (character == close)
-            {
-                depth--;
-                if (depth == 0)
-                {
-                    return index;
-                }
-            }
-        }
-
-        throw new InvalidOperationException("Unsupported Claude MCP JSON layout.");
-    }
+    private static int FindMatching(string value, int start, char open, char close) =>
+        JsonTextSurgery.FindMatching(value, start, open, close);
 
     private void AddInstructions(List<AgentConfigurationFilePlan> files, string path)
     {
