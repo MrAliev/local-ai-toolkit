@@ -218,7 +218,7 @@ public sealed class GitHubReleaseFeedTests : IDisposable
             TestContext.Current.CancellationToken));
         var invocation = Assert.Single(cli.FileInvocations);
         Assert.Contains(
-            "repos/MrAliev/local-ai-developer-toolkit/releases/assets/518217710",
+            "repos/MrAliev/local-ai-toolkit/releases/assets/518217710",
             invocation.Arguments);
         Assert.Equal(path, invocation.OutputPath);
     }

@@ -65,7 +65,7 @@ if ($null -ne $existingPublishRoot -and
 }
 
 if ([string]::IsNullOrWhiteSpace($PackageUri)) {
-    $PackageUri = "https://github.com/MrAliev/local-ai-developer-toolkit/releases/download/" +
+    $PackageUri = "https://github.com/MrAliev/local-ai-toolkit/releases/download/" +
         "$ReleaseVersion/localai-package.zip"
 }
 

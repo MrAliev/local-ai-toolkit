@@ -25,8 +25,8 @@ public sealed class AnonymousReleaseFeedTests : IDisposable
     {
         var handler = new ScriptedHandler();
         handler.Redirect(
-            "https://github.com/MrAliev/local-ai-developer-toolkit/releases/latest",
-            "https://github.com/MrAliev/local-ai-developer-toolkit/releases/tag/0.1.45");
+            "https://github.com/MrAliev/local-ai-toolkit/releases/latest",
+            "https://github.com/MrAliev/local-ai-toolkit/releases/tag/0.1.45");
         using var feed = new AnonymousReleaseFeed(new HttpClient(handler));
 
         var tag = await feed.ResolveTagAsync("latest", TestContext.Current.CancellationToken);
@@ -44,11 +44,11 @@ public sealed class AnonymousReleaseFeedTests : IDisposable
     {
         var handler = new ScriptedHandler();
         handler.Respond(
-            "https://github.com/MrAliev/local-ai-developer-toolkit/releases/latest",
+            "https://github.com/MrAliev/local-ai-toolkit/releases/latest",
             HttpStatusCode.OK,
             "<html>a page, not a redirect</html>");
         handler.Respond(
-            "https://api.github.com/repos/MrAliev/local-ai-developer-toolkit/releases/latest",
+            "https://api.github.com/repos/MrAliev/local-ai-toolkit/releases/latest",
             HttpStatusCode.OK,
             """{"tag_name":"0.1.45"}""");
         using var feed = new AnonymousReleaseFeed(new HttpClient(handler));
@@ -76,7 +76,7 @@ public sealed class AnonymousReleaseFeedTests : IDisposable
         var payload = Encoding.UTF8.GetBytes(new string('p', 40_000));
         var handler = new ScriptedHandler();
         handler.Redirect(
-            "https://github.com/MrAliev/local-ai-developer-toolkit/releases/download/0.1.45/localai-package.zip",
+            "https://github.com/MrAliev/local-ai-toolkit/releases/download/0.1.45/localai-package.zip",
             "https://objects.githubusercontent.com/package");
         handler.RespondBytes("https://objects.githubusercontent.com/package", payload);
         using var feed = new AnonymousReleaseFeed(new HttpClient(handler));
@@ -113,7 +113,7 @@ public sealed class AnonymousReleaseFeedTests : IDisposable
     {
         var handler = new ScriptedHandler();
         handler.Redirect(
-            "https://github.com/MrAliev/local-ai-developer-toolkit/releases/download/0.1.45/localai-package.zip",
+            "https://github.com/MrAliev/local-ai-toolkit/releases/download/0.1.45/localai-package.zip",
             "http://mirror.invalid/package");
         using var feed = new AnonymousReleaseFeed(new HttpClient(handler));
 
@@ -132,7 +132,7 @@ public sealed class AnonymousReleaseFeedTests : IDisposable
     {
         var handler = new ScriptedHandler();
         handler.Respond(
-            "https://github.com/MrAliev/local-ai-developer-toolkit/releases/download/9.9.9/localai-package.zip",
+            "https://github.com/MrAliev/local-ai-toolkit/releases/download/9.9.9/localai-package.zip",
             HttpStatusCode.NotFound,
             "Not Found");
         using var feed = new AnonymousReleaseFeed(new HttpClient(handler));
@@ -157,11 +157,11 @@ public sealed class AnonymousReleaseFeedTests : IDisposable
     {
         var handler = new ScriptedHandler();
         handler.Respond(
-            "https://github.com/MrAliev/local-ai-developer-toolkit/releases/download/0.1.45/release-manifest.json",
+            "https://github.com/MrAliev/local-ai-toolkit/releases/download/0.1.45/release-manifest.json",
             HttpStatusCode.OK,
             """{"SchemaVersion":1,"ReleaseVersion":"0.1.45"}""");
         handler.RespondBytes(
-            "https://github.com/MrAliev/local-ai-developer-toolkit/releases/download/0.1.45/release-manifest.sig",
+            "https://github.com/MrAliev/local-ai-toolkit/releases/download/0.1.45/release-manifest.sig",
             new byte[64]);
         using var feed = new AnonymousReleaseFeed(new HttpClient(handler));
 

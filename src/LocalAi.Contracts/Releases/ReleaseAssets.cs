@@ -11,7 +11,12 @@ namespace LocalAi.Contracts;
 /// </summary>
 public static class ReleaseAssets
 {
-    public const string DefaultRepository = "MrAliev/local-ai-developer-toolkit";
+    /// <summary>
+    /// Renamed from local-ai-developer-toolkit, which carried a word the project's name never
+    /// had. GitHub redirects the old path, so a copy installed before the rename goes on
+    /// finding its updates; this is what a copy installed after it asks for.
+    /// </summary>
+    public const string DefaultRepository = "MrAliev/local-ai-toolkit";
 
     public const string ManifestAsset = "release-manifest.json";
 
