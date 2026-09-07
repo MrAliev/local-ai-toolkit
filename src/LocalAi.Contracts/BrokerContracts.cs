@@ -46,10 +46,14 @@ public sealed record BrokerCompatibility(
 /// would have one starting a broker while the other believed one was running.
 ///
 /// The figure is a budget, and what spends it is the broker's own writing: the heartbeat loop
-/// waits one second between ticks and the state store spends up to two seconds retrying a rename
-/// a reader is denying. So a publish that fails once still lands four seconds after the last one
-/// and inside this, and two consecutive failures do not — which is the margin #396 asks about,
-/// pinned by <c>TheHeartbeatMarginHoldsTests</c>.
+/// waits one second between ticks, and a failed publish spends <c>HeartbeatLoop.PublishRetryBudget</c>
+/// retrying a rename a reader is denying. Three consecutive failures still land inside this, which
+/// is the margin #396 asks about, pinned by <c>TheHeartbeatMarginHoldsTests</c>.
+///
+/// It used to say two seconds and one failure, which was true while the heartbeat shared the state
+/// store's default budget — #447 gave it its own, shorter one, and that is what bought the room.
+/// The arithmetic lives in the test rather than here, so a sentence cannot outlive the constants
+/// it describes a second time.
 /// </summary>
 public static class BrokerHeartbeat
 {
