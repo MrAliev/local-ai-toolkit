@@ -28,8 +28,9 @@ public sealed class BrokerProcess : IBrokerProcess
         TimeSpan.FromMilliseconds(100);
     private static readonly TimeSpan StartupPollInterval =
         TimeSpan.FromMilliseconds(50);
-    private static readonly TimeSpan MaximumHeartbeatSkew =
-        TimeSpan.FromSeconds(5);
+    // The launcher answers the same question about the same file, so the figure is shared rather
+    // than spelled twice (#396).
+    private static readonly TimeSpan MaximumHeartbeatSkew = BrokerHeartbeat.MaximumSkew;
 
     private readonly string _executablePath;
     private readonly string _runtimeRoot;
