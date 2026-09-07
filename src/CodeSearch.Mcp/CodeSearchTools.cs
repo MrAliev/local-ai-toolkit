@@ -48,7 +48,7 @@ public static class CodeSearchTools
         printed, at column 1. Sibling declarations (const a = f(), b = g()) stay unresolved.
         Source-derived output is wrapped in nonce-bound <untrusted-content> markers.
         """)]
-    public static string GoToDefinition(
+    public static async Task<string> GoToDefinition(
         SemanticNavigationGateway gateway,
         SyncNotice notice,
         [Description("Repository-relative source path.")]
@@ -58,7 +58,8 @@ public static class CodeSearchTools
         [Description("Column on that line, counted from 1, as a UTF-16 offset. Defaults to 1 — the start of the line, which is what navigates a search_code hit.")]
         int column = 1,
         [Description("Repository root. Defaults to the repository containing the working directory.")]
-        string? root = null)
+        string? root = null,
+        CancellationToken cancellationToken = default)
     {
         if (!SemanticDocumentPath.IsRepositoryRelative(path))
         {
@@ -72,11 +73,12 @@ public static class CodeSearchTools
 
         try
         {
-            var outcome = gateway.ResolveDefinition(
+            var outcome = await gateway.ResolveDefinitionAsync(
                 path,
                 position.Line,
                 position.Utf16Column,
-                root);
+                root,
+                cancellationToken);
             return Degraded(outcome, notice, root) +
                 (outcome.Locations.Count == 0
                     ? CodeSearchText.NoDefinition
@@ -93,7 +95,10 @@ public static class CodeSearchTools
         {
             return $"semantic_snapshot_mismatch: {ex.Message}";
         }
-        catch (Exception ex)
+        // Cancellation is not a tool failure and must not be described as one: the client asked
+        // for this call to stop, and the protocol is told by the exception rather than by a
+        // sentence in the answer.
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return CodeSearchText.ToolFailed("go_to_definition", Describe(ex));
         }
@@ -109,7 +114,7 @@ public static class CodeSearchTools
         printed, at column 1. Sibling declarations (const a = f(), b = g()) stay unresolved.
         Source-derived output is wrapped in nonce-bound <untrusted-content> markers.
         """)]
-    public static string FindReferences(
+    public static async Task<string> FindReferences(
         SemanticNavigationGateway gateway,
         SyncNotice notice,
         [Description("Repository-relative source path.")]
@@ -121,7 +126,8 @@ public static class CodeSearchTools
         [Description("Include definition locations in the result. Defaults to true.")]
         bool includeDefinition = true,
         [Description("Repository root. Defaults to the repository containing the working directory.")]
-        string? root = null)
+        string? root = null,
+        CancellationToken cancellationToken = default)
     {
         if (!SemanticDocumentPath.IsRepositoryRelative(path))
         {
@@ -135,12 +141,13 @@ public static class CodeSearchTools
 
         try
         {
-            var outcome = gateway.ResolveReferences(
+            var outcome = await gateway.ResolveReferencesAsync(
                 path,
                 position.Line,
                 position.Utf16Column,
                 includeDefinition,
-                root);
+                root,
+                cancellationToken);
             return Degraded(outcome, notice, root) +
                 (outcome.Locations.Count == 0
                     ? CodeSearchText.NoReferences
@@ -157,7 +164,8 @@ public static class CodeSearchTools
         {
             return $"semantic_snapshot_mismatch: {ex.Message}";
         }
-        catch (Exception ex)
+        // See go_to_definition: a cancelled call is reported by the exception, not by a sentence.
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return CodeSearchText.ToolFailed("find_references", Describe(ex));
         }
@@ -172,7 +180,7 @@ public static class CodeSearchTools
         snapshot-bound SIDX relationship graph. No text heuristic is used.
         Source-derived output is wrapped in nonce-bound <untrusted-content> markers.
         """)]
-    public static string FindImplementations(
+    public static async Task<string> FindImplementations(
         SemanticNavigationGateway gateway,
         SyncNotice notice,
         [Description("Repository-relative source path.")]
@@ -182,7 +190,8 @@ public static class CodeSearchTools
         [Description("Column on that line, counted from 1, as a UTF-16 offset. Defaults to 1 — the start of the line, which is what navigates a search_code hit.")]
         int column = 1,
         [Description("Repository root. Defaults to the repository containing the working directory.")]
-        string? root = null)
+        string? root = null,
+        CancellationToken cancellationToken = default)
     {
         if (!SemanticDocumentPath.IsRepositoryRelative(path))
         {
@@ -196,11 +205,12 @@ public static class CodeSearchTools
 
         try
         {
-            var locations = gateway.FindImplementations(
+            var locations = await gateway.FindImplementationsAsync(
                 path,
                 position.Line,
                 position.Utf16Column,
-                root);
+                root,
+                cancellationToken);
             return notice.Above(root, SyncNoticeAudience.Answer) +
                 (locations.Count == 0
                     ? CodeSearchText.NoImplementations
@@ -217,7 +227,8 @@ public static class CodeSearchTools
         {
             return $"semantic_snapshot_mismatch: {ex.Message}";
         }
-        catch (Exception ex)
+        // See go_to_definition: a cancelled call is reported by the exception, not by a sentence.
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return CodeSearchText.ToolFailed("find_implementations", Describe(ex));
         }

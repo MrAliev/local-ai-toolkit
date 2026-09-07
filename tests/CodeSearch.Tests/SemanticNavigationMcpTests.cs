@@ -5,17 +5,52 @@ namespace CodeSearch.Tests;
 
 public class SemanticNavigationMcpTests
 {
+    /// <summary>
+    /// The navigation tools blocked on an awaitable and carried no cancellation token, so the
+    /// gateway was called with <see cref="CancellationToken.None"/> whatever the client sent: a
+    /// call could not be cancelled at all (#395).
+    ///
+    /// The token here is cancelled before the call, so nothing waits for anything. What is under
+    /// test is that the token is carried, never how quickly a cancellation lands — a test that
+    /// timed a cancellation would be a statement about the machine.
+    /// </summary>
+    [Theory]
+    [InlineData("definition")]
+    [InlineData("references")]
+    [InlineData("implementations")]
+    public async Task A_cancelled_navigation_call_stops(string operation)
+    {
+        var gateway = Gateway();
+        using var cancelled = new CancellationTokenSource();
+        await cancelled.CancelAsync();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => operation switch
+        {
+            "definition" => CodeSearchTools.GoToDefinition(
+                gateway, NoBuildRunning.Notice, "Src/Use.cs", 5, 13,
+                cancellationToken: cancelled.Token),
+            "references" => CodeSearchTools.FindReferences(
+                gateway, NoBuildRunning.Notice, "Src/Use.cs", 5, 13,
+                cancellationToken: cancelled.Token),
+            "implementations" => CodeSearchTools.FindImplementations(
+                gateway, NoBuildRunning.Notice, "Src/Use.cs", 5, 13,
+                cancellationToken: cancelled.Token),
+            _ => throw new ArgumentOutOfRangeException(nameof(operation)),
+        });
+    }
+
     [Fact]
-    public void Go_to_definition_wraps_each_source_derived_location()
+    public async Task Go_to_definition_wraps_each_source_derived_location()
     {
         var gateway = Gateway();
 
-        var response = CodeSearchTools.GoToDefinition(
+        var response = await CodeSearchTools.GoToDefinition(
             gateway,
             NoBuildRunning.Notice,
             "Src/Use.cs",
             line: 5,
-            column: 13);
+            column: 13,
+            cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.StartsWith("Definitions: 1", response, StringComparison.Ordinal);
         Assert.Contains("<untrusted-content", response, StringComparison.Ordinal);
@@ -25,17 +60,18 @@ public class SemanticNavigationMcpTests
     }
 
     [Fact]
-    public void Find_references_can_exclude_the_definition()
+    public async Task Find_references_can_exclude_the_definition()
     {
         var gateway = Gateway();
 
-        var response = CodeSearchTools.FindReferences(
+        var response = await CodeSearchTools.FindReferences(
             gateway,
             NoBuildRunning.Notice,
             "Src/Use.cs",
             line: 5,
             column: 13,
-            includeDefinition: false);
+            includeDefinition: false,
+            cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.StartsWith("References: 1", response, StringComparison.Ordinal);
         Assert.Contains("Src/Use.cs:5:11-5:15", response, StringComparison.Ordinal);
@@ -43,14 +79,15 @@ public class SemanticNavigationMcpTests
     }
 
     [Fact]
-    public void Find_implementations_wraps_precise_relationship_results()
+    public async Task Find_implementations_wraps_precise_relationship_results()
     {
-        var response = CodeSearchTools.FindImplementations(
+        var response = await CodeSearchTools.FindImplementations(
             Gateway(),
             NoBuildRunning.Notice,
             "Src/A.cs",
             line: 3,
-            column: 18);
+            column: 18,
+            cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.StartsWith("Implementations: 1", response, StringComparison.Ordinal);
         Assert.Contains(
@@ -78,17 +115,18 @@ public class SemanticNavigationMcpTests
     }
 
     [Fact]
-    public void Navigation_readiness_errors_remain_trusted_and_unwrapped()
+    public async Task Navigation_readiness_errors_remain_trusted_and_unwrapped()
     {
         var gateway = new SemanticNavigationGateway(
             _ => throw new SemanticNavigationNotReadyException("semantic.sidx is absent"));
 
-        var response = CodeSearchTools.GoToDefinition(
+        var response = await CodeSearchTools.GoToDefinition(
             gateway,
             NoBuildRunning.Notice,
             "Src/Use.cs",
             line: 5,
-            column: 13);
+            column: 13,
+            cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.StartsWith("semantic_navigation_not_ready:", response, StringComparison.Ordinal);
         Assert.DoesNotContain("<untrusted-content", response, StringComparison.Ordinal);
@@ -104,16 +142,17 @@ public class SemanticNavigationMcpTests
     /// when an identifier happened to be.
     /// </summary>
     [Fact]
-    public void A_hit_navigates_at_the_line_it_is_printed_with()
+    public async Task A_hit_navigates_at_the_line_it_is_printed_with()
     {
         // What search_code would print for the declaration this fixture puts at zero-based 2.
         const int printedStartLine = 3;
 
-        var response = CodeSearchTools.GoToDefinition(
+        var response = await CodeSearchTools.GoToDefinition(
             Gateway(),
             NoBuildRunning.Notice,
             "Src/A.cs",
-            line: printedStartLine);
+            line: printedStartLine,
+            cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.StartsWith("Definitions: 1", response, StringComparison.Ordinal);
         Assert.Contains("Src/A.cs:3:17-3:19", response, StringComparison.Ordinal);
@@ -126,10 +165,11 @@ public class SemanticNavigationMcpTests
     [Theory]
     [InlineData(0, 1)]
     [InlineData(1, 0)]
-    public void A_position_counted_from_zero_is_refused_by_name(int line, int column)
+    public async Task A_position_counted_from_zero_is_refused_by_name(int line, int column)
     {
-        var response = CodeSearchTools.GoToDefinition(
-            Gateway(), NoBuildRunning.Notice, "Src/A.cs", line, column);
+        var response = await CodeSearchTools.GoToDefinition(
+            Gateway(), NoBuildRunning.Notice, "Src/A.cs", line, column,
+            cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.StartsWith("invalid_position:", response, StringComparison.Ordinal);
         Assert.DoesNotContain("<untrusted-content", response, StringComparison.Ordinal);
@@ -145,10 +185,11 @@ public class SemanticNavigationMcpTests
     [InlineData("/Src/A.cs")]
     [InlineData("../Src/A.cs")]
     [InlineData("Src/./A.cs")]
-    public void A_path_that_is_not_repository_relative_is_refused_by_name(string path)
+    public async Task A_path_that_is_not_repository_relative_is_refused_by_name(string path)
     {
-        var response = CodeSearchTools.GoToDefinition(
-            Gateway(), NoBuildRunning.Notice, path, line: 3);
+        var response = await CodeSearchTools.GoToDefinition(
+            Gateway(), NoBuildRunning.Notice, path, line: 3,
+            cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.StartsWith("invalid_path:", response, StringComparison.Ordinal);
         Assert.Contains(path, response, StringComparison.Ordinal);
@@ -157,19 +198,21 @@ public class SemanticNavigationMcpTests
     }
 
     [Fact]
-    public void Every_navigation_tool_refuses_such_a_path_with_the_same_words()
+    public async Task Every_navigation_tool_refuses_such_a_path_with_the_same_words()
     {
         const string path = @"R:\LocalAi\Src\A.cs";
         var gateway = Gateway();
-        var expected = CodeSearchTools.GoToDefinition(
-            gateway, NoBuildRunning.Notice, path, line: 3);
+        var expected = await CodeSearchTools.GoToDefinition(
+            gateway, NoBuildRunning.Notice, path, line: 3,
+            cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.All(
             new[]
             {
-                CodeSearchTools.FindReferences(gateway, NoBuildRunning.Notice, path, line: 5),
-                CodeSearchTools.FindImplementations(
-                    gateway, NoBuildRunning.Notice, path, line: 3),
+                await CodeSearchTools.FindReferences(gateway, NoBuildRunning.Notice, path, line: 5, cancellationToken: TestContext.Current.CancellationToken),
+                await CodeSearchTools.FindImplementations(
+                    gateway, NoBuildRunning.Notice, path, line: 3,
+                    cancellationToken: TestContext.Current.CancellationToken),
                 CodeSearchTools.FindRelationships(gateway, NoBuildRunning.Notice, path, line: 4),
             },
             answer => Assert.Equal(expected, answer));

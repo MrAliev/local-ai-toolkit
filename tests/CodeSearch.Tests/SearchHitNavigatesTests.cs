@@ -51,8 +51,9 @@ public sealed class SearchHitNavigatesTests : IDisposable
         var gateway = await GatewayAsync();
 
         // Exactly what an agent does with a hit: the start line as printed, column 1.
-        var response = CodeSearchTools.GoToDefinition(
-            gateway, NoBuildRunning.Notice, RelativePath, chunk.StartLine);
+        var response = await CodeSearchTools.GoToDefinition(
+            gateway, NoBuildRunning.Notice, RelativePath, chunk.StartLine,
+            cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Contains("Work", response, StringComparison.Ordinal);
         Assert.DoesNotContain("Idle", response, StringComparison.Ordinal);
@@ -70,8 +71,9 @@ public sealed class SearchHitNavigatesTests : IDisposable
             item.Symbol.EndsWith("Idle", StringComparison.Ordinal));
         var gateway = await GatewayAsync();
 
-        var response = CodeSearchTools.GoToDefinition(
-            gateway, NoBuildRunning.Notice, RelativePath, idle.StartLine);
+        var response = await CodeSearchTools.GoToDefinition(
+            gateway, NoBuildRunning.Notice, RelativePath, idle.StartLine,
+            cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Contains("Idle", response, StringComparison.Ordinal);
     }
