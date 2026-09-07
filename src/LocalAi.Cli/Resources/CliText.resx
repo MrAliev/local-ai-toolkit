@@ -297,7 +297,7 @@
   </data>
   <data name="ProgressMinutesLeft" xml:space="preserve">
     <value> About {0} min left.</value>
-    <comment>Leading space: a clause appended to the line above. Empty on the first fragment, where nothing has been measured yet, and never a bare number without about - it is a mean over completed fragments, and the fallback pass can double it. F1 and invariant, the format IndexBuilder already prints an ETA in.</comment>
+    <comment>Leading space: a clause appended to the line above. Empty on the first fragment, where nothing has been measured yet, and never a bare number without about - it is a mean over completed fragments, and the fallback pass can double it. F1 and invariant, the format IndexBuilder already prints an ETA in. Also carried by ProgressTriageFragment, where the mean is over the log analysed rather than over fragments, so the merges that happen between them are already in it and the cascade after the last fragment is not - the other reason the sentence says about.</comment>
   </data>
   <data name="ProgressPullDownloading" xml:space="preserve">
     <value>Downloading {0}: {1} of {2} GB.</value>
@@ -325,7 +325,7 @@
   </data>
   <data name="ProgressRunning" xml:space="preserve">
     <value>The model is working: {0} s.</value>
-    <comment>Its pair, for LocalJobState.Running. The number is time in the current state rather than since the command started, so the two lines together read as a timeline.</comment>
+    <comment>Its pair, for LocalJobState.Running. The number is time in the current state rather than since the command started, so the two lines together read as a timeline. Two variants name the work when the run said what it carries - ProgressRunningImages, ProgressRunningFiles; this is what prints when nothing did.</comment>
   </data>
   <data name="ProgressTranslatingFragment" xml:space="preserve">
     <value>Translating fragment {0} of {1}.{2}</value>
@@ -340,8 +340,8 @@
     <comment>Before the capacity probe, which loads a model to find out whether it fits: it unloads others, preflights at a context size and checks residency, stepping down on failure. Minutes of silence otherwise, before anything else about the run can be said.</comment>
   </data>
   <data name="ProgressTriageFragment" xml:space="preserve">
-    <value>Triaging fragment {0}; {1} s since the start.</value>
-    <comment>No of N on purpose: fragments are streamed off the log and the total is not known until it ends. The elapsed is since the command started, unlike the heartbeat's, and the wording says so.</comment>
+    <value>Triaging fragment {0}; {1}% of the log analysed.{2}</value>
+    <comment>Still no of N: fragments are streamed off the log and that total is not known until it ends. The percent is a denominator that does exist - the position reached in the source against its length - and unlike ProgressPullDownloading's it does not grow, which is why a percent is right here and refused there. It counts what the fragments already analysed covered, so the first line says 0 and no line says 100: the one that says the reading finished is ProgressTriageLogRead. {2} is ProgressMinutesLeft or empty. The seconds since the start are gone from here: the estimate answers what they stood in for, and an index, a percent, an elapsed and an estimate on one line is one figure too many.</comment>
   </data>
   <data name="ProgressTriageLogRead" xml:space="preserve">
     <value>The whole log is read: {0} fragments.</value>
@@ -718,5 +718,14 @@ for those.</value>
   <data name="AgentGateNeedsPayload" xml:space="preserve">
     <value>localai agent gate reads a Claude Code hook payload on stdin and answers on stdout. The installer registers it and the client runs it; there is nothing to run by hand.</value>
     <comment>Read by one reader only: a person who opened settings.json, saw the registered line and ran it by hand to find out what it does. The refusal the gate itself answers with is not in this catalogue and has no Russian pair - it executes the rule ManagedInstructionBlock installs, which is one English constant on every machine, and a second wording of one rule drifts from the first at the next edit of either. localai agent gate, settings.json, stdin and stdout are typed or are file names, so they stay as they are.</comment>
+  </data>
+
+  <data name="ProgressRunningImages" xml:space="preserve">
+    <value>The model is working on {0} image(s): {1} s.</value>
+    <comment>The heartbeat's own sentence with the work named. One call carries every image, so there is nothing inside it to count: what is missing is not a position but the size of what was sent, which is the fact that says whether forty seconds is ordinary. A per-image counter was the alternative and it lies - the images are encoded in about a second and the model then works for minutes, so the counter stops at the last one and reads as a hang there. Reported before the call and printed by the silence clock like the plain sentence, so a run that answers in three seconds stays silent. image(s) is this catalogue's plural device; the Russian carries the count after the noun.</comment>
+  </data>
+  <data name="ProgressRunningFiles" xml:space="preserve">
+    <value>The model is working on {0} file(s): {1} s.</value>
+    <comment>Its pair, for a question asked over files, which is also one call. A bare prompt reports nothing and keeps ProgressRunning: there is no count worth naming.</comment>
   </data>
 </root>

@@ -46,6 +46,17 @@ public sealed class LocalRunProgress : ILocalRunObserver
     private DateTimeOffset stateSince;
     private DateTimeOffset? firstFragmentAt;
 
+    /// <summary>
+    /// What the one call carries, when the run said so. Kept rather than printed: naming it is
+    /// not an event a reader waits for, and a run that answers in three seconds should stay
+    /// silent. It is spent on the heartbeat the silence clock was going to print anyway.
+    /// </summary>
+    private int? workingImages;
+    private int? workingFiles;
+
+    private DateTimeOffset? triageFirstAt;
+    private long? triageBaseline;
+
     public LocalRunProgress(
         TextWriter writer,
         Func<DateTimeOffset> clock,
@@ -88,9 +99,15 @@ public sealed class LocalRunProgress : ILocalRunObserver
                 break;
 
             case TriagingFragment triaged:
-                Write(
-                    CliText.ProgressTriageFragment(triaged.Index, WholeSeconds(now - startedAt)),
-                    now);
+                ReportTriage(triaged, now);
+                break;
+
+            case ReadingImages images:
+                workingImages = images.Count;
+                break;
+
+            case AskingOverFiles files:
+                workingFiles = files.Count;
                 break;
 
             case TriageLogRead read:
@@ -124,8 +141,17 @@ public sealed class LocalRunProgress : ILocalRunObserver
         }
 
         var inState = WholeSeconds(now - stateSince);
+        // Queued is queued whatever the job carries: naming the cargo there would say nothing
+        // about the wait. Working is where the size of what was sent is the fact that tells a
+        // reader whether forty seconds is ordinary.
         Write(
-            pending.Running ? CliText.ProgressRunning(inState) : CliText.ProgressQueued(inState),
+            pending.Running
+                ? workingImages is { } images
+                    ? CliText.ProgressRunningImages(images, inState)
+                    : workingFiles is { } files
+                        ? CliText.ProgressRunningFiles(files, inState)
+                        : CliText.ProgressRunning(inState)
+                : CliText.ProgressQueued(inState),
             now);
     }
 
@@ -163,6 +189,43 @@ public sealed class LocalRunProgress : ILocalRunObserver
             },
             now);
     }
+
+    /// <summary>
+    /// Ungated, like every other step line: it is the only proof the stream is advancing, and
+    /// under the silence clock a run whose fragments are quick and one that has stalled would
+    /// look the same.
+    /// </summary>
+    private void ReportTriage(TriagingFragment fragment, DateTimeOffset now)
+    {
+        var left = string.Empty;
+        if (triageFirstAt is { } first && triageBaseline is { } baseline &&
+            fragment.Consumed > baseline && fragment.Total > fragment.Consumed)
+        {
+            // A mean over the log actually analysed, so the merges that happened between
+            // fragments are already inside it. The cascade after the last one is not, which is
+            // the other reason the sentence says about.
+            var mean = (now - first) / (fragment.Consumed - baseline);
+            var remaining = mean * (fragment.Total - fragment.Consumed);
+            left = CliText.ProgressMinutesLeft(
+                remaining.TotalMinutes.ToString("F1", CultureInfo.InvariantCulture));
+        }
+
+        triageFirstAt ??= now;
+        triageBaseline ??= fragment.Consumed;
+        Write(
+            CliText.ProgressTriageFragment(
+                fragment.Index,
+                Percent(fragment.Consumed, fragment.Total),
+                left),
+            now);
+    }
+
+    /// <summary>
+    /// Integer division, so it rounds down and a run with one fragment left says 99 rather than
+    /// 100. Zero when there is nothing to divide by: an empty log yields one empty fragment.
+    /// </summary>
+    private static int Percent(long consumed, long total) =>
+        total <= 0 ? 0 : (int)(consumed * 100 / total);
 
     /// <summary>
     /// Gibibytes to one decimal, invariant. The same unit the operating system shows for a

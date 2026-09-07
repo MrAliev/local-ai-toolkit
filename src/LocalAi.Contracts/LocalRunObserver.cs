@@ -61,10 +61,34 @@ public sealed record TranslationRetrying(string Detail, string Model) : LocalRun
 public sealed record TriageChoosingModel : LocalRunStep;
 
 /// <summary>
-/// About to analyse one fragment. No total: fragments are streamed off the log, and the count is
-/// not known until the log ends.
+/// About to analyse one fragment, and how much of the source is behind it.
+///
+/// Still no total of fragments: they are streamed off the log, and that count is not known until
+/// it ends. <paramref name="Consumed"/> against <paramref name="Total"/> is the denominator that
+/// does exist — the position reached in the source against its length — and unlike a download's
+/// total this one does not grow, which is why a percent is right here and refused in
+/// <see cref="ModelDownloadProgress"/>. Both are in the source's own unit: bytes for a file,
+/// characters for text piped in. Only their ratio is ever printed, so the two units never meet on
+/// screen. Consumed covers what the fragments already analysed took, so it is 0 on the first and
+/// never reaches Total: the fact that the reading finished is <see cref="TriageLogRead"/>.
 /// </summary>
-public sealed record TriagingFragment(int Index) : LocalRunStep;
+public sealed record TriagingFragment(int Index, long Consumed, long Total) : LocalRunStep;
+
+/// <summary>
+/// One call is about to carry <paramref name="Count"/> images. Reported once, before it, because
+/// there is nothing to count inside: every image goes to the model in a single chat request and
+/// the answer comes back whole.
+///
+/// Not a line of its own. The console keeps the count and names the work in the heartbeat it was
+/// already going to print, so a run that answers in three seconds still says nothing. A per-image
+/// counter was the alternative and it lies about where the time goes: the images are encoded in
+/// about a second and the model then works for minutes, so the counter would stop at the last one
+/// and read as a hang there.
+/// </summary>
+public sealed record ReadingImages(int Count) : LocalRunStep;
+
+/// <summary>The same fact for a question asked over files, which is also one call.</summary>
+public sealed record AskingOverFiles(int Count) : LocalRunStep;
 
 /// <summary>The total, at the first moment it is true.</summary>
 public sealed record TriageLogRead(int Fragments) : LocalRunStep;
