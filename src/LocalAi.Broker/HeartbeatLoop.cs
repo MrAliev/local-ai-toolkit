@@ -67,6 +67,25 @@ public sealed class HeartbeatLoop
     /// </summary>
     public static TimeSpan DefaultInterval { get; } = TimeSpan.FromSeconds(1);
 
+    /// <summary>
+    /// How long one heartbeat write may spend retrying a rename a reader is denying, and it is
+    /// deliberately shorter than <c>BrokerRuntimeStateStore.DefaultRetryBudget</c>.
+    ///
+    /// That default belongs to a caller who publishes once and has no second chance. This loop is
+    /// the opposite: it writes again a second later, so blocking here buys one long attempt where
+    /// giving up early buys four short ones spread over four seconds — better cover for a
+    /// transient reader, not worse. It also keeps the shutdown request, which this same loop is
+    /// the only reader of, from waiting behind a contended rename.
+    ///
+    /// The figure is what the margin allows. Between two successful heartbeats the loop waits a
+    /// tick before every attempt and each failed one spends its whole budget, so the gap after
+    /// <c>n</c> failures is <c>(n + 1) x interval + n x budget</c>. At 300 ms that is 4.9 seconds
+    /// for three failures — inside <c>BrokerHeartbeat.MaximumSkew</c> — and 6.2 for four, which is
+    /// not. With the two-second default it was four seconds for one failure and seven for two
+    /// (#396).
+    /// </summary>
+    public static TimeSpan PublishRetryBudget { get; } = TimeSpan.FromMilliseconds(300);
+
     public async Task RunAsync(CancellationToken cancellationToken)
     {
         while (true)
