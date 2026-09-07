@@ -840,7 +840,11 @@ public sealed class LocalTasksTests
         // Choosing the model comes first because it loads one: minutes of silence otherwise,
         // before anything else about the run can be said.
         Assert.IsType<TriageChoosingModel>(seen.Steps[0]);
-        Assert.Equal(new TriagingFragment(1), seen.Steps.OfType<TriagingFragment>().Single());
+        // Nothing consumed before the first fragment, and the whole of the text as the
+        // denominator — for text piped in the unit is characters, as the record says.
+        Assert.Equal(
+            new TriagingFragment(1, 0, "fatal DIRECT_TEXT_42".Length),
+            seen.Steps.OfType<TriagingFragment>().Single());
         Assert.Equal(1, seen.Steps.OfType<TriageLogRead>().Single().Fragments);
         Assert.True(
             seen.Steps.IndexOf(seen.Steps.OfType<TriageLogRead>().Single()) >

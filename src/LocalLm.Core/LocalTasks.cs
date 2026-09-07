@@ -248,6 +248,10 @@ public sealed class LocalTasks
         var imageSystem = profile == LocalTaskProfile.ImageTranslation
             ? imageTranslationSystem
             : imageReadingSystem;
+        // Once, before the one call that carries all of them. There is nothing to count inside
+        // it, so this is not an event a reader waits for — the console keeps the number and
+        // spends it on the heartbeat it was going to print anyway.
+        observer?.Report(new ReadingImages(images.Count));
         var workflowId = profile == LocalTaskProfile.ImageTranslation
             ? Guid.NewGuid()
             : (Guid?)null;
@@ -446,6 +450,13 @@ public sealed class LocalTasks
             : string.Empty;
 
         var requestBody = files.Count == 0 ? prompt : $"{prompt}\n\n{body}";
+        // A bare prompt names nothing: there is no cargo worth reporting, and the plain
+        // heartbeat is the honest sentence for it.
+        if (files.Count > 0)
+        {
+            observer?.Report(new AskingOverFiles(files.Count));
+        }
+
         var result = await client.RoutedChatAsync(
             profile,
             requestBody,

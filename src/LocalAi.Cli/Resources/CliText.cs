@@ -514,6 +514,17 @@ public static class CliText
     public static string ProgressRunning(int seconds) =>
         Catalogue.Format(nameof(ProgressRunning), seconds);
 
+    /// <param name="images">
+    /// What the one call carries. There is nothing to count inside it, so this is the size of
+    /// what was sent rather than a position in it — the fact that says whether forty seconds is
+    /// ordinary.
+    /// </param>
+    public static string ProgressRunningImages(int images, int seconds) =>
+        Catalogue.Format(nameof(ProgressRunningImages), images, seconds);
+
+    public static string ProgressRunningFiles(int files, int seconds) =>
+        Catalogue.Format(nameof(ProgressRunningFiles), files, seconds);
+
     public static string ProgressTranslatingFragment(int index, int total, string left) =>
         Catalogue.Format(nameof(ProgressTranslatingFragment), index, total, left);
 
@@ -526,8 +537,16 @@ public static class CliText
     public static string ProgressTriageChoosingModel =>
         Catalogue.Get(nameof(ProgressTriageChoosingModel));
 
-    public static string ProgressTriageFragment(int index, int seconds) =>
-        Catalogue.Format(nameof(ProgressTriageFragment), index, seconds);
+    /// <param name="percent">
+    /// How much of the source the fragments already analysed covered. Whole, rounded down, so a
+    /// run with one fragment left says 99 rather than a hundred it has not reached.
+    /// </param>
+    /// <param name="left">
+    /// <see cref="ProgressMinutesLeft"/>, or empty on the first fragment, where nothing has been
+    /// measured yet.
+    /// </param>
+    public static string ProgressTriageFragment(int index, int percent, string left) =>
+        Catalogue.Format(nameof(ProgressTriageFragment), index, percent, left);
 
     public static string ProgressTriageLogRead(int fragments) =>
         Catalogue.Format(nameof(ProgressTriageLogRead), fragments);

@@ -184,24 +184,139 @@ public sealed class LocalRunProgressTests
     }
 
     /// <summary>
-    /// Triage cannot say "of N" until the log ends, so it says the count it has and how long the
-    /// run has been going, and the reader infers the rate. An invented denominator would be the
-    /// one number here that is a guess.
+    /// Triage still cannot say "of N" fragments until the log ends — they are streamed off it —
+    /// but a denominator does exist and is exact: how much of the source is behind the fragment
+    /// being announced. So the count keeps no total and the percentage carries the progress.
     /// </summary>
     [Fact]
-    public void Triage_counts_without_a_denominator_it_does_not_have()
+    public void Triage_says_how_much_of_the_log_is_behind_the_fragment_it_announces()
     {
         var progress = Progress();
         progress.Report(new TriageChoosingModel());
 
-        After(34);
-        progress.Report(new TriagingFragment(1));
-        Assert.Contains("34", Lines()[^1], StringComparison.Ordinal);
+        progress.Report(new TriagingFragment(1, 0, 1000));
+        Assert.Contains("0%", Lines()[^1], StringComparison.Ordinal);
+        // The fragment count is still a count without a total, and the percentage must not be
+        // read as one.
         Assert.DoesNotContain(" 1/", Lines()[^1], StringComparison.Ordinal);
 
-        progress.Report(new TriageMerging(4, 0));
+        progress.Report(new TriagingFragment(2, 250, 1000));
+        Assert.Contains("25%", Lines()[^1], StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The figure counts what the fragments already analysed covered, so it never reaches a
+    /// hundred: the line that says the reading finished is the one that says it.
+    /// </summary>
+    [Fact]
+    public void Triage_never_claims_the_whole_log_before_the_line_that_says_so()
+    {
+        var progress = Progress();
+
+        progress.Report(new TriagingFragment(4, 990, 1000));
+        Assert.Contains("99%", Lines()[^1], StringComparison.Ordinal);
+        Assert.DoesNotContain("100%", Lines()[^1], StringComparison.Ordinal);
+
         progress.Report(new TriageLogRead(37));
         Assert.Contains("37", Lines()[^1], StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The estimate is a mean over the log actually analysed, so the merges that happened
+    /// between fragments are already inside it. Thirty seconds bought a quarter of the log, so
+    /// the three quarters left are about ninety seconds.
+    /// </summary>
+    [Fact]
+    public void The_triage_estimate_is_measured_over_the_log_it_has_read()
+    {
+        var progress = Progress();
+
+        progress.Report(new TriagingFragment(1, 0, 1000));
+        After(30);
+        progress.Report(new TriagingFragment(2, 250, 1000));
+
+        Assert.Contains("1.5", Lines()[^1], StringComparison.Ordinal);
+    }
+
+    /// <summary>An empty log yields one empty fragment, and nothing to divide by.</summary>
+    [Fact]
+    public void An_empty_log_asks_for_no_percentage_it_cannot_compute()
+    {
+        var progress = Progress();
+
+        progress.Report(new TriagingFragment(1, 0, 0));
+
+        Assert.Single(Lines());
+    }
+
+    /// <summary>
+    /// Naming the cargo is not an event a reader needs: one call carries every image, so this
+    /// says nothing about where the time will go. It is remembered and spent on the heartbeat
+    /// the silence clock was going to print anyway, which keeps a run that answers in three
+    /// seconds silent.
+    /// </summary>
+    [Fact]
+    public void Naming_the_work_prints_no_line_of_its_own()
+    {
+        var progress = Progress();
+
+        progress.Report(new ReadingImages(5));
+
+        Assert.Empty(Lines());
+    }
+
+    /// <summary>
+    /// And when the silence does earn a line, it says what the model was given. Forty seconds
+    /// is ordinary for five images and alarming for none, and the plain sentence cannot tell
+    /// the reader which of the two they are looking at.
+    /// </summary>
+    [Fact]
+    public void A_call_over_images_says_so_once_the_silence_earns_a_line()
+    {
+        var progress = Progress();
+        progress.Report(new ReadingImages(5));
+
+        After(10);
+        progress.Report(new BrokerJobPending(Running: true));
+
+        Assert.Equal(
+            CliText.ProgressRunningImages(5, 10),
+            Assert.Single(Lines()),
+            StringComparer.Ordinal);
+    }
+
+    /// <summary>A run that named no cargo keeps the sentence that names none.</summary>
+    [Fact]
+    public void A_run_that_named_no_work_keeps_the_plain_heartbeat()
+    {
+        var progress = Progress();
+
+        After(10);
+        progress.Report(new BrokerJobPending(Running: true));
+
+        Assert.Equal(
+            CliText.ProgressRunning(10),
+            Assert.Single(Lines()),
+            StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// A job that has not left the queue is waiting whatever it carries, so naming the cargo
+    /// there would say nothing about the wait.
+    /// </summary>
+    [Fact]
+    public void A_queued_job_says_it_is_queued_whatever_it_carries()
+    {
+        var progress = Progress();
+        progress.Report(new ReadingImages(5));
+
+        After(10);
+        progress.Report(new BrokerJobPending(Running: false));
+
+        Assert.Equal(
+            CliText.ProgressQueued(10),
+            Assert.Single(Lines()),
+            StringComparer.Ordinal);
     }
 
     /// <summary>
