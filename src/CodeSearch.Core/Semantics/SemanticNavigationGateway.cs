@@ -482,6 +482,11 @@ public sealed class SemanticNavigationGateway
                 identity.RepositoryId,
                 current.GenerationId,
                 identity.HeadTree,
-                identity.DirtyHash));
+                // The semantic hash, not the corpus one: this identity is checked against what a
+                // semantic artefact was built for, and since #385 that is the state of the files
+                // the semantic layer reads rather than of every uncommitted file. Passing the
+                // corpus hash here would refuse navigation after a saved `.md` — the very edit the
+                // two hashes exist to stop paying for.
+                identity.SemanticDirtyHash));
     }
 }
