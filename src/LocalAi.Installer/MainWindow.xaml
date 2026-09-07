@@ -402,6 +402,20 @@
                                                   SelectedValuePath="Choice"
                                                   SelectedValue="{Binding Choice, Mode=OneWay}"
                                                   SelectionChanged="OnAgentChoiceChanged" />
+                                        <!-- The gate sits under the combo it depends on, and only
+                                             in the Claude Code row: it is a PreToolUse hook in
+                                             that client's own settings, and Codex has no such
+                                             event. Its enabling condition is the combo directly
+                                             above, which is why it is here rather than among the
+                                             consents on the confirm page. -->
+                                        <StackPanel Margin="0,8,0,0"
+                                                    Visibility="{Binding HasTextSearchGate, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
+                                            <CheckBox Content="{x:Static vm:PageLabels.RefuseTextSearch}"
+                                                      IsChecked="{Binding DataContext.Agents.RefusesTextSearch, RelativeSource={RelativeSource AncestorType=Window}, Mode=TwoWay}"
+                                                      IsEnabled="{Binding DataContext.Agents.CanRefuseTextSearch, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}" />
+                                            <TextBlock Text="{Binding DataContext.Agents.TextSearchHint, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
+                                                       Style="{StaticResource Muted}" Margin="24,4,0,0" />
+                                        </StackPanel>
                                     </StackPanel>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>

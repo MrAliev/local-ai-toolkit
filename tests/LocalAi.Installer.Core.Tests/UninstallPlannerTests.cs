@@ -1,3 +1,4 @@
+using System.Text;
 using LocalAi.TestFixtures;
 using LocalAi.Installer.Core.Agents;
 using LocalAi.Installer.Core.Removal;
@@ -95,8 +96,11 @@ public sealed class UninstallPlannerTests : IDisposable
 
         Assert.Empty(plan.Paths);
         Assert.True(plan.HasWork);
+        // Three plans for two clients: the text-search gate is planned, applied and failed
+        // apart from the client that carries it, because the file it edits is one the person
+        // edits by hand and the client's is not (#423).
         Assert.Equal(
-            ["Claude", "Codex"],
+            ["Claude", "Claude text-search gate", "Codex"],
             plan.AgentConfigurations.Select(agent => agent.AgentName));
     }
 
@@ -347,6 +351,107 @@ public sealed class UninstallPlannerTests : IDisposable
             StringComparison.Ordinal);
         // Advice to do destructive work for a reason that no longer holds.
         Assert.DoesNotContain("remove them here", bounded.Detail, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Disconnecting Claude takes the text-search gate with it, and as a plan of its own.
+    ///
+    /// Leaving it behind is the worst of the outcomes available here: a machine with no LocalAi
+    /// on it that still turns down `grep`, pointing at a launcher that is gone, with nothing
+    /// installed to explain why. Its own plan rather than the client's because the two files
+    /// fail independently — `settings.json` is hand-edited, `.claude.json` is not (#423).
+    /// </summary>
+    [Fact]
+    public async Task Disconnecting_claude_takes_the_text_search_gate_out()
+    {
+        const string before = "{\n  \"theme\": \"dark\"\n}";
+        var settings = Path.Combine(machine.Home, ".claude", "settings.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(settings)!);
+        await File.WriteAllTextAsync(
+            settings,
+            ClaudeHookRegistration.Add(
+                before,
+                "\"C:\\Anywhere\\localai-launcher.exe\" run localai agent gate"),
+            new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
+            TestContext.Current.CancellationToken);
+
+        var plan = await Plan(RemovalSelection.FromPreset(RemovalPreset.DisconnectClients));
+
+        var gate = Assert.Single(
+            plan.AgentConfigurations,
+            configuration => configuration.Files.Any(file => file.Path == settings));
+        Assert.Equal(before, Assert.Single(gate.Files).AfterText, StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// Somebody else's hook on the same event outlives ours, and the plan says so.
+    ///
+    /// The load-bearing sentence is the last one. A person who removes LocalAi and is then still
+    /// refused a tool call concludes that the uninstall failed and goes looking for what it left
+    /// behind — when the answer is that another entry, which was never ours to take, is doing it.
+    /// </summary>
+    [Fact]
+    public async Task Other_hooks_left_on_the_same_event_are_named_with_what_they_will_do()
+    {
+        await WriteSettingsAsync(
+            """
+            {
+              "hooks": {
+                "PreToolUse": [
+                  {
+                    "matcher": "Bash",
+                    "hooks": [ { "type": "command", "command": "audit --log" } ]
+                  }
+                ]
+              }
+            }
+            """);
+
+        var plan = await Plan(RemovalSelection.FromPreset(RemovalPreset.DisconnectClients));
+
+        var notice = Assert.Single(
+            plan.Retained,
+            entry => entry.Title.Contains("PreToolUse", StringComparison.Ordinal));
+        Assert.Contains(": 1.", notice.Detail, StringComparison.Ordinal);
+        Assert.Contains(
+            Path.Combine(machine.Home, ".claude", "settings.json"),
+            notice.Detail,
+            StringComparison.Ordinal);
+        Assert.Contains("one of them is the reason", notice.Detail, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// And it is not offered when there is nothing to explain. A notice about hooks this run did
+    /// not touch, on a machine where ours was the only one, is a page of reassurance about a
+    /// problem the reader does not have.
+    /// </summary>
+    [Fact]
+    public async Task Nothing_else_on_that_event_means_no_notice_about_it()
+    {
+        await WriteSettingsAsync("{}");
+
+        var plan = await Plan(RemovalSelection.FromPreset(RemovalPreset.DisconnectClients));
+
+        Assert.DoesNotContain(
+            plan.Retained,
+            entry => entry.Title.Contains("PreToolUse", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// Writes a Claude settings file carrying our gate on top of whatever the caller supplies,
+    /// which is how every one of these arrives on a real machine.
+    /// </summary>
+    private async Task WriteSettingsAsync(string existing)
+    {
+        var settings = Path.Combine(machine.Home, ".claude", "settings.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(settings)!);
+        await File.WriteAllTextAsync(
+            settings,
+            ClaudeHookRegistration.Add(
+                existing,
+                "\"C:\\Anywhere\\localai-launcher.exe\" run localai agent gate"),
+            new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
+            TestContext.Current.CancellationToken);
     }
 
     private Task<UninstallPlan> Plan(RemovalSelection selection) =>

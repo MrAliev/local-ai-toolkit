@@ -114,6 +114,42 @@ public static class PageLabels
         "Nothing is downloaded now. Models can be set up later.",
         "Сейчас ничего не скачивается. Модели можно настроить позже.");
 
+    // --- Client applications --------------------------------------------------------------
+
+    /// <summary>
+    /// The label says the cost rather than the benefit, and names the part a reader would
+    /// otherwise discover by being refused: it applies to the commands they type themselves.
+    /// </summary>
+    public static string RefuseTextSearch => InstallerCulture.Pick(
+        "Refuse text searches in Claude Code, including the ones you type",
+        "Отклонять текстовый поиск в Claude Code, включая набранный вами");
+
+    public static string RefuseTextSearchHint => InstallerCulture.Pick(
+        "grep, rg, findstr, Select-String and Claude Code's own Grep and Glob are turned down " +
+        "before they run, with a message naming the codesearch tools that answer the same " +
+        "question. Who is calling is not checked, so the commands you type yourself are " +
+        "refused too. git log --grep reads commit messages rather than the tree and still runs.",
+        "grep, rg, findstr, Select-String, а также собственные Grep и Glob в Claude Code " +
+        "отклоняются до запуска — с сообщением, которое называет инструменты codesearch, " +
+        "отвечающие на тот же вопрос. Кто вызывает, не проверяется, поэтому набранные вами " +
+        "команды отклоняются тоже. git log --grep читает сообщения коммитов, а не дерево, и " +
+        "работает по-прежнему.");
+
+    /// <summary>
+    /// Shown instead when the choice above does not register the MCP servers. It has to say both
+    /// halves: why the refusal would be useless without them, and that the machine keeps what it
+    /// has — a disabled control that silently withdrew a setting would be the worse failure.
+    /// </summary>
+    public static string RefuseTextSearchNeedsMcp => InstallerCulture.Pick(
+        "Available when the choice above registers the MCP servers: the refusal names the " +
+        "codesearch tools that answer the same question instead, and without them it would only " +
+        "get in the way. This computer keeps the setting it has now — nothing is written to " +
+        "settings.json.",
+        "Доступно, когда выбор выше регистрирует MCP-серверы: отказ называет инструменты " +
+        "codesearch, которые отвечают на тот же вопрос вместо поиска, а без них он только " +
+        "мешал бы. На этом компьютере остаётся то, что настроено сейчас, — в settings.json " +
+        "ничего не пишется.");
+
     // --- Confirm ------------------------------------------------------------------------
     public static string ChooseARelease => InstallerCulture.Pick(
         "Choose a release…",

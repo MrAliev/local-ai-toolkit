@@ -555,6 +555,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
 
         LoadInterruptedRunJournal();
         SeedSettingsFromInstallation();
+        SeedTextSearchGate();
         await RefreshEnvironmentDiagnosticsAsync(cancellationToken);
 
         // Behind the check already running, on every errand. A page whose one job is to name
@@ -599,6 +600,36 @@ public sealed class InstallerWizardViewModel : ObservableObject
         {
             // An unreadable installation seeds nothing and the pages keep their safe defaults.
         }
+    }
+
+    /// <summary>
+    /// Starts the text-search gate's checkbox from what is in <c>~/.claude/settings.json</c> right
+    /// now, which is the whole of how a decline survives an update: nothing is remembered, so an
+    /// update proposes what is already there rather than restoring something that was turned off,
+    /// and somebody who took the entry out by hand is shown that instead of their old answer.
+    ///
+    /// Separate from <see cref="SeedSettingsFromInstallation"/> deliberately. That one gives up
+    /// when the runtime root is missing, and this setting does not live there — a machine with no
+    /// LocalAi runtime can still carry an entry from an installation that was removed.
+    /// </summary>
+    private void SeedTextSearchGate()
+    {
+        var adapter = new ClaudeConfigurationAdapter(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            InstallationLayout.CreateDefault().BinRoot);
+        var registered = false;
+        try
+        {
+            registered = adapter.IsGateRegistered();
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            // A file that cannot be read holds nothing this run will claim to have found. The
+            // path is still seeded, so the review line names it rather than an empty string.
+        }
+
+        agents.ApplyGateRegistration(registered, adapter.GateSettingsPath);
     }
 
     /// <summary>
@@ -1250,6 +1281,89 @@ public sealed class InstallerWizardViewModel : ObservableObject
         StringBuilder report,
         CancellationToken cancellationToken)
     {
+        await ApplyClientIntegrationAsync(report, cancellationToken);
+        await ApplyTextSearchGateAsync(report, cancellationToken);
+    }
+
+    /// <summary>
+    /// The text-search gate, applied as its own step with its own plan and its own failure.
+    ///
+    /// That separation is the point rather than tidiness. <c>settings.json</c> is a file the
+    /// person edits by hand, so a misplaced comma in it is an ordinary event — and inside the
+    /// loop above, that comma would cost the MCP registrations, which are the expensive half of
+    /// the installation. Here it costs only the gate, and the line above still reads true (#423).
+    /// </summary>
+    private async Task ApplyTextSearchGateAsync(
+        StringBuilder report,
+        CancellationToken cancellationToken)
+    {
+        if (!agents.GateChanges)
+        {
+            // Includes the case the consent turns on: an unticked box over a machine with
+            // nothing registered must not open the file at all, because an empty `hooks: {}` is
+            // an effect nobody agreed to and it would reformat their document on the way in.
+            AppendLog(report, "Text-search gate: left as it was.");
+            return;
+        }
+
+        if (packageOutcome is null || !packageInstalled)
+        {
+            AppendLog(
+                report,
+                "Text-search gate: skipped, because the LocalAi package was not installed and " +
+                "this run did not get far enough to change it.");
+            hasRunError = true;
+            return;
+        }
+
+        var registering = agents.RefusesTextSearch;
+        string? step = null;
+        try
+        {
+            var adapter = new ClaudeConfigurationAdapter(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                InstallationLayout.CreateDefault().BinRoot);
+            var plan = adapter.PreviewGate(registering);
+            if (!plan.HasChanges)
+            {
+                AppendLog(report, "Text-search gate: already as requested, nothing to change.");
+                return;
+            }
+
+            step = JournalBegin(
+                InstallerRunEffectKind.AgentConfiguration,
+                "Claude text-search gate");
+            await adapter.ApplyAsync(plan, cancellationToken);
+            JournalComplete(
+                step,
+                "Applied to " + string.Join(", ", plan.Files.Select(file => file.Path)) + ".",
+                isReversible: true,
+                new InstallerRunUndoData(
+                    Files: plan.Files.Select(BuildAgentFileUndo).ToArray()));
+            AppendLog(
+                report,
+                registering
+                    ? "Text-search gate: registered in " +
+                      string.Join(", ", plan.Files.Select(file => file.Path)) +
+                      ". Restart Claude Code to pick it up."
+                    : "Text-search gate: removed from " +
+                      string.Join(", ", plan.Files.Select(file => file.Path)) + ".");
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            JournalFail(step, exception.Message);
+            AppendLog(
+                report,
+                $"Text-search gate: not changed — {exception.Message} " +
+                "The rest of the installation is unaffected.");
+            hasRunError = true;
+        }
+    }
+
+    private async Task ApplyClientIntegrationAsync(
+        StringBuilder report,
+        CancellationToken cancellationToken)
+    {
         var requested = agents.Agents
             .Where(agent => agent.Choice != AgentChoice.NoChange)
             .ToArray();
@@ -1624,6 +1738,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         builder.AppendLine(models.ReviewText);
         builder.AppendLine(residency.ReviewText + StoredResidencyNote());
         builder.AppendLine(agents.ReviewText);
+        builder.AppendLine(agents.GateReviewText);
         builder.AppendLine(UpdateCheckReviewLine());
         if (residency.HasWarning)
         {
