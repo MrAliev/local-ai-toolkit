@@ -85,7 +85,10 @@ internal sealed class LogTriagePipeline(
                            cancellationToken))
         {
             fragmentCount++;
-            observer?.Report(new TriagingFragment((int)fragmentCount));
+            observer?.Report(new TriagingFragment(
+                (int)fragmentCount,
+                fragment.ConsumedBefore,
+                fragment.Total));
             originalTokens = Math.Min(
                 int.MaxValue,
                 originalTokens + TokenEstimator.ForText(fragment.UniqueText));
@@ -348,7 +351,7 @@ internal sealed class LogTriagePipeline(
             var overlap = string.Empty;
             if (source.Text.Length == 0)
             {
-                yield return new LogFragment(string.Empty, string.Empty);
+                yield return new LogFragment(string.Empty, string.Empty, 0, 0);
                 yield break;
             }
 
@@ -364,7 +367,7 @@ internal sealed class LogTriagePipeline(
                     freshLength);
                 var fresh = source.Text.Substring(offset, freshLength);
                 var content = overlap + fresh;
-                yield return new LogFragment(content, fresh);
+                yield return new LogFragment(content, fresh, offset, source.Text.Length);
                 offset += freshLength;
                 overlap = Tail(content, overlapCharacters);
             }
@@ -387,6 +390,13 @@ internal sealed class LogTriagePipeline(
             leaveOpen: false);
         var fileOverlap = string.Empty;
         var yielded = false;
+        // Counted off the text handed out rather than read from the stream: both the FileStream
+        // and the StreamReader buffer 64 KB, so the stream's position runs up to 128 KB ahead of
+        // what has actually been analysed — on a 200 KB log the first fragment would report the
+        // whole file. CurrentEncoding reflects a byte order mark the reader detected, so this sum
+        // falls short of the file's length by the preamble at most: pessimistic, never optimistic.
+        var consumed = 0L;
+        var total = new FileInfo(source.Path!).Length;
         while (true)
         {
             var freshBudget = Math.Max(1, fragmentCharacters - fileOverlap.Length);
@@ -395,7 +405,7 @@ internal sealed class LogTriagePipeline(
             {
                 if (!yielded)
                 {
-                    yield return new LogFragment(string.Empty, string.Empty);
+                    yield return new LogFragment(string.Empty, string.Empty, 0, total);
                 }
 
                 yield break;
@@ -403,7 +413,8 @@ internal sealed class LogTriagePipeline(
 
             yielded = true;
             var content = fileOverlap + fresh;
-            yield return new LogFragment(content, fresh);
+            yield return new LogFragment(content, fresh, consumed, total);
+            consumed += reader.CurrentEncoding.GetByteCount(fresh);
             fileOverlap = Tail(content, overlapCharacters);
         }
     }
@@ -649,7 +660,17 @@ internal sealed class LogTriagePipeline(
 
     private sealed record LogSource(string? Path, string? Text);
 
-    private sealed record LogFragment(string Content, string UniqueText);
+    /// <param name="ConsumedBefore">
+    /// How much of the source the fragments before this one covered, in the source's own unit —
+    /// characters for text, bytes for a file. Before rather than including, so the first fragment
+    /// reports nothing consumed and no fragment reports the whole source: that the reading
+    /// finished is a separate fact, and the line that says it is the one that says it.
+    /// </param>
+    private sealed record LogFragment(
+        string Content,
+        string UniqueText,
+        long ConsumedBefore,
+        long Total);
 
     private sealed record Capacity(string Model, int ContextTokens);
 
