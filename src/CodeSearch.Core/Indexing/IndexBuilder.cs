@@ -971,7 +971,7 @@ public sealed class IndexBuilder(
 
                 return embeddings;
             }
-            catch (EmbeddingUnavailableException) when (spent < BackendWaitBudget)
+            catch (EmbeddingUnavailableException exception) when (spent < BackendWaitBudget)
             {
                 // Trimmed to what is left, so the figure the line prints is one the build will
                 // honour rather than one it rounds up to.
@@ -980,6 +980,14 @@ public sealed class IndexBuilder(
                 if (interval > remaining)
                 {
                     interval = remaining;
+                }
+
+                // Once per outage, and `waited` is already exactly "first time round this one":
+                // it is set at the end of this block. The countdown under it repeats; the cause
+                // does not, which is what keeps the countdown a countdown.
+                if (!waited)
+                {
+                    _log(IndexText.BuildBackendStalled(exception.Message));
                 }
 
                 _log(IndexText.BuildBackendWaiting(
