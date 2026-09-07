@@ -37,14 +37,20 @@ public sealed class LoadedRoslynSolution : IAsyncDisposable
     /// </summary>
     public IReadOnlyList<string> UncoveredProjects { get; }
 
+    /// <param name="log">
+    /// Passed through to the analysis, the one step of this phase that can say how far it is.
+    /// Optional and before the token, so a caller that does not report keeps its shape.
+    /// </param>
     public Task<SemanticIndex> BuildIndexAsync(
         string repositoryRoot,
         SemanticIndexBuildIdentity identity,
+        Action<string>? log = null,
         CancellationToken cancellationToken = default) =>
         new RoslynSemanticIndexer().BuildAsync(
             solution,
             repositoryRoot,
             identity,
+            log,
             cancellationToken);
 
     public ValueTask DisposeAsync()
