@@ -1,4 +1,4 @@
-using CodeSearch.Core.Chunking;
+﻿using CodeSearch.Core.Chunking;
 using CodeSearch.Core.Embedding;
 using CodeSearch.Core.Indexing;
 using CodeSearch.Core.Semantics;
@@ -566,24 +566,6 @@ public static class CodeSearchSyncCommand
     }
 
     /// <summary>
-    /// Drops generations this repository has outgrown, immediately after publishing the one that
-    /// superseded them.
-    ///
-    /// Publishing a new generation is the exact moment an old one stops being reachable, and it
-    /// is the only moment the count can exceed the retention bound — so this is where the bound
-    /// belongs. Left to <c>localai prune</c> alone it was invisible: superseded generations and
-    /// their overlays reached several hundred megabytes on a repository that had simply been
-    /// committed to for a while.
-    ///
-    /// Scoped to this repository and to generations only. Installed versions and installer
-    /// backups are the larger share of a grown runtime, and they stay with the explicit command
-    /// on purpose: deleting binaries as a side effect of indexing is a worse surprise than a
-    /// large directory.
-    ///
-    /// Never fails the sync. The index is published and correct by this point; a retention sweep
-    /// that could not run is worth reporting and nothing more.
-    /// </summary>
-    /// <summary>
     /// What the repository can still ask about: every live worktree, keyed the way its overlay
     /// directory is, paired with the tree its HEAD points at. Anything else under a kept
     /// generation belongs to a commit nobody is on or a worktree that is gone.
@@ -622,6 +604,24 @@ public static class CodeSearchSyncCommand
         return reachable;
     }
 
+    /// <summary>
+    /// Drops generations this repository has outgrown, immediately after publishing the one that
+    /// superseded them.
+    ///
+    /// Publishing a new generation is the exact moment an old one stops being reachable, and it
+    /// is the only moment the count can exceed the retention bound — so this is where the bound
+    /// belongs. Left to <c>localai prune</c> alone it was invisible: superseded generations and
+    /// their overlays reached several hundred megabytes on a repository that had simply been
+    /// committed to for a while.
+    ///
+    /// Scoped to this repository and to generations only. Installed versions and installer
+    /// backups are the larger share of a grown runtime, and they stay with the explicit command
+    /// on purpose: deleting binaries as a side effect of indexing is a worse surprise than a
+    /// large directory.
+    ///
+    /// Never fails the sync. The index is published and correct by this point; a retention sweep
+    /// that could not run is worth reporting and nothing more.
+    /// </summary>
     internal static void PruneSupersededGenerations(
         string repositoryRuntimeRoot,
         string? runtimeRoot,
