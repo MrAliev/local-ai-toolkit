@@ -1,4 +1,4 @@
-using LocalAi.Installer.Core.Agents;
+﻿using LocalAi.Installer.Core.Agents;
 
 namespace LocalAi.Installer.Core.Tests;
 
@@ -306,20 +306,6 @@ public sealed class ManagedInstructionBlockTests
     }
 
     /// <summary>
-    /// A budget, because this text is read on every session in two files and nothing else
-    /// counts it. Four rounds of review on one branch took it from 5.2K to 10.0K characters,
-    /// each round adding while claiming to tighten, and the only reason anybody noticed was a
-    /// reviewer measuring by hand.
-    ///
-    /// Measured on <see cref="ManagedInstructionBlock.Block"/>, markers included, which is what
-    /// lands in the file, with line endings counted as one character each. Raw, the CRLF form
-    /// is about 180 characters longer than the LF form — more than the headroom — so an
-    /// unnormalised count would pass on one platform and fail on another.
-    ///
-    /// The number is not sacred: raise it on purpose when something genuinely belongs here.
-    /// What must not happen is drifting past it a paragraph at a time.
-    /// </summary>
-    /// <summary>
     /// Codex gets both halves inline — it has no import mechanism — so its block is honestly
     /// larger, and until now it was measured by nothing at all: both this test and the
     /// no-repetition one took <see cref="ManagedInstructionBlock.Block"/> alone. It had been
@@ -376,6 +362,20 @@ public sealed class ManagedInstructionBlockTests
         Assert.Empty(repeated);
     }
 
+    /// <summary>
+    /// A budget, because this text is read on every session in two files and nothing else
+    /// counts it. Four rounds of review on one branch took it from 5.2K to 10.0K characters,
+    /// each round adding while claiming to tighten, and the only reason anybody noticed was a
+    /// reviewer measuring by hand.
+    ///
+    /// Measured on <see cref="ManagedInstructionBlock.Block"/>, markers included, which is what
+    /// lands in the file, with line endings counted as one character each. Raw, the CRLF form
+    /// is about 180 characters longer than the LF form — more than the headroom — so an
+    /// unnormalised count would pass on one platform and fail on another.
+    ///
+    /// The number is not sacred: raise it on purpose when something genuinely belongs here.
+    /// What must not happen is drifting past it a paragraph at a time.
+    /// </summary>
     [Fact]
     public void The_block_stays_within_its_budget()
     {

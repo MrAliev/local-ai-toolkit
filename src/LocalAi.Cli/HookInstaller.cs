@@ -84,7 +84,11 @@ public static class HookInstaller
             }
 
             var previous = File.Exists(previousPath)
-                ? $"\"{previousPath.Replace('\\', '/')}\" \"$@\"\n" +
+                // Through the same helper the launcher's path goes through, two lines below. This
+                // was interpolated raw, so a repository under a path carrying `$` or a backtick
+                // produced a dispatcher whose first line invoked something else — and, because
+                // that line's status gates the rest, one that exited before reaching LocalAi.
+                ? $"{QuoteExecutable(previousPath.Replace('\\', '/'))} \"$@\"\n" +
                   "previous_status=$?\n" +
                   "if [ $previous_status -ne 0 ]; then exit $previous_status; fi\n"
                 : string.Empty;
@@ -132,9 +136,15 @@ public static class HookInstaller
             "info",
             "exclude");
         Directory.CreateDirectory(Path.GetDirectoryName(excludePath)!);
-        var lines = File.Exists(excludePath)
-            ? File.ReadAllLines(excludePath).ToList()
-            : [];
+        // Read as text rather than as lines, so the endings the file arrived with survive being
+        // written back. `ReadAllLines` plus a join on '\n' rewrote every line of a CRLF file to
+        // add two patterns — harmless to Git, and the whole of the reader's next diff of a file
+        // that is theirs.
+        var existing = File.Exists(excludePath) ? File.ReadAllText(excludePath) : string.Empty;
+        var newLine = GitHookLayout.LineEndingOf(existing);
+        var lines = existing.Length == 0
+            ? []
+            : existing.ReplaceLineEndings("\n").TrimEnd('\n').Split('\n').ToList();
         var missing = patterns
             .Where(pattern => !lines.Contains(pattern, StringComparer.Ordinal))
             .ToArray();
@@ -156,7 +166,7 @@ public static class HookInstaller
         lines.AddRange(missing);
         File.WriteAllText(
             excludePath,
-            string.Join('\n', lines) + "\n",
+            string.Join(newLine, lines) + newLine,
             new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
     }
 

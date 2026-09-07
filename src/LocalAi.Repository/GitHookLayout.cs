@@ -89,6 +89,19 @@ public static class GitHookLayout
     }
 
     /// <summary>
+    /// The line ending a file already uses, so writing into somebody else's file does not
+    /// reflow it.
+    ///
+    /// `.git/info/exclude` is theirs and is edited by hand. Reading it with <c>ReadAllLines</c>
+    /// and rejoining with <c>'\n'</c> rewrote every line of a CRLF file to add two patterns —
+    /// harmless to Git and the whole of the reader's next diff. One helper rather than one per
+    /// caller: the install and the uninstall both write this file, and a pair of them would be a
+    /// pair free to disagree.
+    /// </summary>
+    public static string LineEndingOf(string text) =>
+        text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
+
+    /// <summary>
     /// The <c>.git/info/exclude</c> patterns installation writes for a hooks directory that
     /// sits inside the working tree, in the order it writes them.
     /// </summary>
