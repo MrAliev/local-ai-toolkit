@@ -302,7 +302,7 @@ internal sealed class LogTriagePipeline(
     {
         // Merges also happen mid-stream when a level overflows its budget, so the line
         // this becomes must not read as "the log has been read".
-        observer?.Report(new TriageMerging(summaries.Count, level));
+        observer?.Report(new MergingPartials(summaries.Count, level));
         var body = new StringBuilder();
         for (var index = 0; index < summaries.Count; index++)
         {

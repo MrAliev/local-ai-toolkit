@@ -250,13 +250,84 @@ public sealed class LocalRunProgressTests
     }
 
     /// <summary>
-    /// Naming the cargo is not an event a reader needs: one call carries every image, so this
-    /// says nothing about where the time will go. It is remembered and spent on the heartbeat
-    /// the silence clock was going to print anyway, which keeps a run that answers in three
-    /// seconds silent.
+    /// One image per call, so the counter moves when a call finishes rather than when a file is
+    /// encoded. The first carries no estimate — nothing has been measured yet — and the second
+    /// carries one, over the image that has finished.
     /// </summary>
     [Fact]
-    public void Naming_the_work_prints_no_line_of_its_own()
+    public void An_image_read_on_its_own_says_which_image_it_is_on()
+    {
+        var progress = Progress();
+
+        progress.Report(new ReadingImage(1, 5));
+        Assert.Contains("1", Lines()[^1], StringComparison.Ordinal);
+        Assert.Contains("5", Lines()[^1], StringComparison.Ordinal);
+        Assert.DoesNotContain("min", Lines()[^1], StringComparison.Ordinal);
+
+        // Thirty seconds bought one image; four are left, so about two minutes.
+        After(30);
+        progress.Report(new ReadingImage(2, 5));
+        Assert.Contains("2.0", Lines()[^1], StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The count is the fraction. An index, a total, a percentage and an estimate on one line is
+    /// one figure too many — triage prints a percent only because it has no total at all.
+    /// </summary>
+    [Fact]
+    public void A_counted_image_prints_no_percentage_beside_its_count()
+    {
+        var progress = Progress();
+
+        progress.Report(new ReadingImage(2, 5));
+
+        Assert.DoesNotContain("%", Assert.Single(Lines()), StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Ungated, like every other step line: it is the proof the stream is advancing, and under the
+    /// silence clock a run whose images are quick and one that has stalled look the same.
+    /// </summary>
+    [Fact]
+    public void Every_image_earns_its_line_however_quick_the_run_is()
+    {
+        var progress = Progress();
+
+        for (var image = 1; image <= 5; image++)
+        {
+            progress.Report(new ReadingImage(image, 5));
+            After(1);
+        }
+
+        Assert.Equal(5, Lines().Length);
+    }
+
+    /// <summary>
+    /// The position answers "what is it working on" already, so the heartbeat must not answer it a
+    /// second time — and it would answer wrongly: this call carries one image, not five.
+    /// </summary>
+    [Fact]
+    public void A_counted_image_leaves_no_cargo_for_the_heartbeat_to_name()
+    {
+        var progress = Progress();
+        progress.Report(new ReadingImages(5));
+        progress.Report(new ReadingImage(1, 5));
+
+        // Thirty, not ten: the image line is a line, so it buys the longer silence.
+        After(30);
+        progress.Report(new BrokerJobPending(Running: true));
+
+        Assert.Equal(CliText.ProgressRunning(30), Lines()[^1], StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// The together form, where naming the cargo is not an event a reader needs: one call carries
+    /// every image, so this says nothing about where the time will go. It is remembered and spent
+    /// on the heartbeat the silence clock was going to print anyway, which keeps a run that
+    /// answers in three seconds silent.
+    /// </summary>
+    [Fact]
+    public void Images_sent_in_one_call_print_no_line_of_their_own()
     {
         var progress = Progress();
 

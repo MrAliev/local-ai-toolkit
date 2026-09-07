@@ -551,8 +551,19 @@ public static class CliText
     public static string ProgressTriageLogRead(int fragments) =>
         Catalogue.Format(nameof(ProgressTriageLogRead), fragments);
 
-    public static string ProgressTriageMerging(int findings, int level) =>
-        Catalogue.Format(nameof(ProgressTriageMerging), findings, level);
+    /// <param name="parts">
+    /// How many partial answers this merge carries. Renamed from the triage-only form when the
+    /// reducer gained a second caller: reading images one at a time ends in the same merge.
+    /// </param>
+    public static string ProgressMerging(int parts, int level) =>
+        Catalogue.Format(nameof(ProgressMerging), parts, level);
+
+    /// <param name="left">
+    /// <see cref="ProgressMinutesLeft"/>, or empty on the first image, where nothing has been
+    /// measured yet.
+    /// </param>
+    public static string ProgressReadingImage(int index, int total, string left) =>
+        Catalogue.Format(nameof(ProgressReadingImage), index, total, left);
 
     public static string TranslateWriteDocument => Catalogue.Get(nameof(TranslateWriteDocument));
 

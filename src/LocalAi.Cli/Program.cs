@@ -337,6 +337,7 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
                 image.Question,
                 image.Profile,
                 image.Model,
+                image.Together,
                 inner),
             machineReadable,
             token));

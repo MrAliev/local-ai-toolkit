@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!--
     What the LocalLm tools say, in every language they say it in. English is the neutral resource every other language falls back to. Numbers, durations and identifiers are formatted by the caller and arrive already invariant, so a hole is never a place a decimal separator can change.
@@ -84,11 +84,11 @@
     <value>Прочитано изображений: {0} — {1}</value>
   </data>
   <data name="ImagesTooLargeTogether" xml:space="preserve">
-    <value>Изображения вместе превышают общий предел {0} МБ на один вызов. Разделить запрос.</value>
+    <value>Изображения вместе превышают общий предел {0} МБ. Разделить запрос.</value><comment>The limit is over the request, checked at the metadata pass before a byte is read. It no longer says "for one call": in the default form the images are not one call - each is read on its own and the readings are merged.</comment>
   </data>
   <data name="ImagesTooManyPixels" xml:space="preserve">
-    <value>Изображения вместе превышают общий предел {0:N0} пикселей на один вызов. Разделить запрос.</value>
-    <comment>N0 formats invariantly in both languages, by the rule the notice line follows.</comment>
+    <value>Изображения вместе превышают общий предел в {0:N0} пикселей. Разделить запрос.</value>
+    <comment>The limit is over the request, checked at the metadata pass before a byte is read. It no longer says "for one call": in the default form the images are not one call - each is read on its own and the readings are merged.</comment>
   </data>
   <data name="Ineligible" xml:space="preserve">
     <value>Установленные локальные модели для задачи {0} этот запрос принять не могут. Запросить меньший контекст или — для изображения — изображение меньшего размера: каждая модель объявляет, какие размеры контекста и какое число пикселей она принимает.</value>
@@ -186,8 +186,8 @@
     <value>Файлов в запросе: {0}; предел на один вызов — {1}. Разделить запрос.</value>
   </data>
   <data name="TooManyImages" xml:space="preserve">
-    <value>Изображений в запросе: {0}; предел на один вызов — {1}. Разделить запрос.</value>
-    <comment>The Russian puts the count after a colon so the numeral does not have to agree.</comment>
+    <value>Изображений в запросе: {0}; предел — {1}. Разделить запрос.</value>
+    <comment>The limit is over the request, checked at the metadata pass before a byte is read. It no longer says "for one call": in the default form the images are not one call - each is read on its own and the readings are merged.</comment>
   </data>
   <data name="TranslateFileEmpty" xml:space="preserve">
     <value>Файл '{0}' пуст — переводить нечего.</value>
@@ -310,5 +310,10 @@
   </data>
   <data name="ValidatorUrls" xml:space="preserve">
     <value>URL</value>
+  </data>
+
+  <data name="ImagesReadOneAtATime" xml:space="preserve">
+    <value>Изображения прочитаны по одному и сведены: {0} — {1}</value>
+    <comment>The counted form's detail. Separate from ImagesRead because the two are different claims about the answer: one look at five images can compare them and five merged readings cannot, which is what the merge prompt forbids. A reader deciding whether to trust a statement spanning the images has only this line to go on. Renders inside Notice's hole, so no trailing full stop.</comment>
   </data>
 </root>

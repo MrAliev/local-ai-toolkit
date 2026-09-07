@@ -30,7 +30,7 @@ internal static class CliUsage
         "[--out file] [--json]";
     public const string ReadImage =
         "localai read-image <question> <image> [image ...] [--profile name] "  +
-        "[--model model] [--json]";
+        "[--model model] [--together] [--json]";
     // No brackets around the flag: here it is required rather than optional. The listing is
     // for a program, and the block this line sits in is the list for a person.
     public const string Capabilities = "localai capabilities --json";

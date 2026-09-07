@@ -216,6 +216,7 @@ public sealed class LocalTasksTests
                 "Translate all visible text into Russian.",
                 LocalTaskProfile.ImageTranslation,
                 model: null,
+                together: false,
                 TestContext.Current.CancellationToken);
 
             var call = Assert.Single(client.Calls);
