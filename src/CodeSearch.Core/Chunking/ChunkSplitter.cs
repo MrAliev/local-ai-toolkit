@@ -12,6 +12,20 @@ namespace CodeSearch.Core.Chunking;
 /// </remarks>
 internal static class ChunkSplitter
 {
+    /// <summary>
+    /// How many windows a sliding pass actually cuts, which is the denominator a part number is
+    /// out of.
+    ///
+    /// Both callers had it as <c>ceil(lines / step)</c>, and both stop the moment a window reaches
+    /// the last line — so the windows that formula counts past that point are never produced. The
+    /// first window covers <paramref name="window"/> lines and each one after it advances by
+    /// <paramref name="step"/>, so what is left to cover after the first is what decides the rest.
+    /// </summary>
+    public static int WindowCount(int lines, int window, int step) =>
+        lines <= window
+            ? 1
+            : 1 + (int)Math.Ceiling((double)(lines - window) / step);
+
     public static IEnumerable<Chunk> Split(
         string relPath,
         ChunkKind kind,
@@ -47,7 +61,7 @@ internal static class ChunkSplitter
         var avgLineLength = Math.Max(1, whole.Length / Math.Max(1, lines.Length));
         var windowLines = Math.Max(20, budget / avgLineLength);
         var step = Math.Max(1, windowLines - ChunkLimits.SplitOverlapLines);
-        var totalParts = (int)Math.Ceiling((double)lines.Length / step);
+        var totalParts = WindowCount(lines.Length, windowLines, step);
 
         var part = 0;
         for (var offset = 0; offset < lines.Length; offset += step)

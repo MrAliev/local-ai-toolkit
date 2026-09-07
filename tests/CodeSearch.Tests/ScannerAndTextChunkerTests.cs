@@ -22,6 +22,59 @@ public class GenericTextChunkerTests
         Assert.All(chunks, c => Assert.Equal(ChunkKind.Text, c.Kind));
     }
 
+    /// <summary>
+    /// The line range names lines the file has.
+    ///
+    /// Splitting on `\n` gives a file ending in a newline — which is nearly all of them — a
+    /// phantom empty last element, and the range published it: a two-line file was served as
+    /// `1-3`, a 21-line `.csproj` as `1-22`. That range goes into the hit header the reader
+    /// opens their editor at, and into the `Lines:` header baked inside the embedded text.
+    /// </summary>
+    [Fact]
+    public void A_trailing_newline_does_not_add_a_line_to_the_range()
+    {
+        var chunk = Assert.Single(_chunker.Split("notes.md", "one\ntwo\n").ToList());
+
+        Assert.Equal(1, chunk.StartLine);
+        Assert.Equal(2, chunk.EndLine);
+        Assert.Contains("Lines: 1-2", chunk.EmbedText, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A file that fits in one window is not announced as part one of two.
+    ///
+    /// The denominator was `ceil(lines / step)` while the loop stops as soon as a window reaches
+    /// the last line, so it counted windows that are never cut. Every file of 48 to 59 lines got
+    /// a `[1/2]` suffix where the code intends none at all — telling a reader there is a second
+    /// half of the file they have not seen.
+    /// </summary>
+    [Theory]
+    [InlineData(52)]
+    [InlineData(59)]
+    public void A_file_that_fits_in_one_window_carries_no_part_suffix(int lines)
+    {
+        var content = string.Join('\n', Enumerable.Range(1, lines).Select(i => $"line {i}"));
+
+        var chunk = Assert.Single(_chunker.Split("docs/guide.md", content).ToList());
+
+        Assert.Equal("guide.md", chunk.Symbol, StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// And where there really are several, the denominator is how many there are.
+    /// </summary>
+    [Fact]
+    public void The_part_count_is_the_number_of_windows_actually_cut()
+    {
+        var content = string.Join('\n', Enumerable.Range(1, 200).Select(i => $"line {i}"));
+
+        var chunks = _chunker.Split("docs/guide.md", content).ToList();
+
+        Assert.All(
+            chunks,
+            chunk => Assert.EndsWith($"/{chunks.Count}]", chunk.Symbol, StringComparison.Ordinal));
+    }
+
     [Fact]
     public void ShortFileBecomesASingleChunk()
     {

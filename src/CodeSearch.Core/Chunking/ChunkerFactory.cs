@@ -74,6 +74,17 @@ public static class ChunkerFactory
     /// catalogue knows nothing about this file" and "the catalogue names three definitions in it"
     /// cannot compare equal.
     /// </summary>
+    /// <summary>
+    /// Bumped when the cutting itself changes, so every file is re-chunked on the next sync
+    /// rather than keeping chunks whose boundaries or labels no longer describe them.
+    ///
+    /// This is the lever a format version would otherwise be used for, and it is the honest one:
+    /// what changed is the chunker, and the chunker is exactly what reuse compares. r2 is the
+    /// pass that stopped counting a trailing newline as a line and stopped announcing part one of
+    /// a part count that was never cut.
+    /// </summary>
+    private const string Revision = "r2";
+
     public static string IdentityOf(string path, SymbolDefinitionCatalog catalog)
     {
         ArgumentNullException.ThrowIfNull(catalog);
@@ -82,8 +93,8 @@ public static class ChunkerFactory
         return chunker switch
         {
             null => string.Empty,
-            not GenericTextChunker => chunker.GetType().Name,
-            _ => "window:" + catalog.Fingerprint(path),
+            not GenericTextChunker => Revision + ":" + chunker.GetType().Name,
+            _ => Revision + ":window:" + catalog.Fingerprint(path),
         };
     }
 

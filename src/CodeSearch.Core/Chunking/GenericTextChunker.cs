@@ -29,7 +29,11 @@ public sealed class GenericTextChunker : IChunker
         var fileName = Path.GetFileName(relPath);
         var step = WindowLines - OverlapLines;
         var part = 0;
-        var total = Math.Max(1, (int)Math.Ceiling((double)lines.Length / step));
+        // How many windows are actually cut, which is not `ceil(lines / step)`: the loop stops as
+        // soon as a window reaches the last line, so the tail windows that formula counts are
+        // never produced. Every file of 48 to 59 lines was announced as `[1/2]` — a reader told
+        // there is a second half they have not seen.
+        var total = ChunkSplitter.WindowCount(lines.Length, WindowLines, step);
 
         for (var start = 0; start < lines.Length; start += step)
         {
@@ -76,6 +80,22 @@ public sealed class GenericTextChunker : IChunker
 
 public static class SourceLines
 {
-    public static string[] Split(string content) =>
-        content.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+    /// <summary>
+    /// The lines of a file, without the empty one a trailing newline leaves behind.
+    ///
+    /// Nearly every file ends in a newline, and splitting on it gives a phantom last element that
+    /// the chunkers counted as a line: a two-line file was published as `1-3`, a 21-line
+    /// `.csproj` as `1-22`. That range is what a reader opens their editor at and what the
+    /// `Lines:` header inside the embedded text says.
+    ///
+    /// Exactly one is dropped, not every trailing blank: a file that genuinely ends in blank
+    /// lines has them, and they are its lines.
+    /// </summary>
+    public static string[] Split(string content)
+    {
+        var lines = content.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+        return lines.Length > 1 && lines[^1].Length == 0
+            ? lines[..^1]
+            : lines;
+    }
 }

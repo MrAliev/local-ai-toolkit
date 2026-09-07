@@ -63,11 +63,16 @@ public sealed class AReusedChunkBelongsToTheFileItIsStampedOnTests : IDisposable
     }
 
     /// <summary>
-    /// And the entry itself is gone rather than left pointing at somebody else's chunks. A file
-    /// listed with a hash it did not produce is the record every later build trusts.
+    /// And the entry is listed with no chunks, rather than carrying somebody else's.
+    ///
+    /// This test asserted the opposite when it was written — that the file is not listed at all —
+    /// and that expectation was wrong. Dropping the entry is what lets the base go on answering
+    /// for the path, because an overlay shadows a base entry only by listing the file or naming
+    /// it deleted. Zero chunks says the true thing: this file diverges, and it has nothing to
+    /// contribute.
     /// </summary>
     [Fact]
-    public async Task A_file_that_now_yields_no_chunks_is_not_listed_at_all()
+    public async Task A_file_that_now_yields_no_chunks_is_listed_with_none_of_them()
     {
         Write("first.md", "one\ntwo\n");
         Write("second.md", "three\nfour\n");
@@ -90,9 +95,58 @@ public sealed class AReusedChunkBelongsToTheFileItIsStampedOnTests : IDisposable
             TestContext.Current.CancellationToken);
 
         var overlay = CodeIndex.Load(Overlay("b"), withVectors: false);
-        Assert.DoesNotContain(
+        var entry = Assert.Single(
             overlay.Files,
             file => file.RelPath.EndsWith("first.md", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(0, entry.ChunkCount);
+    }
+
+    /// <summary>
+    /// And the base's chunks for that file stop being served.
+    ///
+    /// The two tests above assert on the overlay alone, which is not what search queries: it
+    /// queries base and overlay composed. An overlay shadows a base entry when it lists the file
+    /// or names it deleted, and a diverged file that cuts into nothing is in neither list — it
+    /// still exists on disk so it is not deleted, and it contributes no chunks so it is not
+    /// listed. The base's entry therefore survives, and a search answers with a symbol from a
+    /// file that no longer holds it.
+    ///
+    /// The snippet is withheld — the file hash no longer matches — so what a reader gets is a
+    /// phantom: a symbol, a signature and a line range for text that is gone, occupying a result
+    /// slot, under a message telling them to run sync and search again. Sync has already run.
+    /// </summary>
+    [Fact]
+    public async Task The_base_stops_answering_for_a_file_that_now_yields_no_chunks()
+    {
+        Write("first.md", "the quick brown fox\njumps over the lazy dog\n");
+        Write("second.md", "three\nfour\n");
+        // A commit is named on both, because composing refuses an overlay with no base commit —
+        // there is no git repository under a temporary directory to supply one.
+        var context = new IndexBuildContext(root, "base-commit", "base-tree", "repo", "generation");
+        var builder = new IndexBuilder(new RecordingEmbedder());
+        await builder.BuildAsync(
+            root,
+            Base,
+            ct: TestContext.Current.CancellationToken,
+            context: context);
+
+        Write("first.md", "   \n\n   \n");
+        await builder.BuildOverlayAsync(
+            root,
+            Base,
+            Overlay("a"),
+            TestContext.Current.CancellationToken,
+            context: context);
+
+        var composed = new CompositeIndex(
+            CodeIndex.Load(Base),
+            CodeIndex.Load(Overlay("a")));
+
+        ISearchableIndex index = composed;
+        var paths = Enumerable.Range(0, index.ChunkCount)
+            .Select(index.PathOf)
+            .ToArray();
+        Assert.DoesNotContain("first.md", paths, StringComparer.OrdinalIgnoreCase);
     }
 
     /// <summary>
