@@ -113,11 +113,16 @@ internal static class BrokerProgram
             var scheduleMetadata = new ScheduleMetadataResolver(
                 catalog,
                 durationEstimator);
+            // One figure, two uses, and deliberately not two settings: how long a loaded model
+            // is kept when nothing is running, and how long it is kept when the only work left
+            // is for a different model, are the same question. Splitting them would let an
+            // operator raise the one they read about and keep paying for the one they did not.
+            var modelKeepAlive = TimeSpan.FromSeconds(policy.IdleModelKeepAliveSeconds);
             var host = new BrokerHost(
                 queue,
                 $"broker-{process.Id}",
                 executionRouter.ExecuteAsync,
-                scheduler: new ModelAwareScheduler(),
+                scheduler: new ModelAwareScheduler(modelHold: modelKeepAlive),
                 scheduleMetadata: async (candidates, cancellationToken) =>
                 {
                     var prepared = await executionRouter.PrepareAsync(
@@ -144,7 +149,7 @@ internal static class BrokerProgram
                     scheduleMetadata.Observe(request, receipt, duration);
                 },
                 idleUnload: executionRouter.UnloadResidentAsync,
-                idleUnloadAfter: TimeSpan.FromSeconds(policy.IdleModelKeepAliveSeconds),
+                idleUnloadAfter: modelKeepAlive,
                 backendProbe: transport.ProbeActiveModelAsync,
                 diagnostic: diagnostic =>
                 {
