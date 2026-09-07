@@ -161,7 +161,8 @@ public static class CodeSearchSyncCommand
                 progress.TotalChunks,
                 progress.ChunksPerSecond,
                 progress.EstimatedRemaining,
-                DateTimeOffset.UtcNow);
+                DateTimeOffset.UtcNow,
+                progress.Pause);
             progressStore.Save(lastProgress);
         }
 
@@ -179,6 +180,10 @@ public static class CodeSearchSyncCommand
                 ChunksPerSecond = 0,
                 EstimatedRemaining = null,
                 UpdatedAtUtc = DateTimeOffset.UtcNow,
+                // Reaching a new phase is the build moving, so whatever it was waiting for is
+                // over. Carrying the pause across would leave a reader told the build is waiting
+                // for a backend it has already been answered by.
+                Pause = null,
             };
             progressStore.Save(lastProgress);
         }

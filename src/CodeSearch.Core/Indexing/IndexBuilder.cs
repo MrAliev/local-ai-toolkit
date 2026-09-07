@@ -25,7 +25,8 @@ public sealed record IndexBuildProgress(
     int ProcessedChunks,
     int TotalChunks,
     double ChunksPerSecond,
-    TimeSpan? EstimatedRemaining);
+    TimeSpan? EstimatedRemaining,
+    IndexBuildPause? Pause = null);
 
 public sealed record IndexBuildContext(
     string Root,
@@ -708,7 +709,12 @@ public sealed class IndexBuilder(
         // from that. The counters are the ones already reached; the rate is zero and the estimate
         // unknown, which is the shape a checkpoint restore already reports, so the reader is told
         // "calculating" rather than an estimate nobody is earning.
-        void Pausing() => _progress(new IndexBuildProgress(done, total, 0, null));
+        //
+        // The reason travels with it. Zero rate and no estimate say the build has stopped moving;
+        // they do not say whether it is waiting for something that will come back, and a reader
+        // watching index_status has no log to consult.
+        void Pausing(IndexBuildPause reason) =>
+            _progress(new IndexBuildProgress(done, total, 0, null, reason));
         var position = 0;
         var budget = InitialBatchChars;
 
@@ -909,7 +915,7 @@ public sealed class IndexBuilder(
     /// </summary>
     private async Task<float[][]> EmbedWaitingForABackendAsync(
         IReadOnlyList<string> inputs,
-        Action pausing,
+        Action<IndexBuildPause> pausing,
         CancellationToken ct)
     {
         var deduplicationKey = EmbeddingDeduplicationKey(inputs);
@@ -947,7 +953,7 @@ public sealed class IndexBuilder(
     private async Task<float[][]> WaitForABackendAsync(
         IReadOnlyList<string> inputs,
         string deduplicationKey,
-        Action pausing,
+        Action<IndexBuildPause> pausing,
         CancellationToken ct)
     {
         var spent = TimeSpan.Zero;
@@ -992,7 +998,7 @@ public sealed class IndexBuilder(
 
                 _log(IndexText.BuildBackendWaiting(
                     remaining.TotalMinutes.ToString("F1", CultureInfo.InvariantCulture)));
-                pausing();
+                pausing(IndexBuildPause.BackendUnavailable);
                 await _backendWait(interval, ct);
                 spent += interval;
                 waited = true;
@@ -1003,7 +1009,7 @@ public sealed class IndexBuilder(
     private async Task<float[][]> EmbedBatchAsync(
         IReadOnlyList<(string RelPath, int Slot, string Text)> batch,
         EmbeddingCheckpointStore? checkpoint,
-        Action pausing,
+        Action<IndexBuildPause> pausing,
         CancellationToken ct)
     {
         var inputs = batch.Select(b => b.Text).ToList();
