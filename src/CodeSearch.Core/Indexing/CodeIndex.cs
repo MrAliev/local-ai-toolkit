@@ -15,6 +15,18 @@ public sealed class IndexedFile
     public required int ChunkStart { get; init; }
 
     public required int ChunkCount { get; init; }
+
+    /// <summary>
+    /// Which chunker produced these chunks, as <see cref="Chunking.ChunkerFactory.IdentityOf"/>
+    /// spells it. Empty means unrecorded, and unrecorded means the chunks are not reusable.
+    ///
+    /// The content hash above is not enough on its own to decide reuse: a file's boundaries can
+    /// come from the semantic index rather than from its own text, so it can keep every byte and
+    /// still need cutting again (#388). Defaulted rather than required because the safe direction
+    /// is obvious — a builder that forgets to set it loses reuse for that file and cannot produce
+    /// a wrong chunk.
+    /// </summary>
+    public string Chunker { get; init; } = string.Empty;
 }
 
 public sealed class ChunkMeta
@@ -38,7 +50,8 @@ public sealed class ChunkMeta
 /// <code>
 ///   "CIDX" | int version | int dim | string model | string root | string gitCommit
 ///   long indexedAtUtcTicks
-///   int fileCount   -> per file: string relPath, byte[32] hash, int chunkStart, int chunkCount
+///   int fileCount   -> per file: string relPath, byte[32] hash, int chunkStart, int chunkCount,
+///                                string chunker (v5+)
 ///   int chunkCount  -> per chunk: int fileIndex, byte kind, string symbol, string signature,
 ///                                 string ns, string lexicalText, int startLine, int endLine
 ///   float32[chunkCount * dim]  (contiguous, L2-normalized)
@@ -50,11 +63,15 @@ public sealed class CodeIndex : ISearchableIndex
     /// <summary>
     /// v2 adds the overlay fields. v3 adds exact repository/generation/tree/dirty identities.
     /// v4 persists lexical chunk text so exact identifiers work in every indexed language.
-    /// Older files remain readable for diagnostics. Moving to v4 intentionally performs one
-    /// full rebuild because older containers do not retain the source text needed to populate
-    /// the language-independent lexical field.
+    /// v5 records which chunker produced each file's chunks, without which chunks cannot be
+    /// reused from a neighbouring overlay: the content hash alone does not settle the boundaries
+    /// for a file the semantic index has an opinion about.
+    /// Older files remain readable for diagnostics. Moving to v4 intentionally performed one full
+    /// rebuild because older containers do not retain the source text needed to populate the
+    /// language-independent lexical field; v5 performs one more, because a chunker nothing
+    /// recorded cannot be recovered from the container either.
     /// </summary>
-    public const int CurrentVersion = 4;
+    public const int CurrentVersion = 5;
 
     private const string Magic = "CIDX";
 
@@ -204,12 +221,18 @@ public sealed class CodeIndex : ISearchableIndex
                 throw Corrupt(path, $"a {hash.Length}-byte file hash");
             }
 
+            var fileChunkStart = reader.ReadInt32();
+            var fileChunkCount = reader.ReadInt32();
             files.Add(new IndexedFile
             {
                 RelPath = relPath,
                 Hash = hash,
-                ChunkStart = reader.ReadInt32(),
-                ChunkCount = reader.ReadInt32(),
+                ChunkStart = fileChunkStart,
+                ChunkCount = fileChunkCount,
+                // Older containers recorded no chunker, and an empty one is not reused — which
+                // is the correct answer rather than a lenient one: nothing in a v4 file says
+                // whether its boundaries came from the semantic index or from its own text.
+                Chunker = version >= 5 ? ReadBoundedString(reader, stream, path) : string.Empty,
             });
         }
 
@@ -394,6 +417,7 @@ public sealed class CodeIndex : ISearchableIndex
             writer.Write(file.Hash);
             writer.Write(file.ChunkStart);
             writer.Write(file.ChunkCount);
+            writer.Write(file.Chunker);
         }
 
         writer.Write(Chunks.Count);
