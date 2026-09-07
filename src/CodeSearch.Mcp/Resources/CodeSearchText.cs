@@ -113,11 +113,11 @@ public static class CodeSearchText
     /// <summary>The form the locations below are printed in, said once, in the open.</summary>
     public static string LocationNumbering => Catalogue.Get(nameof(LocationNumbering));
 
-    public static string NavigationHeuristicCoversNothing(string root) =>
-        Catalogue.Format(nameof(NavigationHeuristicCoversNothing), root);
+    public static string NavigationHeuristicCoversNothing(string command) =>
+        Catalogue.Format(nameof(NavigationHeuristicCoversNothing), command);
 
-    public static string NavigationHeuristicMissing(string root) =>
-        Catalogue.Format(nameof(NavigationHeuristicMissing), root);
+    public static string NavigationHeuristicMissing(string command) =>
+        Catalogue.Format(nameof(NavigationHeuristicMissing), command);
 
     /// <summary>
     /// The third value of this field: the generation is sound and this worktree is not, because
@@ -125,8 +125,8 @@ public static class CodeSearchText
     /// HEURISTIC would say answers arrive and are merely worse, and two of the four tools refuse
     /// outright in this state.
     /// </summary>
-    public static string NavigationOverlayNotBuilt(string root) =>
-        Catalogue.Format(nameof(NavigationOverlayNotBuilt), root);
+    public static string NavigationOverlayNotBuilt(string command) =>
+        Catalogue.Format(nameof(NavigationOverlayNotBuilt), command);
 
     /// <summary>
     /// What a build in flight says on the answers it changes, and what it says when it ends.

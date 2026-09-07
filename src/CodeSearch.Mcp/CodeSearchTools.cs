@@ -706,19 +706,22 @@ public static class CodeSearchTools
         // answers definition queries exactly as a missing one does, and reporting it as precise
         // was how a broken C# workspace stayed invisible: the file is there, the checksum agrees,
         // and every answer is a text match wearing the wrong label.
+        // The built command, not the root: the same reply's NOT BUILT branch quotes a full path
+        // through IndexCommand, and a bare `localai-launcher.exe` beside it resolves only from
+        // the launcher's own directory (#435).
         { SemanticIndexPresent: true, SemanticIndexCoversNothing: true } =>
-            CodeSearchText.NavigationHeuristicCoversNothing(status.RepositoryRoot),
+            CodeSearchText.NavigationHeuristicCoversNothing(IndexCommand(status.RepositoryRoot)),
         // Ahead of the overlay branch on purpose: an overlay over a generation that cannot
         // navigate rescues nothing, and one sync fixes both. It also keeps a legacy index — no
         // generation id, so no semantic index, and RequiresOverlay decided by root instead —
         // reading as HEURISTIC rather than as a worktree waiting for something.
         { SemanticIndexPresent: false } =>
-            CodeSearchText.NavigationHeuristicMissing(status.RepositoryRoot),
+            CodeSearchText.NavigationHeuristicMissing(IndexCommand(status.RepositoryRoot)),
         // The generation is sound and this checkout is not. SemanticNavigationGateway loads the
         // base index alone only while the head tree matches the generation's and the tree is
         // clean; otherwise it reaches for an overlay that has not been built.
         { SemanticOverlayMissing: true } =>
-            CodeSearchText.NavigationOverlayNotBuilt(status.RepositoryRoot),
+            CodeSearchText.NavigationOverlayNotBuilt(IndexCommand(status.RepositoryRoot)),
         _ => CodeSearchText.NavigationPrecise,
     };
 

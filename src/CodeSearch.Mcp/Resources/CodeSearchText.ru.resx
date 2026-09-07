@@ -88,13 +88,13 @@
     <value>{0} (размерность {1})</value>
   </data>
   <data name="NavigationHeuristicCoversNothing" xml:space="preserve">
-    <value>HEURISTIC - в этом поколении semantic.sidx есть, но не покрывает ни одного документа, поэтому go_to_definition и find_references отвечают ограниченным поиском по тексту, а find_implementations и find_relationships ничего не находят ни по одному символу. Семантическая индексация отработала и ничего не дала; причину называет вывод синхронизации. Устранить причину и синхронизировать заново: localai-launcher.exe run localai sync --root {0}</value>
+    <value>HEURISTIC - в этом поколении semantic.sidx есть, но не покрывает ни одного документа, поэтому go_to_definition и find_references отвечают ограниченным поиском по тексту, а find_implementations и find_relationships ничего не находят ни по одному символу. Семантическая индексация отработала и ничего не дала; причину называет вывод синхронизации. Устранить причину и синхронизировать заново: {0}</value>
   </data>
   <data name="NavigationHeuristicMissing" xml:space="preserve">
-    <value>HEURISTIC - в этом поколении нет semantic.sidx, поэтому go_to_definition и find_references отвечают ограниченным поиском по тексту, а find_implementations и find_relationships отказывают. Синхронизировать заново, чтобы он появился: localai-launcher.exe run localai sync --root {0}</value>
+    <value>HEURISTIC - в этом поколении нет semantic.sidx, поэтому go_to_definition и find_references отвечают ограниченным поиском по тексту, а find_implementations и find_relationships отказывают. Синхронизировать заново, чтобы он появился: {0}</value>
   </data>
   <data name="NavigationOverlayNotBuilt" xml:space="preserve">
-    <value>NOT READY - в этом рабочем дереве есть незакоммиченные правки или коммит, по которому опубликованное поколение не собиралось, а его семантический overlay не собран, поэтому go_to_definition и find_references отвечают ограниченным поиском по тексту, а find_implementations и find_relationships отказывают. Собрать: localai-launcher.exe run localai sync --root {0}</value>
+    <value>NOT READY - в этом рабочем дереве есть незакоммиченные правки или коммит, по которому опубликованное поколение не собиралось, а его семантический overlay не собран, поэтому go_to_definition и find_references отвечают ограниченным поиском по тексту, а find_implementations и find_relationships отказывают. Собрать: {0}</value>
     <comment>The third value of a field a reader scans. HEURISTIC would say answers arrive and are merely worse, which is false for find_implementations and find_relationships - they refuse - and precise is the promise #421 is about. NOT READY is spelled the way the semantic_navigation_not_ready token is, because that is what the next navigation call prints for this same state. The consequence clause is NavigationHeuristicMissing's to the word: the two states differ in what is absent, not in what happens. The trigger is described in commits rather than trees on purpose: two commits sharing a tree need no overlay, and then this line does not print.</comment>
   </data>
   <data name="NavigationPrecise" xml:space="preserve">
