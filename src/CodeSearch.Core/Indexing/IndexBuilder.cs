@@ -173,6 +173,12 @@ public sealed class IndexBuilder(
         var freshChunks = ChunkFiles(root, changed, ct);
         var totalToEmbed = freshChunks.Values.Sum(c => c.Count);
         _log(IndexText.BuildChunked(changed.Count, totalToEmbed));
+
+        var plan = Plan(files, previousByPath, existing, freshChunks, hashes);
+        RefuseAVectorBlockThatCannotBeAllocated(
+            plan.TotalChunks,
+            existing?.Dim ?? expectedEmbeddingDimension ?? 0);
+
         _progress(new IndexBuildProgress(0, totalToEmbed, 0, null));
 
         var checkpoint = embeddingCheckpointPath is null
@@ -184,7 +190,7 @@ public sealed class IndexBuilder(
                 _log);
         var vectorsByPath = await EmbedAsync(freshChunks, totalToEmbed, checkpoint, ct);
 
-        var assembled = Assemble(files, previousByPath, existing, freshChunks, vectorsByPath, hashes, out var dim);
+        var assembled = Assemble(plan, existing, vectorsByPath, out var dim);
 
         if (dim == 0)
         {
@@ -280,6 +286,12 @@ public sealed class IndexBuilder(
 
         var freshChunks = ChunkFiles(workingRoot, toChunk, ct);
         var totalToEmbed = freshChunks.Values.Sum(c => c.Count);
+
+        var plan = Plan(changed, overlayByPath, existingOverlay, freshChunks, hashes);
+        RefuseAVectorBlockThatCannotBeAllocated(
+            plan.TotalChunks,
+            expectedEmbeddingDimension ?? baseIndex.Dim);
+
         _progress(new IndexBuildProgress(0, totalToEmbed, 0, null));
         var checkpoint = embeddingCheckpointPath is null
             ? null
@@ -290,8 +302,7 @@ public sealed class IndexBuilder(
                 _log);
         var vectorsByPath = await EmbedAsync(freshChunks, totalToEmbed, checkpoint, ct);
 
-        var assembled = Assemble(
-            changed, overlayByPath, existingOverlay, freshChunks, vectorsByPath, hashes, out var dim);
+        var assembled = Assemble(plan, existingOverlay, vectorsByPath, out var dim);
 
         if (dim == 0)
         {
@@ -952,30 +963,26 @@ public sealed class IndexBuilder(
         return "codesearch:index:" + Convert.ToHexString(hash.GetHashAndReset());
     }
 
-    private static (List<IndexedFile> Files, List<ChunkMeta> Chunks, float[] Vectors) Assemble(
+    /// <summary>
+    /// What the finished index will hold: every file that contributes a chunk, and whether those
+    /// chunks are the freshly cut ones or the previous index's kept verbatim.
+    ///
+    /// Counted once and used at two moments that can be hours apart — the refusal below, before
+    /// any embedding starts, and the single vector block allocated after it all. Counting twice
+    /// would be counting by two rules free to drift, and a ceiling checked against a different
+    /// total from the one allocated is worse than no ceiling at all.
+    /// </summary>
+    private sealed record ChunkPlan(
+        List<(string RelPath, byte[] Hash, List<Chunk>? Fresh, IndexedFile? Prior)> Contributions,
+        int TotalChunks);
+
+    private static ChunkPlan Plan(
         List<string> files,
         Dictionary<string, IndexedFile> previous,
         CodeIndex? existing,
         Dictionary<string, List<Chunk>> freshChunks,
-        Dictionary<string, float[][]> freshVectors,
-        Dictionary<string, byte[]> hashes,
-        out int dim)
+        Dictionary<string, byte[]> hashes)
     {
-        dim = existing?.Dim ?? 0;
-        if (dim == 0)
-        {
-            foreach (var vectors in freshVectors.Values)
-            {
-                if (vectors.Length > 0 && vectors[0] is { Length: > 0 })
-                {
-                    dim = vectors[0].Length;
-                    break;
-                }
-            }
-        }
-
-        // Two passes: total up the chunks first so the vector block is allocated exactly once.
-        // Growing a List<float> to half a gigabyte instead would spike to ~1.5GB mid-resize.
         var contributions = new List<(string RelPath, byte[] Hash, List<Chunk>? Fresh, IndexedFile? Prior)>(files.Count);
         var totalChunks = 0;
 
@@ -998,11 +1005,64 @@ public sealed class IndexBuilder(
             }
         }
 
-        var outFiles = new List<IndexedFile>(contributions.Count);
-        var outChunks = new List<ChunkMeta>(totalChunks);
-        var outVectors = new float[(long)totalChunks * dim];
+        return new ChunkPlan(contributions, totalChunks);
+    }
 
-        foreach (var (relPath, hash, fresh, prior) in contributions)
+    /// <summary>
+    /// The one ceiling that no machine can be bought out of: every vector of a finished index
+    /// lives in a single <c>float[]</c>, and an array holds at most <c>Array.MaxLength</c>
+    /// elements — about 524 000 chunks at 4096 dimensions. Past that the allocation in
+    /// <see cref="Assemble"/> throws, and it is the last step of a build that may have run for
+    /// hours, so the whole of it is lost to a number that was knowable before it started (#397).
+    ///
+    /// Which is why this stands before the embedding rather than beside the allocation. It is an
+    /// upper bound and nothing more: a build well under it can still exhaust the machine it runs
+    /// on, and refusing on that would be a guess about the machine rather than a fact about the
+    /// index.
+    ///
+    /// A width of zero means nobody has said how wide a vector is — no previous index and no
+    /// expected dimension — and the ceiling is a quotient, so there is nothing to check. That is
+    /// only reachable from <c>codesearch index</c>: <c>localai sync</c> always carries the
+    /// generation's dimension.
+    /// </summary>
+    private static void RefuseAVectorBlockThatCannotBeAllocated(int totalChunks, int dimension)
+    {
+        if (dimension <= 0 || (long)totalChunks * dimension <= Array.MaxLength)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            IndexText.BuildTooManyChunks(totalChunks, Array.MaxLength / dimension, dimension));
+    }
+
+    private static (List<IndexedFile> Files, List<ChunkMeta> Chunks, float[] Vectors) Assemble(
+        ChunkPlan plan,
+        CodeIndex? existing,
+        Dictionary<string, float[][]> freshVectors,
+        out int dim)
+    {
+        dim = existing?.Dim ?? 0;
+        if (dim == 0)
+        {
+            foreach (var vectors in freshVectors.Values)
+            {
+                if (vectors.Length > 0 && vectors[0] is { Length: > 0 })
+                {
+                    dim = vectors[0].Length;
+                    break;
+                }
+            }
+        }
+
+        // The plan counted the chunks before the embedding began, so the vector block is allocated
+        // exactly once. Growing a List<float> to half a gigabyte instead would spike to ~1.5GB
+        // mid-resize.
+        var outFiles = new List<IndexedFile>(plan.Contributions.Count);
+        var outChunks = new List<ChunkMeta>(plan.TotalChunks);
+        var outVectors = new float[(long)plan.TotalChunks * dim];
+
+        foreach (var (relPath, hash, fresh, prior) in plan.Contributions)
         {
             var start = outChunks.Count;
             var fileIndex = outFiles.Count;

@@ -96,6 +96,18 @@ public static class IndexText
     public static string BuildEmbeddingStoppedAtStart(int total) =>
         Catalogue.Format(nameof(BuildEmbeddingStoppedAtStart), total);
 
+    /// <param name="chunks">
+    /// What the finished index would hold — fresh plus reused — rather than what is left to
+    /// embed. Beside a ceiling, the smaller of the two reads as a limit that was not reached.
+    /// </param>
+    /// <param name="ceiling">
+    /// How many chunks of this width one vector block can hold, computed from
+    /// <c>Array.MaxLength</c> rather than written down, so the sentence cannot drift from the
+    /// limit it describes.
+    /// </param>
+    public static string BuildTooManyChunks(int chunks, int ceiling, int dimensions) =>
+        Catalogue.Format(nameof(BuildTooManyChunks), chunks, ceiling, dimensions);
+
     /// <summary>
     /// What the semantic phase says while it works, which was nothing at all: 36.72 seconds from
     /// the start of a sync to its first line, all of it inside <c>dotnet restore</c> and
