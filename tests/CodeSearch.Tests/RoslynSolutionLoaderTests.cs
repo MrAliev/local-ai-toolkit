@@ -24,11 +24,11 @@ public sealed class RoslynSolutionLoaderTests : IAsyncLifetime
               </ItemGroup>
             </Project>
             """,
-            TestContext.Current.CancellationToken);
+            cancellationToken: TestContext.Current.CancellationToken);
         await File.WriteAllTextAsync(
             Path.Combine(root, "Value.cs"),
             "public sealed class Value { }",
-            TestContext.Current.CancellationToken);
+            cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.False(File.Exists(Path.Combine(root, "obj", "project.assets.json")));
 
@@ -57,17 +57,17 @@ public sealed class RoslynSolutionLoaderTests : IAsyncLifetime
               </ItemGroup>
             </Project>
             """,
-            TestContext.Current.CancellationToken);
+            cancellationToken: TestContext.Current.CancellationToken);
         await File.WriteAllTextAsync(
             Path.Combine(root, "Value.cs"),
             "public sealed class Value { }",
-            TestContext.Current.CancellationToken);
+            cancellationToken: TestContext.Current.CancellationToken);
 
         var diagnostics = new List<string>();
         await using var loaded = await RoslynSolutionLoader.LoadAsync(
             root,
             diagnostics.Add,
-            TestContext.Current.CancellationToken);
+            cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.NotNull(loaded);
         Assert.DoesNotContain(
@@ -133,13 +133,13 @@ public sealed class RoslynSolutionLoaderTests : IAsyncLifetime
             Global
             EndGlobal
             """,
-            TestContext.Current.CancellationToken);
+            cancellationToken: TestContext.Current.CancellationToken);
 
         var diagnostics = new List<string>();
         await using var loaded = await RoslynSolutionLoader.LoadAsync(
             root,
             diagnostics.Add,
-            TestContext.Current.CancellationToken);
+            cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.NotNull(loaded);
         Assert.Contains(
@@ -162,11 +162,11 @@ public sealed class RoslynSolutionLoaderTests : IAsyncLifetime
               </PropertyGroup>
             </Project>
             """,
-            TestContext.Current.CancellationToken);
+            cancellationToken: TestContext.Current.CancellationToken);
         await File.WriteAllTextAsync(
             Path.Combine(directory, "Value.cs"),
             $"namespace {name}; public sealed class Value {{ }}",
-            TestContext.Current.CancellationToken);
+            cancellationToken: TestContext.Current.CancellationToken);
     }
 
     public ValueTask InitializeAsync() => ValueTask.CompletedTask;

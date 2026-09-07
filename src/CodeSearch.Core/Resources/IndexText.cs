@@ -111,6 +111,13 @@ public static class IndexText
     public static string RoslynRestored(string seconds) =>
         Catalogue.Format(nameof(RoslynRestored), seconds);
 
+    /// <param name="seconds">
+    /// How long this step has been running, F1 and invariant. The only figure the line carries:
+    /// a step with no per-item callback cannot honestly offer a fraction or an estimate.
+    /// </param>
+    public static string StepStillRunning(string seconds) =>
+        Catalogue.Format(nameof(StepStillRunning), seconds);
+
     public static string RoslynAnalysing(int analysed, int projects) =>
         Catalogue.Format(nameof(RoslynAnalysing), analysed, projects);
 

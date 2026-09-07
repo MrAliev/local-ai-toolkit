@@ -223,6 +223,10 @@
     <value>Opened {0} projects in {1}s.</value>
     <comment>The count is honest only after the call - MSBuildWorkspace.OpenSolutionAsync is one opaque operation with no per-project callback, so this is the first moment the number exists. Both holes are invariant.</comment>
   </data>
+  <data name="StepStillRunning" xml:space="preserve">
+    <value>Still running, {0}s so far.</value>
+    <comment>A time and nothing else: no fraction, no estimate, no claim about what remains, because a step with no per-item callback can compute none of those honestly. Its cadence is IndexBuilder.TargetBatchDuration, referenced rather than repeated, so nothing anywhere in a sync goes quiet for longer than one embedding batch. A step that finishes inside the interval prints this line no times at all, which is the point: its presence is always information rather than noise, and that is the property the tests pin. Seconds arrive F1 and invariant.</comment>
+  </data>
   <data name="RoslynAnalysing" xml:space="preserve">
     <value>Analysed {0}/{1} projects.</value>
     <comment>The one place in the semantic phase where a fraction is a fact rather than a guess: the project count is known before the first iteration, and it is the same figure RoslynOpened printed a moment earlier, so 7/26 closes against a number the reader has already seen. Printed after the project it counts, not before it - 1/26 before the work is a promise. Throttled by elapsed time rather than by every Nth project, because a per-N rule is wrong at both ends; a fast analysis therefore prints this line no times at all, which is why RoslynAnalysed prints unconditionally. Both holes are counts and stay invariant. Analysed is разобрано in Russian - the register of Открыто, Просмотрено and Сохранено beside it - and RoslynAnalysed uses the same verb, because it is the same action.</comment>

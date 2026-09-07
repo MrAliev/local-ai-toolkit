@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.MSBuild;
 using System.Diagnostics;
 using System.Globalization;
+using CodeSearch.Core.Indexing;
 using CodeSearch.Core.Resources;
 using LocalAi.Contracts;
 
@@ -72,6 +73,71 @@ public static class RoslynSolutionLoader
     private static readonly TimeSpan RestoreTimeout = TimeSpan.FromMinutes(10);
 
     /// <summary>
+    /// Runs a step that has no counter of its own, saying it is still there while it runs.
+    ///
+    /// <c>dotnet restore</c> and <c>OpenSolutionAsync</c> are single calls with no per-project
+    /// callback — about 21 s and 10 s on the run that produced #387 — so each announced itself,
+    /// said what it cost, and said nothing in between. A machine that is genuinely stuck looked
+    /// exactly like one twenty seconds into a restore.
+    ///
+    /// The line carries a time and nothing else. A fraction or an estimate would have to be
+    /// invented here, and the cadence is <see cref="IndexBuilder.TargetBatchDuration"/>, so
+    /// nothing anywhere in a sync stays silent for longer than one embedding batch.
+    ///
+    /// A step that finishes inside the interval prints nothing at all, which is the common case
+    /// on a warm machine and the whole point: the line's presence is information rather than
+    /// noise.
+    /// </summary>
+    /// <param name="wait">
+    /// The pause between lines, injectable so a test can prove the reporting without spending
+    /// fifteen real seconds, and prove the silence without pretending to be a fast machine.
+    /// </param>
+    /// <summary>
+    /// A solution or a bare project, whichever the repository has. One method so the step handed
+    /// to the heartbeat is a single task rather than a branch, and both shapes are reported the
+    /// same way.
+    /// </summary>
+    private static async Task<Solution> OpenAsync(
+        MSBuildWorkspace workspace,
+        string selected,
+        CancellationToken cancellationToken) =>
+        selected.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase)
+            ? (await workspace.OpenProjectAsync(
+                selected,
+                cancellationToken: cancellationToken).ConfigureAwait(false)).Solution
+            : await workspace.OpenSolutionAsync(
+                selected,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+
+    internal static async Task<T> WhileTheStepRunsAsync<T>(
+        Task<T> step,
+        Action<string>? diagnostic,
+        TimeProvider time,
+        Func<TimeSpan, CancellationToken, Task> wait,
+        CancellationToken cancellationToken)
+    {
+        var started = time.GetTimestamp();
+        while (true)
+        {
+            // The delay is abandoned rather than awaited once the step is done, so a step that
+            // ends just after a tick does not wait out the rest of the interval.
+            var tick = wait(IndexBuilder.TargetBatchDuration, cancellationToken);
+            await Task.WhenAny(step, tick).ConfigureAwait(false);
+            // The step, not whichever task WhenAny happened to name: when both are complete it
+            // returns either, and taking the tick there would announce a step that has finished.
+            if (step.IsCompleted)
+            {
+                return await step.ConfigureAwait(false);
+            }
+
+            diagnostic?.Invoke(IndexText.StepStillRunning(
+                time.GetElapsedTime(started).TotalSeconds.ToString(
+                    "F1",
+                    CultureInfo.InvariantCulture)));
+        }
+    }
+
+    /// <summary>
     /// One decimal, invariant, as every other duration this product prints — these lines are
     /// quoted verbatim and parsed, so no comma or group separator may appear in any language.
     /// </summary>
@@ -88,11 +154,20 @@ public static class RoslynSolutionLoader
             ["NuGetAudit"] = "false",
         };
 
+    /// <param name="time">Only for the elapsed figure the heartbeat line carries.</param>
+    /// <param name="wait">
+    /// The pause between heartbeat lines. Both are injectable for the tests and defaulted for
+    /// everybody else, so no caller has to know they exist.
+    /// </param>
     public static async Task<LoadedRoslynSolution?> LoadAsync(
         string repositoryRoot,
         Action<string>? diagnostic = null,
+        TimeProvider? time = null,
+        Func<TimeSpan, CancellationToken, Task>? wait = null,
         CancellationToken cancellationToken = default)
     {
+        time ??= TimeProvider.System;
+        wait ??= Task.Delay;
         ArgumentException.ThrowIfNullOrWhiteSpace(repositoryRoot);
         var root = Path.GetFullPath(repositoryRoot);
         var candidates = Directory
@@ -123,9 +198,11 @@ public static class RoslynSolutionLoader
         // afterwards explains a wait the reader has already sat through (#387).
         diagnostic?.Invoke(IndexText.RoslynLoading(selected, (int)RestoreTimeout.TotalMinutes));
         var restoring = Stopwatch.StartNew();
-        var restored = await RestoreProjectDependenciesAsync(
-            selected,
+        var restored = await WhileTheStepRunsAsync(
+            RestoreProjectDependenciesAsync(selected, diagnostic, cancellationToken),
             diagnostic,
+            time,
+            wait,
             cancellationToken).ConfigureAwait(false);
         if (restored)
         {
@@ -173,13 +250,12 @@ public static class RoslynSolutionLoader
             try
             {
                 var opening = Stopwatch.StartNew();
-                var solution = selected.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase)
-                    ? (await workspace.OpenProjectAsync(
-                        selected,
-                        cancellationToken: cancellationToken)).Solution
-                    : await workspace.OpenSolutionAsync(
-                        selected,
-                        cancellationToken: cancellationToken);
+                var solution = await WhileTheStepRunsAsync(
+                    OpenAsync(workspace, selected, cancellationToken),
+                    diagnostic,
+                    time,
+                    wait,
+                    cancellationToken).ConfigureAwait(false);
                 // After the call, because that is the first moment the count exists: opening a
                 // solution is one opaque operation with no per-project callback to count from.
                 diagnostic?.Invoke(
