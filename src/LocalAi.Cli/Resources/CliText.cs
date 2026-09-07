@@ -569,4 +569,12 @@ public static class CliText
 
     public static string NativeOperationUnknown(string operation, string operations) =>
         Catalogue.Format(nameof(NativeOperationUnknown), operation, operations);
+
+    /// <summary>
+    /// Said to the one person who ever reads this command's own output: somebody who found the
+    /// registered line in <c>settings.json</c> and ran it to see what it does. The refusal the
+    /// gate answers a client with is not in this catalogue at all — see
+    /// <c>TextSearchRefusal</c> for why it is English on every machine.
+    /// </summary>
+    public static string AgentGateNeedsPayload => Catalogue.Get(nameof(AgentGateNeedsPayload));
 }

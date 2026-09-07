@@ -35,6 +35,15 @@ internal static class CliUsage
     // for a program, and the block this line sits in is the list for a person.
     public const string Capabilities = "localai capabilities --json";
 
+    // No options and no operands: the payload arrives on standard input and the answer goes to
+    // standard output, both in the client's own schema. Two words rather than one because `hook`
+    // already belongs to Git above, and because the next thing an agent's configuration needs
+    // will want to live beside this one rather than take another top-level word.
+    //
+    // Deliberately absent from MachineOutput.Commands: what this prints is the client's
+    // `hookSpecificOutput`, not a MachineEnvelope, so `--json` must keep refusing it.
+    public const string AgentGate = "localai agent gate";
+
     // Every command the binary actually answers to belongs here. The hook command was missing
     // from this list while every installed Git hook invoked it, so anyone debugging a hook was
     // told by the tool itself that the command it had just run did not exist.
@@ -48,5 +57,5 @@ internal static class CliUsage
         "localai sync [--root dir] [--base-only] [--require-semantics] [--max-inline-files n] | " + Hook + " | " +
         "localai hooks install [--root dir] | " + Prune + " | " + Doctor + " | " +
         Telemetry + " | " + Ask + " | " + Triage + " | " + ReadImage + " | " + Translate +
-        " | " + Capabilities;
+        " | " + Capabilities + " | " + AgentGate;
 }
