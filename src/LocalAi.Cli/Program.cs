@@ -3,6 +3,7 @@ using LocalAi.Cli;
 using LocalAi.Cli.Resources;
 using LocalAi.Contracts;
 using LocalAi.Contracts.Localization;
+using LocalAi.Installer.Core;
 using LocalLm.Core;
 using System.Globalization;
 using System.Text.Json;
@@ -29,6 +30,11 @@ else
 {
     OutputCulture.Apply();
 }
+
+// The installer's assembly keeps its own settable static, and only the installer window ever set
+// it — so anything this process reaches in there answered in English on every machine and looked
+// like it was working. Told once, here, from the language just resolved above (#400).
+InstallerCulture.FollowProcessCulture();
 
 // Every command runs under one guard. A broker or Git failure used to leave the runtime's own
 // stack trace on the console and exit with 0xE0434352, which tells an operator nothing and tells
