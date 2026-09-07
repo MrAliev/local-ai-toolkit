@@ -133,9 +133,19 @@ public static class OutputCulture
     /// static which only the installer window ever sets, so a CLI asking it would be told
     /// English on every machine and would look like it was working.
     /// </summary>
-    public static string Pick(string english, string russian) =>
+    public static string Pick(string english, string russian) => IsRussian ? russian : english;
+
+    /// <summary>
+    /// Whether this process resolved to Russian — the one decision behind every choice of two
+    /// texts, exposed so nothing has to restate it.
+    ///
+    /// The installer's own static reads this rather than the culture directly. Two copies of
+    /// "is this Russian" is how one of them comes to be wrong, and the copy that was wrong here
+    /// was the installer's: it never asked at all (#400).
+    /// </summary>
+    public static bool IsRussian =>
         CultureInfo.CurrentUICulture.TwoLetterISOLanguageName
-            .Equals("ru", StringComparison.OrdinalIgnoreCase) ? russian : english;
+            .Equals("ru", StringComparison.OrdinalIgnoreCase);
 
     private static string? Stored()
     {
