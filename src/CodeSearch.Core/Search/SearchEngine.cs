@@ -2,6 +2,7 @@ using System.Numerics.Tensors;
 using System.Text;
 using CodeSearch.Core.Chunking;
 using CodeSearch.Core.Indexing;
+using CodeSearch.Core.Resources;
 
 namespace CodeSearch.Core.Search;
 
@@ -437,9 +438,12 @@ public static class SearchEngine
         return hits;
     }
 
-    internal const string SnapshotChangedSnippet =
-        "(snapshot_changed - the file on disk no longer matches this hit's snapshot; " +
-        "run sync and search again)";
+    /// <summary>
+    /// Through the catalogue rather than as a literal here: this reaches a reader as part of a
+    /// <c>search_code</c> report, and that report follows the reader's language. As a constant it
+    /// was an English sentence in the middle of a Russian answer.
+    /// </summary>
+    internal static string SnapshotChangedSnippet => IndexText.SnapshotChangedSnippet;
 
     private sealed record CachedSource(string[] Lines, byte[]? CanonicalHash);
 
@@ -500,7 +504,7 @@ public static class SearchEngine
         var sourceLines = source.Lines;
         if (sourceLines.Length == 0 || chunk.StartLine > sourceLines.Length)
         {
-            return "(file changed since indexing - snippet unavailable)";
+            return IndexText.StaleRangeSnippet;
         }
 
         var start = Math.Max(0, chunk.StartLine - 1);

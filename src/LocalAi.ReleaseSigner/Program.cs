@@ -275,8 +275,14 @@ internal static class Program
         var stagingRoot = args.Optional("staging")
             ?? Path.Combine(Path.GetTempPath(), $"localai-verify-{Guid.NewGuid():N}");
 
+        // Owned here, not by the verifier it is handed to: that one takes it as a parameter and
+        // may be given a shared instance, so disposing somebody else's key would be the worse
+        // default. It wraps an ECDsa, and a crypto handle left to a finaliser is a handle held
+        // for as long as the process runs.
+        using var manifestVerifier =
+            new ReleaseManifestVerifier(LoadPublicKeyBytes(args.Optional("public-key")));
         var verifier = new ReleasePackageVerifier(
-            new ReleaseManifestVerifier(LoadPublicKeyBytes(args.Optional("public-key"))),
+            manifestVerifier,
             new LocalFileReleaseClient(packagePath),
             new WindowsAuthenticodeVerifier(),
             // Only consulted when the manifest sets RequiresAuthenticode.

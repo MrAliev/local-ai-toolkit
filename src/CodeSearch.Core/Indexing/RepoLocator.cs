@@ -164,7 +164,17 @@ public static class RepoLocator
                 return null;
             }
 
-            Task.WaitAll([copy, stderr], GitTimeoutMs);
+            // The result is checked, as `Run` checks it: `WaitForExit(int)` returns once the
+            // process ends without awaiting the redirected readers, so a drain that has not
+            // finished leaves this reading a MemoryStream another thread is still writing —
+            // a truncated answer returned as a success. What hangs off that is the whole
+            // indexable file list and the dirty-path list, where a short read silently drops
+            // files rather than failing.
+            if (!Task.WaitAll([copy, stderr], GitTimeoutMs))
+            {
+                return null;
+            }
+
             return process.ExitCode == 0 ? output.ToArray() : null;
         }
         catch (Exception)

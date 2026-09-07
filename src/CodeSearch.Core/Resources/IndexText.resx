@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!--
     What CodeSearch.Core refuses with, in the language the reader's machine is set to. The rule is CodeSearchText's, unchanged: anything left of the first colon is a field name or a code and stays English, and so does any status token, identifier, path or command to the right of one. Sentences and clauses are translated. Do not write a second rule.
@@ -262,5 +262,13 @@
   <data name="GenerationUnreadableRemedy" xml:space="preserve">
     <value>Rebuild it: localai sync --root {0}</value>
     <comment>Rebuild it, not Build one: the generation is present and broken rather than absent. Same words as SemanticIndexUnreadableRemedy and SemanticOverlayUnreadableRemedy, in a key of its own so that rewording one cannot move the others.</comment>
+  </data>
+  <data name="SnapshotChangedSnippet" xml:space="preserve">
+    <value>(snapshot_changed - the file on disk no longer matches this hit's snapshot; run sync and search again)</value>
+    <comment>Replaces a hit's snippet when the file's content hash no longer matches the one recorded at indexing. The token and the ASCII separator are a contract, as StatusStale's comment puts it; only the clause after it moves. Reached from search_code, whose report otherwise follows the reader, so an English sentence here was the one English paragraph in a Russian answer.</comment>
+  </data>
+  <data name="StaleRangeSnippet" xml:space="preserve">
+    <value>(file changed since indexing - snippet unavailable)</value>
+    <comment>The other stale-snippet state, and a different one: the recorded hash matched or was never taken, and the chunk's start line is past the end of the file as it is now. Named for the range rather than for the file so the two keys are told apart by their names, the way ChunkSourceStaleRange already names this state on the get_code_chunk path. No token, so the aside takes an em dash in Russian rather than the ASCII separator.</comment>
   </data>
 </root>
