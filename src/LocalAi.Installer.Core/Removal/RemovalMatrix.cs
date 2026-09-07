@@ -202,10 +202,13 @@ public static class RemovalMatrix
                 "Anything in the runtime root this installer does not recognise, listed by path.",
                 "Всё в корне рантайма, чего этот установщик не распознаёт, " +
                 "перечислено по путям."),
+            // The absolute "untouched" is earned rather than hopeful: removal is a text splice
+            // and `Removing_the_registration_undoes_adding_it` pins the result byte for byte.
             RemovalItem.ClaudeIntegration => InstallerCulture.Pick(
-                "Server registrations and the managed block; your own text is untouched.",
-                "Регистрации серверов и управляемый блок; ваш собственный " +
-                "текст не трогается."),
+                "Server registrations, the managed block and the hook that refuses text " +
+                "searches; your own text is untouched.",
+                "Регистрации серверов, управляемый блок и хук, который отклоняет текстовый " +
+                "поиск; ваш собственный текст не трогается."),
             RemovalItem.CodexIntegration => InstallerCulture.Pick(
                 "Server registrations, their tool sub-tables, and the managed block.",
                 "Регистрации серверов, их подтаблицы инструментов и " +

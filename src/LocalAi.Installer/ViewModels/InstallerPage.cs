@@ -217,6 +217,14 @@ public sealed record AgentOption(string Agent, AgentChoice Choice)
     /// bracket in Russian sits where the sentence puts it, not where the XAML did.
     /// </summary>
     public string Heading => $"{DisplayName} ({DetectionText})";
+
+    /// <summary>
+    /// Whether this row carries the text-search gate underneath its combo. Claude Code alone: the
+    /// gate is a <c>PreToolUse</c> hook in that client's own settings, and Codex has no such
+    /// event to hang it on (#423).
+    /// </summary>
+    public bool HasTextSearchGate =>
+        string.Equals(Agent, "claude", StringComparison.Ordinal);
 }
 
 /// <summary>

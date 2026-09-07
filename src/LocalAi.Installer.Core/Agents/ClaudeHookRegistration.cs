@@ -43,6 +43,29 @@ public static class ClaudeHookRegistration
         return Groups(Parse(settings)) is { } groups && groups.Any(group => Names(group, command));
     }
 
+    /// <summary>
+    /// Whether an entry this product wrote is present, wherever its launcher was at the time.
+    ///
+    /// This is the question the installer asks, and it is not the overload above: the launcher
+    /// path is part of the command, so an entry left by an install at another directory answers
+    /// no there while <see cref="Remove"/> — which recognises ours by <see cref="Signature"/> —
+    /// takes it out anyway. The two predicates disagreeing is a review line that says nothing
+    /// will be written to a file the run then edits.
+    /// </summary>
+    public static bool IsRegistered(string settings) =>
+        Groups(Parse(settings)) is { } groups && groups.Any(Ours);
+
+    /// <summary>
+    /// How many entries on the same event belong to somebody else — the ones an uninstall leaves
+    /// exactly where they are.
+    ///
+    /// Worth counting because of what their presence does to the person afterwards: a tool call
+    /// still refused once LocalAi is gone reads as an uninstall that failed, and they go looking
+    /// for what it left behind. There is such an entry on the author's own machine.
+    /// </summary>
+    public static int OtherEntries(string settings) =>
+        Groups(Parse(settings)) is { } groups ? groups.Count(group => !Ours(group)) : 0;
+
     public static string Add(string settings, string command)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(command);
