@@ -14,6 +14,11 @@ namespace LocalAi.Tests.Shared;
 ///
 /// Clearing the attribute before the delete is the whole of the fix. What still cannot be
 /// removed — a file another process holds open — is still swallowed, for the original reason.
+///
+/// Not for a tree that contains a reparse point. The walk below is <see
+/// cref="SearchOption.AllDirectories"/>, which follows a junction rather than stopping at it, so
+/// a fixture that builds one — PublishScriptGuardTests does, on purpose — would have its
+/// attributes cleared through the link. That fixture keeps its own delete, which never walks.
 /// </summary>
 internal sealed class TemporaryDirectory : IDisposable
 {
