@@ -127,8 +127,31 @@ public sealed class ModelRuntime : IModelRuntime
     private readonly ModelRoutingCatalog _catalog;
     private readonly TimeProvider _timeProvider;
     private readonly LocalAi.Contracts.ModelResidencyPolicy _residencyPolicy;
-    private readonly HashSet<ModelContextKey> _disabled = [];
+    /// <summary>
+    /// When each disabled model may be tried again, rather than a set that is only ever added to.
+    ///
+    /// Almost everything that fails a preflight passes: another process holding video memory, a
+    /// model still loading, a hiccup reaching the adapter. As a set with no removal, one unlucky
+    /// moment cost the model the rest of the broker's life — every later request routed to a
+    /// weaker one, silently, until somebody restarted the process.
+    /// </summary>
+    private readonly Dictionary<ModelContextKey, DateTimeOffset> _disabledUntil = [];
+
     private readonly object _sync = new();
+
+    /// <summary>
+    /// How long a failed preflight keeps a model out of the routing.
+    ///
+    /// The same ten minutes the owner chose for a backend that has gone, and for the same stated
+    /// reason: the figure is for the slowest configuration this product supports, because on a
+    /// processor with no graphics card everything here takes substantially longer. Not shared with
+    /// that constant in code — this assembly does not depend on the one that holds it — so it is
+    /// named here with its provenance rather than passed off as a number somebody liked.
+    ///
+    /// Long enough that a busy adapter is not hammered, short enough that a passing contention
+    /// costs one interval of weaker answers instead of a working day of them.
+    /// </summary>
+    public static readonly TimeSpan DisabledFor = TimeSpan.FromMinutes(10);
 
     public ModelRuntime(
         IModelRuntimeTransport transport,
@@ -147,7 +170,21 @@ public sealed class ModelRuntime : IModelRuntime
     {
         lock (_sync)
         {
-            return _disabled.Contains(new ModelContextKey(model, contextTokens));
+            var key = new ModelContextKey(model, contextTokens);
+            if (!_disabledUntil.TryGetValue(key, out var until))
+            {
+                return false;
+            }
+
+            if (_timeProvider.GetUtcNow() < until)
+            {
+                return true;
+            }
+
+            // Forgotten on the way past, so the entry cannot outlive the reason for it and the
+            // next request pays for a fresh preflight rather than inheriting an old verdict.
+            _disabledUntil.Remove(key);
+            return false;
         }
     }
 
@@ -290,7 +327,13 @@ public sealed class ModelRuntime : IModelRuntime
                     $"Model '{model}' reported no loaded size after preflight.");
             }
 
-            var fullyResident = process.SizeVramBytes == process.SizeBytes;
+            // `>=`, as `ResidencyShortfall` and `DescribeDegradation` both have it, and for the
+            // reason both of them record: Ollama has reported more in video memory than the
+            // model's own size. This was the third site and the only one where `==` refuses the
+            // model rather than describing it oddly — under the default strict policy, the
+            // best-loaded model on the machine was turned away for having arrived more than
+            // completely, and then disabled for it.
+            var fullyResident = process.SizeVramBytes >= process.SizeBytes;
             var admitted = _residencyPolicy switch
             {
                 LocalAi.Contracts.ModelResidencyPolicy.RequireFullVram =>
@@ -331,7 +374,7 @@ public sealed class ModelRuntime : IModelRuntime
         {
             lock (_sync)
             {
-                _disabled.Add(key);
+                _disabledUntil[key] = _timeProvider.GetUtcNow() + DisabledFor;
             }
 
             try

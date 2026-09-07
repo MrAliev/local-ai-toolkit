@@ -93,7 +93,11 @@ public static class ManagedInstructionBlock
         {
             var begin = beginIndexes[0];
             var end = endIndexes[0] + EndMarker.Length;
-            updated = content[..begin] + Block + content[end..];
+            // `block`, not `Block`. The insert branch above always honoured the parameter and this
+            // one never did, so a first install wrote Codex the right text and every install after
+            // it replaced that with Claude's — telling Codex to invoke a skill it has no mechanism
+            // for, and dropping the reference material it gets inline instead.
+            updated = content[..begin] + block + content[end..];
         }
 
         return new(!string.Equals(content, updated, StringComparison.Ordinal), updated);
