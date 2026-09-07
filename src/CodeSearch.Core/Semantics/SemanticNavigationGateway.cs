@@ -143,6 +143,10 @@ public sealed class SemanticNavigationGateway
         string? root = null,
         CancellationToken cancellationToken = default)
     {
+        // Carrying a token is not honouring one: every path below the live navigation is an
+        // in-memory snapshot lookup that awaits nothing, so without this a cancelled call
+        // runs to completion and answers (#395).
+        cancellationToken.ThrowIfCancellationRequested();
         if (_liveNavigation is not null)
         {
             var workingRoot = ResolveLiveRoot(root);
@@ -237,6 +241,10 @@ public sealed class SemanticNavigationGateway
         string? root = null,
         CancellationToken cancellationToken = default)
     {
+        // Carrying a token is not honouring one: every path below the live navigation is an
+        // in-memory snapshot lookup that awaits nothing, so without this a cancelled call
+        // runs to completion and answers (#395).
+        cancellationToken.ThrowIfCancellationRequested();
         if (_liveNavigation is not null)
         {
             var workingRoot = ResolveLiveRoot(root);
@@ -302,6 +310,10 @@ public sealed class SemanticNavigationGateway
         string? root = null,
         CancellationToken cancellationToken = default)
     {
+        // Carrying a token is not honouring one: every path below the live navigation is an
+        // in-memory snapshot lookup that awaits nothing, so without this a cancelled call
+        // runs to completion and answers (#395).
+        cancellationToken.ThrowIfCancellationRequested();
         if (_liveNavigation is not null)
         {
             var live = await _liveNavigation.FindImplementationsAsync(
