@@ -511,18 +511,33 @@ public static class CodeSearchSyncCommand
         TextWriter error)
     {
         var drifted = false;
+        // Separately, because the two overlays are keyed by different hashes. A saved `.md`
+        // renames the corpus overlay out from under this build and leaves the semantic one
+        // describing this worktree exactly — and discarding it anyway costs the solution load
+        // #385 exists to avoid, on the very overlay a pristine tree shares (#385, found in
+        // review: the flag is read in two places and only one was moved).
+        var semanticDrifted = false;
         try
         {
             var live = RuntimeIndexLayout.Inspect(captured.WorkingRoot.Value, runtimeRoot);
-            drifted =
+            var moved =
                 !string.Equals(live.HeadCommit, captured.HeadCommit, StringComparison.Ordinal) ||
-                !string.Equals(live.HeadTree, captured.HeadTree, StringComparison.Ordinal) ||
+                !string.Equals(live.HeadTree, captured.HeadTree, StringComparison.Ordinal);
+            drifted = moved ||
                 !string.Equals(live.DirtyHash, captured.DirtyHash, StringComparison.Ordinal);
+            semanticDrifted = moved ||
+                !string.Equals(
+                    live.SemanticDirtyHash,
+                    captured.SemanticDirtyHash,
+                    StringComparison.Ordinal);
         }
         catch (Exception exception) when (
             exception is InvalidOperationException or IOException or UnauthorizedAccessException)
         {
+            // A worktree nobody can inspect names no state at all, so both artifacts are
+            // unnamed-state artifacts.
             drifted = true;
+            semanticDrifted = true;
         }
 
         if (!drifted)
@@ -530,12 +545,14 @@ public static class CodeSearchSyncCommand
             return false;
         }
 
-        foreach (var artifact in new[]
-                 {
-                     overlayPath,
-                     semanticOverlayPath,
-                     overlayPath + ".embedding-checkpoint",
-                 })
+        foreach (var artifact in semanticDrifted
+                     ? new[]
+                     {
+                         overlayPath,
+                         semanticOverlayPath,
+                         overlayPath + ".embedding-checkpoint",
+                     }
+                     : [overlayPath, overlayPath + ".embedding-checkpoint"])
         {
             if (File.Exists(artifact))
             {
@@ -1135,14 +1152,29 @@ public static class CodeSearchSyncCommand
             sourceRoot,
             roslyn,
             cancellationToken: cancellationToken);
+        // Built once and used by both branches, rather than spelled out in each. What this index
+        // was built for is the state of the files the semantic layer reads, which is what
+        // everything downstream compares it against (#385) — and the two branches disagreeing
+        // about that is not hypothetical: the empty one was left on the corpus hash when the other
+        // moved, so every repository with no loadable C# solution — every pure TypeScript or
+        // Python tree, the population the SCIP adapters exist for — rebuilt its semantics on each
+        // sync and answered no navigation at all. One expression cannot drift from itself.
+        var identity = new SemanticIndexBuildIdentity(
+            generation.RepositoryId,
+            generation.Id,
+            snapshot.HeadTree,
+            snapshot.SemanticDirtyHash,
+            snapshot.HeadCommit,
+            CommitTimestamp(snapshot.WorkingRoot.Value, snapshot.HeadCommit));
+
         SemanticIndex languageIndex;
         if (loaded is null)
         {
             var empty = EmptySemanticIndex(generation) with
             {
-                GitTree = snapshot.HeadTree,
-                DirtyHash = snapshot.DirtyHash,
-                BaseCommit = snapshot.HeadCommit,
+                GitTree = identity.GitTree,
+                DirtyHash = identity.DirtyHash,
+                BaseCommit = identity.BaseCommit,
             };
             languageIndex = new XamlSemanticIndexer().Supplement(empty, sourceRoot);
         }
@@ -1150,15 +1182,7 @@ public static class CodeSearchSyncCommand
         {
             var csharp = await loaded.BuildIndexAsync(
                 sourceRoot,
-                new SemanticIndexBuildIdentity(
-                    generation.RepositoryId,
-                    generation.Id,
-                    snapshot.HeadTree,
-                    // What this index was built for is the state of the files the semantic layer
-                    // reads, which is what everything downstream compares it against (#385).
-                    snapshot.SemanticDirtyHash,
-                    snapshot.HeadCommit,
-                    CommitTimestamp(snapshot.WorkingRoot.Value, snapshot.HeadCommit)),
+                identity,
                 roslyn,
                 cancellationToken);
             languageIndex = new XamlSemanticIndexer().Supplement(csharp, sourceRoot);
@@ -1239,13 +1263,11 @@ public static class CodeSearchSyncCommand
 
         var importer = new ScipImporter(policy.ImportLimits());
         var runner = new ScipAdapterRunner(importer);
-        var hasTypeScript = files.Any(path =>
-            path.EndsWith(".ts", StringComparison.OrdinalIgnoreCase) ||
-            path.EndsWith(".tsx", StringComparison.OrdinalIgnoreCase) ||
-            path.EndsWith(".js", StringComparison.OrdinalIgnoreCase) ||
-            path.EndsWith(".jsx", StringComparison.OrdinalIgnoreCase) ||
-            path.EndsWith(".mjs", StringComparison.OrdinalIgnoreCase) ||
-            path.EndsWith(".cjs", StringComparison.OrdinalIgnoreCase));
+        // Through the policy rather than a list of its own. Its comment already promised one
+        // list "consulted both by the adapter choosing files and by the boundary" while the
+        // adapter carried two copies -- which is exactly how the boundary comes to disagree with
+        // what was actually read.
+        var hasTypeScript = files.Any(SemanticCorpusPolicy.IsTypeScriptSource);
         var typeScript = policy.TypeScript;
         if (!hasTypeScript)
         {
@@ -1310,9 +1332,7 @@ public static class CodeSearchSyncCommand
             }
         }
 
-        var hasPython = files.Any(path =>
-            path.EndsWith(".py", StringComparison.OrdinalIgnoreCase) ||
-            path.EndsWith(".pyi", StringComparison.OrdinalIgnoreCase));
+        var hasPython = files.Any(SemanticCorpusPolicy.IsPythonSource);
         var python = policy.Python;
         if (!hasPython)
         {
@@ -1434,12 +1454,7 @@ public static class CodeSearchSyncCommand
     }
 
     private static bool IsTypeScriptSourceFile(string path) =>
-        path.EndsWith(".ts", StringComparison.OrdinalIgnoreCase) ||
-        path.EndsWith(".tsx", StringComparison.OrdinalIgnoreCase) ||
-        path.EndsWith(".js", StringComparison.OrdinalIgnoreCase) ||
-        path.EndsWith(".jsx", StringComparison.OrdinalIgnoreCase) ||
-        path.EndsWith(".mjs", StringComparison.OrdinalIgnoreCase) ||
-        path.EndsWith(".cjs", StringComparison.OrdinalIgnoreCase);
+        SemanticCorpusPolicy.IsTypeScriptSource(path);
 
     private static SemanticAdapterStatus Skipped(string name, string message) =>
         new(name, SemanticAdapterState.Skipped, message, 0);

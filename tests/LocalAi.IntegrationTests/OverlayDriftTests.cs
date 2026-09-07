@@ -71,6 +71,34 @@ public sealed class OverlayDriftTests : IDisposable
         Assert.False(File.Exists(overlay + ".embedding-checkpoint"));
     }
 
+    /// <summary>
+    /// An edit the semantic layer cannot see drifts the corpus overlay and not the semantic one.
+    ///
+    /// The corpus overlay is keyed by the hash of every dirty file, so a saved `.md` does rename
+    /// it out from under this build and it has to go. The semantic overlay is keyed by the hash of
+    /// the files that layer reads, and that has not moved — it still describes this worktree
+    /// exactly. Deleting it costs the 36-second solution load that #385 was filed to avoid, and it
+    /// is the same overlay a pristine tree shares, so the loss lands on the next sync too.
+    /// </summary>
+    [Fact]
+    public void An_edit_the_semantic_layer_cannot_see_keeps_the_semantic_overlay()
+    {
+        var captured = RuntimeIndexLayout.Inspect(_repository, _runtime);
+        var (overlay, semantic) = WriteArtifacts();
+        File.WriteAllText(Path.Combine(_repository, "NOTES.md"), "a line of prose\n");
+
+        var discarded = CodeSearchSyncCommand.DiscardDriftedOverlay(
+            captured,
+            overlay,
+            semantic,
+            _runtime,
+            TextWriter.Null);
+
+        Assert.True(discarded);
+        Assert.False(File.Exists(overlay));
+        Assert.True(File.Exists(semantic));
+    }
+
     [Fact]
     public void A_worktree_that_vanished_counts_as_drifted()
     {

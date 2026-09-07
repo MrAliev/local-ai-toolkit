@@ -73,6 +73,18 @@ public sealed class CodeIndex : ISearchableIndex
     /// </summary>
     public const int CurrentVersion = 5;
 
+    /// <summary>
+    /// Why the current version cannot be read from an older container, in the words the rebuild
+    /// message prints.
+    ///
+    /// Beside the number rather than at the message, because the two drifted the moment the number
+    /// moved: v5 shipped telling every reader that it "adds language-independent lexical text",
+    /// which is what v4 added. A version bump that forgets this constant now has nowhere to hide
+    /// it — the sentence and the number are one edit.
+    /// </summary>
+    public const string CurrentVersionReason =
+        "records which chunker produced each file's chunks";
+
     private const string Magic = "CIDX";
 
     /// <summary>
