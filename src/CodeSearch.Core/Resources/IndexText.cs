@@ -71,6 +71,14 @@ public static class IndexText
     public static string BuildBatchHalved(int chunks, string reason) =>
         Catalogue.Format(nameof(BuildBatchHalved), chunks, reason);
 
+    /// <param name="refusal">
+    /// The refusal's own message, taken from the exception rather than re-derived from a code.
+    /// It is already composed, catalogued and length-bounded by the layer that owns the
+    /// backend's vocabulary, so nothing here has to learn which of the seven states this was.
+    /// </param>
+    public static string BuildBackendStalled(string refusal) =>
+        Catalogue.Format(nameof(BuildBackendStalled), refusal);
+
     /// <param name="minutesLeft">
     /// What is left of the waiting budget, F1 and invariant. The one figure that moves from line
     /// to line, which is what tells a reader the build is alive rather than hung.

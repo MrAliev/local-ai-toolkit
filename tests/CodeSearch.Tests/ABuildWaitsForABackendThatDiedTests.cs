@@ -47,8 +47,55 @@ public sealed class ABuildWaitsForABackendThatDiedTests : IDisposable
         // Proved rather than assumed: without this the test would pass on a build that never met
         // the failure it exists to survive.
         Assert.Equal(2, embedder.Refusals);
-        Assert.Contains(lines, line => line.Contains("Waiting for it", StringComparison.Ordinal));
-        Assert.Contains(lines, line => line.Contains("Ollama answered", StringComparison.Ordinal));
+        Assert.Contains(
+            lines,
+            line => line.Contains("The build is waiting", StringComparison.Ordinal));
+        // Not "Ollama answered": what is checked here is that this call returned vectors, and on
+        // the outage this test is built from Ollama had been answering all along.
+        Assert.Contains(
+            lines,
+            line => line.Contains("Embeddings came back", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// What refused, in the words of whatever refused, once per outage.
+    ///
+    /// The countdown line used to open with "Ollama is not available", copied from
+    /// EmbeddingBackendUnavailable on the ground that it was the same state. It is not one state:
+    /// the broker failing to start, an endpoint answering nothing, and five distinct codes from
+    /// Ollama itself all arrive here as one exception. On the owner's machine one build met
+    /// runner_unreachable twenty-five times in twenty-eight minutes and an unreachable endpoint
+    /// not once — Ollama was up and answering throughout, in the same seven to sixteen seconds a
+    /// success takes, with an HTTP 400 whose body named a runner it could not reach.
+    ///
+    /// The sentence that says which one it was is on the exception already. The catch did not
+    /// bind it, so it was composed, bounded, translated and then dropped.
+    ///
+    /// Once, not per attempt: three refusals here mean two waits, and a cause repeated above
+    /// every line of a countdown is what the countdown was kept clean of.
+    /// </summary>
+    [Fact]
+    public async Task The_wait_carries_the_refusal_s_own_words_once()
+    {
+        var sourceRoot = SourceTree();
+        var lines = new List<string>();
+
+        await new IndexBuilder(new BackendAwayFor(3), lines.Add, backendWait: NoWait).BuildAsync(
+            sourceRoot,
+            Path.Combine(_root, "index.cidx"),
+            ct: TestContext.Current.CancellationToken,
+            embeddingCheckpointPath: Path.Combine(_root, "checkpoint"),
+            expectedEmbeddingDimension: 2);
+
+        Assert.Equal(
+            1,
+            lines.Count(line => line.Contains(
+                "The model backend was not available for embedding.",
+                StringComparison.Ordinal)));
+        // Two waits happened, so the countdown really did repeat under the one cause line.
+        Assert.Equal(
+            2,
+            lines.Count(line => line.Contains("The build is waiting", StringComparison.Ordinal)));
     }
 
     /// <summary>
