@@ -184,6 +184,26 @@ public sealed class ModelResidencyPolicyTests : IDisposable
         Assert.Contains("CPU", warning, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// A sliver in video memory is the processor running the model, and has to read as that.
+    ///
+    /// The CPU branch triggered on "nothing at all in video memory", so 40 MB of a 20 GB model
+    /// fell through to the partial one and printed "only 0% of the model is in video memory, so
+    /// responses are slower" — which says "slower" about the case that is slowest.
+    /// `ResidencyShortfall.Shortfall()` had the rule right; the sentence a reader sees did not.
+    /// </summary>
+    [Fact]
+    public void A_sliver_in_video_memory_reads_as_the_processor_running_it()
+    {
+        var warning = ModelResidencyPolicy.AllowCpu.DescribeDegradation(
+            sizeBytes: 20_000_000_000,
+            sizeVramBytes: 40_000_000);
+
+        Assert.NotNull(warning);
+        Assert.Contains("CPU", warning, StringComparison.Ordinal);
+        Assert.DoesNotContain("0%", warning, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void Partial_load_reports_the_resident_share()
     {
