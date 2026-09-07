@@ -489,7 +489,26 @@ public sealed class UntrustedContentMcpTests : IDisposable
 
         Assert.Contains("Navigation: HEURISTIC", status, StringComparison.Ordinal);
         Assert.Contains("no semantic.sidx", status, StringComparison.Ordinal);
-        Assert.Contains("localai sync --root", status, StringComparison.Ordinal);
+        Assert.Contains("sync --root", status, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// One reply carried two spellings of one command. The `NOT BUILT` branch of this same output
+    /// builds its command through <c>IndexCommand</c>, which quotes a full path and falls back to
+    /// `localai.exe` where no launcher is installed; the navigation lines carried a bare
+    /// `localai-launcher.exe`, which resolves only from the launcher's own directory — nothing in
+    /// `src/` puts it on `PATH`, and the README gives the full path for exactly this command
+    /// (#435).
+    /// </summary>
+    [Fact]
+    public void The_navigation_advice_prints_a_command_that_can_be_typed()
+    {
+        var status = CodeSearchTools.IndexStatus(_service, Reader(), _root);
+
+        Assert.Contains("Navigation: HEURISTIC", status, StringComparison.Ordinal);
+        // The bare spelling always follows the colon of its lead-in; the built one follows a
+        // quote. So this is the whole difference between a line that runs and one that does not.
+        Assert.DoesNotContain(": localai-launcher.exe", status, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -508,7 +527,7 @@ public sealed class UntrustedContentMcpTests : IDisposable
 
         Assert.Contains("Navigation: HEURISTIC", status, StringComparison.Ordinal);
         Assert.Contains("covers no document", status, StringComparison.Ordinal);
-        Assert.Contains("localai sync --root", status, StringComparison.Ordinal);
+        Assert.Contains("sync --root", status, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -543,7 +562,7 @@ public sealed class UntrustedContentMcpTests : IDisposable
         // answering worse, so the line has its own token and its own consequence clause.
         Assert.Contains("Navigation: NOT READY", status, StringComparison.Ordinal);
         Assert.Contains("semantic overlay has not been built", status, StringComparison.Ordinal);
-        Assert.Contains("localai sync --root", status, StringComparison.Ordinal);
+        Assert.Contains("sync --root", status, StringComparison.Ordinal);
     }
 
     [Fact]

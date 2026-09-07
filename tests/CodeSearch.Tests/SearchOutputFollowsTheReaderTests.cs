@@ -57,12 +57,15 @@ public sealed class SearchOutputFollowsTheReaderTests
     {
         using var reading = TestCulture.Reading("ru");
 
-        var advice = CodeSearchText.NavigationHeuristicMissing("R:\\repo");
+        // The command is the caller's now rather than a literal inside the resource (#435), so
+        // what this pins is that a Russian reading passes it through untouched — which is the
+        // rule the test exists for, and the reason the hole is filled by IndexCommand.
+        const string command =
+            "\"C:\\LocalAi\\localai-launcher.exe\" run localai sync --root \"R:\\repo\"";
 
-        Assert.Contains(
-            "localai-launcher.exe run localai sync --root R:\\repo",
-            advice,
-            StringComparison.Ordinal);
+        var advice = CodeSearchText.NavigationHeuristicMissing(command);
+
+        Assert.Contains(command, advice, StringComparison.Ordinal);
         Assert.Contains("go_to_definition", advice, StringComparison.Ordinal);
         Assert.Contains("find_references", advice, StringComparison.Ordinal);
     }
