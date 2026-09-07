@@ -41,7 +41,7 @@ public sealed class RealProjectSemanticsTests
         await using var loaded = await RoslynSolutionLoader.LoadAsync(
             root,
             diagnostics.Add,
-            TestContext.Current.CancellationToken);
+            cancellationToken: TestContext.Current.CancellationToken);
 
         // LoadAsync returns null only when it found no project file to open, so there is nothing
         // for the workspace to have said about it.
@@ -56,7 +56,7 @@ public sealed class RealProjectSemanticsTests
                 DirtyHash: null,
                 BaseCommit: "real-project-semantics",
                 IndexedAtUtc: DateTime.UnixEpoch),
-            TestContext.Current.CancellationToken);
+            cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(
             index.Documents.Count > 0,

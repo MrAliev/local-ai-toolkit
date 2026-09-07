@@ -122,7 +122,7 @@ public sealed class SearchHitNavigatesTests : IDisposable
                 null,
                 "commit",
                 DateTime.UnixEpoch),
-            TestContext.Current.CancellationToken);
+            cancellationToken: TestContext.Current.CancellationToken);
 
         var snapshot = new SemanticSnapshotIdentity("repository", "generation", "tree", null);
         return new SemanticNavigationGateway(

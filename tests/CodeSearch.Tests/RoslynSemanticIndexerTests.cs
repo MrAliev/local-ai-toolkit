@@ -19,7 +19,7 @@ public sealed class RoslynSemanticIndexerTests : IDisposable
             solution,
             _root,
             Identity(),
-            TestContext.Current.CancellationToken);
+            cancellationToken: TestContext.Current.CancellationToken);
         var navigation = new SemanticNavigationService(index);
         var snapshot = new SemanticSnapshotIdentity("repo", "generation", "tree", null);
 
@@ -46,7 +46,7 @@ public sealed class RoslynSemanticIndexerTests : IDisposable
             solution,
             _root,
             Identity(),
-            TestContext.Current.CancellationToken);
+            cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Contains(index.Relationships, relationship =>
             relationship.Kind == SemanticRelationshipKind.Override &&
@@ -97,7 +97,7 @@ public sealed class RoslynSemanticIndexerTests : IDisposable
             solution,
             _root,
             Identity(),
-            TestContext.Current.CancellationToken);
+            cancellationToken: TestContext.Current.CancellationToken);
         var pairDefinitions = index.Occurrences.Where(occurrence =>
             occurrence.Roles.HasFlag(SemanticOccurrenceRoles.Definition) &&
             index.Symbols.Single(symbol => symbol.Id == occurrence.SymbolId).DisplayName == "Pair")
@@ -128,7 +128,7 @@ public sealed class RoslynSemanticIndexerTests : IDisposable
             solution,
             _root,
             Identity(),
-            TestContext.Current.CancellationToken);
+            cancellationToken: TestContext.Current.CancellationToken);
         var position = Position(source, "PairAlias pair");
         var definitions = new SemanticNavigationService(index).GoToDefinition(
             "Aliases.cs",
@@ -173,7 +173,7 @@ public sealed class RoslynSemanticIndexerTests : IDisposable
             solution,
             _root,
             Identity(),
-            TestContext.Current.CancellationToken);
+            cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Single(index.Documents);
         Assert.Equal("Shared/Linked.cs", index.Documents[0].RelPath);
@@ -278,7 +278,7 @@ public sealed class RoslynSemanticIndexerTests : IDisposable
             solution,
             _root,
             Identity(),
-            TestContext.Current.CancellationToken);
+            cancellationToken: TestContext.Current.CancellationToken);
 
         var method = index.Occurrences.Single(occurrence =>
             occurrence.Roles.HasFlag(SemanticOccurrenceRoles.Definition) &&
