@@ -23,8 +23,14 @@ public static class SemanticCorpusPolicy
     public static bool IsTypeScriptSource(string relativePath) =>
         HasExtension(relativePath, ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs");
 
+    /// <summary>
+    /// What the SCIP Python adapter is fed. `.pyi` belongs here because the adapter reads it: a
+    /// stub declares the types everything importing the module is navigated by, so leaving it out
+    /// let an edit to one pass for non-semantic and answered navigation from an overlay built
+    /// before it.
+    /// </summary>
     public static bool IsPythonSource(string relativePath) =>
-        HasExtension(relativePath, ".py");
+        HasExtension(relativePath, ".py", ".pyi");
 
     /// <summary>
     /// The two halves are different in kind. The first is source the layer reads: C# through
