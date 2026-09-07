@@ -105,16 +105,15 @@ public sealed class ClaudeConfigurationAdapter(
         }
         else
         {
-            try
-            {
-                after = ClaudeHookRegistration.Remove(text);
-            }
-            catch (InvalidOperationException)
-            {
-                // Nothing to do and nothing to say: a file this cannot read holds no entry of
-                // ours to take out, and refusing an uninstall over it would strand the rest.
-                return new(GateName, files, BuildPreview(files));
-            }
+            // Allowed to throw, exactly as registering is. The swallow that used to be here
+            // reasoned that a file this cannot read holds no entry of ours — which is false: a
+            // trailing comma is enough to refuse the whole document, and the entry may well be
+            // in it. An uninstall then planned nothing, said nothing, and left the hook behind
+            // pointing at the launcher it had just deleted, while the removal screen promised
+            // the hook was going. Throwing is what `PreviewRemoval` already does for the
+            // neighbouring `.claude.json`, so the two files a removal touches fail alike rather
+            // than one of them reporting a success it did not have.
+            after = ClaudeHookRegistration.Remove(text);
         }
 
         if (!before.SequenceEqual(Encoding.UTF8.GetBytes(after)))

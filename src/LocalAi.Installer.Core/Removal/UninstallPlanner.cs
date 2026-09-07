@@ -355,12 +355,6 @@ public sealed class UninstallPlanner
         new(repositoryId, commonDirectory, null, [], [], [], null, reason);
 
     /// <summary>
-    /// What this run leaves alone, and how to deal with each one by hand. Two of them are
-    /// machine-wide and belong to other software as much as to LocalAi; one is the record of
-    /// what installs did and outlives them on purpose; the rest are whatever the matrix was
-    /// told to keep.
-    /// </summary>
-    /// <summary>
     /// Entries on <c>PreToolUse</c> that this run will leave behind, or null when there is
     /// nothing to say — either because no entry of ours is going, so nothing changes on that
     /// event, or because ours was the only one there.
@@ -391,6 +385,12 @@ public sealed class UninstallPlanner
         }
     }
 
+    /// <summary>
+    /// What this run leaves alone, and how to deal with each one by hand. Two of them are
+    /// machine-wide and belong to other software as much as to LocalAi; one is the record of
+    /// what installs did and outlives them on purpose; the rest are whatever the matrix was
+    /// told to keep.
+    /// </summary>
     private IReadOnlyList<RetainedNotice> Retained(
         RemovalSelection selection,
         IReadOnlyList<HookRemovalEntry> hooks,
