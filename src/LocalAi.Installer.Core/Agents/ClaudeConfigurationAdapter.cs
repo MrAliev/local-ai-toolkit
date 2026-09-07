@@ -74,6 +74,104 @@ public sealed class ClaudeConfigurationAdapter(
         return new("Claude", files, BuildPreview(files));
     }
 
+    /// <summary>
+    /// The text-search gate's registration, as a plan of its own rather than part of the client's.
+    ///
+    /// The reason is what a failed plan costs. `settings.json` is a file the person edits by hand,
+    /// so a stray comma in it is an ordinary event — and a plan that cannot be applied is reported
+    /// and skipped, leaving the rest of the installation alone. Put the gate in the client's plan
+    /// and that stray comma takes the MCP registration with it: the most expensive thing in the
+    /// installation lost to the least important (#423).
+    ///
+    /// Uninstalling is the same call with <paramref name="register"/> false, because "take it out"
+    /// and "do not put it in" are the same instruction to this file.
+    /// </summary>
+    /// <param name="register">
+    /// What the person chose. False with nothing of ours on disk plans nothing at all — an empty
+    /// `hooks: {}` written into somebody's settings is an effect nobody consented to.
+    /// </param>
+    public AgentConfigurationPlan PreviewGate(bool register)
+    {
+        var files = new List<AgentConfigurationFilePlan>();
+        var path = GateSettingsPath;
+        var before = ReadExisting(path);
+        var text = AgentConfigurationFileOperations.DecodeUtf8(before);
+        string after;
+        if (register)
+        {
+            // Allowed to throw: the person asked for this, and a settings file that cannot be
+            // read is something they have to be told about rather than something to work around.
+            after = ClaudeHookRegistration.Add(text, GateCommand);
+        }
+        else
+        {
+            try
+            {
+                after = ClaudeHookRegistration.Remove(text);
+            }
+            catch (InvalidOperationException)
+            {
+                // Nothing to do and nothing to say: a file this cannot read holds no entry of
+                // ours to take out, and refusing an uninstall over it would strand the rest.
+                return new(GateName, files, BuildPreview(files));
+            }
+        }
+
+        if (!before.SequenceEqual(Encoding.UTF8.GetBytes(after)))
+        {
+            files.Add(AgentConfigurationFileOperations.FilePlan(
+                path,
+                before,
+                after,
+                timeProvider.GetUtcNow()));
+        }
+
+        return new(GateName, files, BuildPreview(files));
+    }
+
+    /// <summary>
+    /// Named apart from the client's own plan, and not "Claude": the two are applied, journalled
+    /// and reported as separate steps, so two plans under one name would be two lines nobody
+    /// could tell apart — and would break every lookup that expects one plan per client.
+    /// </summary>
+    private const string GateName = "Claude text-search gate";
+
+    /// <summary>
+    /// Whether the gate is registered on this machine right now.
+    ///
+    /// This is what seeds the checkbox, and it is read rather than remembered: the installer keeps
+    /// no record of a decision, so an update cannot silently restore something that was declined,
+    /// and somebody who took the entry out by hand is shown the truth rather than a memory.
+    /// </summary>
+    public bool IsGateRegistered()
+    {
+        try
+        {
+            // By signature rather than by this installation's command: an entry a previous
+            // install wrote at another directory is still ours, and is still what the run will
+            // take out.
+            return ClaudeHookRegistration.IsRegistered(
+                AgentConfigurationFileOperations.DecodeUtf8(ReadExisting(GateSettingsPath)));
+        }
+        catch (InvalidOperationException)
+        {
+            return false;
+        }
+    }
+
+    public string GateSettingsPath => Path.Combine(homeDirectory, ".claude", "settings.json");
+
+    /// <summary>
+    /// Quoted whole, in the shape `CodeSearchTools.IndexCommand` already prints: a hook command is
+    /// one command line rather than an executable and a list, and the installation path has
+    /// spaces in it on most machines.
+    /// </summary>
+    private string GateCommand =>
+        "\"" + Path.Combine(
+            Path.GetFullPath(installationDirectory),
+            "launcher",
+            "localai-launcher.exe") + "\" run localai agent gate";
+
     public Task ApplyAsync(AgentConfigurationPlan plan, CancellationToken cancellationToken) =>
         AgentConfigurationFileOperations.ApplyAsync(plan, readBack, cancellationToken);
 

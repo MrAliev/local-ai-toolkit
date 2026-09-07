@@ -145,10 +145,17 @@ public sealed class UninstallPlanner
         var plans = new List<AgentConfigurationPlan>();
         if (selection.Includes(RemovalItem.ClaudeIntegration))
         {
-            plans.Add(new ClaudeConfigurationAdapter(
+            var claude = new ClaudeConfigurationAdapter(
                 homeDirectory,
                 layout.LauncherDirectory,
-                timeProvider).PreviewRemoval());
+                timeProvider);
+            plans.Add(claude.PreviewRemoval());
+            // Its own plan, applied and failed on its own. `settings.json` is a file the person
+            // edits by hand and `.claude.json` is not, so the two fail for different reasons and
+            // one failing must not take the other's removal with it (#423). The command is not
+            // consulted on this path — an entry is recognised as ours by its signature, so a
+            // launcher directory standing in for an installation directory here is harmless.
+            plans.Add(claude.PreviewGate(register: false));
         }
 
         if (selection.Includes(RemovalItem.CodexIntegration))
@@ -353,6 +360,37 @@ public sealed class UninstallPlanner
     /// what installs did and outlives them on purpose; the rest are whatever the matrix was
     /// told to keep.
     /// </summary>
+    /// <summary>
+    /// Entries on <c>PreToolUse</c> that this run will leave behind, or null when there is
+    /// nothing to say — either because no entry of ours is going, so nothing changes on that
+    /// event, or because ours was the only one there.
+    ///
+    /// A file that cannot be read counts as nothing to say rather than as a failure: this method
+    /// exists to explain an effect, and refusing an uninstall over an unreadable settings file
+    /// would strand every other removal in the plan.
+    /// </summary>
+    private (int Count, string Path)? OtherPreToolUseHooks()
+    {
+        var path = System.IO.Path.Combine(homeDirectory, ".claude", "settings.json");
+        try
+        {
+            var text = File.Exists(path) ? File.ReadAllText(path) : string.Empty;
+            if (!ClaudeHookRegistration.IsRegistered(text))
+            {
+                return null;
+            }
+
+            var others = ClaudeHookRegistration.OtherEntries(text);
+            return others > 0 ? (others, path) : null;
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException or ArgumentException
+                or InvalidOperationException)
+        {
+            return null;
+        }
+    }
+
     private IReadOnlyList<RetainedNotice> Retained(
         RemovalSelection selection,
         IReadOnlyList<HookRemovalEntry> hooks,
@@ -386,6 +424,26 @@ public sealed class UninstallPlanner
                     " остаётся: это запись о том, что установки сделали с этой " +
                     "машиной, и текущий запуск тоже пишет туда свою.")),
         };
+
+        if (selection.Includes(RemovalItem.ClaudeIntegration) &&
+            OtherPreToolUseHooks() is { } others)
+        {
+            notices.Add(new(
+                InstallerCulture.Pick(
+                    "Other hooks on PreToolUse",
+                    "Другие хуки на PreToolUse"),
+                string.Format(
+                    InstallerCulture.Pick(
+                        "Entries on that event LocalAi did not write: {0}. They stay in {1} " +
+                        "exactly as they are. If a tool call is still refused after this, one " +
+                        "of them is the reason and not a removal that failed.",
+                        "Записей на этом событии, которые LocalAi не создавал: {0}. Они " +
+                        "остаются в {1} ровно как есть. Если после удаления вызов инструмента " +
+                        "всё ещё отклоняется, причина — одна из них, а не несработавшее " +
+                        "удаление."),
+                    others.Count,
+                    others.Path)));
+        }
 
         if (!selection.Includes(RemovalItem.SigningKeys))
         {
