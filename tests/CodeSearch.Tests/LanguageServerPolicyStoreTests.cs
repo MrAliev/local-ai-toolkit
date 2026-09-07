@@ -1,10 +1,21 @@
 using System.Text.Json;
 using CodeSearch.Core.Semantics;
+using LocalAi.Tests.Shared;
 
 namespace CodeSearch.Tests;
 
-public class LanguageServerPolicyStoreTests
+public sealed class LanguageServerPolicyStoreTests : IDisposable
 {
+    private readonly List<string> _roots = [];
+
+    public void Dispose()
+    {
+        foreach (var root in _roots)
+        {
+            TemporaryDirectory.Delete(root);
+        }
+    }
+
     [Fact]
     public void MissingConfigurationIsDisabledAndHasBoundedDefaults()
     {
@@ -254,6 +265,17 @@ public class LanguageServerPolicyStoreTests
             },
         };
 
-    private static string TempRoot() =>
-        Path.Combine(Path.GetTempPath(), "language-server-policy-tests", Guid.NewGuid().ToString("N"));
+    /// <summary>
+    /// The path only — several of these tests are about a store whose directory is not there
+    /// yet, so creating it here would remove the case. Recorded so <see cref="Dispose"/> can
+    /// remove whatever the test did create under it.
+    /// </summary>
+    private string TempRoot()
+    {
+        var root = Path.Combine(
+            Path.GetTempPath(),
+            "language-server-policy-tests-" + Guid.NewGuid().ToString("N"));
+        _roots.Add(root);
+        return root;
+    }
 }

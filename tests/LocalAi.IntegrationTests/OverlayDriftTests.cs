@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using CodeSearch.Core.Indexing;
 using LocalAi.Cli;
+using LocalAi.Tests.Shared;
 
 namespace LocalAi.IntegrationTests;
 
@@ -153,24 +154,14 @@ public sealed class OverlayDriftTests : IDisposable
             process.StandardError.ReadToEnd());
     }
 
-    public void Dispose()
-    {
-        try
-        {
-            DeleteTree(_work);
-        }
-        catch (DirectoryNotFoundException)
-        {
-        }
-        catch (IOException)
-        {
-        }
-        catch (UnauthorizedAccessException)
-        {
-        }
-    }
+    public void Dispose() => TemporaryDirectory.Delete(_work);
 
     /// <summary>Git object files are read-only; a recursive delete refuses them as they are.</summary>
+    /// <summary>
+    /// Deliberately not <see cref="TemporaryDirectory.Delete"/>, which swallows what it cannot
+    /// remove: this is the arrangement of "a worktree that vanished", so a delete that quietly
+    /// did not happen would leave the test asserting about a worktree that is still there.
+    /// </summary>
     private static void DeleteTree(string path)
     {
         if (!Directory.Exists(path))

@@ -3,6 +3,7 @@ using LocalAi.Cli;
 using LocalAi.Contracts;
 using LocalAi.Contracts.Activation;
 using LocalAi.Repository;
+using LocalAi.Tests.Shared;
 
 namespace LocalAi.IntegrationTests;
 
@@ -644,29 +645,5 @@ public sealed class PruneCommandTests : IDisposable
             CurrentPointerSnapshot.CreateCanonicalBytes(version));
     }
 
-    public void Dispose()
-    {
-        if (!Directory.Exists(_root))
-        {
-            return;
-        }
-
-        // Git marks everything under .git/objects read-only, and a recursive delete stops on the
-        // first one. A fixture that cannot clean up fails every test that built a checkout.
-        try
-        {
-            foreach (var file in Directory.EnumerateFiles(_root, "*", SearchOption.AllDirectories))
-            {
-                File.SetAttributes(file, FileAttributes.Normal);
-            }
-
-            Directory.Delete(_root, recursive: true);
-        }
-        catch (Exception exception) when (
-            exception is IOException or UnauthorizedAccessException)
-        {
-            // Cleanup that throws fails the test it was added to protect. A temp directory left
-            // behind is the smaller problem, and the next run picks a fresh one anyway.
-        }
-    }
+    public void Dispose() => TemporaryDirectory.Delete(_root);
 }

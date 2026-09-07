@@ -2,6 +2,7 @@ using LocalAi.Installer.Core.Abstractions;
 using LocalAi.Installer.Core.Removal;
 using LocalAi.Installer.ViewModels;
 using LocalAi.TestFixtures;
+using LocalAi.Tests.Shared;
 
 namespace LocalAi.Installer.Tests;
 
@@ -56,6 +57,7 @@ public sealed class RailMarksWhatRanTests
     public async Task A_finish_page_does_not_mark_the_pages_that_never_ran()
     {
         using var machine = new RemovalFixture();
+        using var log = new TemporaryDirectory("LocalAi.RailTests");
         var wizard = new UninstallWizardViewModel(
             RemovalPreset.FullUninstall,
             offersInstallAfterwards: false,
@@ -64,10 +66,7 @@ public sealed class RailMarksWhatRanTests
             new StubProcessRunner(),
             machine.HooksPathReader)
         {
-            LogDirectory = Path.Combine(
-                Path.GetTempPath(),
-                "LocalAi.RailTests",
-                Guid.NewGuid().ToString("N")),
+            LogDirectory = log.Path,
         };
         await wizard.InitializeAsync(TestContext.Current.CancellationToken);
         await wizard.MoveNextAsync(TestContext.Current.CancellationToken);

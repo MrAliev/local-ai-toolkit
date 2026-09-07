@@ -1,6 +1,7 @@
 using LocalAi.Installer.Core.Releases;
 using LocalAi.Installer.ViewModels;
 using LocalAi.Contracts;
+using LocalAi.Tests.Shared;
 
 namespace LocalAi.Installer.Tests;
 
@@ -11,8 +12,18 @@ namespace LocalAi.Installer.Tests;
 /// into a fixed one: a wizard opened before a release and used after it installed the version
 /// that had been newest when the window opened, while the field still read "latest".
 /// </summary>
-public sealed class PackagePageViewModelTests
+public sealed class PackagePageViewModelTests : IDisposable
 {
+    private readonly List<TemporaryDirectory> _folders = [];
+
+    public void Dispose()
+    {
+        foreach (var folder in _folders)
+        {
+            folder.Dispose();
+        }
+    }
+
     [Fact]
     public void Resolving_latest_does_not_replace_the_request_with_the_answer()
     {
@@ -176,22 +187,19 @@ public sealed class PackagePageViewModelTests
         Assert.Equal(@"D:\chosen", page.SourceFolder);
     }
 
-    private static string ReleaseFolder(bool complete)
+    private string ReleaseFolder(bool complete)
     {
-        var folder = Path.Combine(
-            Path.GetTempPath(),
-            "LocalAi.Installer.Tests.Folder",
-            Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(folder);
+        var folder = new TemporaryDirectory("LocalAi.Installer.Tests.Folder");
+        _folders.Add(folder);
         var names = complete
             ? DirectoryReleaseFeed.RequiredFiles
             : DirectoryReleaseFeed.RequiredFiles.Take(2).ToArray();
         foreach (var name in names)
         {
-            File.WriteAllText(Path.Combine(folder, name), "placeholder");
+            File.WriteAllText(folder.Combine(name), "placeholder");
         }
 
-        return folder;
+        return folder.Path;
     }
 
     private static ResolvedRelease Release(string version) =>
