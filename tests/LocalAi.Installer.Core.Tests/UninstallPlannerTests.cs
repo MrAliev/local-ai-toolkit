@@ -438,6 +438,67 @@ public sealed class UninstallPlannerTests : IDisposable
     }
 
     /// <summary>
+    /// Somebody else's hook on that event, and none of ours: nothing of ours is going, so nothing
+    /// on that event changes and there is nothing to explain. A notice here would be a paragraph
+    /// of reassurance about hooks this run never came near.
+    ///
+    /// The guard that decides this was uncovered — deleting it left the whole suite green — and
+    /// with no settings file at all both branches answer null anyway, so the file has to exist and
+    /// has to carry a stranger's entry for the test to reach the question.
+    /// </summary>
+    [Fact]
+    public async Task Hooks_that_are_not_ours_alone_are_not_announced()
+    {
+        var settings = Path.Combine(machine.Home, ".claude", "settings.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(settings)!);
+        await File.WriteAllTextAsync(
+            settings,
+            """
+            {
+              "hooks": {
+                "PreToolUse": [
+                  { "matcher": "Bash", "hooks": [ { "type": "command", "command": "audit --log" } ] }
+                ]
+              }
+            }
+            """,
+            new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
+            TestContext.Current.CancellationToken);
+
+        var plan = await Plan(RemovalSelection.FromPreset(RemovalPreset.DisconnectClients));
+
+        Assert.DoesNotContain(
+            plan.Retained,
+            entry => entry.Title.Contains("PreToolUse", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// And a run that is not disconnecting Claude says nothing about that client's hooks either,
+    /// however many of them are there. The notice explains an effect this run is having; a run
+    /// that leaves the file alone is not having it.
+    /// </summary>
+    [Fact]
+    public async Task A_run_that_leaves_claude_alone_says_nothing_about_its_hooks()
+    {
+        await WriteSettingsAsync(
+            """
+            {
+              "hooks": {
+                "PreToolUse": [
+                  { "matcher": "Bash", "hooks": [ { "type": "command", "command": "audit --log" } ] }
+                ]
+              }
+            }
+            """);
+
+        var plan = await Plan(RemovalSelection.Nothing());
+
+        Assert.DoesNotContain(
+            plan.Retained,
+            entry => entry.Title.Contains("PreToolUse", StringComparison.Ordinal));
+    }
+
+    /// <summary>
     /// Writes a Claude settings file carrying our gate on top of whatever the caller supplies,
     /// which is how every one of these arrives on a real machine.
     /// </summary>

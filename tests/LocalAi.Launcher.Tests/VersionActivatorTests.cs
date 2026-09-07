@@ -264,20 +264,22 @@ public sealed class VersionActivatorTests
 
         var launcherError = Assert.IsType<LauncherException>(result.error);
         Assert.Equal("version_in_use", launcherError.Code);
-        // The same shape VersionLeaseTests arrived at for the same property one layer down, and
-        // for the reason its comment records at length: bounds narrow enough to sit between the
-        // two outcomes are bounds tuned for the machine, and that was raised twice before a CI
-        // runner took 731 ms of correct behaviour anyway.
+        // One bound, and it is the wrong outcome's own arithmetic rather than a measurement.
         //
-        // What separates the two outcomes is how long the gate is held, so the hold is most of
-        // the budget. Spending it once gives about a second — 700ms waiting for the gate, the
-        // remaining 300ms failing to take the lease — and spending it twice gives about 1.7,
-        // because the lease would start a fresh budget of its own. 700ms apart, where a few
-        // hundred milliseconds of jitter no longer reach the boundary.
-        Assert.InRange(
-            result.Elapsed,
-            TimeSpan.FromMilliseconds(850),
-            TimeSpan.FromMilliseconds(1_400));
+        // The property is that the budget is shared rather than restarted. Sharing it spends
+        // about `LeaseBudget` in total — the gate hold comes out of the same second — while
+        // restarting it spends the hold and then a fresh budget on top, which is exactly
+        // `GateHeldFor + LeaseBudget`. So a run at or past that sum restarted it, and a run
+        // below it did not.
+        //
+        // The lower bound that used to be here asserted the machine was not fast, which proves
+        // nothing about the code and fails a quick runner doing the right thing (#404). The
+        // upper one was the midpoint between the outcomes, leaving 400ms of headroom over
+        // correct behaviour; derived from the constants it leaves 700ms, and it is visibly the
+        // boundary rather than a number chosen to fit what was observed.
+        Assert.True(
+            result.Elapsed < GateHeldFor + LeaseBudget,
+            $"took {result.Elapsed}, which is a second budget rather than a shared one");
         Assert.Equal(before, File.ReadAllBytes(install.CurrentPath));
     }
 
