@@ -54,44 +54,22 @@ public sealed class ExperimentStateStore
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
-        var directory = Path.GetDirectoryName(StatePath)!;
-        Directory.CreateDirectory(directory);
-        var temporaryPath = Path.Combine(
-            directory,
-            $".state-{Guid.NewGuid():N}.tmp");
-        try
-        {
-            var document = new ExperimentStateDocument(
-                SchemaVersion,
-                snapshot.Pairs
-                    .OrderBy(pair => pair.Profile)
-                    .ThenBy(pair => pair.Model, StringComparer.Ordinal)
-                    .ToArray());
-            await using (var stream = new FileStream(
-                             temporaryPath,
-                             FileMode.CreateNew,
-                             FileAccess.Write,
-                             FileShare.None,
-                             4096,
-                             FileOptions.Asynchronous | FileOptions.WriteThrough))
-            {
-                await JsonSerializer.SerializeAsync(
-                    stream,
-                    document,
-                    LocalAiJson.Strict,
-                    cancellationToken);
-                await stream.FlushAsync(cancellationToken);
-            }
+        var document = new ExperimentStateDocument(
+            SchemaVersion,
+            snapshot.Pairs
+                .OrderBy(pair => pair.Profile)
+                .ThenBy(pair => pair.Model, StringComparer.Ordinal)
+                .ToArray());
 
-            File.Move(temporaryPath, StatePath, overwrite: true);
-        }
-        finally
-        {
-            if (File.Exists(temporaryPath))
-            {
-                File.Delete(temporaryPath);
-            }
-        }
+        // Irrecoverable: what accumulates here is which model answered and which failed, observed
+        // once each and derivable from nothing. It was already written through; what changes is
+        // that the flush now reaches the disk rather than the operating system's cache, which is
+        // what FlushAsync did and what the WriteThrough beside it already implied.
+        await AtomicFile.WriteAsync(
+            StatePath,
+            (stream, token) => JsonSerializer.SerializeAsync(stream, document, LocalAiJson.Strict, token),
+            AtomicWrite.Irrecoverable,
+            cancellationToken);
     }
 
     [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]

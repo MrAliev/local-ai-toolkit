@@ -36,35 +36,14 @@ public sealed class BrokerRuntimeStateStore
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(retryBudget, TimeSpan.Zero);
-        var temporaryPath = _statePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
-        try
-        {
-            File.WriteAllText(
-                temporaryPath,
-                JsonSerializer.Serialize(state, LocalAiJson.Strict));
-            var deadline = DateTime.UtcNow + retryBudget;
-            while (true)
-            {
-                try
-                {
-                    File.Move(temporaryPath, _statePath, overwrite: true);
-                    break;
-                }
-                catch (Exception error) when (
-                    error is IOException or UnauthorizedAccessException &&
-                    DateTime.UtcNow < deadline)
-                {
-                    Thread.Sleep(TimeSpan.FromMilliseconds(25));
-                }
-            }
-        }
-        finally
-        {
-            if (File.Exists(temporaryPath))
-            {
-                File.Delete(temporaryPath);
-            }
-        }
+        // Recomputable, and the clearest case of it: what host.json says is where this broker is
+        // listening and when it last beat, all of it true only while the process is alive. A copy
+        // that survived a power cut would describe a broker that does not exist.
+        AtomicFile.WriteJson(
+            _statePath,
+            state,
+            LocalAiJson.Strict,
+            AtomicWrite.Recomputable.Retrying(retryBudget));
     }
 
     public void DeleteIfOwnedBy(BrokerProcessState owner)

@@ -13,39 +13,29 @@ public sealed class RepositoryIndexProgressStore
         _path = repositoryRuntimeRoot.Combine("progress.json").Value;
     }
 
+    /// <summary>
+    /// How long the replace keeps trying while a reader holds the file. New here, and the wider
+    /// of the two windows #427 was about: <c>Read</c> below opens through
+    /// <c>File.ReadAllText</c>, and <c>index_status</c> calls it while a build runs — where the
+    /// generation pointer is replaced once per sync, this is replaced on every batch.
+    /// </summary>
+    private static readonly TimeSpan ReplaceRetryBudget = TimeSpan.FromSeconds(2);
+
+    /// <summary>
+    /// Written through and flushed, which on the recoverability axis it need not be: a progress
+    /// record is the most recomputable file in the runtime tree — the next report overwrites it
+    /// seconds later, and a build that died leaves one nobody acts on. It keeps the flush because
+    /// removing durability is a decision to be asked for rather than taken, and that question is
+    /// the remainder of #392.
+    /// </summary>
     public void Save(RepositoryIndexProgress progress)
     {
         Validate(progress);
-        Directory.CreateDirectory(
-            Path.GetDirectoryName(_path)
-            ?? throw new InvalidOperationException("Progress directory is unavailable."));
-        var temporary = _path + "." + Guid.NewGuid().ToString("N") + ".tmp";
-        try
-        {
-            using (var stream = new FileStream(
-                       temporary,
-                       FileMode.CreateNew,
-                       FileAccess.Write,
-                       FileShare.None,
-                       bufferSize: 4096,
-                       FileOptions.WriteThrough))
-            {
-                JsonSerializer.Serialize(
-                    stream,
-                    new ProgressDocument(1, progress),
-                    LocalAiJson.Strict);
-                stream.Flush(flushToDisk: true);
-            }
-
-            File.Move(temporary, _path, overwrite: true);
-        }
-        finally
-        {
-            if (File.Exists(temporary))
-            {
-                File.Delete(temporary);
-            }
-        }
+        AtomicFile.WriteJson(
+            _path,
+            new ProgressDocument(1, progress),
+            LocalAiJson.Strict,
+            AtomicWrite.Irrecoverable.Retrying(ReplaceRetryBudget));
     }
 
     public RepositoryIndexProgress? Read()
