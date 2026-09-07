@@ -326,17 +326,29 @@ public sealed class UninstallRunner(
         }
 
         var ours = new HashSet<string>(hook.ExcludePatterns, StringComparer.Ordinal);
-        var kept = File.ReadAllLines(path).Where(line => !ours.Contains(line)).ToList();
-        // The blank line that separated our block from whatever came before it goes too; the
-        // file is Git's and is left ending in exactly one newline, as Git writes it.
-        while (kept.Count > 0 && kept[^1].Length == 0)
+        var existing = File.ReadAllText(path);
+        var newLine = GitHookLayout.LineEndingOf(existing);
+        var kept = existing
+            .ReplaceLineEndings("\n")
+            .TrimEnd('\n')
+            .Split('\n')
+            .Where(line => !ours.Contains(line))
+            .ToList();
+
+        // Exactly one, which is what the install added: it separates our block from whatever came
+        // before it, and only when the file did not already end in a blank line. Stripping every
+        // trailing blank took the reader's own as well, and the comment here said "the blank
+        // line" while the loop said all of them.
+        if (kept.Count > 0 && kept[^1].Length == 0)
         {
             kept.RemoveAt(kept.Count - 1);
         }
 
+        // The file is Git's and is left ending in exactly one newline, as Git writes it — in the
+        // endings it arrived with, so removing our two patterns does not reflow the rest.
         File.WriteAllText(
             path,
-            kept.Count == 0 ? string.Empty : string.Join('\n', kept) + "\n",
+            kept.Count == 0 ? string.Empty : string.Join(newLine, kept) + newLine,
             new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
     }
 

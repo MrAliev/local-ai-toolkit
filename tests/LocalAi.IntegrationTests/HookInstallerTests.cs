@@ -32,6 +32,63 @@ public sealed class HookInstallerTests : IDisposable
             dispatcher);
     }
 
+    /// <summary>
+    /// The chained hook's path is escaped for the shell, as the launcher's already was.
+    ///
+    /// It was interpolated raw into a double-quoted string two lines below the helper that
+    /// escapes exactly these characters. In a repository under a path carrying a `$` — Windows
+    /// permits it — `sh` expands the variable to nothing, the first line invokes a path that does
+    /// not exist, `previous_status` is non-zero, and the dispatcher **exits before reaching the
+    /// LocalAi line**. Git ignores exit codes for all four hooks installed here, so nothing
+    /// surfaces: the index quietly stops following HEAD in that repository, which is the failure
+    /// `GitHookLayout` calls out as installing successfully and never running again.
+    /// </summary>
+    [Fact]
+    public void A_chained_hook_under_an_awkward_path_is_escaped_for_the_shell()
+    {
+        var root = Path.Combine(_root, "repo$staging");
+        var hooks = Path.Combine(root, "hooks");
+        Directory.CreateDirectory(hooks);
+        File.WriteAllText(Path.Combine(hooks, "post-commit"), "#!/bin/sh\necho existing\n");
+
+        HookInstaller.Install(
+            root,
+            Path.Combine(_root, "launcher", "localai-launcher.exe"),
+            ["run", "localai"]);
+
+        var dispatcher = File.ReadAllText(Path.Combine(hooks, "post-commit"));
+        Assert.Contains("repo\\$staging", dispatcher, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"" + root.Replace('\\', '/'), dispatcher, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// `.git/info/exclude` belongs to the person, not to this product, and a file that arrived
+    /// with CRLF endings comes back with them.
+    ///
+    /// It was read with `ReadAllLines` and rejoined with `'\n'`, so adding two patterns rewrote
+    /// every line in the file. Harmless to Git and not harmless to the reader: the next `git
+    /// diff` of their own working file is the whole of it.
+    /// </summary>
+    [Fact]
+    public void Adding_patterns_keeps_the_line_endings_the_file_arrived_with()
+    {
+        var common = Path.Combine(_root, ".git");
+        Directory.CreateDirectory(Path.Combine(common, "info"));
+        var exclude = Path.Combine(common, "info", "exclude");
+        File.WriteAllText(exclude, "# theirs\r\nbuild/\r\n");
+
+        HookInstaller.Install(
+            common,
+            Path.Combine(_root, "launcher", "localai-launcher.exe"),
+            ["run", "localai"],
+            ".husky",
+            _root);
+
+        var written = File.ReadAllText(exclude);
+        Assert.Contains("# theirs\r\nbuild/\r\n", written, StringComparison.Ordinal);
+        Assert.DoesNotContain("build/\n#", written, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void Reinstall_is_idempotent()
     {

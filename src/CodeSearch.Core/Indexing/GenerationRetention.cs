@@ -161,7 +161,11 @@ public static class GenerationRetention
             {
                 if (!keep.Contains(Path.GetFileName(directory)))
                 {
-                    // The generation is gone, so nothing under it can be read at all.
+                    // The generation is not being kept, so nothing under it will be readable —
+                    // which is not the same sentence as "the generation is gone", and that is
+                    // what this used to say. The loop above may have failed to remove it, and a
+                    // reader who trusts the stronger claim will not look for the case where the
+                    // base survives and its overlays go.
                     var size = DirectorySize(directory);
                     if (!TryRemove(directory, dryRun))
                     {

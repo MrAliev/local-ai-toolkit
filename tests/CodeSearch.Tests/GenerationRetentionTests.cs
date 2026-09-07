@@ -1,4 +1,4 @@
-using CodeSearch.Core.Indexing;
+﻿using CodeSearch.Core.Indexing;
 using LocalAi.Contracts;
 
 namespace CodeSearch.Tests;
@@ -106,6 +106,15 @@ public sealed class GenerationRetentionTests : IDisposable
             Path.Combine(Repository, "overlays", current, "worktree-that-was-deleted")));
     }
 
+    /// <summary>
+    /// A generation that could not be removed keeps its overlays.
+    ///
+    /// The sweep decided by "not in the keep set" under a comment reading "the generation is
+    /// gone, so nothing under it can be read at all" — but a generation held open by a running
+    /// search fails removal and survives on disk, and it is not in the keep set either. Its
+    /// overlays were then deleted while the base they sit on was still perfectly readable, which
+    /// is an hour of embedding thrown away for a sharing violation.
+    /// </summary>
     /// <summary>
     /// A caller that cannot say what is reachable gets nothing removed under a kept
     /// generation. Guessing here costs an hour of embedding, and the hook has every reason to
