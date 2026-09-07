@@ -927,26 +927,14 @@ public static class CodeSearchSyncCommand
         }
     }
 
+    /// <summary>
+    /// Recomputable: these are the adapters' own results for a staged semantic index, and a build
+    /// that cannot find them runs the adapters again.
+    /// </summary>
     internal static void WriteSemanticAdapterStatuses(
         string path,
-        IReadOnlyList<SemanticAdapterStatus> statuses)
-    {
-        var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
-        try
-        {
-            File.WriteAllText(
-                temporary,
-                JsonSerializer.Serialize(statuses, LocalAiJson.Strict));
-            File.Move(temporary, path, overwrite: true);
-        }
-        finally
-        {
-            if (File.Exists(temporary))
-            {
-                File.Delete(temporary);
-            }
-        }
-    }
+        IReadOnlyList<SemanticAdapterStatus> statuses) =>
+        AtomicFile.WriteJson(path, statuses, LocalAiJson.Strict, AtomicWrite.Recomputable);
 
     private static void DeleteSemanticCheckpoint(
         string path,

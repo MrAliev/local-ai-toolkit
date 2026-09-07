@@ -1,5 +1,6 @@
 using System.Text;
 using CodeSearch.Core.Resources;
+using LocalAi.Contracts;
 
 namespace CodeSearch.Core.Semantics;
 
@@ -163,17 +164,19 @@ public sealed record SemanticIndexOverlay
         }.NormalizeForUse();
     }
 
+    /// <summary>
+    /// Recomputable, and the most rebuilt file in the runtime tree: an overlay is made again
+    /// whenever the branch moves or a file changes.
+    /// </summary>
     public void Save(string path)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         var overlay = Validate();
-        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
-        var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
-        try
-        {
-            using (var stream = File.Create(temporary))
-            using (var writer = new BinaryWriter(stream, Encoding.UTF8))
+        AtomicFile.Write(
+            path,
+            stream =>
             {
+                using var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true);
                 writer.Write(Encoding.ASCII.GetBytes(Magic));
                 writer.Write(CurrentVersion);
                 writer.Write(overlay.RepositoryId);
@@ -185,14 +188,8 @@ public sealed record SemanticIndexOverlay
                 writer.Write(overlay.DeletedDocuments.Count);
                 foreach (var deleted in overlay.DeletedDocuments) writer.Write(deleted);
                 overlay.Changed.WriteTo(writer);
-            }
-
-            File.Move(temporary, path, overwrite: true);
-        }
-        finally
-        {
-            if (File.Exists(temporary)) File.Delete(temporary);
-        }
+            },
+            AtomicWrite.Recomputable);
     }
 
     public static SemanticIndexOverlay Load(string path)

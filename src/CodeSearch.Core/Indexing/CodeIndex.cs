@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Text;
 using CodeSearch.Core.Chunking;
+using LocalAi.Contracts;
 
 namespace CodeSearch.Core.Indexing;
 
@@ -339,70 +340,76 @@ public sealed class CodeIndex : ISearchableIndex
         return count;
     }
 
-    public void Save(string path)
+    /// <summary>
+    /// Written to a sibling temporary and moved into place, so a crash mid-write leaves the
+    /// previous index intact rather than a truncated one.
+    ///
+    /// Recomputable, and expensively so: rebuilding this file is the hours of embedding the
+    /// checkpoint beside it exists to save. What it is not is irreplaceable — every vector in it
+    /// can be computed again from the same tree with the same model, which is the axis, and the
+    /// file that cannot is the checkpoint.
+    /// </summary>
+    public void Save(string path) =>
+        AtomicFile.Write(
+            path,
+            stream =>
+            {
+                // leaveOpen, because the stream belongs to the write above: closing it here would
+                // take the flush and the rename with it.
+                using var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true);
+                WriteTo(writer);
+            },
+            AtomicWrite.Recomputable);
+
+    private void WriteTo(BinaryWriter writer)
     {
-        var directory = Path.GetDirectoryName(path);
-        if (!string.IsNullOrEmpty(directory))
+        writer.Write(Encoding.ASCII.GetBytes(Magic));
+        writer.Write(CurrentVersion);
+        writer.Write(Dim);
+        writer.Write(Model);
+        writer.Write(Root);
+        writer.Write(GitCommit);
+        writer.Write(IndexedAtUtc.Ticks);
+
+        writer.Write(BaseCommit);
+        writer.Write(DeletedPaths.Count);
+        foreach (var deleted in DeletedPaths)
         {
-            Directory.CreateDirectory(directory);
+            writer.Write(deleted);
         }
 
-        // Write to a sibling temp file and move into place, so a crash mid-write leaves the
-        // previous index intact rather than a truncated one.
-        var temp = path + ".tmp";
-        using (var stream = File.Create(temp))
-        using (var writer = new BinaryWriter(stream, Encoding.UTF8))
+        writer.Write(RepositoryId);
+        writer.Write(GenerationId);
+        writer.Write(GitTree);
+        writer.Write(DirtyHash is not null);
+        if (DirtyHash is not null)
         {
-            writer.Write(Encoding.ASCII.GetBytes(Magic));
-            writer.Write(CurrentVersion);
-            writer.Write(Dim);
-            writer.Write(Model);
-            writer.Write(Root);
-            writer.Write(GitCommit);
-            writer.Write(IndexedAtUtc.Ticks);
-
-            writer.Write(BaseCommit);
-            writer.Write(DeletedPaths.Count);
-            foreach (var deleted in DeletedPaths)
-            {
-                writer.Write(deleted);
-            }
-
-            writer.Write(RepositoryId);
-            writer.Write(GenerationId);
-            writer.Write(GitTree);
-            writer.Write(DirtyHash is not null);
-            if (DirtyHash is not null)
-            {
-                writer.Write(DirtyHash);
-            }
-
-            writer.Write(Files.Count);
-            foreach (var file in Files)
-            {
-                writer.Write(file.RelPath);
-                writer.Write(file.Hash);
-                writer.Write(file.ChunkStart);
-                writer.Write(file.ChunkCount);
-            }
-
-            writer.Write(Chunks.Count);
-            foreach (var chunk in Chunks)
-            {
-                writer.Write(chunk.FileIndex);
-                writer.Write((byte)chunk.Kind);
-                writer.Write(chunk.Symbol);
-                writer.Write(chunk.Signature);
-                writer.Write(chunk.Namespace);
-                writer.Write(chunk.LexicalText);
-                writer.Write(chunk.StartLine);
-                writer.Write(chunk.EndLine);
-            }
-
-            WriteVectors(writer, Vectors);
+            writer.Write(DirtyHash);
         }
 
-        File.Move(temp, path, overwrite: true);
+        writer.Write(Files.Count);
+        foreach (var file in Files)
+        {
+            writer.Write(file.RelPath);
+            writer.Write(file.Hash);
+            writer.Write(file.ChunkStart);
+            writer.Write(file.ChunkCount);
+        }
+
+        writer.Write(Chunks.Count);
+        foreach (var chunk in Chunks)
+        {
+            writer.Write(chunk.FileIndex);
+            writer.Write((byte)chunk.Kind);
+            writer.Write(chunk.Symbol);
+            writer.Write(chunk.Signature);
+            writer.Write(chunk.Namespace);
+            writer.Write(chunk.LexicalText);
+            writer.Write(chunk.StartLine);
+            writer.Write(chunk.EndLine);
+        }
+
+        WriteVectors(writer, Vectors);
     }
 
     // Both directions index by float element rather than by byte offset. BlockCopy's offsets are

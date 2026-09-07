@@ -148,24 +148,9 @@ public sealed class LanguageServerPolicyStore
             throw new ArgumentException("Language-server policy is invalid.", nameof(policy));
         }
 
-        Directory.CreateDirectory(System.IO.Path.GetDirectoryName(WritePath)!);
-        var target = WritePath;
-        var temporary = target + "." + Guid.NewGuid().ToString("N") + ".tmp";
-        try
-        {
-            File.WriteAllBytes(
-                temporary,
-                JsonSerializer.SerializeToUtf8Bytes(policy, SerializerOptions));
-            File.Move(temporary, target, overwrite: true);
-            RuntimeDirectories.DiscardLegacySettingsFile(_runtimeRoot, LanguageServerPolicy.FileName);
-        }
-        finally
-        {
-            if (File.Exists(temporary))
-            {
-                File.Delete(temporary);
-            }
-        }
+        // Irrecoverable: a policy is what a person chose, and nothing derives it again.
+        AtomicFile.WriteJson(WritePath, policy, SerializerOptions, AtomicWrite.Irrecoverable);
+        RuntimeDirectories.DiscardLegacySettingsFile(_runtimeRoot, LanguageServerPolicy.FileName);
     }
 
     private static bool IsValid(LanguageServerPolicy policy)

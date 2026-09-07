@@ -385,42 +385,12 @@ public sealed class GenerationStore
     /// manifest, which is written into a staging directory nothing has opened yet — only the
     /// pointer has readers to lose a race with.
     /// </param>
-    private static void AtomicWriteJson<T>(string path, T value, TimeSpan? retryBudget = null)
-    {
-        var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
-        try
-        {
-            File.WriteAllText(
-                temporary,
-                JsonSerializer.Serialize(value, LocalAiJson.Strict));
-            if (retryBudget is not { } budget)
-            {
-                File.Move(temporary, path, overwrite: true);
-                return;
-            }
-
-            var deadline = DateTime.UtcNow + budget;
-            while (true)
-            {
-                try
-                {
-                    File.Move(temporary, path, overwrite: true);
-                    return;
-                }
-                catch (Exception error) when (
-                    error is IOException or UnauthorizedAccessException &&
-                    DateTime.UtcNow < deadline)
-                {
-                    Thread.Sleep(TimeSpan.FromMilliseconds(25));
-                }
-            }
-        }
-        finally
-        {
-            if (File.Exists(temporary))
-            {
-                File.Delete(temporary);
-            }
-        }
-    }
+    private static void AtomicWriteJson<T>(string path, T value, TimeSpan? retryBudget = null) =>
+        AtomicFile.WriteJson(
+            path,
+            value,
+            LocalAiJson.Strict,
+            retryBudget is { } budget
+                ? AtomicWrite.Recomputable.Retrying(budget)
+                : AtomicWrite.Recomputable);
 }

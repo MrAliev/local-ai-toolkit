@@ -1,4 +1,5 @@
 using System.Text;
+using LocalAi.Contracts;
 
 namespace CodeSearch.Core.Semantics;
 
@@ -33,32 +34,22 @@ public sealed record SemanticIndex
     public required List<SemanticOccurrence> Occurrences { get; init; }
     public required List<SemanticRelationship> Relationships { get; init; }
 
+    /// <summary>
+    /// Recomputable: the semantic phase produces this file from the tree it names, in minutes,
+    /// and an interrupted build resumes from the staged copy rather than from a flush.
+    /// </summary>
     public void Save(string path)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         var normalized = NormalizeAndValidate();
-        var directory = Path.GetDirectoryName(Path.GetFullPath(path))
-            ?? throw new InvalidOperationException($"Cannot resolve the directory for semantic index '{path}'.");
-        Directory.CreateDirectory(directory);
-
-        var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
-        try
-        {
-            using (var stream = File.Create(temporary))
-            using (var writer = new BinaryWriter(stream, Encoding.UTF8))
+        AtomicFile.Write(
+            path,
+            stream =>
             {
+                using var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true);
                 normalized.WriteTo(writer);
-            }
-
-            File.Move(temporary, path, overwrite: true);
-        }
-        finally
-        {
-            if (File.Exists(temporary))
-            {
-                File.Delete(temporary);
-            }
-        }
+            },
+            AtomicWrite.Recomputable);
     }
 
     public static SemanticIndex Load(string path)
