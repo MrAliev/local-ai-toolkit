@@ -31,6 +31,24 @@ public sealed class ATextSearchIsRefusedBeforeItRunsTests
     [InlineData("find . -name '*.cs' | xargs grep -n Publish")]
     // A search after a heredoc has closed is still a search.
     [InlineData("cat <<'EOF' > notes.md\nmentions grep in prose\nEOF\ngrep -n Publish src/")]
+    // Handed to an interpreter as a script. Every one of these got through the pattern this
+    // replaces, because nothing recognised a quote as a boundary or a shell as a thing that runs
+    // what it is given.
+    [InlineData("sh -c 'grep -r foo .'")]
+    [InlineData("bash -c \"grep -r foo .\"")]
+    [InlineData("pwsh -Command 'Select-String -Pattern foo -Path .'")]
+    // A heredoc fed to an interpreter is commands, not data — which is the whole point of one.
+    [InlineData("bash <<'EOF'\ngrep -r foo .\nEOF")]
+    // A runner with a flag in front of the tool. The pattern required the tool to follow the
+    // runner immediately, so any option at all defeated it.
+    [InlineData("sudo -u root grep foo /etc/passwd")]
+    [InlineData("find . -print0 | xargs -0 grep foo")]
+    // Spelled by path rather than by name.
+    [InlineData("/usr/bin/grep -r foo .")]
+    [InlineData("C:\\tools\\rg.exe --files-with-matches foo")]
+    // `sls` is how `Select-String` is actually typed, and PowerShell is one of the two shells
+    // this hook answers for.
+    [InlineData("gci -r | sls foo")]
     public void A_search_over_the_tree_is_refused(string command) =>
         Assert.True(TextSearchRefusal.Refuses("Bash", command), command);
 
@@ -48,6 +66,16 @@ public sealed class ATextSearchIsRefusedBeforeItRunsTests
     // A backtick is a substitution in shell and also how prose quotes a command name. The second
     // reading is the common one in this repository's own documents, so it is not a separator here.
     [InlineData("echo \"the rule is about `grep` and its kin\"")]
+    // A quoted argument is text, whatever punctuation it carries. `(` is a command separator in a
+    // shell and also an ordinary bracket in a sentence, and the pattern this replaces could not
+    // tell them apart — so a commit message about this very feature was refused. The reviewer of
+    // it hit the same wall writing a probe.
+    [InlineData("git commit -m 'text search (grep) is refused'")]
+    [InlineData("gh issue create --body 'we blocked | grep for good'")]
+    [InlineData("git commit -m \"say why sls; ag and rg are covered\"")]
+    // The word as a value of a flag, which is where `git log --grep` puts it.
+    [InlineData("git log --grep foo")]
+    [InlineData("dotnet test --filter FullyQualifiedName~Grep")]
     public void Anything_that_is_not_a_search_is_allowed(string command) =>
         Assert.False(TextSearchRefusal.Refuses("Bash", command), command);
 
