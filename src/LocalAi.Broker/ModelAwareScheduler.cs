@@ -27,13 +27,21 @@ public sealed class ModelAwareScheduler
     private static readonly TimeSpan StarvationAge = TimeSpan.FromMinutes(15);
 
     private readonly TimeProvider _timeProvider;
+    private readonly TimeSpan _modelHold;
     private readonly Queue<Guid> _snapshot = [];
     private string? _snapshotModel;
     private DateTimeOffset? _gatherDeadline;
 
-    public ModelAwareScheduler(TimeProvider? timeProvider = null)
+    /// <param name="modelHold">
+    /// How long a loaded model is held before work for another one takes the worker. The
+    /// operator sets it as the idle keep-alive, because it is the same question asked twice.
+    /// Raised to <see cref="GatherWindow"/> when it is shorter: the keep-alive defaults to
+    /// zero, and zero as a hold would switch the instant a queue empties.
+    /// </param>
+    public ModelAwareScheduler(TimeProvider? timeProvider = null, TimeSpan? modelHold = null)
     {
         _timeProvider = timeProvider ?? TimeProvider.System;
+        _modelHold = modelHold is { } hold && hold > GatherWindow ? hold : GatherWindow;
     }
 
     public ScheduleDecision Decide(
@@ -99,13 +107,23 @@ public sealed class ModelAwareScheduler
             .ThenBy(candidate => candidate.Priority)
             .ThenBy(candidate => candidate.Sequence)
             .ToArray();
+        var switchesModel =
+            !string.Equals(selectedModel, residentModel, StringComparison.Ordinal);
         var requiresGatherWindow =
             starved is null &&
-            (!string.Equals(selectedModel, residentModel, StringComparison.Ordinal) ||
+            (switchesModel ||
              group.Any(candidate => candidate.DurationClass == LocalDurationClass.Long));
         if (requiresGatherWindow)
         {
-            _gatherDeadline ??= now + GatherWindow;
+            // Leaving a model that is loaded costs an unload and a reload — ModelRuntime
+            // unloads every other managed model before it preflights — so that wait is the
+            // operator's keep-alive. With nothing loaded there is nothing to protect, and
+            // gathering more work before committing to a long job is a different question
+            // with a different answer; both keep the two seconds.
+            var window = switchesModel && residentModel is not null
+                ? _modelHold
+                : GatherWindow;
+            _gatherDeadline ??= now + window;
             if (now < _gatherDeadline)
             {
                 return new ScheduleDecision(null, selectedModel, _gatherDeadline);
