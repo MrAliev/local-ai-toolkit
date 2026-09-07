@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!--
     What the LocalLm tools say, in every language they say it in. English is the neutral resource every other language falls back to. Numbers, durations and identifiers are formatted by the caller and arrive already invariant, so a hole is never a place a decimal separator can change.
@@ -84,11 +84,11 @@
     <value>Images read: {0} — {1}</value>
   </data>
   <data name="ImagesTooLargeTogether" xml:space="preserve">
-    <value>The images together exceed the {0}MB total limit for one call; split the request.</value>
+    <value>The images together exceed the {0}MB total limit; split the request.</value><comment>The limit is over the request, checked at the metadata pass before a byte is read. It no longer says "for one call": in the default form the images are not one call - each is read on its own and the readings are merged.</comment>
   </data>
   <data name="ImagesTooManyPixels" xml:space="preserve">
-    <value>The images together exceed the {0:N0}-pixel total limit for one call; split the request.</value>
-    <comment>N0 formats invariantly in both languages, by the rule the notice line follows.</comment>
+    <value>The images together exceed the {0:N0}-pixel total limit; split the request.</value>
+    <comment>The limit is over the request, checked at the metadata pass before a byte is read. It no longer says "for one call": in the default form the images are not one call - each is read on its own and the readings are merged.</comment>
   </data>
   <data name="Ineligible" xml:space="preserve">
     <value>A local model for {0} is installed, but none can take this request. Ask for a smaller context, or — for an image — a smaller one: each model declares the context sizes and the pixel count it accepts.</value>
@@ -186,8 +186,8 @@
     <value>{0} files exceed the {1}-file limit for one call; split the request.</value>
   </data>
   <data name="TooManyImages" xml:space="preserve">
-    <value>{0} images exceed the {1}-image limit for one call; split the request.</value>
-    <comment>The Russian puts the count after a colon so the numeral does not have to agree.</comment>
+    <value>{0} images exceed the {1}-image limit; split the request.</value>
+    <comment>The limit is over the request, checked at the metadata pass before a byte is read. It no longer says "for one call": in the default form the images are not one call - each is read on its own and the readings are merged.</comment>
   </data>
   <data name="TranslateFileEmpty" xml:space="preserve">
     <value>The file '{0}' is empty, so there is nothing to translate.</value>
@@ -310,5 +310,10 @@
   </data>
   <data name="ValidatorUrls" xml:space="preserve">
     <value>URLs</value>
+  </data>
+
+  <data name="ImagesReadOneAtATime" xml:space="preserve">
+    <value>Images read one at a time and merged: {0} — {1}</value>
+    <comment>The counted form's detail. Separate from ImagesRead because the two are different claims about the answer: one look at five images can compare them and five merged readings cannot, which is what the merge prompt forbids. A reader deciding whether to trust a statement spanning the images has only this line to go on. Renders inside Notice's hole, so no trailing full stop.</comment>
   </data>
 </root>

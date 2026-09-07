@@ -75,17 +75,24 @@ public sealed record TriageChoosingModel : LocalRunStep;
 public sealed record TriagingFragment(int Index, long Consumed, long Total) : LocalRunStep;
 
 /// <summary>
-/// One call is about to carry <paramref name="Count"/> images. Reported once, before it, because
-/// there is nothing to count inside: every image goes to the model in a single chat request and
-/// the answer comes back whole.
+/// Every image in one call, which is what the together form asks for and what a single image gets.
 ///
-/// Not a line of its own. The console keeps the count and names the work in the heartbeat it was
-/// already going to print, so a run that answers in three seconds still says nothing. A per-image
-/// counter was the alternative and it lies about where the time goes: the images are encoded in
-/// about a second and the model then works for minutes, so the counter would stop at the last one
-/// and read as a hang there.
+/// Not a line of its own: there is nothing to count inside one call, so the console keeps the
+/// number and names the work in the heartbeat it was going to print anyway, and a run that answers
+/// in three seconds still says nothing. Kept when the counted form arrived rather than replaced by
+/// it — a question that spans the images cannot be answered from readings merged afterwards.
 /// </summary>
 public sealed record ReadingImages(int Count) : LocalRunStep;
+
+/// <summary>
+/// About to read image <paramref name="Index"/> of <paramref name="Total"/>, one image per call.
+///
+/// The counter is honest here in a way it would not have been over a single call carrying all of
+/// them: each call finishes, so the figure moves at the model's pace rather than at the encoder's.
+/// A run over one image never reports this — one image is one call, and it takes
+/// <see cref="ReadingImages"/> like the together form.
+/// </summary>
+public sealed record ReadingImage(int Index, int Total) : LocalRunStep;
 
 /// <summary>The same fact for a question asked over files, which is also one call.</summary>
 public sealed record AskingOverFiles(int Count) : LocalRunStep;
@@ -94,7 +101,11 @@ public sealed record AskingOverFiles(int Count) : LocalRunStep;
 public sealed record TriageLogRead(int Fragments) : LocalRunStep;
 
 /// <summary>
-/// Merging partial findings. Also happens mid-stream when a level overflows its budget, so this
-/// must not be read as "the log has been read".
+/// Merging partial answers. Also happens mid-stream when a level overflows its budget, so this
+/// must not be read as "everything has been read".
+///
+/// Named for the reducer rather than for triage, which is where it started: reading images one at
+/// a time ends in the same merge, and "partial findings" is a log's word for what a screenshot
+/// contains.
 /// </summary>
-public sealed record TriageMerging(int Findings, int Level) : LocalRunStep;
+public sealed record MergingPartials(int Parts, int Level) : LocalRunStep;

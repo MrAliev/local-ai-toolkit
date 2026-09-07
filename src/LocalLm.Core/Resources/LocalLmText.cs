@@ -59,6 +59,14 @@ public static class LocalLmText
     public static string ImagesRead(int count, string described) =>
         Format(nameof(ImagesRead), count, described);
 
+    /// <summary>
+    /// The counted form's detail, and separate from <see cref="ImagesRead"/> on purpose: one look
+    /// at five images can compare them and five merged readings cannot, so the two sentences are
+    /// different claims about what the answer supports.
+    /// </summary>
+    public static string ImagesReadOneAtATime(int count, string described) =>
+        Format(nameof(ImagesReadOneAtATime), count, described);
+
     public static string FilesProcessed(int count, string names, string more) =>
         Format(nameof(FilesProcessed), count, names, more);
 

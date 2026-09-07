@@ -297,7 +297,7 @@
   </data>
   <data name="ProgressMinutesLeft" xml:space="preserve">
     <value> Осталось примерно {0} мин.</value>
-    <comment>Leading space: a clause appended to the line above. Empty on the first fragment, where nothing has been measured yet, and never a bare number without about - it is a mean over completed fragments, and the fallback pass can double it. F1 and invariant, the format IndexBuilder already prints an ETA in. Also carried by ProgressTriageFragment, where the mean is over the log analysed rather than over fragments, so the merges that happen between them are already in it and the cascade after the last fragment is not - the other reason the sentence says about.</comment>
+    <comment>Leading space: a clause appended to the line above. Empty on the first unit, where nothing has been measured yet, and never a bare number without about - it is a mean over completed units, and the fallback pass can double it. F1 and invariant, the format IndexBuilder already prints an ETA in. Carried by every counted line - translating a fragment, reading an image - and by ProgressTriageFragment, where the mean is over the log analysed rather than over fragments. In every case the work that follows the last unit, a merge or a retry cascade, is outside the mean: the other reason the sentence says about.</comment>
   </data>
   <data name="ProgressPullDownloading" xml:space="preserve">
     <value>Скачивается {0}: {1} из {2} ГБ.</value>
@@ -346,10 +346,6 @@
   <data name="ProgressTriageLogRead" xml:space="preserve">
     <value>Лог прочитан полностью: фрагментов {0}.</value>
     <comment>The total, at the first moment it is true. Noun-first in Russian: ResourceManager has no plural support.</comment>
-  </data>
-  <data name="ProgressTriageMerging" xml:space="preserve">
-    <value>Слияние частичных выводов: {0} (уровень {1}).</value>
-    <comment>Merges also happen mid-stream when a level overflows its budget, so this must not be read as the log having been read. level is the reduction level the prompt itself names.</comment>
   </data>
   <data name="PruneArchive" xml:space="preserve">
     <value>archive: заданий {0}, тел ответов {1}, {2} МБ</value>
@@ -727,5 +723,14 @@
   <data name="ProgressRunningFiles" xml:space="preserve">
     <value>Модель работает с файлами (их {0}): {1} с.</value>
     <comment>Its pair, for a question asked over files, which is also one call. A bare prompt reports nothing and keeps ProgressRunning: there is no count worth naming.</comment>
+  </data>
+
+  <data name="ProgressReadingImage" xml:space="preserve">
+    <value>Читается изображение {0} из {1}.{2}</value>
+    <comment>One image per call, so the counter moves when a call finishes rather than when a file is encoded - which is what makes it honest, and what ProgressRunningImages says instead when every image goes in one request. No percent beside it: the count is the fraction, and an index, a total, a percent and an estimate on one line is one figure too many, the objection ProgressTriageFragment records. No file name either: eight names on eight lines repeat what the notice lists at the end. {2} is ProgressMinutesLeft or empty, and its mean is over the images already read - the merge after the last one is not in it, the other reason the clause says about. Never printed for a single image: one image is one call and takes the together form.</comment>
+  </data>
+  <data name="ProgressMerging" xml:space="preserve">
+    <value>Слияние частичных ответов: {0} (уровень {1}).</value>
+    <comment>Renamed from ProgressTriageMerging when the reducer gained its second caller: reading images one at a time ends in the same merge. Merges also happen mid-stream when a level overflows its budget, so this must not be read as "everything has been read" - with images the line before it says which image, which keeps that clear. level is the reduction level the prompt itself names.</comment>
   </data>
 </root>
