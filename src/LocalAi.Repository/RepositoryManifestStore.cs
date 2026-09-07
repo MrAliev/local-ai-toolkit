@@ -14,34 +14,32 @@ public sealed class RepositoryManifestStore
         _manifestPath = repositoryRuntimeRoot.Combine("manifest.json").Value;
     }
 
+    /// <summary>
+    /// The same window as the progress record's, for the same reason: <c>Read</c> below opens
+    /// through <c>File.ReadAllText</c>, and every reader of a repository's state — <c>repo
+    /// status</c>, the MCP server, the next sync — goes through it.
+    /// </summary>
+    private static readonly TimeSpan ReplaceRetryBudget = TimeSpan.FromSeconds(2);
+
+    /// <summary>
+    /// Recomputable, and written as such: the manifest states the repository id, its mainline
+    /// ref, the model and the worktrees, all of which a sync derives again from the repository
+    /// itself.
+    /// </summary>
     public void Save(RepositoryManifest manifest)
     {
         ArgumentNullException.ThrowIfNull(manifest);
-        Directory.CreateDirectory(
-            Path.GetDirectoryName(_manifestPath)
-            ?? throw new InvalidOperationException("Manifest directory is unavailable."));
         var payload = JsonSerializer.SerializeToUtf8Bytes(
             manifest,
             LocalAiJson.Strict);
-        var document = new ManifestDocument(
-            1,
-            manifest,
-            Convert.ToHexString(SHA256.HashData(payload)));
-        var temporary = _manifestPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
-        try
-        {
-            File.WriteAllText(
-                temporary,
-                JsonSerializer.Serialize(document, LocalAiJson.Strict));
-            File.Move(temporary, _manifestPath, overwrite: true);
-        }
-        finally
-        {
-            if (File.Exists(temporary))
-            {
-                File.Delete(temporary);
-            }
-        }
+        AtomicFile.WriteJson(
+            _manifestPath,
+            new ManifestDocument(
+                1,
+                manifest,
+                Convert.ToHexString(SHA256.HashData(payload))),
+            LocalAiJson.Strict,
+            AtomicWrite.Recomputable.Retrying(ReplaceRetryBudget));
     }
 
     public RepositoryManifest? Read()

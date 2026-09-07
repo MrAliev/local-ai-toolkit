@@ -29,24 +29,18 @@ public static class BrokerShutdownRequestStore
         return Path.Combine(Path.GetFullPath(runtimeRoot), FileName);
     }
 
+    /// <summary>
+    /// Recomputable to the letter: a request that does not survive is one the stopper writes
+    /// again, and the broker it addressed is still there to receive it.
+    /// </summary>
     public static void Write(string runtimeRoot, BrokerShutdownRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
-        var path = PathFor(runtimeRoot);
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
-        try
-        {
-            File.WriteAllText(temporary, JsonSerializer.Serialize(request));
-            File.Move(temporary, path, overwrite: true);
-        }
-        finally
-        {
-            if (File.Exists(temporary))
-            {
-                File.Delete(temporary);
-            }
-        }
+        AtomicFile.WriteJson(
+            PathFor(runtimeRoot),
+            request,
+            JsonSerializerOptions.Default,
+            AtomicWrite.Recomputable);
     }
 
     /// <summary>

@@ -125,22 +125,9 @@ public sealed class UpdateCheckStateStore
     public void Write(UpdateCheckState state)
     {
         ArgumentNullException.ThrowIfNull(state);
-        Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
-        var temporary = _path + "." + Guid.NewGuid().ToString("N") + ".tmp";
-        try
-        {
-            File.WriteAllBytes(
-                temporary,
-                JsonSerializer.SerializeToUtf8Bytes(state, SerializerOptions));
-            File.Move(temporary, _path, overwrite: true);
-        }
-        finally
-        {
-            if (File.Exists(temporary))
-            {
-                File.Delete(temporary);
-            }
-        }
+        // Recomputable: what it holds is when the last check happened and what it found, and a
+        // lost record only means the next surface checks again sooner than it had to.
+        AtomicFile.WriteJson(_path, state, SerializerOptions, AtomicWrite.Recomputable);
     }
 }
 

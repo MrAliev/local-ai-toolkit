@@ -105,26 +105,17 @@ public sealed class InstalledReleaseStore
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(versionDirectory);
         ArgumentException.ThrowIfNullOrWhiteSpace(releaseVersion);
-        Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
-        var temporary = _path + "." + Guid.NewGuid().ToString("N") + ".tmp";
-        try
-        {
-            File.WriteAllBytes(
-                temporary,
-                JsonSerializer.SerializeToUtf8Bytes(
-                    new InstalledRelease(
-                        InstalledRelease.CurrentSchemaVersion,
-                        versionDirectory,
-                        releaseVersion),
-                    SerializerOptions));
-            File.Move(temporary, _path, overwrite: true);
-        }
-        finally
-        {
-            if (File.Exists(temporary))
-            {
-                File.Delete(temporary);
-            }
-        }
+        // Recomputable, and written as such today: the pair it records — a version directory and
+        // the release published into it — is on disk in the directory's own name, and the next
+        // install writes the record again. Flagged in #399's table as the one where that reading
+        // is least obvious, since nothing in the product currently recovers it.
+        AtomicFile.WriteJson(
+            _path,
+            new InstalledRelease(
+                InstalledRelease.CurrentSchemaVersion,
+                versionDirectory,
+                releaseVersion),
+            SerializerOptions,
+            AtomicWrite.Recomputable);
     }
 }

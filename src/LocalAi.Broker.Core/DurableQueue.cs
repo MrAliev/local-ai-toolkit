@@ -1098,33 +1098,13 @@ public sealed class DurableQueue : ISelectableBrokerQueue
         }
     }
 
-    private static void AtomicWriteJson<T>(string destination, T value)
-    {
-        var temporaryPath = destination + "." + Guid.NewGuid().ToString("N") + ".tmp";
-        try
-        {
-            using (var stream = new FileStream(
-                       temporaryPath,
-                       FileMode.CreateNew,
-                       FileAccess.Write,
-                       FileShare.None,
-                       bufferSize: 4096,
-                       FileOptions.WriteThrough))
-            {
-                JsonSerializer.Serialize(stream, value, JsonOptions);
-                stream.Flush(flushToDisk: true);
-            }
-
-            File.Move(temporaryPath, destination, overwrite: true);
-        }
-        finally
-        {
-            if (File.Exists(temporaryPath))
-            {
-                File.Delete(temporaryPath);
-            }
-        }
-    }
+    /// <summary>
+    /// Irrecoverable, and the reason the queue is called durable: a job document is the only
+    /// record that the work was accepted, and a crash that loses it loses the request itself
+    /// rather than a computation that can be run again.
+    /// </summary>
+    private static void AtomicWriteJson<T>(string destination, T value) =>
+        AtomicFile.WriteJson(destination, value, JsonOptions, AtomicWrite.Irrecoverable);
 
     private MutexLease EnterMutex(CancellationToken cancellationToken)
     {
