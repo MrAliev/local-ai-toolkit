@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 
 namespace LocalAi.Cli;
 
@@ -20,47 +19,23 @@ namespace LocalAi.Cli;
 internal static class TextSearchRefusal
 {
     /// <summary>
-    /// A search tool is refused when it starts a command: at the beginning, after a pipe, a
-    /// separator, a subshell, or behind something that runs another command. Anywhere else the
-    /// word is an argument or text.
+    /// The tools that sweep a tree for a string, by the names they are actually typed under.
     ///
-    /// <c>git</c> is in the list of runners for one reason: <c>git grep</c> is a sweep of the tree
-    /// and got through the hand-installed script, which knew only <c>sudo</c> and its kind. It
-    /// does not take <c>git log --grep</c> with it, because there the word follows <c>--</c>
-    /// rather than a runner.
+    /// <c>sls</c> is here because it is how <c>Select-String</c> is written in practice, and
+    /// PowerShell is one of the two shells this hook answers for — spelling only the full name
+    /// left the common form allowed on the platform this product is built for. <c>egrep</c> and
+    /// <c>fgrep</c> are the same argument one generation earlier.
     ///
-    /// The backtick is deliberately not a separator. It is a substitution in shell, but it is also
-    /// how prose quotes a command name, and this hook's first false positive was a
-    /// <c>grep</c> written in backticks inside the body of an issue about grep. <c>$(...)</c>
-    /// covers substitution in every script written this decade.
+    /// What is not here: <c>find</c> and <c>Get-ChildItem -Recurse</c>. They sweep paths rather
+    /// than contents, which is the <c>Glob</c> half of the rule, and refusing every use of
+    /// <c>find</c> would refuse a great deal that has nothing to do with searching. Widening to
+    /// them is a decision about what the product forbids, not a hole in how it reads a command.
     /// </summary>
-    private static readonly Regex SearchCommand = new(
-        """
-        (?:^|[|;&(\n]|\$\(|\|\||&&)             # start of a command
-        \s*
-        (?:(?:sudo|xargs|time|command|env|git)\s+)*  # things that run another command
-        (grep|egrep|fgrep|rg|ripgrep|ag|ack|ack-grep|findstr|Select-String)\b
-        """,
-        RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace | RegexOptions.Compiled);
-
-    /// <summary>
-    /// Text fed to a command through a heredoc is data, not commands. Without this, writing a
-    /// document that mentions <c>grep</c> — an issue about this very rule, say — is refused as
-    /// though it were a search. A search after the heredoc has closed is still refused, which is
-    /// why the body is excised rather than the whole command abandoned.
-    /// </summary>
-    private static readonly Regex Heredoc = new(
-        @"<<-?\s*(['""]?)(\w+)\1.*?^\s*\2\s*$",
-        RegexOptions.Singleline | RegexOptions.Multiline | RegexOptions.Compiled);
-
-    /// <summary>
-    /// The shell is not the only way to sweep a tree. A subagent asked for <c>grep</c>, was
-    /// refused by the hook, and reached the same result through the built-in search tools — which
-    /// the rule covers and the hook did not. These two are a search whatever their arguments say,
-    /// so the call itself is refused rather than anything inside it.
-    /// </summary>
-    private static readonly HashSet<string> SearchTools =
-        new(StringComparer.Ordinal) { "Grep", "Glob" };
+    private static readonly HashSet<string> SearchPrograms = new(StringComparer.Ordinal)
+    {
+        "grep", "egrep", "fgrep", "rg", "ripgrep", "ag", "ack", "ack-grep", "findstr",
+        "select-string", "sls",
+    };
 
     public static bool Refuses(string? toolName, string? command) =>
         ReasonFor(toolName, command) is not null;
@@ -75,8 +50,12 @@ internal static class TextSearchRefusal
     /// <c>search_code</c> for "what is in this directory" points at the wrong tool — listing the
     /// directory answers that, and is not refused.
     ///
-    /// The hole is filled with the name of what was actually refused — the matched command or the
-    /// tool — so the sentence can never name something that was allowed.
+    /// The hole is filled with the name of what was actually refused — the program the line runs
+    /// or the tool that asked — so the sentence can never name something that was allowed.
+    ///
+    /// <c>Grep</c> and <c>Glob</c> are the client's own search tools, and they are a search
+    /// whatever their arguments say: a subagent refused at the shell reached the same result
+    /// through them, which the rule covered and the hook did not.
     /// </summary>
     public static string? ReasonFor(string? toolName, string? command)
     {
@@ -95,10 +74,11 @@ internal static class TextSearchRefusal
             return null;
         }
 
-        var match = SearchCommand.Match(Heredoc.Replace(command, "<<HEREDOC"));
-        return match.Success
-            ? string.Format(CultureInfo.InvariantCulture, ContentRefused, match.Groups[1].Value)
-            : null;
+        var found = CommandLineScan.ProgramWords(command)
+            .FirstOrDefault(SearchPrograms.Contains);
+        return found is null
+            ? null
+            : string.Format(CultureInfo.InvariantCulture, ContentRefused, found);
     }
 
     /// <summary>
