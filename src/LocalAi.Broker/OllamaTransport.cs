@@ -876,6 +876,20 @@ public sealed class OllamaTransport : IModelRuntimeTransport, IDisposable
     /// layer that owns what Ollama says, and the layers above it must not have to learn
     /// the vocabulary. Ollama does not translate these, so matching them is stable in a
     /// way that matching our own text would not be.
+    ///
+    /// Three phrases and no more, deliberately, and the reason changed with #412 rather
+    /// than with anything here. This match is now what decides between a build that waits
+    /// ten minutes for a backend to come back and one that shreds a batch and dies: only a
+    /// retryable 400 becomes <c>BackendUnavailableException</c>, and only that reaches the
+    /// wait. So a phrase added on a guess costs ten minutes of silence every time a request
+    /// really was bad, and a phrase missing costs the halving that #349 and #369 were about.
+    /// Both are worse than they were when the list was three phrases against two retries.
+    ///
+    /// What a fourth phrase needs, therefore, is evidence rather than imagination: what
+    /// Ollama emits for a runner that goes away other than by a refused connect, taken from
+    /// its source or from a provoked failure. That is what #413 asked for and never got —
+    /// the miss has not been observed once, and the body of the refusal will be in the
+    /// broker's log on the day it is, which is the evidence itself.
     /// </summary>
     private static bool NamesAnUnreachableRunner(string errorBody) =>
         errorBody.Contains("dial tcp", StringComparison.OrdinalIgnoreCase) ||
