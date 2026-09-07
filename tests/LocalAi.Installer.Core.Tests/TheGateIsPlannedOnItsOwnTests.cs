@@ -136,6 +136,32 @@ public sealed class TheGateIsPlannedOnItsOwnTests : IDisposable
     }
 
     /// <summary>
+    /// Taking the entry out of a file nobody can parse fails loudly rather than reporting nothing
+    /// to do.
+    ///
+    /// The swallow this replaces was silent at the worst possible moment. `Parse` refuses any
+    /// document the JSON reader rejects — a trailing comma is enough — so an uninstall over a
+    /// hand-edited settings file planned zero changes, printed no notice, and left the hook
+    /// behind pointing at a launcher it had just deleted. The removal screen meanwhile promised
+    /// "the hook that refuses text searches" was going.
+    ///
+    /// Throwing puts it through the machinery that already exists for a config the adapter
+    /// refuses to rewrite: the plan fails, it is reported by name, and the rest of the removal
+    /// carries on.
+    /// </summary>
+    [Fact]
+    public void Taking_the_entry_out_of_a_file_that_cannot_be_read_fails_rather_than_reporting_nothing()
+    {
+        Directory.CreateDirectory(Path.Combine(home, ".claude"));
+        File.WriteAllText(
+            Path.Combine(home, ".claude", "settings.json"),
+            "{\n  \"theme\": \"dark\",\n}",
+            Utf8);
+
+        Assert.Throws<InvalidOperationException>(() => Adapter().PreviewGate(register: false));
+    }
+
+    /// <summary>
     /// A settings file nobody can parse is not a reason to refuse the installation, and not a
     /// reason to overwrite it either: the question "is the gate registered" is answered no, and
     /// the plan that would write to it is the only thing that fails.
