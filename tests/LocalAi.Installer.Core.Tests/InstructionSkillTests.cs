@@ -76,7 +76,11 @@ public sealed class InstructionSkillTests
     // A local run reported with no model, no duration and no saving, which the reporting rule
     // forbids — the notice is on stderr, so capturing only stdout loses it.
     [InlineData("Capture both")]
-    public void The_fallback_section_offers_every_local_tool(string phrase) =>
+    // Which stream the relayed progress comes off, and that it is carried while the run is
+    // still going rather than after it. The reporting rule says a reply carries the newest
+    // lines; without this the reader does not know where those lines are.
+    [InlineData("what a reply carries while a run is still going")]
+    public void The_command_line_section_offers_every_local_tool(string phrase) =>
         Assert.Contains(phrase, Flat(ManagedInstructionBlock.SkillBody), StringComparison.Ordinal);
 
     /// <summary>
@@ -168,11 +172,22 @@ public sealed class InstructionSkillTests
     ///
     /// The half-the-Codex-block claim above used to be prose, and prose is how it would have
     /// gone quietly false — this change leaves it true by 149 characters. It is asserted now.
+    ///
+    /// The ceiling moved from 7_300 on purpose, a third time, and this raise widened a rule
+    /// rather than adding one: a tool call over a large input outlasts a reply exactly as a
+    /// build does, and unlike a build it says nothing at all while it runs. So the core now
+    /// says which surface a large input goes to, and the reporting paragraph's subject is a
+    /// run rather than a build.
+    ///
+    /// The margin under half is now 99 characters rather than 149, and it survived only
+    /// because the same raise put 249 characters into the Codex block that the core does not
+    /// carry — shared text costs the core once and the inequality twice. An addition to the
+    /// core alone has 99 characters of room, not 199.
     /// </summary>
     [Fact]
     public void The_core_is_materially_smaller_than_the_block_it_replaced()
     {
-        Assert.InRange(ManagedInstructionBlock.Block.Length, 1_000, 7_300);
+        Assert.InRange(ManagedInstructionBlock.Block.Length, 1_000, 7_700);
         Assert.True(
             ManagedInstructionBlock.Block.Length * 2 < ManagedInstructionBlock.CodexBlock.Length,
             $"the core is {ManagedInstructionBlock.Block.Length} characters against the Codex " +
