@@ -318,6 +318,11 @@ public static class CodeSearchSyncCommand
                         generation.Identity,
                         runtimeRoot,
                         error,
+                        // Recording the same phase again, which moves nothing but the timestamp:
+                        // the counters are already the zeroes ReportPhase set a line above.
+                        () => ReportPhase(
+                            RepositoryIndexProgressPhase.SemanticOverlay,
+                            identity.WorkingRoot.Value),
                         cancellationToken);
 
                     // A failed adapter aborts the base generation and deliberately does not abort
@@ -782,6 +787,9 @@ public static class CodeSearchSyncCommand
                     generation,
                     runtimeRoot,
                     error,
+                    // The phase it is still in, recorded again: nothing moves but the timestamp,
+                    // and that is the whole point — see RoslynNarration.
+                    () => phase(RepositoryIndexProgressPhase.SemanticBase),
                     cancellationToken);
                 EnsureSemanticAdaptersSucceeded(built.AdapterStatuses);
                 built.Index.Save(workSemanticIndex);
@@ -1091,21 +1099,49 @@ public static class CodeSearchSyncCommand
         }
     }
 
+    /// <summary>
+    /// The C# phase's narration and its record of being alive are the same event, so they are
+    /// composed once and cannot come apart.
+    ///
+    /// The line is for the person watching the console. The second half is for everybody who is
+    /// not: <c>ReportPhase</c> wrote <c>progress.json</c> when the phase began and never again, so
+    /// <c>index_status</c> printed <c>SemanticOverlay - not counted, recorded 4 min ago</c> in
+    /// front of a build that was working — the same reading a build whose process died four
+    /// minutes ago produces, and <c>SyncNotice</c> prints that age precisely so a dead build looks
+    /// dead (#419).
+    ///
+    /// Every line, not only the heartbeat's: the per-project line of a long analysis is evidence
+    /// of life too, and it is the one that arrives while <c>WhileTheStepRunsAsync</c> is not
+    /// running. What the record then means is "the build last said something this long ago".
+    ///
+    /// Nothing but the timestamp moves. The counters stay the zeroes <c>ReportPhase</c> set,
+    /// because <c>RepositoryIndexProgressPhaseExtensions.CountsChunks</c> exists to keep a phase
+    /// that is not embedding from showing chunk figures, and filling them with projects would make
+    /// that guard lie.
+    /// </summary>
+    internal static Action<string> RoslynNarration(TextWriter error, Action stillRunning) =>
+        message =>
+        {
+            error.WriteLine($"Roslyn: {message}");
+            stillRunning();
+        };
+
     private static async Task<SemanticBuildResult> BuildSemanticIndexAsync(
         string sourceRoot,
         WorkingIndexIdentity snapshot,
         GenerationIdentity generation,
         string? runtimeRoot,
         TextWriter error,
+        Action stillRunning,
         CancellationToken cancellationToken)
     {
         // One sink for the whole phase, named rather than repeated: the prefix is what marks a
         // line as belonging to the C# analysis, and a second copy is how one step comes to print
         // without it.
-        void Roslyn(string message) => error.WriteLine($"Roslyn: {message}");
+        var roslyn = RoslynNarration(error, stillRunning);
         await using var loaded = await RoslynSolutionLoader.LoadAsync(
             sourceRoot,
-            Roslyn,
+            roslyn,
             cancellationToken: cancellationToken);
         SemanticIndex languageIndex;
         if (loaded is null)
@@ -1129,7 +1165,7 @@ public static class CodeSearchSyncCommand
                     snapshot.DirtyHash,
                     snapshot.HeadCommit,
                     CommitTimestamp(snapshot.WorkingRoot.Value, snapshot.HeadCommit)),
-                Roslyn,
+                roslyn,
                 cancellationToken);
             languageIndex = new XamlSemanticIndexer().Supplement(csharp, sourceRoot);
         }
