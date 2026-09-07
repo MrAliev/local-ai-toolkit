@@ -556,6 +556,18 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
         return 0;
     }
 
+    if (args is ["agent", "gate", .. var gateArguments])
+    {
+        // Standard input rather than an argument: the payload is a JSON document a client writes,
+        // and a command line is the wrong place for one. Console.In is handed over rather than
+        // read here so the command can be run against a document in a test.
+        return AgentGateCommand.Execute(
+            gateArguments,
+            CommandStreams.Standard,
+            Console.In,
+            Console.IsInputRedirected);
+    }
+
     if (args is ["hook", .. var hookArguments])
     {
         // Git hooks are the only caller of this command, so its failures are read from a hook
