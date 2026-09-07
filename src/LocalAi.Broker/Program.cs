@@ -171,7 +171,10 @@ internal static class BrokerProgram
             var heartbeat = new HeartbeatLoop(
                 owner,
                 runtimeRoot,
-                stateStore.Publish,
+                // Its own budget rather than the store's default: this is the one caller that
+                // writes again a second later, and spending the default here is what left the
+                // margin at a single failed write (#396).
+                state => stateStore.Publish(state, HeartbeatLoop.PublishRetryBudget),
                 () => backendReachable.Current,
                 () => drain.Requested,
                 drain.Request,
