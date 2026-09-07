@@ -34,7 +34,7 @@ public sealed class TheSemanticPhaseSaysWhatItIsDoingTests
         await using var loaded = await RoslynSolutionLoader.LoadAsync(
             root,
             said.Add,
-            TestContext.Current.CancellationToken);
+            cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.NotNull(loaded);
 

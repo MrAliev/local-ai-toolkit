@@ -138,7 +138,13 @@ public sealed class IndexBuilder(
     /// So the budget follows the observed throughput toward a target duration instead, and a
     /// slow machine simply keeps sending small batches.
     /// </summary>
-    private static readonly TimeSpan TargetBatchDuration = TimeSpan.FromSeconds(15);
+    /// <summary>
+    /// Public because it is also the longest any part of a sync may stay silent: a step with no
+    /// counter of its own says it is still there on this cadence, so nothing anywhere in a run
+    /// goes quiet for longer than one embedding batch (#419). Referenced rather than repeated, so
+    /// the two cannot drift apart.
+    /// </summary>
+    public static TimeSpan TargetBatchDuration { get; } = TimeSpan.FromSeconds(15);
 
     private readonly Action<string> _log = log ?? (_ => { });
     private readonly Action<IndexBuildProgress> _progress = progress ?? (_ => { });
