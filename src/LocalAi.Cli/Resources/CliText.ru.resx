@@ -715,4 +715,8 @@
     <value>Синхронизация остановлена через {0} с.</value>
     <comment>The hole arrives already formatted to one decimal, invariantly, as BuildSaved's does - these lines are quoted verbatim and parsed, so no group separator may appear in either language. It says the total and nothing else: a breakdown printed once the run is over is the summary the progress rule refuses as a substitute for reporting while it runs.</comment>
   </data>
+  <data name="AgentGateNeedsPayload" xml:space="preserve">
+    <value>Команда localai agent gate читает со stdin полезную нагрузку хука Claude Code и отвечает в stdout. Её регистрирует установщик и запускает клиент — руками запускать нечего.</value>
+    <comment>Read by one reader only: a person who opened settings.json, saw the registered line and ran it by hand to find out what it does. The refusal the gate itself answers with is not in this catalogue and has no Russian pair - it executes the rule ManagedInstructionBlock installs, which is one English constant on every machine, and a second wording of one rule drifts from the first at the next edit of either. localai agent gate, settings.json, stdin and stdout are typed or are file names, so they stay as they are.</comment>
+  </data>
 </root>
