@@ -131,6 +131,55 @@ public sealed class ModelAwareSchedulerTests
         Assert.Null(decision.JobId);
     }
 
+    /// <summary>
+    /// An index build feeds the queue in batches, and between two of them there is a moment when
+    /// no embedding work is queued at all. Two seconds was enough for a triage call to win that
+    /// moment, and winning it costs the build its model: ModelRuntime.EnsureReadyAsync unloads
+    /// every other managed model before it preflights, so the next batch reloads eight
+    /// quantised billion parameters from disk. Five such gaps in one build on the owner's
+    /// machine, and the shortest cost 108 seconds.
+    ///
+    /// So the hold before leaving a loaded model is the keep-alive the operator set for exactly
+    /// this question, not a constant. Nothing waits for ever: the fifteen-minute starvation
+    /// guard is unchanged, and a hold shorter than the gather window is raised to it.
+    /// </summary>
+    [Fact]
+    public void The_resident_model_is_held_for_the_keep_alive_before_another_takes_the_worker()
+    {
+        var scheduler = new ModelAwareScheduler(_time, TimeSpan.FromSeconds(30));
+        var cold = Job(1, "cold", seconds: 1);
+
+        Assert.Null(scheduler.Decide([cold], residentModel: "resident").JobId);
+
+        // Past the old two-second window, and well short of the keep-alive.
+        _time.Advance(TimeSpan.FromSeconds(10));
+        Assert.Null(scheduler.Decide([cold], residentModel: "resident").JobId);
+
+        // And it is a hold, not a refusal: once the model really has gone quiet, the cold job
+        // runs rather than starving behind a model nothing is using.
+        _time.Advance(TimeSpan.FromSeconds(21));
+        Assert.Equal(cold.JobId, scheduler.Decide([cold], residentModel: "resident").JobId);
+    }
+
+    /// <summary>
+    /// The keep-alive defaults to zero, which as a hold would mean switching on the instant the
+    /// queue empties — worse than what was there before. The gather window is a floor.
+    /// </summary>
+    [Fact]
+    public void A_keep_alive_below_the_gather_window_does_not_shorten_it()
+    {
+        var scheduler = new ModelAwareScheduler(_time, TimeSpan.Zero);
+        var cold = Job(1, "cold", seconds: 1);
+
+        Assert.Null(scheduler.Decide([cold], residentModel: "resident").JobId);
+
+        _time.Advance(TimeSpan.FromSeconds(1));
+        Assert.Null(scheduler.Decide([cold], residentModel: "resident").JobId);
+
+        _time.Advance(TimeSpan.FromSeconds(2));
+        Assert.Equal(cold.JobId, scheduler.Decide([cold], residentModel: "resident").JobId);
+    }
+
     private ScheduledJobCandidate Job(
         long sequence,
         string model,
