@@ -1,5 +1,7 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
+using CodeSearch.Core.Resources;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
@@ -15,15 +17,38 @@ public sealed record SemanticIndexBuildIdentity(
     DateTime IndexedAtUtc);
 
 /// <summary>Builds compiler-precise C# definitions, references, and type relationships.</summary>
-public sealed class RoslynSemanticIndexer
+/// <param name="time">
+/// Only for the reporting interval below, and only so a test can prove the throttle without
+/// waiting out five real seconds. Nothing else here reads a clock.
+/// </param>
+public sealed class RoslynSemanticIndexer(TimeProvider? time = null)
 {
+    private readonly TimeProvider _time = time ?? TimeProvider.System;
+
+    /// <summary>
+    /// How often the analysis says where it is. Throttled by time rather than by a number of
+    /// projects, because a per-N rule is wrong at both ends: on a two-project repository it would
+    /// print for no reason, and on a two-hundred-project one far too often. A three-second
+    /// analysis stays silent and costs nothing; a thirty-second one gets the most useful line in
+    /// the phase (#420).
+    /// </summary>
+    public static TimeSpan ReportInterval { get; } = TimeSpan.FromSeconds(5);
+
     private static readonly SymbolDisplayFormat SignatureFormat =
         SymbolDisplayFormat.CSharpErrorMessageFormat;
 
+    /// <param name="log">
+    /// Where the analysis says how far it is. This loop is the one place in the semantic phase
+    /// where "project 7 of 26" is a fact rather than a guess: the project count is known before
+    /// the first iteration, and every document inside is awaited one at a time. `dotnet restore`
+    /// and `OpenSolutionAsync` have no such number, which is why #387 was split rather than
+    /// answered in one place.
+    /// </param>
     public async Task<SemanticIndex> BuildAsync(
         Solution solution,
         string repositoryRoot,
         SemanticIndexBuildIdentity identity,
+        Action<string>? log = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(solution);
@@ -38,7 +63,13 @@ public sealed class RoslynSemanticIndexer
         var occurrenceKeys = new HashSet<OccurrenceKey>();
         var relationships = new HashSet<SemanticRelationship>();
 
-        foreach (var project in solution.Projects.OrderBy(project => project.FilePath, StringComparer.Ordinal))
+        var projects = solution.Projects
+            .OrderBy(project => project.FilePath, StringComparer.Ordinal)
+            .ToArray();
+        var started = _time.GetTimestamp();
+        var lastReport = started;
+        var analysed = 0;
+        foreach (var project in projects)
         {
             foreach (var document in project.Documents.OrderBy(document => document.FilePath, StringComparer.Ordinal))
             {
@@ -117,7 +148,23 @@ public sealed class RoslynSemanticIndexer
                         root);
                 }
             }
+
+            analysed++;
+            // After the project, not before it: a line saying 1/26 before any of the work is a
+            // promise, and one saying 1/26 after it is a measurement.
+            if (log is not null && _time.GetElapsedTime(lastReport) >= ReportInterval)
+            {
+                log(IndexText.RoslynAnalysing(analysed, projects.Length));
+                lastReport = _time.GetTimestamp();
+            }
         }
+
+        log?.Invoke(IndexText.RoslynAnalysed(
+            projects.Length,
+            documents.Count,
+            _time.GetElapsedTime(started).TotalSeconds.ToString(
+                "F1",
+                CultureInfo.InvariantCulture)));
 
         return new SemanticIndex
         {

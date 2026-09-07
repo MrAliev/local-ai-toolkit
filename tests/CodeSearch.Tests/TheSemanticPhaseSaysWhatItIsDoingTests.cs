@@ -59,21 +59,33 @@ public sealed class TheSemanticPhaseSaysWhatItIsDoingTests
         var english = (
             CodeSearch.Core.Resources.IndexText.RoslynLoading(@"R:\repo\x.slnx", 10),
             CodeSearch.Core.Resources.IndexText.RoslynRestored("21.4"),
-            CodeSearch.Core.Resources.IndexText.RoslynOpened(26, "9.8"));
+            CodeSearch.Core.Resources.IndexText.RoslynOpened(26, "9.8"),
+            CodeSearch.Core.Resources.IndexText.RoslynAnalysing(7, 26),
+            CodeSearch.Core.Resources.IndexText.RoslynAnalysed(26, 1247, "41.2"));
 
         using var reading = TestCulture.Reading("ru");
 
         var russian = (
             CodeSearch.Core.Resources.IndexText.RoslynLoading(@"R:\repo\x.slnx", 10),
             CodeSearch.Core.Resources.IndexText.RoslynRestored("21.4"),
-            CodeSearch.Core.Resources.IndexText.RoslynOpened(26, "9.8"));
+            CodeSearch.Core.Resources.IndexText.RoslynOpened(26, "9.8"),
+            CodeSearch.Core.Resources.IndexText.RoslynAnalysing(7, 26),
+            CodeSearch.Core.Resources.IndexText.RoslynAnalysed(26, 1247, "41.2"));
 
         Assert.NotEqual(english.Item1, russian.Item1, StringComparer.Ordinal);
         Assert.NotEqual(english.Item2, russian.Item2, StringComparer.Ordinal);
         Assert.NotEqual(english.Item3, russian.Item3, StringComparer.Ordinal);
+        Assert.NotEqual(english.Item4, russian.Item4, StringComparer.Ordinal);
+        Assert.NotEqual(english.Item5, russian.Item5, StringComparer.Ordinal);
         Assert.Contains("21.4", russian.Item2, StringComparison.Ordinal);
         Assert.Contains("26", russian.Item3, StringComparison.Ordinal);
         Assert.Contains("9.8", russian.Item3, StringComparison.Ordinal);
+        Assert.Contains("7", russian.Item4, StringComparison.Ordinal);
+        // Four digits, and the one figure in this phase where a group separator could appear: a
+        // Russian machine must write 1247, never 1 247, because these lines are quoted verbatim
+        // by agents and parsed by tests.
+        Assert.Contains("1247", russian.Item5, StringComparison.Ordinal);
+        Assert.Contains("41.2", russian.Item5, StringComparison.Ordinal);
     }
 
     private static string RepositoryRoot()

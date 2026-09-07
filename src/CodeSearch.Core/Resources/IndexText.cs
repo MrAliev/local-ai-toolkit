@@ -111,6 +111,12 @@ public static class IndexText
     public static string RoslynRestored(string seconds) =>
         Catalogue.Format(nameof(RoslynRestored), seconds);
 
+    public static string RoslynAnalysing(int analysed, int projects) =>
+        Catalogue.Format(nameof(RoslynAnalysing), analysed, projects);
+
+    public static string RoslynAnalysed(int projects, int files, string seconds) =>
+        Catalogue.Format(nameof(RoslynAnalysed), projects, files, seconds);
+
     public static string RoslynOpened(int projects, string seconds) =>
         Catalogue.Format(nameof(RoslynOpened), projects, seconds);
 

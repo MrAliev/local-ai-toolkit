@@ -1099,9 +1099,13 @@ public static class CodeSearchSyncCommand
         TextWriter error,
         CancellationToken cancellationToken)
     {
+        // One sink for the whole phase, named rather than repeated: the prefix is what marks a
+        // line as belonging to the C# analysis, and a second copy is how one step comes to print
+        // without it.
+        void Roslyn(string message) => error.WriteLine($"Roslyn: {message}");
         await using var loaded = await RoslynSolutionLoader.LoadAsync(
             sourceRoot,
-            message => error.WriteLine($"Roslyn: {message}"),
+            Roslyn,
             cancellationToken);
         SemanticIndex languageIndex;
         if (loaded is null)
@@ -1125,6 +1129,7 @@ public static class CodeSearchSyncCommand
                     snapshot.DirtyHash,
                     snapshot.HeadCommit,
                     CommitTimestamp(snapshot.WorkingRoot.Value, snapshot.HeadCommit)),
+                Roslyn,
                 cancellationToken);
             languageIndex = new XamlSemanticIndexer().Supplement(csharp, sourceRoot);
         }
