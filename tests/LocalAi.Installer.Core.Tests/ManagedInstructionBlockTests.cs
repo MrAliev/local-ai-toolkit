@@ -110,11 +110,21 @@ public sealed class ManagedInstructionBlockTests
     // the only way to comply.
     // Hidden indexing is indistinguishable from a hung machine, and the person watching has
     // no other way to tell the two apart.
-    [InlineData("never filter the indexer")]
-    // The precondition of "reported while it runs", which was stated without it: an agent that
+    // Not "never filter the indexer": the rule covers a console run's progress too, and pinning
+    // the indexer would leave the general form deletable with the suite green.
+    [InlineData("never filter that progress away")]
+    // The precondition of "reported while it happens", which was stated without it: an agent that
     // waited out an hour-long sync could not have reported anything during it. Pinned by name
     // because a phrase nothing pins is a phrase that can be deleted with the suite green.
-    [InlineData("A build is the one thing here nobody waits on")]
+    [InlineData("A run that can outlast a reply is started rather than waited on")]
+    // Which surface a large input goes to. Without this a 40 MB log goes back through triage_log,
+    // where an MCP server passes no observer and the call says nothing until it returns.
+    [InlineData("Size decides the surface")]
+    // A rule without a destination is a rule nobody can follow.
+    [InlineData("`localai triage` and `localai ask`")]
+    // The relay itself. "Reported while it happens" without this is satisfied by one summary
+    // once the run is over, which is the thing being ruled out.
+    [InlineData("put its newest lines in every reply until it ends")]
     // The index covers commits. Edits still in the working tree need an overlay that nothing
     // builds on its own, and without this the refusal reads as a broken tool rather than a
     // missing step — which is how a text search gets reached for instead.
@@ -347,7 +357,18 @@ public sealed class ManagedInstructionBlockTests
         // reply that lands with the build already finished and nothing said while it ran. The
         // rest of the paragraph was rewritten rather than extended, and the sentences it
         // replaced are gone.
-        const int budget = 14_600;
+        //
+        // Raised from 14_600 a fourth time, and this one widened a rule rather than adding a
+        // new one. The previous raise said a build is started and not waited on; an MCP tool
+        // call over a large input outlasts a reply exactly as a build does, and says nothing
+        // at all while it runs — LocalRunObserver records that an MCP server passes no
+        // observer, so a triage of a 40 MB log is minutes of silence where `localai triage`
+        // narrates. So the reporting paragraph's subject is a run rather than a build, the
+        // routing section says which surface a large input goes to, and the command-line
+        // section says which stream carries the progress a reply relays. The sentence the
+        // widening contradicted — that everything except a build answers into the reply that
+        // asked for it — is gone rather than qualified.
+        const int budget = 15_200;
 
         var measured = ManagedInstructionBlock.CodexBlock.Length
             - ManagedInstructionBlock.CodexBlock.Count(character => character == (char)13);
