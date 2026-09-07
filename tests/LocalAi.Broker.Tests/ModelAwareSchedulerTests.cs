@@ -132,52 +132,74 @@ public sealed class ModelAwareSchedulerTests
     }
 
     /// <summary>
-    /// An index build feeds the queue in batches, and between two of them there is a moment when
-    /// no embedding work is queued at all. Two seconds was enough for a triage call to win that
-    /// moment, and winning it costs the build its model: ModelRuntime.EnsureReadyAsync unloads
-    /// every other managed model before it preflights, so the next batch reloads eight
-    /// quantised billion parameters from disk. Five such gaps in one build on the owner's
-    /// machine, and the shortest cost 108 seconds.
+    /// A build owns the loaded model for as long as it keeps feeding the queue, and somebody
+    /// else is waiting. Model affinity used to decide this, so the person waiting waited: an
+    /// index build is thousands of Background jobs, and each one won on affinity against a
+    /// Foreground question that would have taken a minute.
     ///
-    /// So the hold before leaving a loaded model is the keep-alive the operator set for exactly
-    /// this question, not a constant. Nothing waits for ever: the fifteen-minute starvation
-    /// guard is unchanged, and a hold shorter than the gather window is raised to it.
+    /// Priority is what says somebody is waiting, and it is now read before affinity. The swap
+    /// costs an unload and a reload — ModelRuntime unloads the other managed models before it
+    /// preflights — and that cost is the point rather than an oversight: paying it once beats
+    /// making an interactive tool wait out a build.
     /// </summary>
     [Fact]
-    public void The_resident_model_is_held_for_the_keep_alive_before_another_takes_the_worker()
+    public void Interactive_work_is_not_queued_behind_a_build_that_owns_the_model()
     {
-        var scheduler = new ModelAwareScheduler(_time, TimeSpan.FromSeconds(30));
+        var scheduler = new ModelAwareScheduler(_time);
+        var build = Job(1, "embed", seconds: 8, priority: LocalJobPriority.Background);
+        var asked = Job(2, "chat", seconds: 30, priority: LocalJobPriority.Foreground);
+
+        // Switching models still gathers for a moment, in case more of the same arrives.
+        Assert.Null(scheduler.Decide([build, asked], residentModel: "embed").JobId);
+        _time.Advance(TimeSpan.FromSeconds(3));
+
+        Assert.Equal(
+            asked.JobId,
+            scheduler.Decide([build, asked], residentModel: "embed").JobId);
+    }
+
+    /// <summary>
+    /// Nothing longer than the gather window stands between a queued job and the model it
+    /// needs. The keep-alive says how long a model is worth holding when nothing wants it, and
+    /// a queued job for another model is the answer to whether anything wants it — so it is not
+    /// a lease, and the scheduler does not read it. That it is not wired in is a property of
+    /// the broker's entry point, which no test builds; what is pinned here is the window.
+    /// </summary>
+    [Fact]
+    public void Nothing_beyond_the_gather_window_holds_the_model_a_queued_job_needs()
+    {
+        var scheduler = new ModelAwareScheduler(_time);
         var cold = Job(1, "cold", seconds: 1);
 
         Assert.Null(scheduler.Decide([cold], residentModel: "resident").JobId);
 
-        // Past the old two-second window, and well short of the keep-alive.
-        _time.Advance(TimeSpan.FromSeconds(10));
-        Assert.Null(scheduler.Decide([cold], residentModel: "resident").JobId);
-
-        // And it is a hold, not a refusal: once the model really has gone quiet, the cold job
-        // runs rather than starving behind a model nothing is using.
-        _time.Advance(TimeSpan.FromSeconds(21));
+        _time.Advance(TimeSpan.FromSeconds(3));
         Assert.Equal(cold.JobId, scheduler.Decide([cold], residentModel: "resident").JobId);
     }
 
     /// <summary>
-    /// The keep-alive defaults to zero, which as a hold would mean switching on the instant the
-    /// queue empties — worse than what was there before. The gather window is a floor.
+    /// The snapshot exists so a chosen model's work is drained rather than re-decided job by
+    /// job. It must not outrank the reason for choosing again: a build's remaining batches are
+    /// in it, and whoever just asked a question would wait out every one of them.
     /// </summary>
     [Fact]
-    public void A_keep_alive_below_the_gather_window_does_not_shorten_it()
+    public void A_frozen_snapshot_is_dropped_when_work_someone_is_waiting_on_arrives()
     {
-        var scheduler = new ModelAwareScheduler(_time, TimeSpan.Zero);
-        var cold = Job(1, "cold", seconds: 1);
+        var scheduler = new ModelAwareScheduler(_time);
+        var first = Job(1, "embed", seconds: 8, priority: LocalJobPriority.Background);
+        var second = Job(2, "embed", seconds: 9, priority: LocalJobPriority.Background);
 
-        Assert.Null(scheduler.Decide([cold], residentModel: "resident").JobId);
+        Assert.Equal(
+            first.JobId,
+            scheduler.Decide([first, second], residentModel: "embed").JobId);
 
-        _time.Advance(TimeSpan.FromSeconds(1));
-        Assert.Null(scheduler.Decide([cold], residentModel: "resident").JobId);
+        var asked = Job(3, "chat", seconds: 30, priority: LocalJobPriority.Foreground);
+        Assert.Null(scheduler.Decide([second, asked], residentModel: "embed").JobId);
+        _time.Advance(TimeSpan.FromSeconds(3));
 
-        _time.Advance(TimeSpan.FromSeconds(2));
-        Assert.Equal(cold.JobId, scheduler.Decide([cold], residentModel: "resident").JobId);
+        Assert.Equal(
+            asked.JobId,
+            scheduler.Decide([second, asked], residentModel: "embed").JobId);
     }
 
     private ScheduledJobCandidate Job(
@@ -185,11 +207,12 @@ public sealed class ModelAwareSchedulerTests
         string model,
         int seconds,
         DateTimeOffset? createdAtUtc = null,
-        bool dependencyReady = true) =>
+        bool dependencyReady = true,
+        LocalJobPriority priority = LocalJobPriority.Foreground) =>
         new(
             JobId(sequence),
             sequence,
-            LocalJobPriority.Foreground,
+            priority,
             createdAtUtc ?? _time.GetUtcNow(),
             model,
             TimeSpan.FromSeconds(seconds),

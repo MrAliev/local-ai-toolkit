@@ -27,21 +27,13 @@ public sealed class ModelAwareScheduler
     private static readonly TimeSpan StarvationAge = TimeSpan.FromMinutes(15);
 
     private readonly TimeProvider _timeProvider;
-    private readonly TimeSpan _modelHold;
     private readonly Queue<Guid> _snapshot = [];
     private string? _snapshotModel;
     private DateTimeOffset? _gatherDeadline;
 
-    /// <param name="modelHold">
-    /// How long a loaded model is held before work for another one takes the worker. The
-    /// operator sets it as the idle keep-alive, because it is the same question asked twice.
-    /// Raised to <see cref="GatherWindow"/> when it is shorter: the keep-alive defaults to
-    /// zero, and zero as a hold would switch the instant a queue empties.
-    /// </param>
-    public ModelAwareScheduler(TimeProvider? timeProvider = null, TimeSpan? modelHold = null)
+    public ModelAwareScheduler(TimeProvider? timeProvider = null)
     {
         _timeProvider = timeProvider ?? TimeProvider.System;
-        _modelHold = modelHold is { } hold && hold > GatherWindow ? hold : GatherWindow;
     }
 
     public ScheduleDecision Decide(
@@ -60,6 +52,23 @@ public sealed class ModelAwareScheduler
             eligible = eligible
                 .Where(pair => !pair.Value.IsMaintenance)
                 .ToDictionary();
+        }
+
+        // The snapshot is a decision already taken, and it must not outrank the reason to take
+        // one again. Work someone is waiting on arrives after a group was frozen, and every job
+        // left in the snapshot is one it would otherwise wait behind — a build's snapshot is
+        // every batch it has queued.
+        if (_snapshot.Count > 0 && eligible.Count > 0)
+        {
+            var mostUrgent = eligible.Values.Min(candidate => candidate.Priority);
+            var outranked = _snapshot
+                .Where(eligible.ContainsKey)
+                .Any(jobId => eligible[jobId].Priority > mostUrgent);
+            if (outranked)
+            {
+                _snapshot.Clear();
+                _snapshotModel = null;
+            }
         }
 
         while (_snapshot.Count > 0)
@@ -86,14 +95,23 @@ public sealed class ModelAwareScheduler
             .ThenBy(candidate => candidate.Priority)
             .ThenBy(candidate => candidate.Sequence)
             .FirstOrDefault();
+        // Priority first, and affinity second. An index build is thousands of Background jobs
+        // for one model, so affinity read first meant a Foreground question waited out the
+        // build: every batch won against it, one at a time, for as long as the build fed the
+        // queue. Priority is the one field that says a person is waiting for this answer.
+        //
+        // Reading it first buys an unload and a reload — ModelRuntime clears the other managed
+        // models before it preflights — and that is the trade being made on purpose, not an
+        // oversight. Among work of equal urgency, affinity still decides, and then the shortest
+        // job, so nothing pays for a swap that nobody was waiting on.
         var selectedModel = starved?.Model ?? jobs
             .GroupBy(candidate => candidate.Model, StringComparer.Ordinal)
-            .OrderByDescending(group =>
+            .OrderBy(group => group.Min(candidate => candidate.Priority))
+            .ThenByDescending(group =>
                 residentModel is not null &&
                 string.Equals(group.Key, residentModel, StringComparison.Ordinal))
             .ThenBy(group => group.Min(candidate => candidate.PredictedDuration))
             .ThenBy(group => group.Min(candidate => candidate.CreatedAtUtc))
-            .ThenBy(group => group.Min(candidate => candidate.Priority))
             .ThenBy(group => group.Min(candidate => candidate.Sequence))
             .First()
             .Key;
@@ -103,8 +121,8 @@ public sealed class ModelAwareScheduler
                 candidate.Model,
                 selectedModel,
                 StringComparison.Ordinal))
-            .OrderBy(candidate => candidate.PredictedDuration)
-            .ThenBy(candidate => candidate.Priority)
+            .OrderBy(candidate => candidate.Priority)
+            .ThenBy(candidate => candidate.PredictedDuration)
             .ThenBy(candidate => candidate.Sequence)
             .ToArray();
         var switchesModel =
@@ -115,15 +133,12 @@ public sealed class ModelAwareScheduler
              group.Any(candidate => candidate.DurationClass == LocalDurationClass.Long));
         if (requiresGatherWindow)
         {
-            // Leaving a model that is loaded costs an unload and a reload — ModelRuntime
-            // unloads every other managed model before it preflights — so that wait is the
-            // operator's keep-alive. With nothing loaded there is nothing to protect, and
-            // gathering more work before committing to a long job is a different question
-            // with a different answer; both keep the two seconds.
-            var window = switchesModel && residentModel is not null
-                ? _modelHold
-                : GatherWindow;
-            _gatherDeadline ??= now + window;
+            // Two seconds, and deliberately not the idle keep-alive. The keep-alive says how
+            // long a model is worth holding when nothing wants it; a queued job for another
+            // model is the answer to whether anything wants it, so letting the keep-alive gate
+            // this would turn "keep it a minute" into "wait a minute". This window is only for
+            // gathering work that is on its way, and it is short for that reason.
+            _gatherDeadline ??= now + GatherWindow;
             if (now < _gatherDeadline)
             {
                 return new ScheduleDecision(null, selectedModel, _gatherDeadline);
