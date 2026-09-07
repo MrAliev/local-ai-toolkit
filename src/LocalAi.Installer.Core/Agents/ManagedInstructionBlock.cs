@@ -260,7 +260,7 @@ public static class ManagedInstructionBlock
         answer, and while a repository is still building say so rather than quietly falling
         back to a text search.
 
-        ### Reporting
+        ### Reporting, and builds that outlast a reply
 
         After every local tool call, say which tool and model ran, how long it took, and the
         cloud tokens avoided. One line:
@@ -274,11 +274,19 @@ public static class ManagedInstructionBlock
         estimate. A local call reported vaguely cannot be told from one that never happened.
 
         After CodeSearch work, name `index_unload` so the user can free the cached index at
-        once — it leaves the on-disk index alone. Indexing is reported while it runs, not
-        summarised once it is over: say what is being indexed the moment it starts, report the
-        phase and figures the tools print without converting them into a claim they do
-        not make, and never filter the indexer's own progress away to keep a reply tidy.
-        Hidden indexing is indistinguishable from a hung machine.
+        once — it leaves the on-disk index alone.
+
+        A build is the one thing here nobody waits on. `localai sync` — and the commit whose
+        hook runs one — takes minutes to an hour, so start it so the turn carries on, its
+        output to a file rather than a pipe nobody is draining, and keep working. Everything
+        else answers into the reply that asked for it and is waited on as usual. Indexing is
+        reported while it runs, not summarised once it is over: say what is being indexed the
+        moment it starts, then put the figures in every reply until it ends — `index_status`,
+        or the `Sync:` line search and navigation answers carry on their own — as they are
+        printed, without converting them into a claim they do not make, and never filter the
+        indexer's own progress away to keep a reply tidy. A reply that lands with the build
+        already over and nothing said while it ran has broken this, however it describes the
+        build: hidden indexing is indistinguishable from a hung machine.
         """;
 
     /// <summary>The part read once a decision is taken, which Claude loads on demand.</summary>
@@ -530,7 +538,7 @@ public static class ManagedInstructionBlock
         answer, and while a repository is still building say so rather than quietly falling
         back to a text search.
 
-        ### Reporting
+        ### Reporting, and builds that outlast a reply
 
         After every local tool call, say which tool and model ran, how long it took, and the
         cloud tokens avoided. One line:
@@ -544,11 +552,19 @@ public static class ManagedInstructionBlock
         estimate. A local call reported vaguely cannot be told from one that never happened.
 
         After CodeSearch work, name `index_unload` so the user can free the cached index at
-        once — it leaves the on-disk index alone. Indexing is reported while it runs, not
-        summarised once it is over: say what is being indexed the moment it starts, report the
-        phase and figures the tools print without converting them into a claim they do
-        not make, and never filter the indexer's own progress away to keep a reply tidy.
-        Hidden indexing is indistinguishable from a hung machine.
+        once — it leaves the on-disk index alone.
+
+        A build is the one thing here nobody waits on. `localai sync` — and the commit whose
+        hook runs one — takes minutes to an hour, so start it so the turn carries on, its
+        output to a file rather than a pipe nobody is draining, and keep working. Everything
+        else answers into the reply that asked for it and is waited on as usual. Indexing is
+        reported while it runs, not summarised once it is over: say what is being indexed the
+        moment it starts, then put the figures in every reply until it ends — `index_status`,
+        or the `Sync:` line search and navigation answers carry on their own — as they are
+        printed, without converting them into a claim they do not make, and never filter the
+        indexer's own progress away to keep a reply tidy. A reply that lands with the build
+        already over and nothing said while it ran has broken this, however it describes the
+        build: hidden indexing is indistinguishable from a hung machine.
 
         ### Transport and residency
 

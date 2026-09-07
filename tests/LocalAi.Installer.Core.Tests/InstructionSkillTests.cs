@@ -158,10 +158,25 @@ public sealed class InstructionSkillTests
     /// refuses — so the clause naming it belongs where the decision is made rather than in a
     /// skill loaded afterwards. It was cut to its shortest form first, and the claim this test
     /// exists for is untouched: the core is still under half the Codex block.
+    ///
+    /// The ceiling moved from 6_700 on purpose, a second time. "Indexing is reported while it
+    /// runs" was already in both blocks with its precondition missing: an agent that waited out
+    /// an hour-long sync had no reply to report into until the build was over. The paragraph
+    /// now says a build is started rather than waited on, and names the two channels — the
+    /// `Sync:` line and `index_status` — that carry its figures across a process boundary,
+    /// which is what makes the rule reachable for an agent with no job control of its own.
+    ///
+    /// The half-the-Codex-block claim above used to be prose, and prose is how it would have
+    /// gone quietly false — this change leaves it true by 149 characters. It is asserted now.
     /// </summary>
     [Fact]
     public void The_core_is_materially_smaller_than_the_block_it_replaced()
     {
-        Assert.InRange(ManagedInstructionBlock.Block.Length, 1_000, 6_700);
+        Assert.InRange(ManagedInstructionBlock.Block.Length, 1_000, 7_300);
+        Assert.True(
+            ManagedInstructionBlock.Block.Length * 2 < ManagedInstructionBlock.CodexBlock.Length,
+            $"the core is {ManagedInstructionBlock.Block.Length} characters against the Codex " +
+            $"block's {ManagedInstructionBlock.CodexBlock.Length}, so it is no longer the " +
+            "smaller half the split exists to buy");
     }
 }
