@@ -154,13 +154,21 @@ public sealed class LocalTasks
             question,
             LocalTaskProfile.VisualAnalysis,
             model,
+            together: false,
             ct);
 
+    /// <param name="together">
+    /// Send every image in one call, as this did before. The counted form cannot answer a question
+    /// that spans the images — "compare these two screenshots" is a claim about both, and the
+    /// reducer that merges the readings is forbidden from introducing claims absent from them — so
+    /// the together form stays reachable, by name rather than by accident.
+    /// </param>
     public async Task<LocalResult> ReadImageAsync(
         IReadOnlyList<string> paths,
         string question,
         LocalTaskProfile profile,
         string? model,
+        bool together,
         CancellationToken ct)
     {
         if (!IsImageProfile(profile))
@@ -187,6 +195,7 @@ public sealed class LocalTasks
         long totalImageBytes = 0;
         var described = new List<string>(paths.Count);
         var fullPaths = new List<string>(paths.Count);
+        var pixels = new List<long>(paths.Count);
 
         // Metadata first, bytes second (#206): every base64 string is held in memory at once,
         // so the totals have to refuse the batch before the first file is materialized.
@@ -228,12 +237,9 @@ public sealed class LocalTasks
 
             described.Add($"{Path.GetFileName(full)} ({info.Width}x{info.Height})");
             fullPaths.Add(full);
-        }
-
-        var images = new List<string>(fullPaths.Count);
-        foreach (var full in fullPaths)
-        {
-            images.Add(Convert.ToBase64String(await File.ReadAllBytesAsync(full, ct)));
+            // Kept per image because each one is now a call of its own, and the workload the
+            // router prices is that call's, not the batch's.
+            pixels.Add((long)info.Width * info.Height);
         }
 
         const string imageReadingSystem =
@@ -248,37 +254,126 @@ public sealed class LocalTasks
         var imageSystem = profile == LocalTaskProfile.ImageTranslation
             ? imageTranslationSystem
             : imageReadingSystem;
-        // Once, before the one call that carries all of them. There is nothing to count inside
-        // it, so this is not an event a reader waits for — the console keeps the number and
-        // spends it on the heartbeat it was going to print anyway.
-        observer?.Report(new ReadingImages(images.Count));
         var workflowId = profile == LocalTaskProfile.ImageTranslation
             ? Guid.NewGuid()
             : (Guid?)null;
-        var result = await client.RoutedChatAsync(
-            profile,
-            question,
-            imageSystem,
-            images,
-            new LocalWorkloadMetadata(
-                question.Length,
-                4_000,
-                0,
-                images.Count,
-                totalImagePixels,
-                LocalDurationClass.Medium),
-            workflowId is { } imageWorkflowId
-                ? new LocalWorkflowHint(
-                    imageWorkflowId,
-                    stepIndex: 0,
-                    expectedStepCount: 1,
-                    [profile],
-                    isDependencyReady: true)
-                : null,
-            modelOverride: model,
-            requestedContextTokens: 8192,
-            LocalJobPriority.Foreground,
-            ct);
+
+        async Task<LocalJobResult<string>> AskAsync(
+            string prompt,
+            IReadOnlyList<string>? batch,
+            long batchPixels,
+            int stepIndex,
+            int stepCount) =>
+            await client.RoutedChatAsync(
+                profile,
+                prompt,
+                imageSystem,
+                batch,
+                new LocalWorkloadMetadata(
+                    prompt.Length,
+                    4_000,
+                    0,
+                    batch?.Count ?? 0,
+                    batchPixels,
+                    LocalDurationClass.Medium),
+                workflowId is { } imageWorkflowId
+                    ? new LocalWorkflowHint(
+                        imageWorkflowId,
+                        stepIndex,
+                        stepCount,
+                        [profile],
+                        isDependencyReady: true)
+                    : null,
+                modelOverride: model,
+                requestedContextTokens: 8192,
+                LocalJobPriority.Foreground,
+                ct);
+
+        static async Task<string> EncodeAsync(string full, CancellationToken token) =>
+            Convert.ToBase64String(await File.ReadAllBytesAsync(full, token));
+
+        LocalJobResult<string> result;
+        // Accumulated over every call, the way triage does it: reporting the last one as the whole
+        // run understates a job of several calls in the line whose purpose is to show its cost.
+        var queued = TimeSpan.Zero;
+        var executed = TimeSpan.Zero;
+        var answerTokens = 0;
+        // A single image takes the together path because there is nothing to merge it with, and
+        // because "image 1 of 1" is a counter that never counts.
+        var inOneCall = together || fullPaths.Count == 1;
+
+        if (inOneCall)
+        {
+            var batch = new List<string>(fullPaths.Count);
+            foreach (var full in fullPaths)
+            {
+                batch.Add(await EncodeAsync(full, ct));
+            }
+
+            // One call, so there is nothing to count inside it. The console keeps the number and
+            // spends it on the heartbeat it was going to print anyway.
+            observer?.Report(new ReadingImages(batch.Count));
+            result = await AskAsync(question, batch, totalImagePixels, 0, 1);
+            answerTokens = TokenEstimator.ForText(result.Value);
+        }
+        else
+        {
+            // One image at a time, because that is what makes the counter true: each call
+            // finishes, so the figure moves. Only one image is held encoded at a time, which the
+            // batched form could not do — its aggregate byte budget exists for that reason.
+            //
+            // The merge runs on the same profile, so it lands on the model already loaded: after
+            // the scheduler learned to give a loaded model up when another job needs it, a merge
+            // routed elsewhere would cost an unload and a reload for a single short call.
+            var reducer = new HierarchicalReducer(
+                MergeBudgetChars,
+                async (readings, level, token) =>
+                {
+                    // Or the console falls silent through a whole model call, directly under the
+                    // line naming the last image — which reads as that image hanging.
+                    observer?.Report(new MergingPartials(readings.Count, level));
+                    var merged = await AskAsync(
+                        MergePrompt(question, readings, level),
+                        null,
+                        0,
+                        fullPaths.Count,
+                        fullPaths.Count + 1);
+                    return new ReducedSummary(merged.Value, merged.Receipt);
+                });
+
+            for (var index = 0; index < fullPaths.Count; index++)
+            {
+                observer?.Report(new ReadingImage(index + 1, fullPaths.Count));
+                var one = await AskAsync(
+                    question,
+                    [await EncodeAsync(fullPaths[index], ct)],
+                    pixels[index],
+                    index,
+                    fullPaths.Count + 1);
+                queued += one.Receipt.QueueDuration;
+                executed += one.Receipt.ExecutionDuration;
+                answerTokens += TokenEstimator.ForText(one.Value);
+                await reducer.AddAsync(one.Value, ct);
+            }
+
+            var reduced = await reducer.CompleteAsync(ct);
+            result = new LocalJobResult<string>(
+                reduced.Text,
+                reduced.Receipt
+                    ?? throw new InvalidOperationException(LocalLmText.LogTriageNoReceipt));
+            answerTokens += TokenEstimator.ForText(reduced.Text);
+        }
+
+        queued += result.Receipt.QueueDuration;
+        executed += result.Receipt.ExecutionDuration;
+        result = result with
+        {
+            Receipt = result.Receipt with
+            {
+                QueueDuration = queued,
+                ExecutionDuration = executed,
+            },
+        };
         var chosen = result.Receipt.Routing?.SelectedModel ?? result.Receipt.Model;
         var routing = result.Receipt.Routing;
         var experimentalModel = routing?.ExperimentalModel ??
@@ -292,7 +387,10 @@ public sealed class LocalTasks
                 wouldHaveCost +
                 TokenEstimator.ForText(question) +
                 TokenEstimator.ForText(imageSystem));
-            var outputTokens = TokenEstimator.ForText(result.Value);
+            // Every call's output, not only the last one's: the counted form produces a reading
+            // per image and then a merge, and pricing the experiment by the merge alone would
+            // report a fraction of what the model actually generated.
+            var outputTokens = answerTokens;
             await client.CompleteExperimentAsync(
                 completedWorkflowId,
                 profile,
@@ -317,7 +415,15 @@ public sealed class LocalTasks
             result.Value,
             TokenEstimator.Saved(wouldHaveCost, result.Value),
             chosen,
-            LocalLmText.ImagesRead(images.Count, string.Join(", ", described)),
+            // Which form ran, because the two are different claims about the answer: one look at
+            // five images can compare them and five merged readings cannot — the merge prompt
+            // forbids exactly that. A reader deciding whether to trust a statement spanning the
+            // images has only this line to go on.
+            inOneCall
+                ? LocalLmText.ImagesRead(fullPaths.Count, string.Join(", ", described))
+                : LocalLmText.ImagesReadOneAtATime(
+                    fullPaths.Count,
+                    string.Join(", ", described)),
             result.Receipt);
     }
 
@@ -351,6 +457,40 @@ public sealed class LocalTasks
     /// <c>ImageProfileUnsupported</c> hardcodes the same three names in two languages; this is
     /// the one that cannot fall out of step with the code.
     /// </summary>
+    /// <summary>
+    /// What a merge prompt may carry. Small beside the prompt budget for text, because each
+    /// reading is one image described, and eight of them is the ceiling the count already sets.
+    /// </summary>
+    private const int MergeBudgetChars = 24_000;
+
+    /// <summary>
+    /// Merging readings of separate images, in the reader's own question. The instruction not to
+    /// add anything is the whole of what makes this safe: a claim about two images together is
+    /// exactly what separate readings cannot support.
+    /// </summary>
+    private static string MergePrompt(
+        string question,
+        IReadOnlyList<string> readings,
+        int level)
+    {
+        var body = new StringBuilder();
+        for (var index = 0; index < readings.Count; index++)
+        {
+            body.AppendLine($"--- READING {index + 1} ---").AppendLine(readings[index]);
+        }
+
+        return $"""
+            {question}
+
+            Each reading below came from one image, read on its own (merge level {level}). Combine
+            them into one answer in the order given, keep every distinct finding and its exact
+            wording, and do not add anything the readings do not contain — in particular, do not
+            compare the images or draw a conclusion that needed more than one of them.
+
+            {body}
+            """;
+    }
+
     public static bool IsImageProfile(LocalTaskProfile profile) =>
         profile is
             LocalTaskProfile.VisualAnalysis or

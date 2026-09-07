@@ -23,4 +23,8 @@
          method directly never goes through one, so they are pinned here too. -->
     <Compile Include="..\Shared\TestCulture.cs" Link="TestCulture.cs" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Shared\TemporaryDirectory.cs" Link="TemporaryDirectory.cs" />
+  </ItemGroup>
 </Project>

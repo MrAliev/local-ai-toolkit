@@ -35,11 +35,13 @@ public static class LocalLmTools
         string mode = "VisualAnalysis",
         [Description("Optional model override. Normally leave blank so the router can choose a resident eligible model.")]
         string? model = null,
+        [Description("Send every image in one request instead of one each. Set this only for a question about the images as a set - 'compare these two screenshots' - because the merged form reads each image on its own and cannot answer across them. It reports no progress: one request has nothing to count.")]
+        bool together = false,
         CancellationToken cancellationToken = default)
     {
         var profile = ParseProfile(mode, nameof(mode));
         return await Run(
-            () => tasks.ReadImageAsync(paths, question, profile, model, cancellationToken),
+            () => tasks.ReadImageAsync(paths, question, profile, model, together, cancellationToken),
             "read_image:" + PrimarySource(paths),
             cancellationToken,
             profile);

@@ -6,11 +6,16 @@ using LocalLm.Core.Resources;
 namespace LocalAi.Cli;
 
 /// <summary>What <c>localai read-image</c> was asked to look at.</summary>
+/// <param name="Together">
+/// Ask about the images as a set rather than one at a time. Off by default, because one at a time
+/// is what makes the progress a count; on, there is one request and nothing to count inside it.
+/// </param>
 public sealed record ReadImageRequest(
     string Question,
     IReadOnlyList<string> Images,
     LocalTaskProfile Profile,
-    string? Model);
+    string? Model,
+    bool Together = false);
 
 /// <summary>
 /// Images on disk, read by a local vision model: a screenshot, a scanned page, a photographed
@@ -36,12 +41,19 @@ public static class ReadImageCommand
         var images = new List<string>();
         var profile = LocalTaskProfile.VisualAnalysis;
         string? model = null;
+        var together = false;
 
         for (var index = 0; index < arguments.Count; index++)
         {
             var argument = arguments[index];
             switch (argument)
             {
+                // A flag rather than an option: it takes no value, and the reader either wants
+                // the images read as a set or does not.
+                case "--together":
+                    together = true;
+                    break;
+
                 case "--profile":
                 case "--model":
                     if (index + 1 >= arguments.Count)
@@ -140,7 +152,7 @@ public static class ReadImageCommand
             return false;
         }
 
-        request = new ReadImageRequest(question, images, profile, model);
+        request = new ReadImageRequest(question, images, profile, model, together);
         return true;
     }
 

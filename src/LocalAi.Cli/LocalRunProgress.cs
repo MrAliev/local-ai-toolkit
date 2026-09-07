@@ -44,7 +44,7 @@ public sealed class LocalRunProgress : ILocalRunObserver
     private DateTimeOffset? lastLineAt;
     private bool? running;
     private DateTimeOffset stateSince;
-    private DateTimeOffset? firstFragmentAt;
+    private DateTimeOffset? firstUnitAt;
 
     /// <summary>
     /// What the one call carries, when the run said so. Kept rather than printed: naming it is
@@ -84,13 +84,25 @@ public sealed class LocalRunProgress : ILocalRunObserver
                 break;
 
             case TranslatingFragment fragment:
-                ReportFragment(fragment, now);
+                ReportCounted(
+                    fragment.Index,
+                    fragment.Total,
+                    CliText.ProgressTranslatingFragment,
+                    now);
+                break;
+
+            case ReadingImage image:
+                ReportCounted(
+                    image.Index,
+                    image.Total,
+                    CliText.ProgressReadingImage,
+                    now);
                 break;
 
             case TranslationRetrying retry:
                 // The pass starts over, so the mean the estimate is built from has to as well:
                 // carrying the old one across would understate a run that has just doubled.
-                firstFragmentAt = null;
+                firstUnitAt = null;
                 Write(CliText.ProgressTranslationRetry(retry.Detail, retry.Model), now);
                 break;
 
@@ -114,8 +126,8 @@ public sealed class LocalRunProgress : ILocalRunObserver
                 Write(CliText.ProgressTriageLogRead(read.Fragments), now);
                 break;
 
-            case TriageMerging merging:
-                Write(CliText.ProgressTriageMerging(merging.Findings, merging.Level), now);
+            case MergingPartials merging:
+                Write(CliText.ProgressMerging(merging.Parts, merging.Level), now);
                 break;
         }
     }
@@ -234,27 +246,44 @@ public sealed class LocalRunProgress : ILocalRunObserver
     private static string Gigabytes(long bytes) =>
         (bytes / (1024d * 1024 * 1024)).ToString("F1", CultureInfo.InvariantCulture);
 
-    private void ReportFragment(TranslatingFragment fragment, DateTimeOffset now)
+    /// <summary>
+    /// A unit of a run whose total is known before the first one: a translation fragment, an
+    /// image, and — when it arrives — a page. Ungated, like every other step line: it is the proof
+    /// the stream is advancing, and under the silence clock a run whose units are quick and one
+    /// that has stalled look the same.
+    ///
+    /// The estimate is a mean over the units that have finished, so the merge that follows the
+    /// last one is outside it — the other reason the clause says about. The total on screen and
+    /// the denominator of the estimate are deliberately the same number: one that counted the
+    /// merge would disagree with the line carrying it.
+    /// </summary>
+    private void ReportCounted(
+        int index,
+        int total,
+        Func<int, int, string, string> sentence,
+        DateTimeOffset now)
     {
         var left = string.Empty;
-        if (fragment.Index > 1 && firstFragmentAt is { } first && fragment.Index <= fragment.Total)
+        if (index > 1 && firstUnitAt is { } first && index <= total)
         {
-            // A mean over what has finished, not a promise: the fragments are whole model calls
-            // and their durations differ, which is why the sentence says "about".
-            var mean = (now - first) / (fragment.Index - 1);
-            var remaining = mean * (fragment.Total - fragment.Index + 1);
+            // A mean over what has finished, not a promise: the units are whole model calls and
+            // their durations differ, which is why the sentence says "about".
+            var mean = (now - first) / (index - 1);
+            var remaining = mean * (total - index + 1);
             left = CliText.ProgressMinutesLeft(
                 remaining.TotalMinutes.ToString("F1", CultureInfo.InvariantCulture));
         }
 
-        if (fragment.Index == 1)
+        if (index == 1)
         {
-            firstFragmentAt = now;
+            firstUnitAt = now;
         }
 
-        Write(
-            CliText.ProgressTranslatingFragment(fragment.Index, fragment.Total, left),
-            now);
+        // The position answers "what is it working on" now, so a remembered cargo count would be a
+        // second answer to the same question — and a false one: this call carries one of them.
+        workingImages = null;
+        workingFiles = null;
+        Write(sentence(index, total, left), now);
     }
 
     private bool SilenceEarnsALine(DateTimeOffset now) =>
