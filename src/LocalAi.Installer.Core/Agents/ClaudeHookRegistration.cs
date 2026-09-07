@@ -118,7 +118,16 @@ public static class ClaudeHookRegistration
             return settings;
         }
 
-        var text = CutOurGroup(settings);
+        // Every entry of ours, not the first one found. `Add` cannot produce a second — it removes
+        // ours before inserting — but a person can, and the hint naming exactly which tools are
+        // covered invites copying the line to a second matcher. Leaving one behind would point a
+        // deleted launcher at their tool calls while the retained notice blamed their own hooks
+        // for the refusal.
+        var text = settings;
+        while (Groups(Parse(text)) is { } remaining && remaining.Any(Ours))
+        {
+            text = CutOurGroup(text);
+        }
 
         // What is left decides how far to keep going, and the parsed document is what says so —
         // the containers this product created go with the entry, and the user's do not. Leaving
@@ -234,35 +243,38 @@ public static class ClaudeHookRegistration
     /// </summary>
     private static string Cut(string text, int start, int end)
     {
-        while (start > 0 && char.IsWhiteSpace(text[start - 1]))
+        var leading = start;
+        while (leading > 0 && char.IsWhiteSpace(text[leading - 1]))
         {
-            start--;
+            leading--;
         }
 
-        while (end < text.Length && char.IsWhiteSpace(text[end]))
+        var trailing = end;
+        while (trailing < text.Length && char.IsWhiteSpace(text[trailing]))
         {
-            end++;
+            trailing++;
         }
 
-        if (end < text.Length && text[end] == ',')
+        if (trailing < text.Length && text[trailing] == ',')
         {
-            end++;
-        }
-        else if (start > 0)
-        {
-            var comma = start - 1;
-            while (comma >= 0 && char.IsWhiteSpace(text[comma]))
-            {
-                comma--;
-            }
-
-            if (comma >= 0 && text[comma] == ',')
-            {
-                start = comma;
-            }
+            // Not the last entry: ours, the indentation that introduced us, and the separator
+            // that joined us to the next one. The next one's own indentation is not ours to take.
+            return text[..leading] + text[(trailing + 1)..];
         }
 
-        return text[..start] + text[end..];
+        if (leading > 0 && text[leading - 1] == ',')
+        {
+            // The last of several. The separator to remove is the one *before* us, and the
+            // whitespace after us belongs to the closing bracket rather than to us — consuming it
+            // is how a removal that promises the file back byte for byte reflowed `\n    ]` to
+            // `]`, silently, on every layout where ours was not first.
+            return text[..(leading - 1)] + text[end..];
+        }
+
+        // The only one. No separator either side, and nothing else in the container needs the
+        // whitespace around us, so an emptied container closes up rather than keeping the shape
+        // of what used to be in it.
+        return text[..leading] + text[trailing..];
     }
 
     private static string Insert(string text, int bodyStart, int bodyEnd, string addition, string indent)

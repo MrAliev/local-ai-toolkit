@@ -146,6 +146,76 @@ public sealed class TheGateIsRegisteredWithoutDisturbingTheFileTests
         Assert.Equal("{}", ClaudeHookRegistration.Remove(after), StringComparer.Ordinal);
     }
 
+    /// <summary>
+    /// The round-trip above only ever exercises our entry sitting first, because `Add` inserts at
+    /// the head of the array. A hand-edited file is the case this class exists for, and there ours
+    /// can be anywhere — so the byte-for-byte promise has to hold there too.
+    ///
+    /// The separator that has to go is the one *before* a last element, and the whitespace after
+    /// it belongs to the closing bracket rather than to us.
+    /// </summary>
+    [Fact]
+    public void Removing_our_entry_from_the_end_leaves_the_rest_byte_for_byte()
+    {
+        var before = """
+            {
+              "hooks": {
+                "PreToolUse": [
+                  {
+                    "matcher": "Write|Edit",
+                    "hooks": [ { "type": "command", "command": "prettier --write" } ]
+                  },
+                  { "matcher": "Bash", "hooks": [ { "type": "command", "command": "OURS" } ] }
+                ]
+              }
+            }
+            """.Replace("OURS", Command.Replace("\\", "\\\\").Replace("\"", "\\\""), StringComparison.Ordinal);
+        var expected = """
+            {
+              "hooks": {
+                "PreToolUse": [
+                  {
+                    "matcher": "Write|Edit",
+                    "hooks": [ { "type": "command", "command": "prettier --write" } ]
+                  }
+                ]
+              }
+            }
+            """;
+
+        Assert.Equal(expected, ClaudeHookRegistration.Remove(before), StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// Every entry of ours, not the first one found. The hint names exactly which tools are
+    /// covered, which invites somebody to copy our line to a second matcher for another tool —
+    /// and an uninstall that took one of the two would leave a launcher that no longer exists
+    /// refusing their calls, while the retained notice blamed their own hooks for it.
+    /// </summary>
+    [Fact]
+    public void Removing_takes_out_every_entry_this_product_wrote()
+    {
+        // Written out rather than added twice: `Add` removes ours before inserting, so it can
+        // never produce this document. A person editing the file can, and that is the point.
+        const string before = """
+            {
+              "hooks": {
+                "PreToolUse": [
+                  { "matcher": "Bash", "hooks": [ { "type": "command", "command": "localai-launcher.exe run localai agent gate" } ] },
+                  { "matcher": "Grep", "hooks": [ { "type": "command", "command": "localai-launcher.exe run localai agent gate" } ] }
+                ]
+              }
+            }
+            """;
+
+        var removed = ClaudeHookRegistration.Remove(before);
+
+        Assert.False(ClaudeHookRegistration.IsRegistered(removed));
+        // And the notice built on this count cannot then blame somebody else's hooks for a
+        // refusal one of ours is still causing.
+        Assert.Equal(0, ClaudeHookRegistration.OtherEntries(removed));
+    }
+
     [Fact]
     public void Removing_what_was_never_registered_changes_nothing()
     {
