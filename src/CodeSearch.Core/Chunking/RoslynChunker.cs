@@ -292,8 +292,14 @@ public sealed class RoslynChunker : IChunker
             }
         }
 
-        // File-scoped namespaces are not ancestors of a CompilationUnit's descendants in the way
-        // block-scoped ones are, so fall back to scanning the unit itself.
+        // For a node with no namespace above it — which is what `WholeFile` passes when it hands
+        // in the compilation unit itself, for a file that declares no type at all.
+        //
+        // This used to say that file-scoped namespaces are not ancestors the way block-scoped
+        // ones are. They are: `FileScopedNamespaceDeclarationSyntax` derives from
+        // `BaseNamespaceDeclarationSyntax` and does sit in the ancestor chain, so the loop above
+        // finds it and this line is never reached for that case. A comment naming the wrong
+        // reason for a branch is how the branch gets deleted by somebody who checks the reason.
         var declared = node.SyntaxTree.GetRoot()
             .DescendantNodes()
             .OfType<BaseNamespaceDeclarationSyntax>()
