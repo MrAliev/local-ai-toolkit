@@ -3,6 +3,7 @@ using CodeSearch.Core.Indexing;
 using LocalAi.Cli;
 using LocalAi.Contracts.Indexing;
 using LocalAi.Contracts;
+using LocalAi.Tests.Shared;
 
 namespace LocalAi.IntegrationTests;
 
@@ -230,20 +231,5 @@ public sealed class RepositorySyncGateTests : IDisposable
             .Identity.Id;
     }
 
-    public void Dispose()
-    {
-        try
-        {
-            Directory.Delete(_root, recursive: true);
-        }
-        catch (DirectoryNotFoundException)
-        {
-        }
-        catch (IOException)
-        {
-        }
-        catch (UnauthorizedAccessException)
-        {
-        }
-    }
+    public void Dispose() => TemporaryDirectory.Delete(_root);
 }

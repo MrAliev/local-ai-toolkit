@@ -4,6 +4,7 @@ using LocalAi.Cli;
 using LocalAi.Contracts;
 using LocalAi.Contracts.Activation;
 using LocalAi.Installer.Core.Releases;
+using LocalAi.Tests.Shared;
 
 namespace LocalAi.IntegrationTests;
 
@@ -34,14 +35,7 @@ public sealed class UpdateCommandTests : IDisposable
     {
         output.Dispose();
         error.Dispose();
-        try
-        {
-            Directory.Delete(root, recursive: true);
-        }
-        catch (Exception exception) when (
-            exception is IOException or UnauthorizedAccessException)
-        {
-        }
+        TemporaryDirectory.Delete(root);
     }
 
     [Fact]

@@ -3,6 +3,7 @@ using CodeSearch.Core.Search;
 using CodeSearch.Mcp;
 using CodeSearch.Mcp.Resources;
 using LocalAi.Contracts;
+using LocalAi.Tests.Shared;
 
 namespace CodeSearch.Tests;
 
@@ -223,8 +224,8 @@ public sealed class SyncNoticeWiringTests : IDisposable
 
     public void Dispose()
     {
-        Delete(_root);
-        Delete(_runtimeRoot);
+        TemporaryDirectory.Delete(_root);
+        TemporaryDirectory.Delete(_runtimeRoot);
     }
 
     private SearchService Service() => new(runtimeRoot: _runtimeRoot);
@@ -289,25 +290,5 @@ public sealed class SyncNoticeWiringTests : IDisposable
         Assert.True(
             process.ExitCode == 0,
             $"git {string.Join(' ', arguments)} failed: {process.StandardError.ReadToEnd()}");
-    }
-
-    /// <summary>
-    /// Best effort. Git marks the files under .git/objects read-only, so a delete of a real
-    /// repository can fail on Windows - and a temporary directory left behind must not be reported
-    /// as a failure of the thing under test.
-    /// </summary>
-    private static void Delete(string directory)
-    {
-        try
-        {
-            if (Directory.Exists(directory))
-            {
-                Directory.Delete(directory, recursive: true);
-            }
-        }
-        catch (Exception exception) when (
-            exception is IOException or UnauthorizedAccessException)
-        {
-        }
     }
 }
