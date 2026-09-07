@@ -24,9 +24,19 @@ public sealed class RepositoryIndexProgressStore
     /// <summary>
     /// Written through and flushed, which on the recoverability axis it need not be: a progress
     /// record is the most recomputable file in the runtime tree — the next report overwrites it
-    /// seconds later, and a build that died leaves one nobody acts on. It keeps the flush because
-    /// removing durability is a decision to be asked for rather than taken, and that question is
-    /// the remainder of #392.
+    /// seconds later, and a build that died leaves one nobody acts on.
+    ///
+    /// It keeps the flush anyway, and this is the decision #392 asked for rather than an omission.
+    /// What the axis answers is whether losing the file costs a fact or a recomputation, and here
+    /// it costs neither: the file is not lost, it is stale, and a stale progress record is read by
+    /// <c>SyncNotice</c> as a build that stopped. The flush is what keeps the last thing a build
+    /// said about itself on the disk when the machine goes down mid-sync, so the next reader is
+    /// told where it stopped rather than where it was some seconds earlier. That is worth one
+    /// flush per embedding batch — a cost paid once every fifteen seconds against a write the
+    /// operating system was going to make anyway.
+    ///
+    /// The pointer beside it is the opposite case and says so in <c>GenerationStore</c>: nothing
+    /// reads a stale pointer as a statement about a run in progress.
     /// </summary>
     public void Save(RepositoryIndexProgress progress)
     {
