@@ -1106,7 +1106,7 @@ public static class CodeSearchSyncCommand
         await using var loaded = await RoslynSolutionLoader.LoadAsync(
             sourceRoot,
             Roslyn,
-            cancellationToken);
+            cancellationToken: cancellationToken);
         SemanticIndex languageIndex;
         if (loaded is null)
         {
