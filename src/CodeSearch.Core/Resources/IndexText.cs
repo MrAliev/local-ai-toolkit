@@ -309,4 +309,13 @@ public static class IndexText
     public static string ChunkSourceMissing => Catalogue.Get(nameof(ChunkSourceMissing));
 
     public static string ChunkSourceUnavailable => Catalogue.Get(nameof(ChunkSourceUnavailable));
+
+    /// <summary>
+    /// The two asides that stand in for a hit's snippet when the file has moved on since it was
+    /// indexed. Both reach a reader through <c>search_code</c>, whose report otherwise follows
+    /// them — so as English literals they were the one English paragraph in a Russian answer.
+    /// </summary>
+    public static string SnapshotChangedSnippet => Catalogue.Get(nameof(SnapshotChangedSnippet));
+
+    public static string StaleRangeSnippet => Catalogue.Get(nameof(StaleRangeSnippet));
 }

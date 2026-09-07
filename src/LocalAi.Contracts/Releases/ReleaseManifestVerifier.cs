@@ -205,6 +205,11 @@ public sealed partial class ReleaseManifestVerifier : IDisposable
             manifest.ReleaseVersion.Length > 128 ||
             !SafeReleaseVersion().IsMatch(manifest.ReleaseVersion) ||
             !SafeVersionDirectory().IsMatch(manifest.VersionDirectory) ||
+            // Unreachable today and kept on purpose: the pattern above already requires an
+            // alphanumeric first character, so neither value can survive it. What this guards is
+            // the day somebody loosens that pattern — these two are the values that turn a
+            // version directory into a path escape, and they are worth naming where a reader
+            // relaxing the regex will see them.
             manifest.VersionDirectory is "." or ".." ||
             !SafeCatalogVersion().IsMatch(manifest.ModelCatalogVersion) ||
             manifest.ProtocolVersion <= 0 ||
