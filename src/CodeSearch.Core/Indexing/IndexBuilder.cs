@@ -431,10 +431,12 @@ public sealed class IndexBuilder(
     /// the one case with nothing to reuse. Two files out of 715 edited, and the build reported
     /// nought reused and two to embed, every time (#388).
     ///
-    /// Choosing wrongly here cannot produce a wrong index, only a slower build: every file is
-    /// still checked against its own content hash and its own chunker before anything is kept.
-    /// The generation, worktree, head tree and model are guaranteed by the directory the path
-    /// already names, and by the model check inside <see cref="LoadReusable"/>.
+    /// Choosing wrongly here cannot produce a wrong index, only a slower build — but only because
+    /// <see cref="Reusable"/> stands on the branch that keeps a previous entry. That was written
+    /// as a claim here before it was true anywhere: the filter this sentence meant lives in the
+    /// caller, and a file that was re-chunked into nothing reached the keeping branch without
+    /// passing it. The generation, worktree, head tree and model are guaranteed by the directory
+    /// the path already names, and by the model check inside <see cref="LoadReusable"/>.
     /// </summary>
     private static string NewestOverlayBeside(string overlayPath)
     {
@@ -479,7 +481,7 @@ public sealed class IndexBuilder(
             if (index.FormatVersion < CodeIndex.CurrentVersion)
             {
                 _log($"Existing index is format v{index.FormatVersion}; v{CodeIndex.CurrentVersion} " +
-                     "adds language-independent lexical text - rebuilding once.");
+                     $"{CodeIndex.CurrentVersionReason} - rebuilding once.");
                 return null;
             }
 
@@ -1075,10 +1077,12 @@ public sealed class IndexBuilder(
                 contributions.Add(new(relPath, hash, identityOf(relPath), chunks, null));
                 totalChunks += chunks.Count;
             }
-            else if (existing is not null && previous.TryGetValue(relPath, out var prior))
+            else if (existing is not null &&
+                     previous.TryGetValue(relPath, out var prior) &&
+                     Reusable(prior, hash, relPath, identityOf))
             {
-                // The prior identity rather than this build's: these are the previous chunks, and
-                // they are only here because the two already matched.
+                // The prior identity rather than this build's: they are the same by the check
+                // above, and the prior one is what actually cut these chunks.
                 contributions.Add(new(relPath, hash, prior.Chunker, null, prior));
                 totalChunks += prior.ChunkCount;
             }
@@ -1086,6 +1090,28 @@ public sealed class IndexBuilder(
 
         return new ChunkPlan(contributions, totalChunks);
     }
+
+    /// <summary>
+    /// Whether a previous index's entry still describes this file, asked here rather than assumed
+    /// from the caller having asked it already.
+    ///
+    /// The callers do filter — <see cref="Partition"/> and the overlay's own `toChunk` — but a
+    /// file can reach the fallback branch without having passed either: one that was re-chunked
+    /// and produced nothing. Whitespace-only content, a NUL byte from a build tool writing binary
+    /// through a text extension, and a file locked between the hash and the read all do that, and
+    /// the entry then arrives carrying the file's new hash over the old file's chunks and vectors.
+    ///
+    /// Search would answer from text the file no longer holds, and the next build would see a
+    /// matching hash and a matching chunker and keep it. So the predicate lives beside the branch
+    /// that acts on it, where it cannot be separated from it by a later edit.
+    /// </summary>
+    private static bool Reusable(
+        IndexedFile prior,
+        byte[] hash,
+        string relPath,
+        Func<string, string> identityOf) =>
+        prior.Hash.AsSpan().SequenceEqual(hash) &&
+        string.Equals(prior.Chunker, identityOf(relPath), StringComparison.Ordinal);
 
     /// <summary>
     /// The one ceiling that no machine can be bought out of: every vector of a finished index

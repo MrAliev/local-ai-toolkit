@@ -68,8 +68,20 @@ public sealed class SymbolDefinitionCatalog
             return string.Empty;
         }
 
+        // Sorted rather than taken in the order the catalogue holds them. That order depends on
+        // which route the catalogue arrived by — a freshly built index is unnormalized, one loaded
+        // from a semantic overlay has been through `NormalizeForUse` — and `SymbolAwareChunker`
+        // sorts its spans anyway, so the same file cuts identically either way. Hashing the raw
+        // order would make the fingerprint disagree with itself across the two routes and quietly
+        // re-embed every windowed file whenever the semantic overlay was reused (#388).
         var builder = new StringBuilder(definitions.Count * 24);
-        foreach (var definition in definitions)
+        foreach (var definition in definitions
+                     .OrderBy(definition => definition.Name.StartLine)
+                     .ThenBy(definition => definition.Name.StartCharacter)
+                     .ThenBy(definition => definition.Name.EndLine)
+                     .ThenBy(definition => definition.Name.EndCharacter)
+                     .ThenBy(definition => definition.Body?.StartLine ?? -1)
+                     .ThenBy(definition => definition.Body?.EndLine ?? -1))
         {
             Append(builder, definition.Name);
             builder.Append(definition.Body is { } body ? '=' : '-');

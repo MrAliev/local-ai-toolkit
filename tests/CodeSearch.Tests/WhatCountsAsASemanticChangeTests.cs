@@ -31,6 +31,10 @@ public sealed class WhatCountsAsASemanticChangeTests
     [InlineData("web/app.mjs")]
     [InlineData("web/app.cjs")]
     [InlineData("tools/report.py")]
+    // The Python adapter is fed `.py` and `.pyi` alike, so a stub is source the layer reads.
+    // Left out of the boundary, editing one leaves the overlay declared current and navigation
+    // answered from an overlay built before the stub changed — the unsound direction.
+    [InlineData("tools/report.pyi")]
     // What the solution is made of. None of these is read by the semantic layer as source, and
     // every one of them changes what the layer would find: a project reference added, a target
     // framework changed, a file glob widened.
