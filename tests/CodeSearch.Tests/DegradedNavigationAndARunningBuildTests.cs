@@ -34,14 +34,15 @@ public sealed class DegradedNavigationAndARunningBuildTests : IDisposable
     /// thing the reader must not do, and it is the only part of the answer that tells them to act.
     /// </summary>
     [Fact]
-    public void A_reason_that_names_a_sync_does_not_name_it_while_one_is_running()
+    public async Task A_reason_that_names_a_sync_does_not_name_it_while_one_is_running()
     {
-        var answer = CodeSearchTools.GoToDefinition(
+        var answer = await CodeSearchTools.GoToDefinition(
             WithoutASemanticIndex(),
             Watching(Running()),
             "Use.cs",
             line: 1,
-            root: _root);
+            root: _root,
+            cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Contains("semantic_navigation_degraded:", answer, StringComparison.Ordinal);
         Assert.Contains(CodeSearchText.BuildAlreadyRunning, answer, StringComparison.Ordinal);
@@ -54,14 +55,15 @@ public sealed class DegradedNavigationAndARunningBuildTests : IDisposable
     /// "answers come from the last index it published" - there is no last index.
     /// </summary>
     [Fact]
-    public void A_reason_that_names_a_sync_does_not_promise_a_published_index()
+    public async Task A_reason_that_names_a_sync_does_not_promise_a_published_index()
     {
-        var answer = CodeSearchTools.FindReferences(
+        var answer = await CodeSearchTools.FindReferences(
             WithNoGenerationAtAll(),
             Watching(Running()),
             "Use.cs",
             line: 1,
-            root: _root);
+            root: _root,
+            cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Contains(CodeSearchText.BuildAlreadyRunning, answer, StringComparison.Ordinal);
         Assert.DoesNotContain(
@@ -76,14 +78,15 @@ public sealed class DegradedNavigationAndARunningBuildTests : IDisposable
     /// was published.
     /// </summary>
     [Fact]
-    public void A_reason_that_names_no_command_keeps_the_line_it_has()
+    public async Task A_reason_that_names_no_command_keeps_the_line_it_has()
     {
-        var answer = CodeSearchTools.GoToDefinition(
+        var answer = await CodeSearchTools.GoToDefinition(
             WithNothingAtThePosition(),
             Watching(Running()),
             "Use.cs",
             line: 1,
-            root: _root);
+            root: _root,
+            cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Contains(CodeSearchText.SyncNotSearchableYet, answer, StringComparison.Ordinal);
         Assert.DoesNotContain(
@@ -97,14 +100,15 @@ public sealed class DegradedNavigationAndARunningBuildTests : IDisposable
     /// all. That is the whole of what keeps this a fix rather than a rewrite.
     /// </summary>
     [Fact]
-    public void With_nothing_running_the_reason_is_the_sentence_it_has_always_been()
+    public async Task With_nothing_running_the_reason_is_the_sentence_it_has_always_been()
     {
-        var answer = CodeSearchTools.GoToDefinition(
+        var answer = await CodeSearchTools.GoToDefinition(
             WithoutASemanticIndex(),
             NoBuildRunning.Notice,
             "Use.cs",
             line: 1,
-            root: _root);
+            root: _root,
+            cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Contains(
             IndexText.GenerationWithoutSemanticIndex(Generation, _root),
@@ -119,14 +123,15 @@ public sealed class DegradedNavigationAndARunningBuildTests : IDisposable
     /// rather than still working.
     /// </summary>
     [Fact]
-    public void A_build_that_died_leaves_the_command_and_says_where_it_stopped()
+    public async Task A_build_that_died_leaves_the_command_and_says_where_it_stopped()
     {
-        var answer = CodeSearchTools.GoToDefinition(
+        var answer = await CodeSearchTools.GoToDefinition(
             WithoutASemanticIndex(),
             Watching(Died()),
             "Use.cs",
             line: 1,
-            root: _root);
+            root: _root,
+            cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Contains("localai sync --root", answer, StringComparison.Ordinal);
         Assert.Contains(
@@ -142,14 +147,15 @@ public sealed class DegradedNavigationAndARunningBuildTests : IDisposable
     /// goes on the line under it, and the blank line the answer already had stays where it was.
     /// </summary>
     [Fact]
-    public void The_block_follows_the_reason_rather_than_heading_the_answer()
+    public async Task The_block_follows_the_reason_rather_than_heading_the_answer()
     {
-        var answer = CodeSearchTools.GoToDefinition(
+        var answer = await CodeSearchTools.GoToDefinition(
             WithoutASemanticIndex(),
             Watching(Running()),
             "Use.cs",
             line: 1,
-            root: _root);
+            root: _root,
+            cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.StartsWith("semantic_navigation_degraded: ", answer, StringComparison.Ordinal);
         var lines = answer.Split('\n');
@@ -164,14 +170,15 @@ public sealed class DegradedNavigationAndARunningBuildTests : IDisposable
     /// caveat - and a refusal whose only route is a command that cannot run is worse, not better.
     /// </summary>
     [Fact]
-    public void A_refusal_that_names_a_sync_does_not_name_it_while_one_is_running()
+    public async Task A_refusal_that_names_a_sync_does_not_name_it_while_one_is_running()
     {
-        var answer = CodeSearchTools.FindImplementations(
+        var answer = await CodeSearchTools.FindImplementations(
             WithoutASemanticIndex(),
             Watching(Running()),
             "Use.cs",
             line: 1,
-            root: _root);
+            root: _root,
+            cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Contains("semantic_navigation_not_ready:", answer, StringComparison.Ordinal);
         Assert.Contains(CodeSearchText.BuildAlreadyRunning, answer, StringComparison.Ordinal);
