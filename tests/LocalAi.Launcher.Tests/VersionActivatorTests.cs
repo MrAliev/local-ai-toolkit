@@ -249,7 +249,7 @@ public sealed class VersionActivatorTests
             started.Set();
             var elapsed = Stopwatch.StartNew();
             var error = Record.Exception(() =>
-                CreateActivator(install, TimeSpan.FromMilliseconds(500)).Activate(
+                CreateActivator(install, LeaseBudget).Activate(
                     "v2",
                     stopRunning: false,
                     ExpectCurrent(before)));
@@ -258,18 +258,36 @@ public sealed class VersionActivatorTests
         });
 
         started.Wait(TestContext.Current.CancellationToken);
-        Thread.Sleep(TimeSpan.FromMilliseconds(250));
+        Thread.Sleep(GateHeldFor);
         gate.Dispose();
         var result = await activation;
 
         var launcherError = Assert.IsType<LauncherException>(result.error);
         Assert.Equal("version_in_use", launcherError.Code);
+        // The same shape VersionLeaseTests arrived at for the same property one layer down, and
+        // for the reason its comment records at length: bounds narrow enough to sit between the
+        // two outcomes are bounds tuned for the machine, and that was raised twice before a CI
+        // runner took 731 ms of correct behaviour anyway.
+        //
+        // What separates the two outcomes is how long the gate is held, so the hold is most of
+        // the budget. Spending it once gives about a second — 700ms waiting for the gate, the
+        // remaining 300ms failing to take the lease — and spending it twice gives about 1.7,
+        // because the lease would start a fresh budget of its own. 700ms apart, where a few
+        // hundred milliseconds of jitter no longer reach the boundary.
         Assert.InRange(
             result.Elapsed,
-            TimeSpan.FromMilliseconds(400),
-            TimeSpan.FromMilliseconds(650));
+            TimeSpan.FromMilliseconds(850),
+            TimeSpan.FromMilliseconds(1_400));
         Assert.Equal(before, File.ReadAllBytes(install.CurrentPath));
     }
+
+    /// <summary>
+    /// How much of <see cref="LeaseBudget"/> the startup gate holds. Named rather than written
+    /// into the assertion, so the bounds above are visibly derived from the budget of the code
+    /// under test rather than chosen to fit a measurement — and most of the budget, because the
+    /// hold is exactly what separates spending it once from spending it twice.
+    /// </summary>
+    private static readonly TimeSpan GateHeldFor = TimeSpan.FromMilliseconds(700);
 
     [Fact]
     public void Stop_timeout_is_separate_from_shared_lease_acquisition_budget()
