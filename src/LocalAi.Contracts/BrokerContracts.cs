@@ -37,6 +37,29 @@ public sealed record BrokerCompatibility(
     [property: JsonRequired] int ProtocolVersion,
     [property: JsonRequired] string BuildCompatibilityId);
 
+/// <summary>
+/// How stale a published heartbeat may be before the broker that wrote it is taken for dead.
+///
+/// One definition, because two consumers act on it and they must agree: the client decides
+/// whether to start a replacement, and the launcher decides whether an owner is still there. Two
+/// copies of five seconds were kept in two assemblies until #396; a disagreement between them
+/// would have one starting a broker while the other believed one was running.
+///
+/// The figure is a budget, and what spends it is the broker's own writing: the heartbeat loop
+/// waits one second between ticks and the state store spends up to two seconds retrying a rename
+/// a reader is denying. So a publish that fails once still lands four seconds after the last one
+/// and inside this, and two consecutive failures do not — which is the margin #396 asks about,
+/// pinned by <c>TheHeartbeatMarginHoldsTests</c>.
+/// </summary>
+public static class BrokerHeartbeat
+{
+    /// <summary>
+    /// Symmetric on purpose: a heartbeat from the future by more than this is as wrong as one
+    /// from the past, and both mean the state was not written by a broker running now.
+    /// </summary>
+    public static TimeSpan MaximumSkew { get; } = TimeSpan.FromSeconds(5);
+}
+
 public static class BrokerCompatibilityContract
 {
     /// <summary>

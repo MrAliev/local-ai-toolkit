@@ -1,14 +1,18 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
+using LocalAi.Contracts;
 
 namespace LocalAi.Launcher;
 
 internal sealed class BrokerHostStateReader
 {
     private static readonly JsonSerializerOptions StrictJson = CreateJsonOptions();
-    // Permit only the short read/clock skew that can occur around host-state publication.
-    private static readonly TimeSpan MaximumHeartbeatSkew = TimeSpan.FromSeconds(5);
+    // Permit only the short read/clock skew that can occur around host-state publication. The
+    // client asks the same question of the same file, so the figure is shared rather than spelled
+    // twice (#396) — the document shape below stays this reader's own, because it parses a file
+    // another process wrote and refuses anything it does not recognise.
+    private static readonly TimeSpan MaximumHeartbeatSkew = BrokerHeartbeat.MaximumSkew;
     private readonly TimeProvider _timeProvider;
 
     internal BrokerHostStateReader(TimeProvider? timeProvider = null)
