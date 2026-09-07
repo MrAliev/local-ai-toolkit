@@ -107,9 +107,14 @@ public sealed class IndexBuilder(
 
     /// <summary>
     /// Definition bodies for the tree being indexed, from the semantic phase that ran before
-    /// this one. Empty for a build with no semantic data — an overlay, a repository whose
-    /// adapters are disabled, a machine without the external indexers — and every file then
-    /// chunks the way it did before symbol-aware chunking existed.
+    /// this one. Empty for a build with no semantic data — a repository whose adapters are
+    /// disabled, a machine without the external indexers — and every file then chunks the way it
+    /// did before symbol-aware chunking existed.
+    ///
+    /// Not empty for an overlay, which this used to say: `localai sync` builds its semantics
+    /// first and hands the catalogue to both builds alike. That matters now that reuse compares
+    /// which chunker cut a file, because an overlay built without it would disagree with the base
+    /// about every windowed file the catalogue names.
     /// </summary>
     private readonly SymbolDefinitionCatalog _definitions = definitions ?? SymbolDefinitionCatalog.Empty;
 

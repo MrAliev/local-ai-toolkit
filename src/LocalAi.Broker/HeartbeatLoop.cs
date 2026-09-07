@@ -106,9 +106,11 @@ public sealed class HeartbeatLoop
                 // loop costs the process: clients read a heartbeat older than five seconds as a
                 // dead broker and start a replacement, which finds broker.lock still held and
                 // exits 0 — and this loop is the only reader of the shutdown request, so the
-                // broker cannot be asked to stop either. The store already spends two seconds
-                // retrying the rename before it gives up, so what arrives here has outlasted the
-                // contention it was written for; trying again in a second is the whole remedy.
+                // broker cannot be asked to stop either. What arrives here has already spent
+                // <see cref="PublishRetryBudget"/> retrying the rename, so it has outlasted the
+                // contention that budget was written for; trying again in a second is the whole
+                // remedy. The figure named here used to be the store's two seconds, which stopped
+                // being what this path spends the moment the heartbeat was given its own.
                 _publishFailed(exception);
             }
 

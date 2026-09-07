@@ -222,7 +222,15 @@ public sealed class CodeIndex : ISearchableIndex
                 : null;
         }
 
-        var fileCount = ReadBoundedCount(reader, stream, path, minimumEntryBytes: 41);
+        // A file record is a length-prefixed path (1 byte at its shortest), a 32-byte hash, two
+        // ints, and from v5 a length-prefixed chunker name (1 more). The bound is what stops a
+        // corrupt count from sizing an allocation, so it follows the version rather than staying
+        // at the older, looser figure.
+        var fileCount = ReadBoundedCount(
+            reader,
+            stream,
+            path,
+            minimumEntryBytes: version >= 5 ? 42 : 41);
         var files = new List<IndexedFile>(fileCount);
         for (var i = 0; i < fileCount; i++)
         {

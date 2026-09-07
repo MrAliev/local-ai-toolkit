@@ -24,7 +24,6 @@ public sealed class AgentIntegrationPageViewModel : ObservableObject
     /// <summary>What the machine has right now, read rather than remembered.</summary>
     private bool gateOnDisk;
 
-    private bool gateAnsweredByHand;
     private bool refusesTextSearch;
 
     public ObservableCollection<AgentOption> Agents { get; } =
@@ -91,7 +90,6 @@ public sealed class AgentIntegrationPageViewModel : ObservableObject
         get => CanRefuseTextSearch ? refusesTextSearch : gateOnDisk;
         set
         {
-            gateAnsweredByHand = true;
             refusesTextSearch = value;
             NotifyGate();
         }
@@ -166,17 +164,16 @@ public sealed class AgentIntegrationPageViewModel : ObservableObject
     /// proposes what is already there rather than restoring something they turned off — and
     /// somebody who removed the entry by hand is shown that, instead of a memory of their answer.
     ///
-    /// Called more than once in a session, like detection, so an answer given by hand survives it.
+    /// Called once, from the wizard's initialisation — unlike detection, which runs again whenever
+    /// the environment is re-examined. The guard that used to be here kept an answer given by hand
+    /// from being overwritten by a second seed, and there is no second seed: it was a branch no
+    /// entry point reached and no test covered, promising a protection nothing needed.
     /// </summary>
     public void ApplyGateRegistration(bool registered, string settingsPath)
     {
         gateOnDisk = registered;
         GateSettingsPath = settingsPath ?? string.Empty;
-        if (!gateAnsweredByHand)
-        {
-            refusesTextSearch = registered;
-        }
-
+        refusesTextSearch = registered;
         OnPropertyChanged(nameof(GateSettingsPath));
         NotifyGate();
     }
