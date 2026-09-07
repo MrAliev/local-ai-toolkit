@@ -60,6 +60,33 @@ public static class ChunkerFactory
         return definitions.Count > 0 ? new SymbolAwareChunker(definitions) : chunker;
     }
 
+    /// <summary>
+    /// Which chunker <see cref="Resolve(string, SymbolDefinitionCatalog)"/> would return, in a
+    /// form that can be written into an index and compared to a later build's answer.
+    ///
+    /// A file's chunks may be reused only when this matches as well as its content hash. The two
+    /// are genuinely independent: a path whose chunker comes from its extension is settled by the
+    /// path alone, but a windowed path can be promoted to a symbol-aware one — or demoted back —
+    /// purely by the semantic index moving underneath it, with every byte of the file unchanged
+    /// (#388).
+    ///
+    /// The windowed state carries the empty fingerprint rather than no marker at all, so "the
+    /// catalogue knows nothing about this file" and "the catalogue names three definitions in it"
+    /// cannot compare equal.
+    /// </summary>
+    public static string IdentityOf(string path, SymbolDefinitionCatalog catalog)
+    {
+        ArgumentNullException.ThrowIfNull(catalog);
+
+        var chunker = Resolve(path);
+        return chunker switch
+        {
+            null => string.Empty,
+            not GenericTextChunker => chunker.GetType().Name,
+            _ => "window:" + catalog.Fingerprint(path),
+        };
+    }
+
     public static IChunker? Resolve(string path)
     {
         var fileName = Path.GetFileName(path);

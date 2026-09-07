@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using CodeSearch.Core.Semantics;
 
 namespace CodeSearch.Core.Chunking;
@@ -43,6 +45,52 @@ public sealed class SymbolDefinitionCatalog
         _byPath.TryGetValue(Normalize(relPath), out var definitions)
             ? definitions
             : [];
+
+    /// <summary>
+    /// A short, stable digest of exactly the definitions <see cref="For"/> hands the chunker for
+    /// one file — the spans it cuts on, in the order it receives them.
+    ///
+    /// It exists so a later build can tell whether a file whose bytes are unchanged would still be
+    /// cut the same way. It would not always: these definitions come from the semantic index,
+    /// which is rebuilt on its own schedule, so a file can keep every byte and change its
+    /// boundaries. Reusing its chunks then would keep vectors that describe text at spans the
+    /// chunk list no longer names (#388).
+    ///
+    /// Empty for a file with no definitions, which is a fact about the catalogue rather than about
+    /// the file: the same path resolves to a windowed chunker in that state and a symbol-aware one
+    /// in the other, so the two must not compare equal.
+    /// </summary>
+    public string Fingerprint(string relPath)
+    {
+        var definitions = For(relPath);
+        if (definitions.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var builder = new StringBuilder(definitions.Count * 24);
+        foreach (var definition in definitions)
+        {
+            Append(builder, definition.Name);
+            builder.Append(definition.Body is { } body ? '=' : '-');
+            if (definition.Body is { } present)
+            {
+                Append(builder, present);
+            }
+
+            builder.Append(';');
+        }
+
+        return Convert.ToHexStringLower(
+            SHA256.HashData(Encoding.UTF8.GetBytes(builder.ToString())))[..16];
+
+        static void Append(StringBuilder builder, SourceRange range) =>
+            builder
+                .Append(range.StartLine).Append(',')
+                .Append(range.StartCharacter).Append(',')
+                .Append(range.EndLine).Append(',')
+                .Append(range.EndCharacter);
+    }
 
     /// <summary>
     /// Collects every definition occurrence the chunker can cut on: the ones that report a body,

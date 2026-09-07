@@ -149,6 +149,13 @@ public sealed class IndexBuilder(
     private readonly Action<string> _log = log ?? (_ => { });
     private readonly Action<IndexBuildProgress> _progress = progress ?? (_ => { });
 
+    /// <summary>
+    /// Which chunker this build would use for a file, as it will be recorded beside the file's
+    /// chunks. Reuse compares it, so the recording and the comparison come from one place.
+    /// </summary>
+    private string ChunkerIdentity(string relPath) =>
+        ChunkerFactory.IdentityOf(relPath, _definitions);
+
     public async Task<BuildResult> BuildAsync(
         string root,
         string indexPath,
@@ -167,14 +174,19 @@ public sealed class IndexBuilder(
         var existing = LoadReusable(indexPath, force);
         var previousByPath = BuildLookup(existing);
 
-        var (reused, changed) = Partition(root, files, previousByPath, out var hashes);
+        var (reused, changed) = Partition(
+            root,
+            files,
+            previousByPath,
+            out var hashes,
+            ChunkerIdentity);
         _log(IndexText.BuildPartitioned(reused.Count, changed.Count));
 
         var freshChunks = ChunkFiles(root, changed, ct);
         var totalToEmbed = freshChunks.Values.Sum(c => c.Count);
         _log(IndexText.BuildChunked(changed.Count, totalToEmbed));
 
-        var plan = Plan(files, previousByPath, existing, freshChunks, hashes);
+        var plan = Plan(files, previousByPath, existing, freshChunks, hashes, ChunkerIdentity);
         RefuseAVectorBlockThatCannotBeAllocated(
             plan.TotalChunks,
             existing?.Dim ?? expectedEmbeddingDimension ?? 0);
@@ -274,12 +286,16 @@ public sealed class IndexBuilder(
 
         _log(IndexText.BuildOverlayDivergence(changed.Count, deleted.Count));
 
-        var existingOverlay = LoadReusable(overlayPath, force: false);
+        var existingOverlay = LoadReusable(NewestOverlayBeside(overlayPath), force: false);
         var overlayByPath = BuildLookup(existingOverlay);
 
         var toChunk = changed
             .Where(path => !(overlayByPath.TryGetValue(path, out var prior) &&
-                             prior.Hash.AsSpan().SequenceEqual(hashes[path])))
+                             prior.Hash.AsSpan().SequenceEqual(hashes[path]) &&
+                             string.Equals(
+                                 prior.Chunker,
+                                 ChunkerIdentity(path),
+                                 StringComparison.Ordinal)))
             .ToList();
 
         _log(IndexText.BuildOverlayReuse(changed.Count - toChunk.Count, toChunk.Count));
@@ -287,7 +303,7 @@ public sealed class IndexBuilder(
         var freshChunks = ChunkFiles(workingRoot, toChunk, ct);
         var totalToEmbed = freshChunks.Values.Sum(c => c.Count);
 
-        var plan = Plan(changed, overlayByPath, existingOverlay, freshChunks, hashes);
+        var plan = Plan(changed, overlayByPath, existingOverlay, freshChunks, hashes, ChunkerIdentity);
         RefuseAVectorBlockThatCannotBeAllocated(
             plan.TotalChunks,
             expectedEmbeddingDimension ?? baseIndex.Dim);
@@ -405,6 +421,44 @@ public sealed class IndexBuilder(
         return new BuildPlan(files.Count, changed.Count, chunks);
     }
 
+    /// <summary>
+    /// The overlay to reuse chunks from: the most recently written one in the directory this
+    /// build is about to write into, which is normally the previous build of the same branch.
+    ///
+    /// Not <paramref name="overlayPath"/> itself, which was the whole defect. An overlay's file
+    /// name carries the hash of every dirty file, so editing anything names a file that does not
+    /// exist yet, and the reuse branch could only fire on a rebuild where nothing had changed —
+    /// the one case with nothing to reuse. Two files out of 715 edited, and the build reported
+    /// nought reused and two to embed, every time (#388).
+    ///
+    /// Choosing wrongly here cannot produce a wrong index, only a slower build: every file is
+    /// still checked against its own content hash and its own chunker before anything is kept.
+    /// The generation, worktree, head tree and model are guaranteed by the directory the path
+    /// already names, and by the model check inside <see cref="LoadReusable"/>.
+    /// </summary>
+    private static string NewestOverlayBeside(string overlayPath)
+    {
+        var directory = Path.GetDirectoryName(Path.GetFullPath(overlayPath));
+        if (directory is null || !Directory.Exists(directory))
+        {
+            return overlayPath;
+        }
+
+        try
+        {
+            return new DirectoryInfo(directory)
+                .EnumerateFiles("*.cidx")
+                .OrderByDescending(file => file.LastWriteTimeUtc)
+                .FirstOrDefault()
+                ?.FullName ?? overlayPath;
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException)
+        {
+            return overlayPath;
+        }
+    }
+
     private CodeIndex? LoadReusable(string indexPath, bool force)
     {
         if (force || !File.Exists(indexPath))
@@ -475,11 +529,18 @@ public sealed class IndexBuilder(
         return changed.Count;
     }
 
+    /// <param name="identityOf">
+    /// What this build would cut the file with, compared against what the previous index recorded.
+    /// Null asks for the content check alone, which is what <see cref="CountChangedFiles"/> wants:
+    /// it runs before the semantic phase, so it has no catalogue to answer the question with and
+    /// says so rather than answering it wrongly.
+    /// </param>
     private static (List<string> Reused, List<string> Changed) Partition(
         string root,
         List<string> files,
         Dictionary<string, IndexedFile> previous,
-        out Dictionary<string, byte[]> hashes)
+        out Dictionary<string, byte[]> hashes,
+        Func<string, string>? identityOf = null)
     {
         var reused = new List<string>();
         var changed = new List<string>();
@@ -501,7 +562,10 @@ public sealed class IndexBuilder(
                 continue;
             }
 
-            if (previous.TryGetValue(relPath, out var prior) && prior.Hash.AsSpan().SequenceEqual(hash))
+            if (previous.TryGetValue(relPath, out var prior) &&
+                prior.Hash.AsSpan().SequenceEqual(hash) &&
+                (identityOf is null ||
+                 string.Equals(prior.Chunker, identityOf(relPath), StringComparison.Ordinal)))
             {
                 reused.Add(relPath);
             }
@@ -973,17 +1037,30 @@ public sealed class IndexBuilder(
     /// total from the one allocated is worse than no ceiling at all.
     /// </summary>
     private sealed record ChunkPlan(
-        List<(string RelPath, byte[] Hash, List<Chunk>? Fresh, IndexedFile? Prior)> Contributions,
+        List<Contribution> Contributions,
         int TotalChunks);
+
+    /// <summary>
+    /// One file's place in the finished index: its content hash, its chunks — freshly cut or the
+    /// previous index's kept verbatim — and the chunker they came from, which is written beside
+    /// them so a later build can tell whether they are still reusable.
+    /// </summary>
+    private readonly record struct Contribution(
+        string RelPath,
+        byte[] Hash,
+        string Chunker,
+        List<Chunk>? Fresh,
+        IndexedFile? Prior);
 
     private static ChunkPlan Plan(
         List<string> files,
         Dictionary<string, IndexedFile> previous,
         CodeIndex? existing,
         Dictionary<string, List<Chunk>> freshChunks,
-        Dictionary<string, byte[]> hashes)
+        Dictionary<string, byte[]> hashes,
+        Func<string, string> identityOf)
     {
-        var contributions = new List<(string RelPath, byte[] Hash, List<Chunk>? Fresh, IndexedFile? Prior)>(files.Count);
+        var contributions = new List<Contribution>(files.Count);
         var totalChunks = 0;
 
         foreach (var relPath in files)
@@ -995,12 +1072,14 @@ public sealed class IndexBuilder(
 
             if (freshChunks.TryGetValue(relPath, out var chunks))
             {
-                contributions.Add((relPath, hash, chunks, null));
+                contributions.Add(new(relPath, hash, identityOf(relPath), chunks, null));
                 totalChunks += chunks.Count;
             }
             else if (existing is not null && previous.TryGetValue(relPath, out var prior))
             {
-                contributions.Add((relPath, hash, null, prior));
+                // The prior identity rather than this build's: these are the previous chunks, and
+                // they are only here because the two already matched.
+                contributions.Add(new(relPath, hash, prior.Chunker, null, prior));
                 totalChunks += prior.ChunkCount;
             }
         }
@@ -1062,7 +1141,7 @@ public sealed class IndexBuilder(
         var outChunks = new List<ChunkMeta>(plan.TotalChunks);
         var outVectors = new float[(long)plan.TotalChunks * dim];
 
-        foreach (var (relPath, hash, fresh, prior) in plan.Contributions)
+        foreach (var (relPath, hash, chunker, fresh, prior) in plan.Contributions)
         {
             var start = outChunks.Count;
             var fileIndex = outFiles.Count;
@@ -1112,6 +1191,7 @@ public sealed class IndexBuilder(
                 Hash = hash,
                 ChunkStart = start,
                 ChunkCount = outChunks.Count - start,
+                Chunker = chunker,
             });
         }
 
