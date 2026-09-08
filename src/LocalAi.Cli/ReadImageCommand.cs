@@ -15,7 +15,8 @@ public sealed record ReadImageRequest(
     IReadOnlyList<string> Images,
     LocalTaskProfile Profile,
     string? Model,
-    bool Together = false);
+    bool Together = false,
+    string? Language = null);
 
 /// <summary>
 /// Images on disk, read by a local vision model: a screenshot, a scanned page, a photographed
@@ -41,6 +42,7 @@ public static class ReadImageCommand
         var images = new List<string>();
         var profile = LocalTaskProfile.VisualAnalysis;
         string? model = null;
+        string? language = null;
         var together = false;
 
         for (var index = 0; index < arguments.Count; index++)
@@ -56,6 +58,7 @@ public static class ReadImageCommand
 
                 case "--profile":
                 case "--model":
+                case "--language":
                     if (index + 1 >= arguments.Count)
                     {
                         refusal = new CommandRefusal(
@@ -71,6 +74,26 @@ public static class ReadImageCommand
                     if (argument == "--model")
                     {
                         model = value;
+                        break;
+                    }
+
+                    if (argument == "--language")
+                    {
+                        // Checked before it is used: OutputCulture.Resolve answers an unknown
+                        // value with English rather than refusing, so a caller who asked for
+                        // German would be handed the very failure this option exists to fix.
+                        if (!LanguageOption.IsSupported(value))
+                        {
+                            refusal = new CommandRefusal(
+                                "language_not_supported",
+                                CliText.LanguageNotSupported(
+                                    "read-image",
+                                    value,
+                                    LanguageOption.Supported));
+                            return false;
+                        }
+
+                        language = value;
                         break;
                     }
 
@@ -152,7 +175,7 @@ public static class ReadImageCommand
             return false;
         }
 
-        request = new ReadImageRequest(question, images, profile, model, together);
+        request = new ReadImageRequest(question, images, profile, model, together, language);
         return true;
     }
 

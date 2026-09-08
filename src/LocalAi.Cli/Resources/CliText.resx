@@ -155,6 +155,10 @@
     <value>--json is not available here. The usage marks the commands that take it with [--json].</value>
     <comment>No echo of what was typed. Naming the command meant naming a prefix of it — `hooks` for `hooks install`, because the path is matched against the commands that fill an envelope and an unmatched one is known only by its first word. A prefix names a command the reader did not run. The envelope's own `command` field keeps that first word for correlation; this sentence does not repeat it.</comment>
   </data>
+  <data name="LanguageNotSupported" xml:space="preserve">
+    <value>localai {0} does not answer in '{1}'. This installation speaks {2}, and a run answers in one language throughout.</value>
+    <comment>Shaped after ProfileUnknown: command, the value as typed, and the accepted set, with no usage line — the set is the whole answer. "This installation speaks {2}" is lifted from PolicyLanguageUnknown word for word, because it is the same fact. The closing clause is not decoration: it answers "the model knows German, why will you not".</comment>
+  </data>
   <data name="LauncherMissing" xml:space="preserve">
     <value>The stable entry point is missing: {0}. Registrations pointing at it will fail, and registrations pointing inside a version directory break on the next upgrade.</value>
   </data>

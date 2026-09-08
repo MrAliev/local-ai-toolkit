@@ -7,7 +7,8 @@ public sealed record TriageRequest(
     string? Path,
     bool FromStandardInput,
     string? Question,
-    string? Model);
+    string? Model,
+    string? Language = null);
 
 /// <summary>
 /// Machine output of any length, read by a local model that says what failed and why.
@@ -42,6 +43,7 @@ public static class TriageCommand
         var fromStandardInput = false;
         string? question = null;
         string? model = null;
+        string? language = null;
 
         for (var index = 0; index < arguments.Count; index++)
         {
@@ -59,6 +61,7 @@ public static class TriageCommand
             {
                 case "--question":
                 case "--model":
+                case "--language":
                     if (index + 1 >= arguments.Count)
                     {
                         refusal = new CommandRefusal(
@@ -73,6 +76,25 @@ public static class TriageCommand
                     if (argument == "--question")
                     {
                         question = arguments[++index];
+                    }
+                    else if (argument == "--language")
+                    {
+                        // Checked before it is used: OutputCulture.Resolve answers an unknown
+                        // value with English rather than refusing, so a caller who asked for
+                        // German would be handed the very failure this option exists to fix.
+                        var wanted = arguments[++index];
+                        if (!LanguageOption.IsSupported(wanted))
+                        {
+                            refusal = new CommandRefusal(
+                                "language_not_supported",
+                                CliText.LanguageNotSupported(
+                                    "triage",
+                                    wanted,
+                                    LanguageOption.Supported));
+                            return false;
+                        }
+
+                        language = wanted;
                     }
                     else
                     {
@@ -107,7 +129,7 @@ public static class TriageCommand
         // "exactly one source" refusal cannot arise here.
         if (path is not null)
         {
-            request = new TriageRequest(path, FromStandardInput: false, question, model);
+            request = new TriageRequest(path, FromStandardInput: false, question, model, language);
             return true;
         }
 
@@ -119,7 +141,7 @@ public static class TriageCommand
             return false;
         }
 
-        request = new TriageRequest(null, FromStandardInput: true, question, model);
+        request = new TriageRequest(null, FromStandardInput: true, question, model, language);
         return true;
     }
 }

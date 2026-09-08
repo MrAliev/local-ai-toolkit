@@ -66,6 +66,74 @@ public sealed class LocalModelCommandTests
         Assert.Contains("text-chat", refusal.Message, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// The answer now comes in the language this installation answers in, so the way out for one
+    /// call is an option rather than an environment variable set and unset around it. It takes the
+    /// two codes the product has strings for, not a language name: this says which of two
+    /// installations' worth of strings you get, where translate's --to names content in an open
+    /// set nothing validates.
+    ///
+    /// A language the product cannot print is refused rather than accepted and quietly answered in
+    /// English, which is the failure the whole change exists to remove.
+    /// </summary>
+    [Theory]
+    [InlineData("de")]
+    [InlineData("ru-RU")]
+    [InlineData("system")]
+    public void Ask_refuses_a_language_this_installation_does_not_speak(string language)
+    {
+        Assert.False(AskCommand.TryParse(
+            ["summarise", "--language", language],
+            out _,
+            out var refusal));
+
+        Assert.Equal("language_not_supported", refusal!.Code, StringComparer.Ordinal);
+        Assert.Contains("en, ru", refusal.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("ru")]
+    [InlineData("RU")]
+    public void Ask_takes_the_language_it_was_given(string language)
+    {
+        Assert.True(AskCommand.TryParse(
+            ["summarise", "--language", language],
+            out var request,
+            out _));
+
+        Assert.Equal(language, request!.Language, StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// The option is advertised where a reader looks for it, and only on the three commands that
+    /// produce prose. translate names its languages with --from and --to already, and a second
+    /// option that could contradict them buys nothing.
+    /// </summary>
+    [Fact]
+    public void The_language_option_is_offered_by_the_three_commands_that_answer_in_prose()
+    {
+        Assert.Contains("--language", CliUsage.Ask, StringComparison.Ordinal);
+        Assert.Contains("--language", CliUsage.Triage, StringComparison.Ordinal);
+        Assert.Contains("--language", CliUsage.ReadImage, StringComparison.Ordinal);
+        Assert.DoesNotContain("--language", CliUsage.Translate, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A missing value is a different mistake from an unsupported one, and the parser answers each
+    /// with its own code because a program branches on the code rather than on the sentence.
+    /// </summary>
+    [Fact]
+    public void A_language_option_with_no_value_is_its_own_refusal()
+    {
+        Assert.False(AskCommand.TryParse(
+            ["summarise", "--language"],
+            out _,
+            out var refusal));
+
+        Assert.Equal("language_value_missing", refusal!.Code, StringComparer.Ordinal);
+    }
+
     /// <summary>A word that is not a profile at all is a different mistake from a profile that
     /// exists but is for images.</summary>
     [Fact]
