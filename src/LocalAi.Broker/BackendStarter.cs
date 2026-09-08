@@ -7,7 +7,14 @@ namespace LocalAi.Broker;
 /// <summary>
 /// Starts Ollama once, when a model call finds it down.
 ///
-/// Three limits, all of them deliberate.
+/// Four limits, all of them deliberate.
+///
+/// **Only when nothing is listening.** The trigger is an <c>HttpRequestException</c>, and that is
+/// every HTTP status as well as every failure to connect — a 404 for a model the server does not
+/// hold looks identical to a server that is gone. Starting on one of those put a second
+/// <c>ollama serve</c> beside a healthy one, where it took the traffic and answered 404 to
+/// everything, so the symptom fed itself. The endpoint is asked whether anything answers before
+/// anything is launched, which is what the report already claimed had happened.
 ///
 /// **Only the executable an installation recorded**, never one resolved now. A path found at the
 /// moment of use is how a background process ends up running whatever answers to the name, and
@@ -27,7 +34,16 @@ public sealed class BackendStarter
     private readonly OllamaLaunchRecordStore _records;
     private readonly Action<string> _report;
     private readonly Action<string> _start;
+
+    /// <summary>
+    /// Whether anything answers at the endpoint. A socket rather than a request on purpose: the
+    /// question is "is a server there", and every HTTP answer — including the 404 that caused this
+    /// to be written — already proves it is.
+    /// </summary>
+    private readonly Func<Uri, bool> _isListening;
+
     private int _attempted;
+    private int _answeringReported;
 
     /// <param name="start">
     /// How the recorded executable is run. Injected so a test can see what would be launched
@@ -38,12 +54,14 @@ public sealed class BackendStarter
         Uri endpoint,
         OllamaLaunchRecordStore records,
         Action<string> report,
-        Action<string>? start = null)
+        Action<string>? start = null,
+        Func<Uri, bool>? isListening = null)
     {
         _endpoint = endpoint ?? throw new ArgumentNullException(nameof(endpoint));
         _records = records ?? throw new ArgumentNullException(nameof(records));
         _report = report ?? throw new ArgumentNullException(nameof(report));
         _start = start ?? StartDetached;
+        _isListening = isListening ?? BackendEndpoint.AnythingListening;
     }
 
     /// <summary>
@@ -63,7 +81,7 @@ public sealed class BackendStarter
             return;
         }
 
-        if (Interlocked.Exchange(ref _attempted, 1) == 1)
+        if (Volatile.Read(ref _attempted) == 1)
         {
             return;
         }
@@ -75,20 +93,46 @@ public sealed class BackendStarter
     {
         if (!_endpoint.IsLoopback)
         {
+            Volatile.Write(ref _attempted, 1);
             _report(
-                $"Ollama is not answering at {_endpoint}, which is not this machine, so it " +
+                $"Ollama is configured at {_endpoint}, which is not this machine, so it " +
                 "cannot be started from here.");
+            return;
+        }
+
+        // A start is for a backend that is not there, and until now nothing checked that it was
+        // not. Every HTTP status the transport is handed arrives as HttpRequestException, and the
+        // commonest of them is a 404 for a model this server does not hold — which comes from a
+        // server answering normally. Reading that as "Ollama is down" started a second one beside
+        // the first, and on Windows both stand: the new server bound 127.0.0.1:11434 next to the
+        // original's [::]:11434, the more specific bind took every IPv4 request, and a build's
+        // embeddings went to a server that had just started and held no models at all.
+        //
+        // The one attempt is deliberately not spent here. A server answering now says nothing
+        // about an hour from now, and the outage this whole class exists for must still get its
+        // start when it comes.
+        if (_isListening(_endpoint))
+        {
+            if (Interlocked.Exchange(ref _answeringReported, 1) == 0)
+            {
+                _report(
+                    $"Something is already listening at {_endpoint}, so nothing was started. " +
+                    "The failure is recorded in diagnostics.jsonl, in the runtime directory.");
+            }
+
             return;
         }
 
         if (_records.Read() is not { } record)
         {
+            Volatile.Write(ref _attempted, 1);
             _report(
                 "Ollama is not answering and no verified installation of it was recorded, so " +
                 "it will not be started. Run the LocalAi installer once to record one.");
             return;
         }
 
+        Volatile.Write(ref _attempted, 1);
         try
         {
             _start(record.ExecutablePath);
