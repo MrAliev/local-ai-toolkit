@@ -538,7 +538,7 @@ A refusal is a message, not a breakage. Three common ones:
 | --- | --- | --- |
 | `No overlay matches this worktree` | edits are saved, the index is behind | `lai localai sync --root <repo>` |
 | `NOT CONFIGURED` | the repository is not connected | `lai localai sync --root <repo>`, then `hooks install` |
-| `The model backend was not available` | the model did not come up | `lai localai doctor`, then try again — what was computed is kept in a checkpoint |
+| `The model backend is unavailable` | the model backend refused a batch; the build waits for it and goes on by itself | nothing, usually — if the build did stop, run `lai localai sync --root <repo>` again; what was computed is kept in a checkpoint |
 
 ---
 

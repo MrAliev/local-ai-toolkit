@@ -539,7 +539,7 @@ lai localai doctor                             # что не так с уста�
 | --- | --- | --- |
 | `No overlay matches this worktree` | правки сохранены, индекс отстал | `lai localai sync --root <repo>` |
 | `NOT CONFIGURED` | репозиторий не подключён | `lai localai sync --root <repo>` и `hooks install` |
-| `The model backend was not available` | модель не поднялась | `lai localai doctor`, затем повторить — посчитанное сохранено в чекпойнте |
+| `The model backend is unavailable` | бэкенд моделей отказал в партии; сборка ждёт и продолжает сама | обычно ничего — если сборка всё же остановилась, повторить `lai localai sync --root <repo>`: посчитанное сохранено в чекпойнте |
 
 ---
 
