@@ -156,7 +156,7 @@ public sealed class SyncNotice(Func<string?, SyncSighting?> look)
 
             var line = "Sync: " +
                 (sighting.Progress is { } progress
-                    ? Figures(progress, withEta: true)
+                    ? Figures(progress, running: true)
                     : CodeSearchText.ProgressNotRecordedYet) +
                 "\n";
             var explain = audience switch
@@ -204,7 +204,7 @@ public sealed class SyncNotice(Func<string?, SyncSighting?> look)
 
         return audience is SyncNoticeAudience.Instruction
             ? "Sync: " +
-                CodeSearchText.ProgressStoppedAt(Figures(progress, withEta: false)) +
+                CodeSearchText.ProgressStoppedAt(Figures(progress, running: false)) +
                 "\n" + Separator(separated)
             : Closing(sighting, said, CodeSearchText.SyncDidNotFinish, separated);
     }
@@ -238,23 +238,53 @@ public sealed class SyncNotice(Func<string?, SyncSighting?> look)
     /// Phase, figures and age. The figures use the keys `index_status` prints, so a reader who
     /// sees both never sees two accounts of one build.
     ///
-    /// <paramref name="withEta"/> is false for a build that is no longer running: the estimate was
-    /// the dead process's prediction of a remaining time nobody is spending, and it is the only
-    /// field here that is a prediction rather than a dated fact.
+    /// <paramref name="running"/> is false for a build that is no longer running, and it gates the
+    /// two fields that are only true of one that is. The estimate was the dead process's
+    /// prediction of a remaining time nobody is spending. The pause is the same kind of leftover:
+    /// the field stays in the record for ever, exactly as the phase does, and printing it there
+    /// would report a build that is gone as waiting for something to come back.
+    ///
+    /// A pause takes the estimate's slot rather than standing beside it. A waiting build writes
+    /// rate 0 and no estimate by construction, so the slot would otherwise always read
+    /// `calculating` — which says an estimate is being worked out while nothing is moving, and
+    /// that is the sentence this line was missing: frozen counters under `calculating`, beside a
+    /// `recorded 4 s ago` the wait keeps fresh on every rung of its ladder, made a backend outage
+    /// and a dying build read exactly alike. `index_status` has said `Paused: BackendUnavailable`
+    /// since the reason existed; this line, which rides above every answer and is read by whoever
+    /// is watching without asking, did not.
     /// </summary>
-    private static string Figures(RepositoryIndexProgress progress, bool withEta)
+    private static string Figures(RepositoryIndexProgress progress, bool running)
     {
+        var pause = running ? progress.Pause : null;
         var counted = progress.Phase.CountsChunks()
             ? CodeSearchText.ProgressChunks(
                   progress.ProcessedChunks,
                   progress.TotalChunks,
                   Math.Max(0, progress.TotalChunks - progress.ProcessedChunks)) +
-              (withEta ? ", " + Eta(progress.EstimatedRemaining) : string.Empty)
+              (running && pause is null ? ", " + Eta(progress.EstimatedRemaining) : string.Empty)
             : CodeSearchText.ProgressNotCounted;
 
-        return $"{progress.Phase} - {counted}, " +
-            CodeSearchText.RecordedAgo(RecordedAge.Of(progress.UpdatedAtUtc));
+        return $"{progress.Phase} - {counted}" +
+            (pause is { } waiting ? ", " + Waiting(waiting) : string.Empty) +
+            ", " + CodeSearchText.RecordedAgo(RecordedAge.Of(progress.UpdatedAtUtc));
     }
+
+    /// <summary>
+    /// One clause per pause, chosen by the member rather than by printing the token: the row name
+    /// `Paused:` supplies the word on `index_status`, and here the only field name is the literal
+    /// `Sync: ` prefix, so the word has to open the value.
+    ///
+    /// A second member of the enum throws here rather than printing nothing. C# cannot make that
+    /// a build error — an enum value need not be one of the named ones, so a switch expression
+    /// without this arm is rejected as non-exhaustive (CS8524) — and a silent empty clause is the
+    /// worse failure of the two: it looks exactly like the build that is not paused at all, which
+    /// is the state this whole line exists to distinguish.
+    /// </summary>
+    private static string Waiting(IndexBuildPause pause) => pause switch
+    {
+        IndexBuildPause.BackendUnavailable => CodeSearchText.ProgressPausedBackendUnavailable,
+        _ => throw new ArgumentOutOfRangeException(nameof(pause), pause, null),
+    };
 
     private static string Eta(TimeSpan? remaining) =>
         remaining is { } estimate
