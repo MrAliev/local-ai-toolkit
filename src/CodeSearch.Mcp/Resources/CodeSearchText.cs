@@ -192,6 +192,14 @@ public static class CodeSearchText
     public static string ProgressChunks(int processed, int total, int remaining) =>
         Catalogue.Format(nameof(ProgressChunks), processed, total, remaining);
 
+    /// <summary>
+    /// One key per <see cref="LocalAi.Contracts.IndexBuildPause"/> member rather than a generic
+    /// clause with the token in it, which is the enum's own rule — a second member gets a second
+    /// key, and the switch that chooses between them stops compiling until it does.
+    /// </summary>
+    public static string ProgressPausedBackendUnavailable =>
+        Catalogue.Get(nameof(ProgressPausedBackendUnavailable));
+
     public static string RateChunks(string rate) => Catalogue.Format(nameof(RateChunks), rate);
 
     public static string EtaMinutes(string minutes) =>
