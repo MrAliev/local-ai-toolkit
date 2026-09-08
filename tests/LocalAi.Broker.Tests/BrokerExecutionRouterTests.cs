@@ -97,7 +97,9 @@ public sealed class BrokerExecutionRouterTests : IDisposable
         var status = result.Body.Deserialize<LocalModelsStatusOutput>(
             LocalAiJson.Strict)!;
         Assert.Equal(["qwen3.5:9b"], status.InstalledModels);
-        Assert.Equal(["translategemma:12b"], status.RecommendedMissingModels);
+        Assert.Equal(
+            ["glm-ocr:bf16", "translategemma:12b"],
+            status.RecommendedMissingModels);
     }
 
     [Fact]

@@ -52,7 +52,9 @@ public sealed class ModelControlServiceTests : IDisposable
 
         Assert.Equal(["qwen3.5:9b"], status.InstalledModels);
         Assert.Equal(["qwen3.5:9b"], status.ResidentModels);
-        Assert.Equal(["translategemma:12b"], status.RecommendedMissingModels);
+        Assert.Equal(
+            ["glm-ocr:bf16", "translategemma:12b"],
+            status.RecommendedMissingModels);
         var residency = Assert.Single(status.Residency!);
         Assert.Equal(100, residency.SizeBytes);
         Assert.Equal(100, residency.SizeVramBytes);
