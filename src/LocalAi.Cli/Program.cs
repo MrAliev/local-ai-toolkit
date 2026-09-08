@@ -246,6 +246,8 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
             return Refuse("ask", askRefusal!, machineReadable);
         }
 
+        LanguageOption.Apply(ask!.Language);
+
         return await Interruptible(token => LocalModelRun.ExecuteAsync(
             "ask",
             "ask:" + PrimarySource(ask!.Files, "prompt"),
@@ -328,6 +330,8 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
             return Refuse("read-image", imageRefusal!, machineReadable);
         }
 
+        LanguageOption.Apply(image!.Language);
+
         return await Interruptible(token => LocalModelRun.ExecuteAsync(
             "read-image",
             "read-image:" + PrimarySource(image!.Images, "images"),
@@ -354,6 +358,7 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
             return Refuse("triage", triageRefusal!, machineReadable);
         }
 
+        LanguageOption.Apply(triage!.Language);
         string? piped = null;
         if (triage!.FromStandardInput)
         {

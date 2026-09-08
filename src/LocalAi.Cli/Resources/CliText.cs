@@ -488,6 +488,17 @@ public static class CliText
     public static string OptionValueMissing(string command, string option, string usage) =>
         Catalogue.Format(nameof(OptionValueMissing), command, option, usage);
 
+    /// <summary>
+    /// Shaped after <see cref="ProfileUnknown"/>: command, the value as typed, and the accepted
+    /// set, with no usage line — the set is the whole answer. The closing clause answers "the
+    /// model knows German, why will you not", which otherwise arrives as an issue.
+    /// </summary>
+    public static string LanguageNotSupported(
+        string command,
+        string language,
+        string supported) =>
+        Catalogue.Format(nameof(LanguageNotSupported), command, language, supported);
+
     public static string CommandUnknownArgument(string command, string argument, string usage) =>
         Catalogue.Format(nameof(CommandUnknownArgument), command, argument, usage);
 

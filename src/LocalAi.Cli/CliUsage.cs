@@ -19,9 +19,11 @@ internal static class CliUsage
     public const string Doctor = "localai doctor [--root dir] [--json]";
     public const string Telemetry = "localai telemetry";
     public const string Ask =
-        "localai ask <prompt> [file ...] [--profile name] [--model model] [--json]";
+        "localai ask <prompt> [file ...] [--profile name] [--model model] " +
+        "[--language en|ru] [--json]";
     public const string Triage =
-        "localai triage [log-file|-] [--question text] [--model model] [--json]";
+        "localai triage [log-file|-] [--question text] [--model model] " +
+        "[--language en|ru] [--json]";
     // The three ways in are one slot and only one may be filled, which is the fact worth showing;
     // `repo status` above already spells an alternation this way. `--in -` is not advertised
     // here — the bare `-` in the same bracket already stands for standard input.
@@ -30,7 +32,7 @@ internal static class CliUsage
         "[--out file] [--json]";
     public const string ReadImage =
         "localai read-image <question> <image> [image ...] [--profile name] "  +
-        "[--model model] [--together] [--json]";
+        "[--model model] [--together] [--language en|ru] [--json]";
     // No brackets around the flag: here it is required rather than optional. The listing is
     // for a program, and the block this line sits in is the list for a person.
     public const string Capabilities = "localai capabilities --json";

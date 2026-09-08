@@ -247,10 +247,14 @@ public sealed class LocalTasks
             "Answer only from what is actually visible. Transcribe text exactly, preserving " +
             "the original language. If something is unreadable, say so explicitly instead " +
             "of guessing.";
-        const string imageTranslationSystem =
-            "Translate all visible natural-language text faithfully. Preserve layout order, " +
-            "numbers, identifiers, URLs, and unreadable markers. Return only the translated " +
-            "content and never invent text that is not visible.";
+        // The target language was never named here, so the model translated wherever it liked.
+        // It is named now, from the same setting that decides every other string this reader
+        // sees — which makes `--language` the way to ask for a different one.
+        var imageTranslationSystem =
+            "Translate all visible natural-language text faithfully. " +
+            AnswerLanguage.TranslateInstruction +
+            " Preserve layout order, numbers, identifiers, URLs, and unreadable markers. " +
+            "Return only the translated content and never invent text that is not visible.";
         var imageSystem = profile == LocalTaskProfile.ImageTranslation
             ? imageTranslationSystem
             : imageReadingSystem;
