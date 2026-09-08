@@ -572,7 +572,8 @@ public sealed class OllamaTransport : IModelRuntimeTransport, IDisposable
             body,
             payload.Inputs,
             cancellationToken,
-            maximumResponseBytes: EmbedResponseCeilingBytes);
+            maximumResponseBytes: EmbedResponseCeilingBytes,
+            surfaceRunnerFailure: true);
         EmbedResponse response;
         try
         {
@@ -704,7 +705,8 @@ public sealed class OllamaTransport : IModelRuntimeTransport, IDisposable
         string? body,
         IReadOnlyList<string> sensitiveValues,
         CancellationToken cancellationToken,
-        long maximumResponseBytes = DefaultResponseCeilingBytes)
+        long maximumResponseBytes = DefaultResponseCeilingBytes,
+        bool surfaceRunnerFailure = false)
     {
         for (var attempt = 1; attempt <= MaxAttempts; attempt++)
         {
@@ -761,17 +763,15 @@ public sealed class OllamaTransport : IModelRuntimeTransport, IDisposable
                     errorBody.IsTruncated,
                     sensitiveValues);
 
-                // A runner that never came back is not a bad request, and after the last attempt
-                // it must stop looking like one. An HttpRequestException here is what a
-                // genuinely malformed request throws too, and the layer above answers that by
-                // halving the batch to isolate a chunk that was never the problem - failing
-                // again, smaller (#369). The name is what it can act on; Ollama's own words stay
-                // in this file and travel as the detail.
-                if (attempt == MaxAttempts &&
-                    response.StatusCode == HttpStatusCode.BadRequest &&
-                    NamesAnUnreachableRunner(errorBody.Text))
+                // A runner refusal is not a bad request. Embeddings surface the first one because
+                // their caller can immediately reduce per-input fan-out; other operations keep
+                // the transport's ordinary retry policy. The name is what callers act on;
+                // Ollama's own words stay in this file and travel as the detail.
+                if (response.StatusCode == HttpStatusCode.BadRequest &&
+                    NamesAnUnreachableRunner(errorBody.Text) &&
+                    (surfaceRunnerFailure || attempt == MaxAttempts))
                 {
-                    throw new BackendUnavailableException(RunnerUnreachable, reported);
+                    throw new BackendRunnerUnavailableException(reported);
                 }
 
                 if (!IsRetryable(response.StatusCode, errorBody.Text) ||
@@ -858,14 +858,13 @@ public sealed class OllamaTransport : IModelRuntimeTransport, IDisposable
 
     /// <summary>
     /// A 400 whose body says the server could not reach its own runner is not a bad
-    /// request. It is the backend being briefly unavailable, and the same request works
-    /// moments later.
+    /// request. For embeddings the first refusal is surfaced to the adaptive item policy. Other
+    /// operations retry it here because they have no smaller equivalent request to make.
     ///
     /// Counted rather than guessed (#349): 40 embed jobs failed this way in four days,
     /// every one an HTTP 400 returned after the same 10-12 seconds a success takes, with
     /// no accompanying line in Ollama's own log, and every one succeeded on a retry. The
-    /// layer above answered by halving the batch to isolate an offending chunk, and there
-    /// was none - so it failed twice where it could have waited once.
+    /// previous generic halving could not distinguish it from an offending chunk.
     /// </summary>
     private static bool IsRetryable(HttpStatusCode statusCode, string errorBody) =>
         IsTransient(statusCode) ||
@@ -877,13 +876,10 @@ public sealed class OllamaTransport : IModelRuntimeTransport, IDisposable
     /// the vocabulary. Ollama does not translate these, so matching them is stable in a
     /// way that matching our own text would not be.
     ///
-    /// Three phrases and no more, deliberately, and the reason changed with #412 rather
-    /// than with anything here. This match is now what decides between a build that waits
-    /// ten minutes for a backend to come back and one that shreds a batch and dies: only a
-    /// retryable 400 becomes <c>BackendUnavailableException</c>, and only that reaches the
-    /// wait. So a phrase added on a guess costs ten minutes of silence every time a request
-    /// really was bad, and a phrase missing costs the halving that #349 and #369 were about.
-    /// Both are worse than they were when the list was three phrases against two retries.
+    /// Three phrases and no more, deliberately. This match is what turns a backend sentence into
+    /// the stable <c>BackendRunnerUnavailableException</c> signal, so a phrase added on a guess
+    /// would lower a healthy machine's learned batch size and a phrase missing would lose the
+    /// quick-recovery path.
     ///
     /// What a fourth phrase needs, therefore, is evidence rather than imagination: what
     /// Ollama emits for a runner that goes away other than by a refused connect, taken from

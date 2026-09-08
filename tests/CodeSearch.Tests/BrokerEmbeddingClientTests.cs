@@ -113,6 +113,27 @@ public sealed class BrokerEmbeddingClientTests
         Assert.Same(failure, error.InnerException);
     }
 
+    [Fact]
+    public async Task Preserves_a_runner_refusal_as_the_signal_for_batch_backoff()
+    {
+        var failure = new BrokerJobFailedException(
+            Guid.NewGuid(),
+            "BackendRunnerUnavailableException",
+            "The model backend is unavailable: runner_unreachable. dial tcp: refused");
+        var client = new BrokerEmbeddingClient(
+            "embed-model",
+            new ThrowingBrokerClient(failure));
+
+        var error = await Assert.ThrowsAsync<EmbeddingRunnerUnavailableException>(
+            () => client.EmbedAsync(
+                ["text"],
+                LocalJobPriority.Background,
+                "index:tree:batch-1",
+                TestContext.Current.CancellationToken));
+
+        Assert.Same(failure, error.InnerException);
+    }
+
     /// <summary>
     /// The same rule, reached by the route nobody guarded. An Ollama that is simply not running
     /// does not fail a job — the job never runs at all, and the wait ends in
