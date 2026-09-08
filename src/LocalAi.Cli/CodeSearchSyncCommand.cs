@@ -1203,6 +1203,32 @@ public static class CodeSearchSyncCommand
     /// not embedding from showing chunk figures, and filling them with projects would make that
     /// guard lie. The project count travels as the step's own pair instead.
     /// </summary>
+    /// <summary>
+    /// Keeps the progress record moving while an external adapter runs.
+    ///
+    /// <c>scip-typescript</c> and <c>scip-python</c> are each a single awaited call, and the
+    /// policy allows either of them three hundred seconds. Nothing between the call and its return
+    /// wrote anything, so <c>recorded 4 min ago</c> grew for the whole of a healthy run — which is
+    /// exactly how a killed build reads, and the reason the pause reporting exists at all.
+    /// </summary>
+    internal static Task<T> WhileTheAdapterRunsAsync<T>(
+        Task<T> adapter,
+        IndexBuildStep name,
+        Action<IndexBuildStep, int, int>? step,
+        TimeProvider time,
+        Func<TimeSpan, CancellationToken, Task> wait,
+        CancellationToken cancellationToken) =>
+        // The same ticker the Roslyn steps use, rather than a second one beside it. What a tick
+        // does here is re-report the step: the adapter has no counter, so the figures stay zero
+        // and only the record's timestamp moves — which is the whole of what a reader watching
+        // "recorded N ago" needs.
+        QuietStep.WhileItRunsAsync(
+            adapter,
+            _ => step?.Invoke(name, 0, 0),
+            time,
+            wait,
+            cancellationToken);
+
     internal static Action<string> RoslynNarration(TextWriter error, Action stillRunning) =>
         message =>
         {
@@ -1400,10 +1426,16 @@ public static class CodeSearchSyncCommand
                 }
 
                 step?.Invoke(IndexBuildStep.ScipTypeScript, 0, 0);
-                var result = await runner.RunAsync(
-                    index,
-                    adapterRoot,
-                    Spec("typescript", typeScript, arguments, policy),
+                var result = await WhileTheAdapterRunsAsync(
+                    runner.RunAsync(
+                        index,
+                        adapterRoot,
+                        Spec("typescript", typeScript, arguments, policy),
+                        cancellationToken),
+                    IndexBuildStep.ScipTypeScript,
+                    step,
+                    TimeProvider.System,
+                    Task.Delay,
                     cancellationToken);
                 index = result.Index;
                 statuses.Add(result.Status);
@@ -1432,10 +1464,16 @@ public static class CodeSearchSyncCommand
         else
         {
             step?.Invoke(IndexBuildStep.ScipPython, 0, 0);
-            var result = await runner.RunAsync(
-                index,
-                sourceRoot,
-                Spec("python", python, python.Arguments, policy),
+            var result = await WhileTheAdapterRunsAsync(
+                runner.RunAsync(
+                    index,
+                    sourceRoot,
+                    Spec("python", python, python.Arguments, policy),
+                    cancellationToken),
+                IndexBuildStep.ScipPython,
+                step,
+                TimeProvider.System,
+                Task.Delay,
                 cancellationToken);
             index = result.Index;
             statuses.Add(result.Status);

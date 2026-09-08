@@ -27,7 +27,7 @@ public sealed class AQuietStepSaysItIsAliveTests
     {
         var lines = new List<string>();
 
-        var result = await RoslynSolutionLoader.WhileTheStepRunsAsync(
+        var result = await QuietStep.WhileItRunsAsync(
             Task.FromResult(7),
             lines.Add,
             TimeProvider.System,
@@ -59,7 +59,7 @@ public sealed class AQuietStepSaysItIsAliveTests
             }
         }
 
-        var result = await RoslynSolutionLoader.WhileTheStepRunsAsync(
+        var result = await QuietStep.WhileItRunsAsync(
             step.Task,
             Say,
             TimeProvider.System,
@@ -81,7 +81,7 @@ public sealed class AQuietStepSaysItIsAliveTests
         var step = new TaskCompletionSource<int>();
         var ticks = 0;
 
-        var result = await RoslynSolutionLoader.WhileTheStepRunsAsync(
+        var result = await QuietStep.WhileItRunsAsync(
             step.Task,
             null,
             TimeProvider.System,
