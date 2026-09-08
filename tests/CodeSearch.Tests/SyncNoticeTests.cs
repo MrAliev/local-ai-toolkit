@@ -38,6 +38,63 @@ public sealed class SyncNoticeTests
     }
 
     /// <summary>
+    /// A build waiting for embeddings and a build dying read exactly alike on this line.
+    ///
+    /// `index_status` has printed `Paused: BackendUnavailable` since the reason existed. This line
+    /// — the one that rides above every search and navigation answer, read by whoever is watching
+    /// without asking — dropped it. What was left was the counters frozen at the batch the outage
+    /// began on, a fresh `recorded 4 s ago` beside them, because the wait rewrites the record on
+    /// every rung of the ladder, and `ETA calculating`, which says an estimate is being worked out
+    /// while nothing is moving. The clause takes the estimate's slot rather than joining it: a
+    /// paused build writes rate 0 and no estimate by construction, so the slot could hold nothing
+    /// else.
+    /// </summary>
+    [Fact]
+    public void A_paused_build_says_it_is_waiting_rather_than_calculating()
+    {
+        var notice = Watching(Paused(RepositoryIndexProgressPhase.EmbeddingBase, 3120, 8250));
+
+        var above = notice.Above("R:\\LocalAi", SyncNoticeAudience.Answer);
+
+        Assert.Contains(
+            CodeSearchText.ProgressChunks(3120, 8250, 5130),
+            above,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            CodeSearchText.ProgressPausedBackendUnavailable,
+            above,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(CodeSearchText.EtaCalculating, above, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A pause on a record nothing will ever finish is not a wait: the process that would have
+    /// resumed is gone, and it left the field behind the way it left the phase behind.
+    /// `ProgressStoppedAt` owns that state, and the clause under it would report a dead build as
+    /// waiting for something to come back — the same reading the dropped ETA is dropped to prevent.
+    /// </summary>
+    [Fact]
+    public void A_pause_left_behind_by_a_build_that_died_is_not_reported_as_waiting()
+    {
+        var notice = Watching(StoppedWhilePaused(
+            RepositoryIndexProgressPhase.EmbeddingBase,
+            3120,
+            8250,
+            TimeSpan.FromHours(3.2)));
+
+        var instead = notice.InsteadOf("R:\\LocalAi").Above;
+
+        Assert.Contains(
+            CodeSearchText.ProgressChunks(3120, 8250, 5130),
+            instead,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            CodeSearchText.ProgressPausedBackendUnavailable,
+            instead,
+            StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// The sentence explains; the figures report. Repeating the sentence on every call of a build
     /// that lasts minutes would train a reader to skip the whole line, figures included.
     /// </summary>
@@ -370,6 +427,44 @@ public sealed class SyncNoticeTests
         int processed,
         int total) =>
         new(Repository, BuildHoldsTheGate: true, Progress(phase, processed, total, TimeSpan.Zero));
+
+    /// <summary>
+    /// A sync holding the gate whose last write said it is waiting for the backend. Rate zero and
+    /// no estimate are not decoration: that is exactly what the build records while it waits, so a
+    /// fixture with either of them would be testing a state nothing produces.
+    /// </summary>
+    private static SyncSighting Paused(
+        RepositoryIndexProgressPhase phase,
+        int processed,
+        int total) =>
+        new(
+            Repository,
+            BuildHoldsTheGate: true,
+            Progress(phase, processed, total, TimeSpan.Zero) with
+            {
+                ChunksPerSecond = 0,
+                EstimatedRemaining = null,
+                Pause = IndexBuildPause.BackendUnavailable,
+            });
+
+    /// <summary>
+    /// The pause a killed sync left behind: the field is in the record for ever, like the phase
+    /// beside it, and nothing is waiting for anything.
+    /// </summary>
+    private static SyncSighting StoppedWhilePaused(
+        RepositoryIndexProgressPhase phase,
+        int processed,
+        int total,
+        TimeSpan ago) =>
+        new(
+            Repository,
+            BuildHoldsTheGate: false,
+            Progress(phase, processed, total, ago) with
+            {
+                ChunksPerSecond = 0,
+                EstimatedRemaining = null,
+                Pause = IndexBuildPause.BackendUnavailable,
+            });
 
     /// <summary>A sync that wrote its end and let go of the gate.</summary>
     private static SyncSighting Finished(RepositoryIndexProgressPhase phase) =>
