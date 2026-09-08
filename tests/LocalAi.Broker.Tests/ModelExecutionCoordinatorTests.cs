@@ -177,7 +177,7 @@ public sealed class ModelExecutionCoordinatorTests : IDisposable
                 executedModels.Add(model);
                 return Task.FromResult(Result(model));
             },
-            (selection, _) => selection.Model == "translategemma:12b"
+            (_, selection, _) => selection.Model == "translategemma:12b"
                 ? ModelValidationResult.Fail(
                     ModelExecutionOutcome.StructuralFailure,
                     "structure")
@@ -348,7 +348,7 @@ public sealed class ModelExecutionCoordinatorTests : IDisposable
                     Assert.IsType<ChatJobPayload>(request.Payload).Model!);
                 return Task.FromResult(Result("translated"));
             },
-            (_, _) => throw new InvalidOperationException("validator fault"));
+            (_, _, _) => throw new InvalidOperationException("validator fault"));
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => coordinator.ExecuteAsync(
@@ -402,7 +402,8 @@ public sealed class ModelExecutionCoordinatorTests : IDisposable
     private ModelExecutionCoordinator Create(
         IModelRuntime runtime,
         Func<LocalJobRequest, CancellationToken, Task<BrokerExecutionResult>> execute,
-        Func<ModelSelection, BrokerExecutionResult, ModelValidationResult>? validate = null,
+        Func<LocalJobRequest, ModelSelection, BrokerExecutionResult, ModelValidationResult>?
+            validate = null,
         Action<string>? diagnostic = null) =>
         new(
             new ModelRouter(ModelRoutingCatalog.LoadEmbedded()),
