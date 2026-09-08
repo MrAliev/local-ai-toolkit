@@ -46,7 +46,15 @@ public sealed class UninstallRegistration(
     public const string DefaultSubKey =
         @"Software\Microsoft\Windows\CurrentVersion\Uninstall\LocalAi";
 
-    public const string DisplayName = "LocalAi Developer Toolkit";
+    /// <summary>
+    /// What the product calls itself, which is the title of both READMEs.
+    ///
+    /// It read "LocalAi Developer Toolkit" until now, carrying a word the name never had. The
+    /// repository rename that took the same word out of the URL did not reach here, because this
+    /// string is only ever seen in a list nobody opens on a machine that already has the thing
+    /// installed — and the install log prints it, which is where it was finally noticed.
+    /// </summary>
+    public const string DisplayName = "Local AI Toolkit";
 
     public const string Publisher = "MrAliev";
 

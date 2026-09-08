@@ -55,7 +55,11 @@ public sealed class UninstallRegistrationTests : IDisposable
         var entry = registration.Register("0.1.50", installerSource);
 
         Assert.True(File.Exists(registration.UninstallerPath));
-        Assert.Equal("LocalAi Developer Toolkit", entry.DisplayName);
+        // What the product calls itself, which is the title of both READMEs. The entry used to
+        // read "LocalAi Developer Toolkit", carrying a word the name never had — it survived the
+        // repository rename because nobody looks at this list on a machine that already has the
+        // thing installed.
+        Assert.Equal("Local AI Toolkit", entry.DisplayName);
         Assert.Equal("0.1.50", entry.DisplayVersion);
         Assert.Equal(machine.Runtime, entry.InstallLocation);
         Assert.Equal(
