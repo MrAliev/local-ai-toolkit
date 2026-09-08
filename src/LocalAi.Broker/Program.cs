@@ -93,10 +93,6 @@ internal static class BrokerProgram
                 coordinator,
                 control,
                 transport.ExecuteAsync);
-            // Advice, not an event: repeating it once per retry turn would bury the diagnostics
-            // it is meant to explain.
-            var backendHintPrinted = false;
-
             // Published on the heartbeat so a client can say why its job never ran. The broker's
             // own stderr goes nowhere a user looks: it is started detached, with no console.
             var backendReachable = new BackendReachability(ollamaUri);
@@ -161,10 +157,6 @@ internal static class BrokerProgram
                         diagnostic.ExceptionType,
                         diagnostic.JobId,
                         diagnostic.Reason);
-                    backendHintPrinted = ReportUnreachableBackend(
-                        diagnostic,
-                        ollamaUri,
-                        backendHintPrinted);
                     backendReachable.Observe(diagnostic);
                     backendStarter.OnDiagnostic(diagnostic);
                 });
@@ -228,56 +220,6 @@ internal static class BrokerProgram
         }
     }
 
-    /// <summary>
-    /// Names the endpoint when the backend is what failed. The diagnostic line above carries an
-    /// exception type, which does not tell an operator that starting Ollama is the fix.
-    /// </summary>
-    private static bool ReportUnreachableBackend(
-        BrokerHostDiagnostic diagnostic,
-        Uri ollamaUri,
-        bool alreadyPrinted)
-    {
-        if (alreadyPrinted ||
-            !string.Equals(
-                diagnostic.ExceptionType,
-                nameof(HttpRequestException),
-                StringComparison.Ordinal))
-        {
-            return alreadyPrinted;
-        }
-
-        Console.Error.WriteLine(
-            $"LocalAi broker: Ollama is not reachable at {ollamaUri}. Queued work is kept and " +
-            "waits for it to answer; start Ollama if it is not running.");
-        return true;
-    }
-
-    /// <summary>
-    /// Whether the backend answered, as last seen by the host loop.
-    ///
-    /// Written from the diagnostic callback and read by the heartbeat, both on the broker's own
-    /// threads, so a volatile flag is the whole of it -- this is a fact to publish, not a
-    /// decision to coordinate.
-    /// </summary>
-    private sealed class BackendReachability(Uri endpoint)
-    {
-        private volatile bool _unreachable;
-
-        public BrokerBackendState Current => new(!_unreachable, endpoint.ToString());
-
-        public void Observe(BrokerHostDiagnostic diagnostic)
-        {
-            if (string.Equals(
-                    diagnostic.ExceptionType,
-                    nameof(HttpRequestException),
-                    StringComparison.Ordinal))
-            {
-                _unreachable = true;
-            }
-        }
-
-        public void Answered() => _unreachable = false;
-    }
 
     private sealed class DrainSignal
     {
