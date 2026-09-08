@@ -120,8 +120,9 @@ public sealed class ABuildWaitsForABackendThatDiedTests : IDisposable
             embeddingCheckpointPath: Path.Combine(_root, "checkpoint"),
             expectedEmbeddingDimension: 2);
 
-        // Zero rate and no estimate: the shape a checkpoint restore already reports, so the
-        // reader is told "calculating" rather than an estimate nobody is earning.
+        // Zero rate and no estimate: the shape a checkpoint restore already reports. The reader
+        // is told neither -- index_status prints no rate it did not measure and no estimate
+        // nobody is earning, and the pause row takes the position the estimate had.
         Assert.Contains(
             reports,
             report => report.ChunksPerSecond == 0 && report.EstimatedRemaining is null);
