@@ -83,6 +83,21 @@ public static class CliText
     public static string DoctorUnknownArgument(string argument, string usage) =>
         Catalogue.Format(nameof(DoctorUnknownArgument), argument, usage);
 
+    /// <summary>
+    /// Reached only when no repository was named, so naming <c>--root</c> is a next step rather
+    /// than a repetition of what the reader just typed.
+    /// </summary>
+    public static string RepositoryNoneHere(string directory) =>
+        Catalogue.Format(nameof(RepositoryNoneHere), directory);
+
+    /// <summary>
+    /// Says nothing about whether there is a repository. There is one — a <c>.git</c> was found —
+    /// and git would not answer about it. A row folding this into "not a repository" would name a
+    /// cause it never established.
+    /// </summary>
+    public static string RepositoryNotChecked(string reason) =>
+        Catalogue.Format(nameof(RepositoryNotChecked), reason);
+
     public static string PolicyDefaults(string detail) =>
         Catalogue.Format(nameof(PolicyDefaults), detail);
 

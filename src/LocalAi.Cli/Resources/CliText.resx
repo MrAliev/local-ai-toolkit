@@ -469,6 +469,14 @@ Everything named above is under {2}.</value>
     <value>localai repo status does not understand '{0}'. Usage: {1}</value>
     <comment>Usage: stays English, as it does everywhere else. {1} is CliUsage.RepoStatus, so the refusal names --root rather than leaving the reader to guess which flag was meant.</comment>
   </data>
+  <data name="RepositoryNoneHere" xml:space="preserve">
+    <value>{0} is not inside a Git repository, so there is no index to check. Use --root with a directory inside one.</value>
+    <comment>Names --root, unlike RepositoryOutsideGit, because this branch is only reached when nothing was passed: telling a reader to do what they just did is the mistake that comment was written about. 0 is the directory that was examined, absolute and unquoted, as the launcher row prints paths.</comment>
+  </data>
+  <data name="RepositoryNotChecked" xml:space="preserve">
+    <value>not checked; {0}</value>
+    <comment>Shaped after UpdateNeverChecked, the house form for a value the check could not establish: value, semicolon, reason. 0 is git's own explanation, which is English on every machine — the same mixed line PolicyCheck already prints from exception.Message.</comment>
+  </data>
   <data name="RepositoryNotConnected" xml:space="preserve">
     <value>{0} is not connected. Index it: localai sync --root {0}</value>
     <comment>The old wording named the option without its argument, so the command it offered could not be run as written.</comment>

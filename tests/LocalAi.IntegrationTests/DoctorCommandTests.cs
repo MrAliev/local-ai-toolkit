@@ -28,6 +28,49 @@ public sealed class DoctorCommandTests : IDisposable
         Assert.Contains("v1", Check(report, "version").Detail, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// Which rows appear is what carries the state, so the row a reader scans for must not be the
+    /// one that is missing. Run without --root, doctor used to drop the repository check entirely
+    /// and still close with "no problems": eight green rows about a repository it never looked at.
+    ///
+    /// Standing somewhere that is not a repository is not a fault, so this is ok rather than a
+    /// warning and cannot move the exit code. What the caller names is checked and may fail; where
+    /// the caller happens to be standing is reported and cannot.
+    /// </summary>
+    [Fact]
+    public void A_directory_that_is_no_repository_is_still_reported_as_a_row()
+    {
+        Install("v1");
+        var elsewhere = Path.Combine(_root, "not-a-repository");
+        Directory.CreateDirectory(elsewhere);
+
+        var report = DoctorCommand.Inspect(_root, repositoryRoot: null, workingDirectory: elsewhere);
+
+        var repository = Check(report, "repository");
+        Assert.Equal(DoctorStatus.Ok, repository.Status);
+        Assert.Contains(elsewhere, repository.Detail, StringComparison.Ordinal);
+        Assert.Equal(0, report.ExitCode);
+    }
+
+    /// <summary>
+    /// A <c>.git</c> that git will not answer about — an empty one here, a checkout with no commit
+    /// yet in life. The row says the check did not run, and stays a warning: the reader named no
+    /// repository, so nothing they asserted has failed, and doctor must not begin exiting 1 for
+    /// standing somewhere ordinary.
+    /// </summary>
+    [Fact]
+    public void A_repository_git_will_not_answer_about_is_noted_rather_than_failed()
+    {
+        Install("v1");
+        var checkout = Path.Combine(_root, "checkout");
+        Directory.CreateDirectory(Path.Combine(checkout, ".git"));
+
+        var report = DoctorCommand.Inspect(_root, repositoryRoot: null, workingDirectory: checkout);
+
+        Assert.Equal(DoctorStatus.Warning, Check(report, "repository").Status);
+        Assert.Equal(0, report.ExitCode);
+    }
+
     [Fact]
     public void An_empty_runtime_root_fails_rather_than_reporting_nothing()
     {

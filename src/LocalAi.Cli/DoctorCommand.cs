@@ -76,7 +76,10 @@ public static class DoctorCommand
         return report.ExitCode;
     }
 
-    public static DoctorReport Inspect(string runtimeRoot, string? repositoryRoot = null)
+    public static DoctorReport Inspect(
+        string runtimeRoot,
+        string? repositoryRoot = null,
+        string? workingDirectory = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(runtimeRoot);
         var root = Path.GetFullPath(runtimeRoot);
@@ -91,6 +94,10 @@ public static class DoctorCommand
         if (!string.IsNullOrWhiteSpace(repositoryRoot))
         {
             checks.Add(CheckRepository(root, repositoryRoot));
+        }
+        else if (!string.IsNullOrWhiteSpace(workingDirectory))
+        {
+            checks.Add(CheckRepositoryWhereWeStand(root, workingDirectory));
         }
 
         return new DoctorReport(checks);
@@ -492,6 +499,45 @@ public static class DoctorCommand
         }
     }
 
+    /// <summary>
+    /// The repository the reader is standing in, when they named none.
+    ///
+    /// What the caller names is checked and may fail; where the caller happens to be standing is
+    /// reported and cannot. <c>--root</c> asserts that a repository is there, so failing to answer
+    /// about it is a failed check and exits 1. A working directory asserts nothing: it may be no
+    /// repository at all, and it may be one git will not answer about — a checkout with no commit
+    /// yet is both ordinary and unanswerable. Neither is a fault of this installation, so neither
+    /// may move the exit code.
+    ///
+    /// Whether there is a repository here is decided by the filesystem rather than by git, so
+    /// "there is none" is never inferred from a git that failed to start.
+    /// </summary>
+    private static DoctorCheck CheckRepositoryWhereWeStand(
+        string runtimeRoot,
+        string workingDirectory)
+    {
+        var examined = Path.GetFullPath(workingDirectory);
+        var workingRoot = CodeSearch.Core.Indexing.RepoLocator.ResolveWorkingRoot(examined);
+        var marker = Path.Combine(workingRoot.Value, ".git");
+        if (!Directory.Exists(marker) && !File.Exists(marker))
+        {
+            return new DoctorCheck(
+                "repository",
+                DoctorStatus.Ok,
+                CliText.RepositoryNoneHere(examined),
+                Facts(("directory", examined)));
+        }
+
+        var check = CheckRepository(runtimeRoot, workingRoot.Value);
+        return check.Status == DoctorStatus.Failed
+            ? new DoctorCheck(
+                "repository",
+                DoctorStatus.Warning,
+                CliText.RepositoryNotChecked(check.Detail),
+                Facts(("directory", examined)))
+            : check;
+    }
+
     private static DoctorCheck CheckRepository(string runtimeRoot, string? repositoryRoot)
     {
         try
@@ -525,9 +571,14 @@ public static class DoctorCommand
                 CliText.RepositoryState(manifest.State, Short(manifest.CurrentGenerationId)),
                 repositoryFacts);
         }
+        // JsonException belongs here beside InvalidDataException: the manifest is read by
+        // JsonSerializer, and a truncated one throws the first rather than the second. Without it
+        // a corrupt manifest took the whole command down instead of failing this one row — which
+        // mattered little while only --root reached this code, and matters now that standing in a
+        // repository does.
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException or InvalidOperationException
-                or InvalidDataException)
+                or InvalidDataException or JsonException)
         {
             return new DoctorCheck("repository", DoctorStatus.Failed, exception.Message);
         }
