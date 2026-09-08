@@ -614,19 +614,34 @@ public sealed class UntrustedContentMcpTests : IDisposable
     }
 
     [Fact]
-    public void A_phase_that_counts_no_chunks_does_not_show_the_last_phase_tally()
+    public void A_phase_that_counts_no_chunks_names_its_step_and_not_the_last_phase_tally()
     {
         // This exact shape is what a finished embedding pass left behind while the semantic
         // build and the generation publish ran for another two and a half minutes: a full
-        // counter with nothing remaining, beside a phase that was not counting anything.
-        Save(RepositoryIndexProgressPhase.SemanticBase, 1415, 1415);
+        // counter with nothing remaining, beside a phase that was not counting anything. The
+        // tally still must not appear. What stands in its place is no longer a line saying the
+        // phase counts nothing — it is what the phase is doing, with the step's own figures.
+        Save(
+            RepositoryIndexProgressPhase.SemanticBase,
+            1415,
+            1415,
+            IndexBuildStep.AnalysingProjects,
+            stepDone: 12,
+            stepTotal: 26);
 
         var status = CodeSearchTools.IndexStatus(_service, Building(), _root);
 
         Assert.Contains("Sync phase: SemanticBase", status, StringComparison.Ordinal);
-        Assert.Contains("not counted in this phase", status, StringComparison.Ordinal);
+        Assert.Contains(
+            CodeSearchText.ProgressAnalysingProjects(12, 26),
+            status,
+            StringComparison.Ordinal);
         Assert.DoesNotContain("1415/1415", status, StringComparison.Ordinal);
         Assert.DoesNotContain("0 remaining", status, StringComparison.Ordinal);
+        // Projects per second is not a figure anyone can act on, and an estimate built from it
+        // would be invented: projects differ in size by two orders of magnitude.
+        Assert.DoesNotContain("Rate:", status, StringComparison.Ordinal);
+        Assert.DoesNotContain("ETA:", status, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -701,7 +716,10 @@ public sealed class UntrustedContentMcpTests : IDisposable
     private void Save(
         RepositoryIndexProgressPhase phase,
         int processedChunks,
-        int totalChunks) =>
+        int totalChunks,
+        IndexBuildStep? step = null,
+        int stepDone = 0,
+        int stepTotal = 0) =>
         new RepositoryIndexProgressStore(_identity.RepositoryRuntimeRoot).Save(
             new RepositoryIndexProgress(
                 _identity.RepositoryId,
@@ -711,7 +729,11 @@ public sealed class UntrustedContentMcpTests : IDisposable
                 totalChunks,
                 0,
                 null,
-                DateTimeOffset.UtcNow));
+                DateTimeOffset.UtcNow,
+                Pause: null,
+                Step: step,
+                StepDone: stepDone,
+                StepTotal: stepTotal));
 
     [Fact]
     public void Status_ignores_corrupted_durable_sync_progress()
