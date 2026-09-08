@@ -56,6 +56,12 @@
     <value>Embedding {0} chunks failed ({1}); halving the batch to isolate the chunk.</value>
     <comment>batch is партия in Russian, following docs/overview.ru.md and the 0.1.53 release notes, which both write it that way for this exact line.</comment>
   </data>
+  <data name="BuildBatchGrowing" xml:space="preserve">
+    <value>Embedding batches of {0} inputs were stable; probing {1} inputs.</value>
+  </data>
+  <data name="BuildBatchSteppedBack" xml:space="preserve">
+    <value>Ollama's runner refused an embedding batch of {0} inputs ({2}); retrying at {1} inputs.</value>
+  </data>
   <data name="BuildCheckpointIgnored" xml:space="preserve">
     <value>Ignoring invalid embedding checkpoint '{0}': {1}</value>
     <comment>checkpoint stays Latin in Russian, verbatim from CliText.ru.resx - one spelling per concept, and контрольная точка is not the one this product uses.</comment>

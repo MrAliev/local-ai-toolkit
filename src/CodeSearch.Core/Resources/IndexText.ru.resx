@@ -56,6 +56,12 @@
     <value>Не удалось посчитать эмбеддинги для {0} чанков ({1}); партия делится пополам, чтобы найти виноватый чанк.</value>
     <comment>batch is партия in Russian, following docs/overview.ru.md and the 0.1.53 release notes, which both write it that way for this exact line.</comment>
   </data>
+  <data name="BuildBatchGrowing" xml:space="preserve">
+    <value>Партии эмбеддингов по {0} входов работали стабильно; проверяется размер {1}.</value>
+  </data>
+  <data name="BuildBatchSteppedBack" xml:space="preserve">
+    <value>Runner Ollama отказал партии эмбеддингов из {0} входов ({2}); повторяем по {1} входов.</value>
+  </data>
   <data name="BuildCheckpointIgnored" xml:space="preserve">
     <value>Некорректный checkpoint эмбеддингов '{0}' пропущен: {1}</value>
     <comment>checkpoint stays Latin in Russian, verbatim from CliText.ru.resx - one spelling per concept, and контрольная точка is not the one this product uses.</comment>

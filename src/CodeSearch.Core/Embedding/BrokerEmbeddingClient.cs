@@ -20,6 +20,7 @@ public sealed class BrokerEmbeddingClient(
     /// <see cref="BrokerJobFailedException.FailureCode"/> states.
     /// </summary>
     private const string BackendUnavailable = "BackendUnavailableException";
+    private const string BackendRunnerUnavailable = "BackendRunnerUnavailableException";
 
     public async Task<float[][]> EmbedAsync(
         IReadOnlyList<string> inputs,
@@ -70,16 +71,24 @@ public sealed class BrokerEmbeddingClient(
                 "The LocalAi broker did not answer in time.",
                 exception);
         }
-        // A backend that is not there is not a chunk that cannot be embedded. IndexBuilder
-        // answers a failed batch by halving it to isolate the offending chunk and excludes
-        // exactly one exception from that - this one - so a job that failed because the runner
-        // never came back has to arrive as it, or the indexer divides work it cannot make
-        // smaller and fails again in both halves (#369).
+        // A backend that is not there is not a chunk that cannot be embedded. The two stable
+        // failure codes below preserve whether Ollama itself was unreachable or whether Ollama
+        // answered but could not reach its runner. IndexBuilder uses only the second signal for
+        // one item-count step back; both signals use the patient backend-recovery path after that.
         //
         // Matched on the failure code, which BrokerJobFailedException documents as ours and
         // stable, and never on the reason: the reason is the backend's own words, quoted rather
         // than parsed, and learning Ollama's vocabulary up here is what the transport's own
         // comment argues against.
+        catch (BrokerJobFailedException exception)
+            when (exception.FailureCode.Equals(
+                BackendRunnerUnavailable,
+                StringComparison.Ordinal))
+        {
+            throw new EmbeddingRunnerUnavailableException(
+                IndexText.EmbeddingBackendUnavailable(Model, exception.Message),
+                exception);
+        }
         catch (BrokerJobFailedException exception)
             when (exception.FailureCode.Equals(BackendUnavailable, StringComparison.Ordinal))
         {
@@ -136,9 +145,17 @@ public sealed class BrokerEmbeddingClient(
     }
 }
 
-public sealed class EmbeddingUnavailableException(
+public class EmbeddingUnavailableException(
     string message,
     Exception innerException) : Exception(message, innerException);
+
+/// <summary>
+/// Ollama answered but its own runner connection was refused. This type is the stable signal for
+/// one batch-size step back; no caller parses the backend's quoted reason.
+/// </summary>
+public sealed class EmbeddingRunnerUnavailableException(
+    string message,
+    Exception innerException) : EmbeddingUnavailableException(message, innerException);
 
 /// <summary>
 /// A single chunk the embedding model refused, already isolated from its batch. Carries the file

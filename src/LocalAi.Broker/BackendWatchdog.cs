@@ -58,16 +58,11 @@ public sealed record BackendWatchdogPolicy(
 }
 
 /// <summary>
-/// The backend is not there. Two things reach this conclusion and both say it this way, because
-/// what a caller acts on is the name: BrokerHost records `exception.GetType().Name` as the
-/// failure code, and BrokerJobFailedException says of that code that it is the stable thing to
-/// match on, as against the reason, which is quoted rather than parsed.
-///
-/// The message no longer names a liveness probe. The watchdog is one producer; the transport is
-/// the other, and it reaches the same conclusion by exhausting its retries against a runner that
-/// never answered - no probe involved.
+/// The backend is not there. The watchdog reaches this conclusion after its liveness probes;
+/// transport failures with a more precise stable meaning derive from this type so the host still
+/// gives them the same retry residency while preserving their own failure code for a caller.
 /// </summary>
-public sealed class BackendUnavailableException : Exception
+public class BackendUnavailableException : Exception
 {
     public BackendUnavailableException(string code)
         : base($"The model backend is unavailable: {code}.") => Code = code;
@@ -82,3 +77,10 @@ public sealed class BackendUnavailableException : Exception
 
     public string Code { get; }
 }
+
+/// <summary>
+/// Ollama answered, but its own HTTP hop to llama-server was refused. A distinct stable failure
+/// code lets the indexer reduce per-request fan-out without parsing Ollama's quoted response.
+/// </summary>
+public sealed class BackendRunnerUnavailableException(string detail)
+    : BackendUnavailableException("runner_unreachable", detail);
