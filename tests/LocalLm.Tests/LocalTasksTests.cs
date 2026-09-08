@@ -228,6 +228,30 @@ public sealed class LocalTasksTests
         }
     }
 
+    /// <summary>
+    /// ask_local reaches AskAsync directly, so the console parser protects a caller this one never
+    /// sees. LogTriage owns LogTriagePipeline — its own prompt, its own fragmenting, its own
+    /// capacity probe — and ask enters none of it; an agent handed a log through ask_local got one
+    /// prompt over the whole file and no sign that the triage had not run.
+    /// </summary>
+    [Fact]
+    public async Task Ask_refuses_a_profile_whose_work_belongs_to_another_tool()
+    {
+        var client = new FakeLocalModelClient();
+        var tasks = new LocalTasks(client);
+
+        var exception = await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+            () => tasks.AskAsync(
+                LocalTaskProfile.LogTriage,
+                "what failed",
+                [],
+                model: null,
+                TestContext.Current.CancellationToken));
+
+        Assert.Contains("triage_log", exception.Message, StringComparison.Ordinal);
+        Assert.Empty(client.Calls);
+    }
+
     [Fact]
     public async Task Ask_rejects_translation_profiles_that_bypass_validation()
     {

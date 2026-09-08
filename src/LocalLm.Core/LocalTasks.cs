@@ -521,6 +521,23 @@ public sealed class LocalTasks
             LocalTaskProfile.VisualAnalysis or
             LocalTaskProfile.ImageTranslation);
 
+    /// <summary>
+    /// Whether the profile is served by machinery of its own that <c>ask</c> does not enter.
+    ///
+    /// Beside <see cref="IsTextChatProfile"/> rather than inside it, because that predicate means
+    /// what its name says and two live sentences rest on it — a refusal telling a reader that
+    /// <c>LogTriage</c> is not a text-chat profile would be false, and a refusal naming a cause it
+    /// never established is the mistake those sentences were already corrected for once.
+    ///
+    /// <c>LogTriage</c> is the whole set today. <see cref="LogTriagePipeline"/> probes a
+    /// model and context pair that fits, splits the log with overlap and reduces the findings;
+    /// <c>ask</c> sends one prompt and lets the profile choose only the model and the validator.
+    /// Public for the same reason the predicate above is: a caller has to be able to refuse before
+    /// the call rather than discover it after.
+    /// </summary>
+    public static bool HasOwnPipeline(LocalTaskProfile profile) =>
+        profile is LocalTaskProfile.LogTriage;
+
     public async Task<LocalResult> AskAsync(
         string prompt, IReadOnlyList<string> files, string? model, CancellationToken ct)
         => await AskAsync(
@@ -542,6 +559,16 @@ public sealed class LocalTasks
             throw new ArgumentOutOfRangeException(
                 nameof(profile),
                 LocalLmText.NotATextChatProfile(profile));
+        }
+
+        // The only guard the MCP tool has: ask_local reaches this method directly, while the
+        // console refuses in the parser before any broker work. Both are needed — one of them
+        // protects a caller the other never sees.
+        if (HasOwnPipeline(profile))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(profile),
+                LocalLmText.ProfileHasItsOwnPipeline(profile));
         }
 
         if (files.Count > MaxAskFiles)

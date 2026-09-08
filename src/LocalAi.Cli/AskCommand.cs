@@ -105,6 +105,18 @@ public static class AskCommand
                         return false;
                     }
 
+                    // A third mistake, and its own code. profile_not_supported tells a program to
+                    // retry with another profile from the list, and retrying a log under
+                    // CodeAnalysis is the defect this refusal exists to stop: the same one prompt,
+                    // a different model, and nothing on screen saying the triage never ran.
+                    if (LocalTasks.HasOwnPipeline(parsed))
+                    {
+                        refusal = new CommandRefusal(
+                            "profile_elsewhere",
+                            CliText.AskProfileHasOwnCommand(value, CliUsage.Triage));
+                        return false;
+                    }
+
                     profile = parsed;
                     break;
 
@@ -141,11 +153,16 @@ public static class AskCommand
     }
 
     /// <summary>
-    /// Computed from the enum through the same predicate the task itself checks, so this cannot
-    /// name a profile the call would reject.
+    /// Computed from the enum through the same predicates the call itself checks, so this cannot
+    /// name a profile the call would reject. Both of them: a list that offered LogTriage while
+    /// LogTriage refused would send a reader from one refusal straight into another, which is the
+    /// failure the first predicate's own comment says it exists to prevent.
     /// </summary>
     private static string TextChatProfiles =>
         string.Join(
             "|",
-            Enum.GetValues<LocalTaskProfile>().Where(LocalTasks.IsTextChatProfile));
+            Enum.GetValues<LocalTaskProfile>()
+                .Where(profile =>
+                    LocalTasks.IsTextChatProfile(profile) &&
+                    !LocalTasks.HasOwnPipeline(profile)));
 }

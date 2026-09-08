@@ -47,6 +47,10 @@
   <data name="AdaptersFailed" xml:space="preserve">
     <value>Semantic generation was not published because required adapters failed: {0}</value>
   </data>
+  <data name="AskProfileHasOwnCommand" xml:space="preserve">
+    <value>localai ask does not run the task profile '{0}': it sends one prompt and nothing more. localai triage chooses a model for the log, reads it in fragments and merges the partial answers. Usage: {1}</value>
+    <comment>Not AskProfileNotSupported: that sentence gives the cause as "it is not a text-chat profile", and LogTriage is one -- it routes to a chat model and returns text. What it is not is work localai ask performs: the profile owns LogTriagePipeline, which probes a model and context pair that fits, splits the log with overlap and reduces the findings, and ask enters none of it. Measured before this key existed: qwen2.5-coder:14b through --profile LogTriage said a log whose last line is "Build FAILED. 1 Error(s)" did not say what failed; the same model on the same log through localai triage named the failure. The three verbs are lifted from the progress lines that same run prints, so the sentence and the run agree. No profile list, unlike its two siblings: this reader named a profile that exists and meant it, and a set of alternatives here invites rerunning the log under CodeAnalysis, which is the defect again. The set is still on ProfileUnknown, one typo away on the same option. Usage: carries localai triage's form, because that is where the prompt they typed becomes --question.</comment>
+  </data>
   <data name="AskProfileNotSupported" xml:space="preserve">
     <value>localai ask does not run the task profile '{0}': it is not a text-chat profile. Supported profiles: {1}</value>
     <comment>The cause is the one the code checks. An earlier draft said the model could not hold a conversation, which is false for four of the seven excluded profiles: translation and image profiles route through the same chat call, and it is the task that does not fit. The clause after the colon is LocalLmText.NotATextChatProfile word for word.</comment>

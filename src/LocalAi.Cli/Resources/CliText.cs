@@ -485,6 +485,15 @@ public static class CliText
     public static string AskProfileNotSupported(string profile, string accepted) =>
         Catalogue.Format(nameof(AskProfileNotSupported), profile, accepted);
 
+    /// <summary>
+    /// A profile ask cannot run because the work belongs to a command of its own. No list of
+    /// alternatives, unlike its two siblings: this reader named a profile that exists and meant
+    /// it, and offering substitutes invites rerunning the log under another one, which is the
+    /// defect again. The usage line carried is the command they are being sent to.
+    /// </summary>
+    public static string AskProfileHasOwnCommand(string profile, string usage) =>
+        Catalogue.Format(nameof(AskProfileHasOwnCommand), profile, usage);
+
     public static string OptionValueMissing(string command, string option, string usage) =>
         Catalogue.Format(nameof(OptionValueMissing), command, option, usage);
 
