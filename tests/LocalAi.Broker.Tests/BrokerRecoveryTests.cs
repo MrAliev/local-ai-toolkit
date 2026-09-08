@@ -222,6 +222,161 @@ public sealed class BrokerRecoveryTests
         Assert.Equal(startedAt + TimeSpan.FromMinutes(30), unloadedAt);
     }
 
+    /// <summary>
+    /// The stretch after a backend failure is not idleness, and unloading through it is what makes
+    /// the failure expensive.
+    ///
+    /// A client whose job failed with <see cref="BackendUnavailableException"/> has not gone away:
+    /// it waits and enqueues the same work again. CodeSearch's index build waits 5, 10, 20 and then
+    /// 30 seconds between attempts, for up to ten minutes, and none of that wait is in the queue —
+    /// it happens in the client's own process, so the broker sees an empty queue and a quiet
+    /// machine. Measured on 2026-09-08 with a ten-second keep-alive, over a quarter of an hour of
+    /// two clients sharing one card: 42 embedding calls, 27 of them refused by the runner, and five
+    /// unloads, each of which charged the next attempt eight gigabytes to load the same model back.
+    ///
+    /// So the host holds the resident model across the gap. The number below is the top of that
+    /// ladder, written out here because the broker cannot reference CodeSearch and a bare 30 would
+    /// say nothing.
+    /// </summary>
+    [Fact]
+    public async Task BrokerHost_holds_the_model_while_a_failed_backend_call_is_retried()
+    {
+        using var root = new TemporaryRuntimeRoot();
+        var startedAt = new DateTimeOffset(2026, 9, 8, 12, 25, 0, TimeSpan.Zero);
+        var longestClientWaitBetweenAttempts = TimeSpan.FromSeconds(30);
+        var clock = new ManualTimeProvider(startedAt);
+        var queue = new DurableQueue(root.Path, clock);
+        await queue.EnqueueAsync(
+            Request("refused-by-the-runner"),
+            TestContext.Current.CancellationToken);
+        using var stop = new CancellationTokenSource(Guard);
+        var unloadCalls = 0;
+        var host = new BrokerHost(
+            queue,
+            "backend-retry-worker",
+            (_, _, _) => throw new BackendUnavailableException("runner_unreachable"),
+            clock,
+            idleDelay: (delay, _) =>
+            {
+                clock.Advance(delay);
+                if (clock.GetUtcNow() - startedAt >= longestClientWaitBetweenAttempts)
+                {
+                    stop.Cancel();
+                }
+
+                return Task.CompletedTask;
+            },
+            idleInterval: TimeSpan.FromSeconds(5),
+            residentModel: () => "resident-model",
+            idleUnload: _ =>
+            {
+                Interlocked.Increment(ref unloadCalls);
+                return Task.CompletedTask;
+            },
+            idleUnloadAfter: TimeSpan.FromSeconds(10));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => host.RunAsync(stop.Token));
+
+        Assert.Equal(0, unloadCalls);
+    }
+
+    /// <summary>
+    /// The other end of the same rule: a client that gave up must not leave the card held forever.
+    /// The grace is a longer wait, not a suspended one, so a quiet stretch past every retry the
+    /// client had budgeted still ends in exactly one unload.
+    /// </summary>
+    [Fact]
+    public async Task BrokerHost_stops_holding_the_model_when_no_retry_comes_back()
+    {
+        using var root = new TemporaryRuntimeRoot();
+        var startedAt = new DateTimeOffset(2026, 9, 8, 12, 25, 0, TimeSpan.Zero);
+        var wholeClientRetryBudget = TimeSpan.FromMinutes(10);
+        var clock = new ManualTimeProvider(startedAt);
+        var queue = new DurableQueue(root.Path, clock);
+        await queue.EnqueueAsync(
+            Request("refused-and-abandoned"),
+            TestContext.Current.CancellationToken);
+        using var stop = new CancellationTokenSource(Guard);
+        var unloadCalls = 0;
+        var host = new BrokerHost(
+            queue,
+            "abandoned-retry-worker",
+            (_, _, _) => throw new BackendUnavailableException("runner_unreachable"),
+            clock,
+            idleDelay: (delay, _) =>
+            {
+                clock.Advance(delay);
+                if (clock.GetUtcNow() - startedAt >= wholeClientRetryBudget)
+                {
+                    stop.Cancel();
+                }
+
+                return Task.CompletedTask;
+            },
+            idleInterval: TimeSpan.FromSeconds(30),
+            residentModel: () => "resident-model",
+            idleUnload: _ =>
+            {
+                Interlocked.Increment(ref unloadCalls);
+                stop.Cancel();
+                return Task.CompletedTask;
+            },
+            idleUnloadAfter: TimeSpan.FromSeconds(10));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => host.RunAsync(stop.Token));
+
+        Assert.Equal(1, unloadCalls);
+    }
+
+    /// <summary>
+    /// And only a backend failure means a client is coming back. A job that failed on its own
+    /// merits is finished, nothing will re-enqueue it, and the keep-alive is the whole answer —
+    /// extending the hold for every exception alike would keep the card occupied after a malformed
+    /// request as readily as after a refused runner.
+    /// </summary>
+    [Fact]
+    public async Task BrokerHost_treats_an_ordinary_job_failure_as_idleness()
+    {
+        using var root = new TemporaryRuntimeRoot();
+        var startedAt = new DateTimeOffset(2026, 9, 8, 12, 25, 0, TimeSpan.Zero);
+        var clock = new ManualTimeProvider(startedAt);
+        var queue = new DurableQueue(root.Path, clock);
+        await queue.EnqueueAsync(
+            Request("failed-on-its-own-merits"),
+            TestContext.Current.CancellationToken);
+        using var stop = new CancellationTokenSource(Guard);
+        var unloadCalls = 0;
+        DateTimeOffset? unloadedAt = null;
+        var host = new BrokerHost(
+            queue,
+            "ordinary-failure-worker",
+            (_, _, _) => throw new InvalidOperationException("The request was malformed."),
+            clock,
+            idleDelay: (delay, _) =>
+            {
+                clock.Advance(delay);
+                return Task.CompletedTask;
+            },
+            idleInterval: TimeSpan.FromSeconds(5),
+            residentModel: () => "resident-model",
+            idleUnload: _ =>
+            {
+                Interlocked.Increment(ref unloadCalls);
+                unloadedAt = clock.GetUtcNow();
+                stop.Cancel();
+                return Task.CompletedTask;
+            },
+            idleUnloadAfter: TimeSpan.FromSeconds(10));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => host.RunAsync(stop.Token));
+
+        Assert.Equal(1, unloadCalls);
+        Assert.Equal(startedAt + TimeSpan.FromSeconds(10), unloadedAt);
+    }
+
     [Fact]
     public async Task BrokerHost_does_not_unload_while_dependency_blocked_work_is_queued()
     {

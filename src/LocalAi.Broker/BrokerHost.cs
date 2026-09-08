@@ -27,6 +27,24 @@ public sealed class BrokerHost
     private readonly BackendWatchdogPolicy _watchdogPolicy;
     private DateTimeOffset _lastActivityAtUtc;
     private bool _idleUnloadIssued;
+    private bool _lastAttemptAwaitsRetry;
+
+    /// <summary>
+    /// How long a resident model is held after the backend refused, on top of nothing else being
+    /// queued.
+    ///
+    /// A client whose job failed with <see cref="BackendUnavailableException"/> is not a client
+    /// that finished: it waits and enqueues the same work again, and its wait is in its own
+    /// process, so the queue is empty for the whole of it. CodeSearch's index build waits 5, 10,
+    /// 20 and then 30 seconds between attempts, for up to ten minutes; a minute covers the top of
+    /// that ladder with room for the attempt that fails again, and every retry inside the grace
+    /// restarts it.
+    ///
+    /// It cannot be read from the client: the broker does not reference CodeSearch, and other
+    /// clients retry on their own schedules. It is a floor rather than a replacement — a
+    /// keep-alive longer than this still wins, because it was asked for.
+    /// </summary>
+    private static readonly TimeSpan BackendRetryGrace = TimeSpan.FromMinutes(1);
 
     public BrokerHost(
         IBrokerQueue queue,
@@ -126,15 +144,27 @@ public sealed class BrokerHost
             }
 
             _idleUnloadIssued = false;
+            _lastAttemptAwaitsRetry = false;
             await RunAttemptAsync(lease, cancellationToken);
             _lastActivityAtUtc = _timeProvider.GetUtcNow();
         }
     }
 
+    /// <summary>
+    /// How long the queue has to stay empty before the resident model is let go. Idleness after a
+    /// backend failure is a client waiting to try again rather than a machine with nothing to do,
+    /// so it is held for the grace instead — or for the keep-alive, where that is the longer of
+    /// the two.
+    /// </summary>
+    private TimeSpan HoldBeforeUnload =>
+        _lastAttemptAwaitsRetry && BackendRetryGrace > _idleUnloadAfter
+            ? BackendRetryGrace
+            : _idleUnloadAfter;
+
     private async Task TryUnloadIdleAsync(CancellationToken cancellationToken)
     {
         if (_idleUnloadIssued ||
-            _timeProvider.GetUtcNow() - _lastActivityAtUtc < _idleUnloadAfter ||
+            _timeProvider.GetUtcNow() - _lastActivityAtUtc < HoldBeforeUnload ||
             _queue is not ISelectableBrokerQueue selectable)
         {
             return;
@@ -406,6 +436,11 @@ public sealed class BrokerHost
         // backend that refused a batch in a sentence of its own had that sentence dropped three
         // times over: here, in the durable state, and again in the exception the client threw.
         Report(lease, "execute", executionException, executionException.Message);
+
+        // The one failure that says the work is coming back. Everything else is a job that is over
+        // — nothing re-enqueues a malformed request — so only this raises the hold above the
+        // keep-alive, and the next attempt lowers it again.
+        _lastAttemptAwaitsRetry = executionException is BackendUnavailableException;
         try
         {
             await _queue.FailAsync(
