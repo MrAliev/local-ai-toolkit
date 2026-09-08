@@ -249,7 +249,9 @@ public static class ManagedInstructionBlock
         Size decides the surface. A snippet, a file or two, one screenshot: the tool, into
         this reply. A whole build log, or files by the dozen: `localai triage` and `localai
         ask`, which print where they have got to while they run — a tool call says nothing
-        between the call and the answer.
+        between the call and the answer. A log is never read into this reply itself,
+        whatever reads it; twenty lines off the end, to see whether a run is moving, is
+        not that.
 
         ### Any repository, not just the ones already set up
 
@@ -535,7 +537,10 @@ public static class ManagedInstructionBlock
         Size decides the surface. A snippet, a file or two, one screenshot: the tool, into
         this reply. A whole build log, or files by the dozen: `localai triage` and `localai
         ask`, which print where they have got to while they run — a tool call says nothing
-        between the call and the answer.
+        between the call and the answer. A log is never read into this reply itself,
+        whatever reads it — `cat`, `tail -f`, an `awk` whose summary lands here. A bounded
+        look is not that: twenty lines off the end, to see whether a run is moving, is how
+        a long run is watched.
 
         ### Any repository, not just the ones already set up
 

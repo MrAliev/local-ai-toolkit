@@ -4,17 +4,23 @@ using System.Text.Json;
 namespace LocalAi.Cli;
 
 /// <summary>
-/// Decides whether a tool call Claude Code is about to make is a text search over the tree.
+/// Decides what the agent gate refuses: a text search over the tree, which is this class, or a
+/// whole log poured into a reply, which is <see cref="WholeLogRefusal"/> and is asked first.
 ///
 /// The product already tells an assistant to reach for the local tools instead, and that was not
 /// enough: the rule was read, agreed to and broken about a dozen times in one session, because the
 /// reach for <c>grep</c> happens before the rule is recalled. A <c>PreToolUse</c> hook refuses the
-/// call before it runs, and recall stops being involved (#423).
+/// call before it runs, and recall stops being involved (#423). The log half was added for the
+/// same reason after the same thing happened to it, with <c>awk</c> in place of <c>grep</c>.
 ///
-/// Deliberately narrow. What is forbidden is sweeping the tree to find code, because
-/// <c>search_code</c> and the navigation tools answer the same question by position rather than by
-/// string match. Searching the commit history by message is not that, and no local tool replaces
-/// it; neither is the word appearing as an argument or inside a document.
+/// The name is now narrower than what the type does, and the rename is deliberately not in the
+/// change that made it so: it touches every call site and every test row and fixes nothing but a
+/// word.
+///
+/// Deliberately narrow, the search half. What is forbidden is sweeping the tree to find code,
+/// because <c>search_code</c> and the navigation tools answer the same question by position rather
+/// than by string match. Searching the commit history by message is not that, and no local tool
+/// replaces it; neither is the word appearing as an argument or inside a document.
 /// </summary>
 internal static class TextSearchRefusal
 {
@@ -72,6 +78,14 @@ internal static class TextSearchRefusal
         if (string.IsNullOrEmpty(command))
         {
             return null;
+        }
+
+        // The log first, because a line can be both and they are not equally expensive.
+        // `cat build.log | grep error` sweeps and pours; answering it as a search names
+        // `search_code`, which is the wrong tool for a log, and leaves the costly half unsaid.
+        if (WholeLogRefusal.ReasonFor(command) is { } log)
+        {
+            return log;
         }
 
         var found = CommandLineScan.ProgramWords(command)

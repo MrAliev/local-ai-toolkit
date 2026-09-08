@@ -187,11 +187,22 @@ public sealed class InstructionSkillTests
     [Fact]
     public void The_core_is_materially_smaller_than_the_block_it_replaced()
     {
-        Assert.InRange(ManagedInstructionBlock.Block.Length, 1_000, 7_700);
+        // Counted with line endings normalised to one character, for the reason the budget test
+        // beside this one gives about its own measurement: a block checked out with CRLF is ~180
+        // characters longer than the same block with LF, which is more than this margin. Measured
+        // raw, as it was, this passed on a machine storing LF and failed on one storing CRLF with
+        // nothing changed between them — and it failed that way for the first time on an addition
+        // of 120 characters against 242 of stated room.
+        var core = WithoutCarriageReturns(ManagedInstructionBlock.Block);
+        var codex = WithoutCarriageReturns(ManagedInstructionBlock.CodexBlock);
+
+        Assert.InRange(core, 1_000, 7_700);
         Assert.True(
-            ManagedInstructionBlock.Block.Length * 2 < ManagedInstructionBlock.CodexBlock.Length,
-            $"the core is {ManagedInstructionBlock.Block.Length} characters against the Codex " +
-            $"block's {ManagedInstructionBlock.CodexBlock.Length}, so it is no longer the " +
-            "smaller half the split exists to buy");
+            core * 2 < codex,
+            $"the core is {core} characters against the Codex block's {codex}, so it is no " +
+            "longer the smaller half the split exists to buy");
     }
+
+    private static int WithoutCarriageReturns(string block) =>
+        block.Length - block.Count(character => character == (char)13);
 }

@@ -368,7 +368,20 @@ public sealed class ManagedInstructionBlockTests
         // section says which stream carries the progress a reply relays. The sentence the
         // widening contradicted — that everything except a build answers into the reply that
         // asked for it — is gone rather than qualified.
-        const int budget = 15_200;
+        //
+        // Raised from 15_200 a fifth time, and this one closed a gap between what the block says
+        // and what the gate refuses. The logs section routed by size and never said that reading
+        // the log yourself is the breach — the code section names grep and says so, the logs
+        // section named no reader at all, and an `awk` over a 32 MB server log was outside every
+        // sentence here. So the paragraph now states the prohibition and its bound in one place:
+        // a log does not enter the reply whatever reads it, and a bounded look at the end of a
+        // running one is not that. The gate refuses the same thing, so the written rule and the
+        // enforced rule are one rule rather than two.
+        //
+        // Codex carries the long form and the core carries a short one, which is not a saving:
+        // Claude has the gate refusing the call, and Codex has no such mechanism, so there the
+        // sentence is the whole of the enforcement and names the readers.
+        const int budget = 15_400;
 
         var measured = ManagedInstructionBlock.CodexBlock.Length
             - ManagedInstructionBlock.CodexBlock.Count(character => character == (char)13);
