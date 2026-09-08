@@ -67,6 +67,62 @@ public sealed class BackendStarterTests : IDisposable
     }
 
     /// <summary>
+    /// The failure this test exists for, observed rather than imagined.
+    ///
+    /// Every HTTP status the transport is handed arrives as <c>HttpRequestException</c>, and the
+    /// commonest of them is a 404 for a model the server does not have — which comes from a server
+    /// answering normally. Reading that as "Ollama is down" started a second <c>ollama serve</c>.
+    /// It bound <c>127.0.0.1:11434</c> beside the first server's <c>[::]:11434</c>, which Windows
+    /// permits because the addresses differ, and the more specific bind then took every IPv4
+    /// request. An index build's embeddings went to a server that had just started and held no
+    /// models at all, so the 404 the start was a reaction to became every request's answer.
+    ///
+    /// Asking whether anything is listening is the check the report already claimed to have made.
+    /// </summary>
+    [Fact]
+    public void A_backend_that_is_answering_is_not_started_a_second_time()
+    {
+        RecordPath(Recorded);
+        var started = new List<string>();
+        var starter = Starter(
+            "http://127.0.0.1:11434/",
+            started,
+            out var reports,
+            listening: true);
+
+        starter.OnDiagnostic(Diagnostic(nameof(HttpRequestException)));
+
+        Assert.Empty(started);
+        Assert.False(starter.HasAttempted);
+        Assert.Contains(reports, line => line.Contains("is answering", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// And the one attempt is not spent by it. A server answering now says nothing about whether
+    /// it will be there in an hour, so the outage this exists for must still get its start.
+    /// </summary>
+    [Fact]
+    public void An_answering_backend_does_not_spend_the_one_start()
+    {
+        RecordPath(Recorded);
+        var started = new List<string>();
+        var listening = true;
+        var reports = new List<string>();
+        var starter = new BackendStarter(
+            new Uri("http://127.0.0.1:11434/"),
+            new OllamaLaunchRecordStore(_root),
+            reports.Add,
+            started.Add,
+            _ => listening);
+
+        starter.OnDiagnostic(Diagnostic(nameof(HttpRequestException)));
+        listening = false;
+        starter.OnDiagnostic(Diagnostic(nameof(HttpRequestException)));
+
+        Assert.Equal([Recorded], started);
+    }
+
+    /// <summary>
     /// Somebody who closed Ollama on purpose should not have it reappear on every retry, and a
     /// start that did not help will not help the second time either.
     /// </summary>
@@ -114,7 +170,8 @@ public sealed class BackendStarterTests : IDisposable
             new Uri("http://127.0.0.1:11434/"),
             new OllamaLaunchRecordStore(_root),
             reports.Add,
-            _ => throw new IOException("the file is in use"));
+            _ => throw new IOException("the file is in use"),
+            _ => false);
 
         var exception = Xunit.Record.Exception(
             () => starter.OnDiagnostic(Diagnostic(nameof(HttpRequestException))));
@@ -125,10 +182,17 @@ public sealed class BackendStarterTests : IDisposable
             line => line.Contains("could not be started", StringComparison.Ordinal));
     }
 
+    /// <param name="listening">
+    /// Whether anything answers at the endpoint. Injected in every test rather than defaulted,
+    /// because the default probe opens a socket: on the machine this product is built for,
+    /// 127.0.0.1:11434 usually has a real Ollama behind it, and a test that consulted it would
+    /// pass or fail by what happened to be running.
+    /// </param>
     private BackendStarter Starter(
         string endpoint,
         List<string> started,
-        out List<string> reports)
+        out List<string> reports,
+        bool listening = false)
     {
         var lines = new List<string>();
         reports = lines;
@@ -136,7 +200,8 @@ public sealed class BackendStarterTests : IDisposable
             new Uri(endpoint),
             new OllamaLaunchRecordStore(_root),
             lines.Add,
-            started.Add);
+            started.Add,
+            _ => listening);
     }
 
     private void RecordPath(string executablePath) =>
