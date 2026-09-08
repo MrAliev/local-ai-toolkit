@@ -28,7 +28,9 @@ public sealed class ModelResidencyPolicyTests : IDisposable
         var policy = new ModelResidencyPolicyStore(_root).Read();
 
         Assert.Equal(ModelResidencyPolicy.RequireFullVram, policy.ModelResidency);
-        Assert.Equal(0, policy.IdleModelKeepAliveSeconds);
+        Assert.Equal(
+            BrokerPolicyDefaults.IdleModelKeepAliveSeconds,
+            policy.IdleModelKeepAliveSeconds);
     }
 
     [Fact]
@@ -77,8 +79,34 @@ public sealed class ModelResidencyPolicyTests : IDisposable
         Assert.Equal(45, store.Read().IdleModelKeepAliveSeconds);
     }
 
+    /// <summary>
+    /// Ten seconds, and the number is the point rather than a preference.
+    ///
+    /// Zero turned every gap between two pieces of work into a full model load. An index build
+    /// posts one batch while the previous one is still being worked on, so the queue is empty
+    /// only for the instant between them — and at zero that instant is enough for the idle sweep
+    /// to unload eight gigabytes the next batch immediately loads again. Measured on the machine
+    /// this was found on: fifty-seven embedding batches, fifty-seven unloads, and a median
+    /// request of ten seconds with two to four of them spent loading the model inside it.
+    ///
+    /// It does not delay a model switch, which is the thing zero was protecting. Work for another
+    /// model unloads the resident one on the execution path, in
+    /// <c>ModelRuntime.EnsureReadyAsync</c>, before its own preflight; the idle sweep only runs
+    /// when nothing is queued at all.
+    /// </summary>
     [Fact]
-    public void Existing_policy_without_idle_keep_alive_uses_immediate_unload()
+    public void An_installation_that_configured_nothing_holds_the_model_for_ten_seconds()
+    {
+        Assert.Equal(10, BrokerPolicy.Default.IdleModelKeepAliveSeconds);
+    }
+
+    /// <summary>
+    /// A policy file written before the field existed is an installation that never chose, so it
+    /// gets the same hold a fresh one gets. The absence of the field used to mean zero, which is
+    /// the one value nobody would pick on purpose.
+    /// </summary>
+    [Fact]
+    public void Existing_policy_without_idle_keep_alive_holds_the_model_for_ten_seconds()
     {
         File.WriteAllText(
             Path.Combine(_root, BrokerPolicy.FileName),
@@ -86,7 +114,7 @@ public sealed class ModelResidencyPolicyTests : IDisposable
 
         var policy = new ModelResidencyPolicyStore(_root).Read();
 
-        Assert.Equal(0, policy.IdleModelKeepAliveSeconds);
+        Assert.Equal(10, policy.IdleModelKeepAliveSeconds);
     }
 
     /// <summary>

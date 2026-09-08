@@ -277,7 +277,7 @@
   AllowCpu             Models may run entirely on the CPU. Works without a
                        usable adapter; substantially slower.
   Idle keep-alive      Seconds to keep an idle model loaded. Zero unloads it
-                       immediately and is the default.
+                       immediately; 10 by default.
   Update check         Whether this installation may ask GitHub if a newer
                        release exists. Off by default; nothing is ever
                        downloaded or installed without you asking.
