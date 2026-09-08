@@ -22,6 +22,10 @@ public sealed class EveryEntryPointDeclaresItsEncodingTests
     [InlineData("CodeSearch.Mcp")]
     [InlineData("LocalLm.Mcp")]
     [InlineData("LocalAi.ReleaseSigner")]
+    // The one a person actually types, and the one this list forgot. It relays a child's raw
+    // UTF-8 bytes to its own standard output without ever telling the console what they are, so
+    // every message past ASCII arrived mangled while the command itself succeeded.
+    [InlineData("LocalAi.Launcher")]
     public void The_entry_point_asks_for_Utf8(string project)
     {
         var path = Path.Combine(RepositoryRoot(), "src", project, "Program.cs");
