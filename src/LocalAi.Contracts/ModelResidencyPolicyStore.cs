@@ -3,15 +3,49 @@ using System.Text.Json.Serialization;
 
 namespace LocalAi.Contracts;
 
+/// <summary>
+/// The values a policy takes when nobody chose one. Its own type because a record's positional
+/// parameter cannot default to a constant declared in that record's body, and the alternative —
+/// the number written once in the parameter list and once in <see cref="BrokerPolicy.Default"/> —
+/// is two places to change and one to forget.
+/// </summary>
+public static class BrokerPolicyDefaults
+{
+    /// <summary>
+    /// How long a model nothing is asking for stays loaded.
+    ///
+    /// It used to be zero, and zero is the one value that makes the common case pay the most.
+    /// Work arrives in a run rather than one piece at a time: an index build posts its next
+    /// batch while the previous one is still being worked on, so the queue is empty only for the
+    /// instant between two batches — and at zero that instant is enough for the idle sweep to
+    /// unload eight gigabytes the next batch immediately loads again. Measured where this was
+    /// found: fifty-seven embedding batches, fifty-seven unloads, and a median request of ten
+    /// seconds with two to four of them spent loading the model inside it.
+    ///
+    /// Ten seconds is chosen to cover that gap and little else. It is not the answer to "how
+    /// long is a model worth holding" in general, which is what a person setting this deliberately
+    /// is answering; it is the answer to "long enough that consecutive work does not reload it".
+    ///
+    /// It does not delay a model switch, which is what zero was protecting. Work for another
+    /// model unloads the resident one on the execution path, in
+    /// <c>ModelRuntime.EnsureReadyAsync</c>, before its own preflight — proved by
+    /// <c>ModelRuntimeTests.Ensure_ready_unloads_other_managed_models_before_preflight</c>. The
+    /// idle sweep runs only when nothing is queued at all.
+    /// </summary>
+    public const int IdleModelKeepAliveSeconds = 10;
+}
+
 public sealed record BrokerPolicy(
     int SchemaVersion,
     ModelResidencyPolicy ModelResidency,
-    int IdleModelKeepAliveSeconds = 0)
+    int IdleModelKeepAliveSeconds = BrokerPolicyDefaults.IdleModelKeepAliveSeconds)
 {
     public const string FileName = "policy.json";
 
-    public static BrokerPolicy Default { get; } =
-        new(1, ModelResidencyPolicy.RequireFullVram, IdleModelKeepAliveSeconds: 0);
+    public static BrokerPolicy Default { get; } = new(
+        1,
+        ModelResidencyPolicy.RequireFullVram,
+        BrokerPolicyDefaults.IdleModelKeepAliveSeconds);
 }
 
 /// <summary>
