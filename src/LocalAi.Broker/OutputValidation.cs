@@ -14,11 +14,25 @@ namespace LocalAi.Broker;
 /// back to another model — and the broker's own composition root passed no check at all, so the
 /// default stood and everything passed.
 ///
-/// This is the missing half. It dispatches on the field the catalogue already carries, so a route
-/// naming a check gets it and a route naming <c>None</c> is explicit about wanting none.
+/// This is where those checks live. It dispatches on the field the catalogue already carries, so
+/// a route naming a check gets it and a route naming <c>None</c> is explicit about wanting none.
 /// </summary>
 public static partial class OutputValidation
 {
+    /// <summary>
+    /// How many lines an answer needs before its variety says anything about it. Below this a
+    /// legitimate reading can be one word repeated -- a label, an error toast, a column of
+    /// identical cells -- and nothing tells that apart from a loop.
+    /// </summary>
+    private const int LinesBeforeVarietyMeansAnything = 40;
+
+    /// <summary>
+    /// The share of distinct lines below which an answer is a loop rather than a transcript,
+    /// written as a divisor: one line in twenty. The measured failure was two distinct lines in
+    /// 727.
+    /// </summary>
+    private const int DegenerateVarietyDivisor = 20;
+
     public static ModelValidationResult For(
         ModelRoutingCatalog catalog,
         LocalJobRequest request,
@@ -33,13 +47,13 @@ public static partial class OutputValidation
         return validator switch
         {
             LocalOutputValidator.CodeReferences => CodeReferences(request, result),
+            LocalOutputValidator.OcrCompleteness => OcrCompleteness(result),
 
             // Named rather than folded into a default, so a validator added to the enum without a
             // check here is a compile-time hole rather than a silent pass. The code carries the
             // name, so a receipt says which check was asked for even when none was performed.
             LocalOutputValidator.None or
             LocalOutputValidator.TranslationStructure or
-            LocalOutputValidator.OcrCompleteness or
             LocalOutputValidator.StructuredOutput =>
                 ModelValidationResult.Pass(validator.ToString()),
             _ => throw new ArgumentOutOfRangeException(
@@ -100,6 +114,51 @@ public static partial class OutputValidation
         }
 
         return ModelValidationResult.Pass("code_references");
+    }
+
+    /// <summary>
+    /// Whether an OCR answer stopped when the image ran out.
+    ///
+    /// Measured on this machine on 2026-09-09: a 1200x300 image carrying the single line
+    /// "LOCAL AI OCR 2048" produced that line 727 times from <c>glm-ocr:bf16</c>, over 22 s, and
+    /// once from <c>qwen3-vl:8b-instruct-q8_0</c>. On a dense 1920x1080 console screenshot the
+    /// same model transcribed all 33 lines exactly and faster than qwen3-vl, so the defect is a
+    /// property of sparse input rather than of the model or the prompt, and neither a model swap
+    /// nor a reworded prompt removes it.
+    ///
+    /// Repetition on its own is not the signal: a real transcript repeats a table column, a log
+    /// line, a status token. The absence of anything else is. So the check reads variety, not
+    /// repeats, and it declines to judge an answer too short for variety to mean anything.
+    ///
+    /// Both numbers are calibrated between the two measured points rather than derived from a
+    /// corpus, and deliberately far from each of them. A false failure costs a fallback run
+    /// against a model that was going to be second choice anyway; a false pass hands over an
+    /// answer that is 96 percent noise.
+    /// </summary>
+    private static ModelValidationResult OcrCompleteness(BrokerExecutionResult result)
+    {
+        if (Answer(result) is not { Length: > 0 } answer)
+        {
+            return ModelValidationResult.Pass("ocr_completeness_no_answer");
+        }
+
+        var lines = answer
+            .Split('\n')
+            .Select(line => line.Trim())
+            .Where(line => line.Length > 0)
+            .ToArray();
+
+        if (lines.Length < LinesBeforeVarietyMeansAnything)
+        {
+            return ModelValidationResult.Pass("ocr_completeness_too_short_to_judge");
+        }
+
+        var distinct = lines.Distinct(StringComparer.Ordinal).Count();
+        return distinct * DegenerateVarietyDivisor <= lines.Length
+            ? ModelValidationResult.Fail(
+                ModelExecutionOutcome.StructuralFailure,
+                "ocr_repeats_without_stopping")
+            : ModelValidationResult.Pass("ocr_completeness");
     }
 
     /// <summary>
