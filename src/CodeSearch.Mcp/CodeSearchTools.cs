@@ -821,9 +821,12 @@ public static class CodeSearchTools
                 : string.Empty;
         }
 
-        // Chunk counters belong to embedding. A semantic build or a generation publish counts
-        // nothing, and printing the previous phase's finished tally next to it is what made a
-        // build that still had minutes to run read as one that had finished and stalled.
+        // Chunk counters belong to embedding. A semantic build or a generation publish counts no
+        // chunks, and printing the previous phase's finished tally next to it is what made a
+        // build that still had minutes to run read as one that had finished and stalled. What
+        // goes there instead is the step: what the phase is doing, with the step's own figures
+        // where it has any. Rate and ETA stay behind this same guard — projects per second is not
+        // a figure anyone can act on, and an estimate built from it would be invented.
         var counts = progress.Phase.CountsChunks();
         return Rows(
             "Sync phase: " + (sighting.BuildHoldsTheGate || sighting.Ended
@@ -839,7 +842,7 @@ public static class CodeSearchTools
                         progress.ProcessedChunks,
                         progress.TotalChunks,
                         Math.Max(0, progress.TotalChunks - progress.ProcessedChunks))
-                    : CodeSearchText.ProgressNotCounted),
+                    : ProgressStepText.Of(progress)),
             counts && !sighting.Ended
                 ? "Rate:       " + CodeSearchText.RateChunks(
                     progress.ChunksPerSecond.ToString("F1", CultureInfo.InvariantCulture))
