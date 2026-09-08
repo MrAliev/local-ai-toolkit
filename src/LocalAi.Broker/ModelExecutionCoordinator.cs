@@ -34,7 +34,8 @@ public sealed class ModelExecutionCoordinator
     private readonly ExperimentStateStore _experiments;
     private readonly ModelTelemetryStore _telemetry;
     private readonly Func<LocalJobRequest, CancellationToken, Task<BrokerExecutionResult>> _execute;
-    private readonly Func<ModelSelection, BrokerExecutionResult, ModelValidationResult> _validate;
+    private readonly Func<LocalJobRequest, ModelSelection, BrokerExecutionResult,
+        ModelValidationResult> _validate;
     private readonly TimeProvider _timeProvider;
     private readonly Action<string>? _diagnostic;
     private ModelResidencyProof? _warmProof;
@@ -45,7 +46,8 @@ public sealed class ModelExecutionCoordinator
         ExperimentStateStore experiments,
         ModelTelemetryStore telemetry,
         Func<LocalJobRequest, CancellationToken, Task<BrokerExecutionResult>> execute,
-        Func<ModelSelection, BrokerExecutionResult, ModelValidationResult>? validate = null,
+        Func<LocalJobRequest, ModelSelection, BrokerExecutionResult, ModelValidationResult>?
+            validate = null,
         TimeProvider? timeProvider = null,
         Action<string>? diagnostic = null)
     {
@@ -54,7 +56,9 @@ public sealed class ModelExecutionCoordinator
         _experiments = experiments ?? throw new ArgumentNullException(nameof(experiments));
         _telemetry = telemetry ?? throw new ArgumentNullException(nameof(telemetry));
         _execute = execute ?? throw new ArgumentNullException(nameof(execute));
-        _validate = validate ?? ((_, _) => ModelValidationResult.Pass("none"));
+        // The request is passed because a check has to see what was asked, not only what came
+        // back: the material a code reference is checked against travels in the prompt.
+        _validate = validate ?? ((_, _, _) => ModelValidationResult.Pass("none"));
         _timeProvider = timeProvider ?? TimeProvider.System;
         _diagnostic = diagnostic;
     }
@@ -300,7 +304,7 @@ public sealed class ModelExecutionCoordinator
         }
 
         var executionCompleted = _timeProvider.GetUtcNow();
-        var validation = _validate(selection, raw);
+        var validation = _validate(original, selection, raw);
         var (shortfall, residentPercent) = _warmProof is null
             ? (ResidencyShortfall.None, (int?)null)
             : _warmProof.Shortfall();

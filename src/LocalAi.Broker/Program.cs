@@ -78,6 +78,10 @@ internal static class BrokerProgram
                 experiments,
                 telemetry,
                 transport.ExecuteAsync,
+                // The catalogue has named a check on every route since the routing table existed,
+                // and until now nothing read the field. This is what reads it.
+                (request, selection, result) =>
+                    OutputValidation.For(catalog, request, selection, result),
                 diagnostic: message => Console.Error.WriteLine("LocalAi broker: " + message));
             var control = new ModelControlService(
                 catalog,
