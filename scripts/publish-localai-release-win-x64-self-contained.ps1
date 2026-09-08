@@ -87,6 +87,22 @@ if ([string]::IsNullOrWhiteSpace($VersionDirectory)) {
 }
 
 dotnet restore LocalAi.slnx -r $Runtime
+# Checked, because every publish below runs with --no-restore and a restore that did not finish
+# turns into a different error two steps later. A run of this script met it twice: the restore
+# reported `MSB4166` from three child nodes and `Восстановление отменено`, the script carried on,
+# and the first project failed with NETSDK1047 — "project.assets.json does not contain a target
+# for net10.0/win-x64", which sends the reader to TargetFrameworks and the runtime identifier,
+# neither of which was wrong. The second run hung in the same place for nine minutes instead.
+#
+# Both times the cause was the NuGet audit reaching for api.nuget.org, which some machines cannot
+# reach at all; `$env:NuGetAudit = "false"` is the lever, and it is deliberately not set here. The
+# audit is what reports a vulnerable package, and a release script is the last place to switch that
+# off for everyone because one machine has no route to it.
+if ($LASTEXITCODE -ne 0) {
+    throw "Restoring LocalAi.slnx for $Runtime failed with code $LASTEXITCODE. Every publish " +
+        "below runs with --no-restore, so nothing after this can succeed. If the failure is the " +
+        "NuGet audit reaching api.nuget.org, set `$env:NuGetAudit = 'false' and run again."
+}
 
 # The signer is built once, here, and every later invocation of it runs with --no-build.
 #
