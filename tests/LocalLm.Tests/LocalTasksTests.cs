@@ -1,12 +1,71 @@
 using System.Buffers.Binary;
 using LocalAi.Contracts;
 using LocalAi.Broker.Client;
+using LocalAi.Tests.Shared;
 using LocalLm.Core;
 
 namespace LocalLm.Tests;
 
 public sealed class LocalTasksTests
 {
+    /// <summary>
+    /// A model answers in the language of the material it was given, so a Russian reader asking
+    /// about an English build log got English back — their own machine's language never entered
+    /// into it. The language the product already prints its own strings in is the one the answer
+    /// should come in, and naming it in the prompt is the whole mechanism: measured on this
+    /// machine, the model then answers in it and still leaves paths, line numbers and error codes
+    /// exactly as they were.
+    ///
+    /// The instruction is English whichever reader it serves, because it is addressed to the
+    /// model rather than to them.
+    /// </summary>
+    [Theory]
+    [InlineData("ru", "Russian")]
+    [InlineData("en", "English")]
+    public async Task A_triage_asks_for_the_answer_in_the_readers_language(
+        string reader,
+        string named)
+    {
+        using var reading = TestCulture.Reading(reader);
+        var client = new FakeLocalModelClient();
+        var tasks = new LocalTasks(client);
+
+        await tasks.TriageLogAsync(
+            path: null,
+            text: "fatal DIRECT_TEXT_42",
+            question: null,
+            model: null,
+            TestContext.Current.CancellationToken);
+
+        Assert.All(
+            client.Calls,
+            call => Assert.Contains(named, call.System!, StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// The same for the ask surface, which has its own system prompt and would otherwise have
+    /// been fixed in one place and forgotten in the other.
+    /// </summary>
+    [Theory]
+    [InlineData("ru", "Russian")]
+    [InlineData("en", "English")]
+    public async Task An_ask_asks_for_the_answer_in_the_readers_language(
+        string reader,
+        string named)
+    {
+        using var reading = TestCulture.Reading(reader);
+        var client = new FakeLocalModelClient();
+        var tasks = new LocalTasks(client);
+
+        await tasks.AskAsync(
+            "list the TODOs",
+            [],
+            model: null,
+            TestContext.Current.CancellationToken);
+
+        Assert.Contains(named, Assert.Single(client.Calls).System!, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task Log_triage_uses_fixed_profile_and_the_largest_full_vram_context()
     {

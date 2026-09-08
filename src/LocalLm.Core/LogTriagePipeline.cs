@@ -18,12 +18,21 @@ internal sealed class LogTriagePipeline(
 {
     private const string DefaultQuestion =
         "What failed, and why? Give the exact file and line if the log names one.";
-    private const string SystemPrompt =
+    private const string TriageInstruction =
         "You are triaging a build or test log for an engineer who will not read it themselves. " +
         "Report only failures the supplied material actually contains - never invent a failure " +
         "that is not there, and say plainly if nothing failed. Preserve exact file paths, line " +
         "numbers, timestamps, identifiers and error codes, and preserve the original language of " +
         "quoted messages.";
+
+    /// <summary>
+    /// No longer a constant, because the last sentence names the reader's language and that is
+    /// known only at run time. The budget below measures this rather than the fixed half: a
+    /// prompt allowance computed from a shorter string than the one actually sent is how a
+    /// context limit is discovered by overrunning it.
+    /// </summary>
+    private static string SystemPrompt =>
+        TriageInstruction + " " + AnswerLanguage.Instruction;
 
     public async Task<LocalResult> RunAsync(
         string? path,

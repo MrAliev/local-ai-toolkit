@@ -602,7 +602,8 @@ public sealed class LocalTasks
             requestBody,
             "You are doing mechanical work for an engineer who will not read these files themselves. " +
             "Answer strictly from the supplied content, quote exact identifiers and line content, and " +
-            "say explicitly when the files do not contain the answer rather than filling the gap.",
+            "say explicitly when the files do not contain the answer rather than filling the gap. " +
+            AnswerLanguage.Instruction,
             null,
             new LocalWorkloadMetadata(
                 requestBody.Length,
