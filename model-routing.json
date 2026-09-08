@@ -132,25 +132,9 @@
       "DefaultDuration": "Short"
     },
     {
-      "Profile": "CodeRerank",
-      "Mode": "Model",
-      "Candidates": [ "qwen2.5-coder:14b", "qwen3.5:9b" ],
-      "Fallbacks": [ "qwen3.5:9b", "qwen2.5-coder:14b" ],
-      "Validator": "StructuredOutput",
-      "DefaultDuration": "Short"
-    },
-    {
       "Profile": "CodeAnalysis",
       "Mode": "Model",
       "Candidates": [ "gpt-oss:20b", "qwen2.5-coder:14b" ],
-      "Fallbacks": [ "qwen3.5:9b" ],
-      "Validator": "CodeReferences",
-      "DefaultDuration": "Medium"
-    },
-    {
-      "Profile": "CodeEditing",
-      "Mode": "Model",
-      "Candidates": [ "qwen2.5-coder:14b" ],
       "Fallbacks": [ "qwen3.5:9b" ],
       "Validator": "CodeReferences",
       "DefaultDuration": "Medium"

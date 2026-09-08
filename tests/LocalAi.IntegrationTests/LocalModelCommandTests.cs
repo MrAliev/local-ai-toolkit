@@ -134,6 +134,30 @@ public sealed class LocalModelCommandTests
         Assert.Equal("language_value_missing", refusal!.Code, StringComparer.Ordinal);
     }
 
+    /// <summary>
+    /// Two profiles carried a full route — candidates, fallbacks, a validator, a duration class —
+    /// for work the product never asks for. find_references answered with their own declarations
+    /// and nothing else, against eleven for LogTriage, so the tool was working and the profiles
+    /// were not. CodeRerank in particular named a job that does not exist: reranking search hits
+    /// with a model would have to call RoutedChatAsync with it, and no such call was ever written.
+    ///
+    /// They were reachable only by typing the name, and what ran then was the ask prompt over a
+    /// task description the caller had invented on the spot. A name that answers is worse than no
+    /// name at all.
+    /// </summary>
+    [Theory]
+    [InlineData("CodeRerank")]
+    [InlineData("CodeEditing")]
+    public void A_profile_the_product_never_asks_for_is_not_a_profile(string profile)
+    {
+        Assert.False(AskCommand.TryParse(
+            ["summarise", "--profile", profile],
+            out _,
+            out var refusal));
+
+        Assert.Equal("profile_unknown", refusal!.Code, StringComparer.Ordinal);
+    }
+
     /// <summary>A word that is not a profile at all is a different mistake from a profile that
     /// exists but is for images.</summary>
     [Fact]
