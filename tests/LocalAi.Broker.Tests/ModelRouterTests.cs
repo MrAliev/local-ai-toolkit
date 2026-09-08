@@ -257,6 +257,37 @@ public sealed class ModelRouterTests
     }
 
     /// <summary>
+    /// Document reading goes to the model built for it, and goes there as an experiment rather
+    /// than a promotion. glm-ocr is 0.9B against qwen3-vl's 8B and claims the document benchmarks
+    /// outright, but none of that was measured on this machine's own material, so the experiment
+    /// machinery is what decides whether it stays: ten attempts, then a pause, and qwen3-vl waiting
+    /// underneath the whole time.
+    ///
+    /// The workload is a rendered page rather than a screenshot — A4 at 300 dpi is about 8.7
+    /// million pixels — because that is the size the profile has to accept for the model to be
+    /// worth having.
+    /// </summary>
+    [Fact]
+    public void Document_reading_is_offered_to_the_specialist_first()
+    {
+        var page = new LocalWorkloadMetadata(
+            10,
+            100,
+            0,
+            1,
+            8_700_000,
+            LocalDurationClass.Medium);
+
+        var selection = new ModelRouter(Catalog).Select(
+            Request(LocalTaskProfile.Ocr, workload: page),
+            Availability([.. Catalog.Models.Select(model => model.Tag)]),
+            ExperimentSnapshot.Empty);
+
+        Assert.Equal("glm-ocr:bf16", selection!.Model, StringComparer.Ordinal);
+        Assert.True(selection.IsExperimentalAttempt);
+    }
+
+    /// <summary>
     /// Which model each of these four profiles reaches on a card holding none of them yet.
     /// Every one was measured against a fixture with a known answer: qwen2.5-coder declined four
     /// judgement tasks that gpt-oss answered correctly, qwen3.5 called a service class a

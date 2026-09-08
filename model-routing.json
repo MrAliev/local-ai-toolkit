@@ -62,6 +62,16 @@
       "ContextTokens": [ 2048, 4096, 8192, 16384, 32768, 65536, 131072 ],
       "SupportsImages": true,
       "MaxImagePixels": 16777216
+    },
+    {
+      "Tag": "glm-ocr:bf16",
+      "Source": "ollama",
+      "Lifecycle": "Experimental",
+      "InstallPolicy": "Recommended",
+      "Capabilities": [ "Text", "Vision", "Ocr" ],
+      "ContextTokens": [ 2048, 4096, 8192, 16384, 32768, 65536, 131072 ],
+      "SupportsImages": true,
+      "MaxImagePixels": 16777216
     }
   ],
   "Routes": [
@@ -92,8 +102,8 @@
     {
       "Profile": "Ocr",
       "Mode": "Model",
-      "Candidates": [ "qwen3-vl:8b-instruct-q8_0" ],
-      "Fallbacks": [ "qwen3.5:9b" ],
+      "Candidates": [ "glm-ocr:bf16", "qwen3-vl:8b-instruct-q8_0" ],
+      "Fallbacks": [ "qwen3-vl:8b-instruct-q8_0", "qwen3.5:9b" ],
       "Validator": "OcrCompleteness",
       "DefaultDuration": "Medium"
     },
@@ -202,5 +212,5 @@
       "DefaultDuration": "Long"
     }
   ],
-  "MaintenanceAllowlist": [ "translategemma:12b" ]
+  "MaintenanceAllowlist": [ "translategemma:12b", "glm-ocr:bf16" ]
 }
