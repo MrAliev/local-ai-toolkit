@@ -111,34 +111,6 @@ public static class RoslynSolutionLoader
                 selected,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
-    internal static async Task<T> WhileTheStepRunsAsync<T>(
-        Task<T> step,
-        Action<string>? diagnostic,
-        TimeProvider time,
-        Func<TimeSpan, CancellationToken, Task> wait,
-        CancellationToken cancellationToken)
-    {
-        var started = time.GetTimestamp();
-        while (true)
-        {
-            // The delay is abandoned rather than awaited once the step is done, so a step that
-            // ends just after a tick does not wait out the rest of the interval.
-            var tick = wait(IndexBuilder.TargetBatchDuration, cancellationToken);
-            await Task.WhenAny(step, tick).ConfigureAwait(false);
-            // The step, not whichever task WhenAny happened to name: when both are complete it
-            // returns either, and taking the tick there would announce a step that has finished.
-            if (step.IsCompleted)
-            {
-                return await step.ConfigureAwait(false);
-            }
-
-            diagnostic?.Invoke(IndexText.StepStillRunning(
-                time.GetElapsedTime(started).TotalSeconds.ToString(
-                    "F1",
-                    CultureInfo.InvariantCulture)));
-        }
-    }
-
     /// <summary>
     /// One decimal, invariant, as every other duration this product prints — these lines are
     /// quoted verbatim and parsed, so no comma or group separator may appear in any language.
@@ -208,7 +180,7 @@ public static class RoslynSolutionLoader
         diagnostic?.Invoke(IndexText.RoslynLoading(selected, (int)RestoreTimeout.TotalMinutes));
         step?.Invoke(IndexBuildStep.RestoringDependencies, 0, 0);
         var restoring = Stopwatch.StartNew();
-        var restored = await WhileTheStepRunsAsync(
+        var restored = await QuietStep.WhileItRunsAsync(
             RestoreProjectDependenciesAsync(selected, diagnostic, cancellationToken),
             diagnostic,
             time,
@@ -261,7 +233,7 @@ public static class RoslynSolutionLoader
             {
                 step?.Invoke(IndexBuildStep.OpeningProjects, 0, 0);
                 var opening = Stopwatch.StartNew();
-                var solution = await WhileTheStepRunsAsync(
+                var solution = await QuietStep.WhileItRunsAsync(
                     OpenAsync(workspace, selected, cancellationToken),
                     diagnostic,
                     time,
