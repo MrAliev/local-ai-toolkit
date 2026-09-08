@@ -14,6 +14,9 @@ public sealed record PruneReport(
     IReadOnlyList<string> Lines,
     long BytesReclaimed);
 
+/// <summary>What the arguments asked for: a run, a rehearsal of one, or the usage block.</summary>
+public sealed record PruneRequest(bool DryRun, bool HelpWanted);
+
 /// <summary>
 /// Applies the retention bounds on demand, across everything the runtime root accumulates.
 ///
@@ -28,6 +31,51 @@ public sealed record PruneReport(
 /// </summary>
 public static class PruneCommand
 {
+    /// <summary>
+    /// Reads the arguments of <c>prune</c>, refusing anything it does not understand.
+    ///
+    /// The rehearsal is chosen by one exact string, and the dispatch used to keep that one and
+    /// discard everything else, so every near miss fell off the rail in silence: <c>--dryrun</c>,
+    /// <c>-n</c> and <c>--help</c> each removed generations while their reader believed they had
+    /// asked for a preview or for usage.
+    ///
+    /// Help is answered before any other argument is read, so <c>--dry-run --help</c> prints usage
+    /// rather than rehearsing. A repeated <c>--dry-run</c> is not ambiguous and is not refused —
+    /// unlike a second <c>--root</c> for <c>doctor</c>, which names a different repository.
+    /// </summary>
+    public static bool TryParseArguments(
+        IReadOnlyList<string> arguments,
+        out PruneRequest? request,
+        out CommandRefusal? refusal)
+    {
+        ArgumentNullException.ThrowIfNull(arguments);
+        request = null;
+        refusal = null;
+        if (arguments.Any(argument => argument is "--help" or "-h" or "/?"))
+        {
+            request = new PruneRequest(DryRun: false, HelpWanted: true);
+            return true;
+        }
+
+        var dryRun = false;
+        foreach (var argument in arguments)
+        {
+            if (argument == "--dry-run")
+            {
+                dryRun = true;
+                continue;
+            }
+
+            refusal = new CommandRefusal(
+                "argument_unknown",
+                CliText.PruneUnknownArgument(argument, CliUsage.Prune));
+            return false;
+        }
+
+        request = new PruneRequest(dryRun, HelpWanted: false);
+        return true;
+    }
+
     public static PruneReport Execute(
         string runtimeRoot,
         bool dryRun,

@@ -388,6 +388,31 @@
   <data name="PruneTelemetry" xml:space="preserve">
     <value>telemetry: записей {0}, {1} МБ</value>
   </data>
+  <data name="PruneUnknownArgument" xml:space="preserve">
+    <value>Команда localai prune не понимает '{0}'. Ничего не удалено. Usage: {1}</value>
+    <comment>Not CommandUnknownArgument: this is the one command in this binary whose ignored argument deleted data. `localai prune --help` ran a real prune, so the refusal says what did not happen as well as what was not understood. 0 is the argument as it was typed, 1 is CliUsage.Prune, which carries the correct spelling of --dry-run. "Ничего не удалено." is taken word for word from PruneWouldReclaim so the two situations sound the same on one machine.</comment>
+  </data>
+  <data name="PruneUsage" xml:space="preserve">
+    <value>Usage: localai prune [--dry-run]
+
+  Применяет границы хранения за один проход: устаревшие поколения индекса и
+  наборы overlay под ними, overlay для коммитов и worktree, на которых уже
+  никто не находится, запись репозитория целиком, если его checkout больше
+  не существует или первая индексация так и не завершилась, завершённые
+  задания брокера и сохранённые с ними ответы, записи карантина,
+  телеметрию, вышедшую за срок хранения, установленные версии сверх {0}
+  сохраняемых и резервные копии установщика.
+
+  Остаётся независимо от границ: поколение, по которому репозиторий отвечает
+  сейчас; overlay, на котором сейчас находится каждый существующий worktree;
+  работающая версия; любое задание, ответ по которому клиент ещё может
+  забрать. На этой установке поколений на репозиторий хранится не меньше {1}.
+
+  --dry-run  Показать, что было бы удалено, и не удалять ничего.
+
+Всё перечисленное находится в {2}.</value>
+    <comment>Usage: and the option name are byte-identical in both languages. Both counts are holes fed from the retention policy this installation reads, so the block cannot name a bound the code does not apply. The list is deliberately complete: shortening it would understate what a run removes.</comment>
+  </data>
   <data name="PruneVersions" xml:space="preserve">
     <value>versions: {0}, {1} МБ</value>
     <comment>The field name supplies the noun; repeating it stutters in English.</comment>
