@@ -4,6 +4,12 @@ using System.Text.RegularExpressions;
 namespace LocalAi.Cli;
 
 /// <summary>
+/// One word of a command, and whether it arrived inside quotes. The flag is the difference between
+/// a path and a sentence mentioning one.
+/// </summary>
+internal readonly record struct CommandWord(string Text, bool Quoted);
+
+/// <summary>
 /// Reads a command line far enough to answer one question: which programs does this line run?
 ///
 /// It replaces a regular expression that looked for a search tool at the start of a command, after
@@ -78,21 +84,41 @@ internal static class CommandLineScan
     public static IReadOnlyList<string> ProgramWords(string script)
     {
         var found = new List<string>();
-        Collect(script, 0, found);
+        Collect(script, 0, found, null);
         return found;
     }
 
-    private static void Collect(string script, int depth, List<string> found)
+    /// <summary>
+    /// Every command this line runs, as its own words, read the same way <see
+    /// cref="ProgramWords"/> reads them — quotes decide what is text, separators decide where a
+    /// command starts, and a shell handed a script is followed into it.
+    ///
+    /// It exists because <see cref="ProgramWords"/> answers "which programs" and drops everything
+    /// else on the floor. A caller deciding whether a read is a whole log or twenty lines of one
+    /// needs what the program was pointed at and how it was bounded, and neither is a program name.
+    /// </summary>
+    public static IReadOnlyList<IReadOnlyList<CommandWord>> Commands(string script)
+    {
+        var commands = new List<IReadOnlyList<CommandWord>>();
+        Collect(script, 0, [], commands);
+        return commands;
+    }
+
+    private static void Collect(
+        string script,
+        int depth,
+        List<string> found,
+        List<IReadOnlyList<CommandWord>>? commands)
     {
         if (depth > MaximumDepth || string.IsNullOrWhiteSpace(script))
         {
             return;
         }
 
-        var body = StripHeredocs(script, depth, found);
+        var body = StripHeredocs(script, depth, found, commands);
         foreach (var command in SplitCommands(body))
         {
-            CollectFromOneCommand(command, depth, found);
+            CollectFromOneCommand(command, depth, found, commands);
         }
     }
 
@@ -104,7 +130,11 @@ internal static class CommandLineScan
     /// interpreter is what a heredoc into a shell is for. So which it is depends on what is being
     /// fed, and that is the program of the command the heredoc opens on.
     /// </summary>
-    private static string StripHeredocs(string script, int depth, List<string> found)
+    private static string StripHeredocs(
+        string script,
+        int depth,
+        List<string> found,
+        List<IReadOnlyList<CommandWord>>? commands)
     {
         return Heredoc.Replace(script, match =>
         {
@@ -112,19 +142,32 @@ internal static class CommandLineScan
             var start = owner.LastIndexOfAny(['\n', ';', '|', '&']);
             var opening = start < 0 ? owner : owner[(start + 1)..];
             var programs = new List<string>();
-            CollectFromOneCommand(opening, depth, programs);
+            // Nothing is recorded for the opening command here: the line it belongs to is walked
+            // again below, and recording it twice would show a caller two commands where the
+            // shell runs one.
+            CollectFromOneCommand(opening, depth, programs, null);
             if (programs.Any(Interpreters.Contains))
             {
-                Collect(match.Groups["body"].Value, depth + 1, found);
+                Collect(match.Groups["body"].Value, depth + 1, found, commands);
             }
 
             return " ";
         });
     }
 
-    private static void CollectFromOneCommand(string command, int depth, List<string> found)
+    private static void CollectFromOneCommand(
+        string command,
+        int depth,
+        List<string> found,
+        List<IReadOnlyList<CommandWord>>? commands)
     {
         var tokens = Tokenize(command);
+        if (commands is not null && tokens.Count > 0)
+        {
+            commands.Add(tokens.Select(token => new CommandWord(token.Text, token.Quoted))
+                .ToArray());
+        }
+
         var expectingProgram = true;
         var interpreter = false;
         var scriptFollows = false;
@@ -139,7 +182,7 @@ internal static class CommandLineScan
             {
                 // The argument of `-c` is a script whether it was quoted or not, and it is the
                 // one place a quoted word is read as commands rather than as text.
-                Collect(text, depth + 1, found);
+                Collect(text, depth + 1, found, commands);
                 scriptFollows = false;
                 continue;
             }
@@ -150,7 +193,7 @@ internal static class CommandLineScan
                 // command written inside a string rather than a string containing brackets.
                 foreach (var nested in Substitutions(text))
                 {
-                    Collect(nested, depth + 1, found);
+                    Collect(nested, depth + 1, found, commands);
                 }
 
                 expectingProgram = false;
