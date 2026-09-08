@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Net.Sockets;
 using LocalAi.Contracts;
 
 namespace LocalAi.Broker;
@@ -62,7 +61,7 @@ public sealed class BackendStarter
         _records = records ?? throw new ArgumentNullException(nameof(records));
         _report = report ?? throw new ArgumentNullException(nameof(report));
         _start = start ?? StartDetached;
-        _isListening = isListening ?? AnythingListening;
+        _isListening = isListening ?? BackendEndpoint.AnythingListening;
     }
 
     /// <summary>
@@ -96,7 +95,7 @@ public sealed class BackendStarter
         {
             Volatile.Write(ref _attempted, 1);
             _report(
-                $"Ollama is not answering at {_endpoint}, which is not this machine, so it " +
+                $"Ollama is configured at {_endpoint}, which is not this machine, so it " +
                 "cannot be started from here.");
             return;
         }
@@ -117,9 +116,8 @@ public sealed class BackendStarter
             if (Interlocked.Exchange(ref _answeringReported, 1) == 0)
             {
                 _report(
-                    $"Ollama is answering at {_endpoint}, so this failure is not that it is " +
-                    "down, and nothing was started. A second server would bind the same port " +
-                    "on a different address and take the traffic from the first.");
+                    $"Something is already listening at {_endpoint}, so nothing was started. " +
+                    "The failure is recorded in diagnostics.jsonl, in the runtime directory.");
             }
 
             return;
@@ -149,31 +147,6 @@ public sealed class BackendStarter
             _report(
                 $"Ollama could not be started from {record.ExecutablePath}: " +
                 exception.Message);
-        }
-    }
-
-    /// <summary>
-    /// Opens a socket to the endpoint and closes it again.
-    ///
-    /// A connect rather than a request, because the question is only whether a server is there and
-    /// every HTTP answer already settles that — including the 404 this check was written for. The
-    /// deadline is short because on a loopback address both an answer and a refusal arrive at once;
-    /// it exists so a port that swallows connections cannot hold up the diagnostic path.
-    /// </summary>
-    private static bool AnythingListening(Uri endpoint)
-    {
-        try
-        {
-            using var client = new TcpClient();
-            return client.ConnectAsync(endpoint.Host, endpoint.Port)
-                       .Wait(TimeSpan.FromSeconds(1)) &&
-                   client.Connected;
-        }
-        catch (Exception exception) when (
-            exception is SocketException or ArgumentException or ObjectDisposedException or
-                AggregateException or InvalidOperationException)
-        {
-            return false;
         }
     }
 

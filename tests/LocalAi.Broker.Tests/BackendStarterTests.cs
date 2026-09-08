@@ -94,7 +94,9 @@ public sealed class BackendStarterTests : IDisposable
 
         Assert.Empty(started);
         Assert.False(starter.HasAttempted);
-        Assert.Contains(reports, line => line.Contains("is answering", StringComparison.Ordinal));
+        Assert.Contains(
+            reports,
+            line => line.Contains("already listening", StringComparison.Ordinal));
     }
 
     /// <summary>
