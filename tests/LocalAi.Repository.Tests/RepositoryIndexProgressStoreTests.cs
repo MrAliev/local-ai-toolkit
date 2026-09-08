@@ -49,6 +49,61 @@ public sealed class RepositoryIndexProgressStoreTests : IDisposable
         Assert.Throws<InvalidDataException>(() => store.Save(progress));
     }
 
+    /// <summary>
+    /// The step's counters are held to what the chunk pair beside them is held to, and for the
+    /// same reason: the pair is printed as a fraction, and `analysed 30/26 projects` is a sentence
+    /// no reader can do anything with. Refusing the write is what keeps a renderer from having to
+    /// defend itself against its own record.
+    /// </summary>
+    [Theory]
+    [InlineData(-1, 26)]
+    [InlineData(30, 26)]
+    [InlineData(0, -1)]
+    public void Save_rejects_invalid_step_counters(int done, int total)
+    {
+        var store = new RepositoryIndexProgressStore(FsPath.From(_root));
+        var progress = new RepositoryIndexProgress(
+            "repository",
+            RepositoryIndexProgressPhase.SemanticBase,
+            @"C:\repo",
+            0,
+            0,
+            0,
+            null,
+            DateTimeOffset.UtcNow,
+            Pause: null,
+            Step: IndexBuildStep.AnalysingProjects,
+            StepDone: done,
+            StepTotal: total);
+
+        Assert.Throws<InvalidDataException>(() => store.Save(progress));
+    }
+
+    /// <summary>
+    /// And a step that counts nothing is not a step with broken counters: most of them have no
+    /// figure at all, and zero of zero is how that is written.
+    /// </summary>
+    [Fact]
+    public void Save_round_trips_a_step_that_counts_nothing()
+    {
+        var store = new RepositoryIndexProgressStore(FsPath.From(_root));
+        var expected = new RepositoryIndexProgress(
+            "repository",
+            RepositoryIndexProgressPhase.SemanticBase,
+            @"C:\repo",
+            0,
+            0,
+            0,
+            null,
+            DateTimeOffset.UtcNow,
+            Pause: null,
+            Step: IndexBuildStep.RestoringDependencies);
+
+        store.Save(expected);
+
+        Assert.Equal(expected, store.Read());
+    }
+
     [Fact]
     public void Read_reports_zero_filled_progress_as_invalid_data()
     {

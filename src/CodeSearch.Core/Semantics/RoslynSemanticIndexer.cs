@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using CodeSearch.Core.Resources;
+using LocalAi.Contracts;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
@@ -44,11 +45,17 @@ public sealed class RoslynSemanticIndexer(TimeProvider? time = null)
     /// and `OpenSolutionAsync` have no such number, which is why #387 was split rather than
     /// answered in one place.
     /// </param>
+    /// <param name="step">
+    /// The same fraction as <paramref name="log"/> carries, as figures rather than as a sentence,
+    /// for the progress record a watcher reads. Both or neither: a console line and a record that
+    /// disagree about one loop are two accounts of it.
+    /// </param>
     public async Task<SemanticIndex> BuildAsync(
         Solution solution,
         string repositoryRoot,
         SemanticIndexBuildIdentity identity,
         Action<string>? log = null,
+        Action<IndexBuildStep, int, int>? step = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(solution);
@@ -69,6 +76,11 @@ public sealed class RoslynSemanticIndexer(TimeProvider? time = null)
         var started = _time.GetTimestamp();
         var lastReport = started;
         var analysed = 0;
+        // Once before the first project, so the record stops naming the step that has just
+        // finished. Zero of twenty-six is a fact — the total is known here, and none of them has
+        // been through yet — where the console line deliberately says nothing until it has a
+        // measurement to report.
+        step?.Invoke(IndexBuildStep.AnalysingProjects, 0, projects.Length);
         foreach (var project in projects)
         {
             foreach (var document in project.Documents.OrderBy(document => document.FilePath, StringComparer.Ordinal))
@@ -152,9 +164,14 @@ public sealed class RoslynSemanticIndexer(TimeProvider? time = null)
             analysed++;
             // After the project, not before it: a line saying 1/26 before any of the work is a
             // promise, and one saying 1/26 after it is a measurement.
-            if (log is not null && _time.GetElapsedTime(lastReport) >= ReportInterval)
+            //
+            // The record is written on this throttle rather than per project, and for the same
+            // reason the line is: a two-hundred-project solution would otherwise rewrite
+            // progress.json two hundred times to say what a five-second cadence already says.
+            if (_time.GetElapsedTime(lastReport) >= ReportInterval)
             {
-                log(IndexText.RoslynAnalysing(analysed, projects.Length));
+                log?.Invoke(IndexText.RoslynAnalysing(analysed, projects.Length));
+                step?.Invoke(IndexBuildStep.AnalysingProjects, analysed, projects.Length);
                 lastReport = _time.GetTimestamp();
             }
         }

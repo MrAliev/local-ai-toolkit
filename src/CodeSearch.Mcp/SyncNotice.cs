@@ -256,15 +256,19 @@ public sealed class SyncNotice(Func<string?, SyncSighting?> look)
     private static string Figures(RepositoryIndexProgress progress, bool running)
     {
         var pause = running ? progress.Pause : null;
-        var counted = progress.Phase.CountsChunks()
+        // Chunks where the phase counts them, and otherwise what the phase is doing. The guard is
+        // the same one it always was: the chunk pair belongs to embedding, and a finished tally
+        // printed beside a phase that is not counting is what made a build with minutes left read
+        // as one that had finished and stalled.
+        var doing = progress.Phase.CountsChunks()
             ? CodeSearchText.ProgressChunks(
                   progress.ProcessedChunks,
                   progress.TotalChunks,
                   Math.Max(0, progress.TotalChunks - progress.ProcessedChunks)) +
               (running && pause is null ? ", " + Eta(progress.EstimatedRemaining) : string.Empty)
-            : CodeSearchText.ProgressNotCounted;
+            : ProgressStepText.Of(progress);
 
-        return $"{progress.Phase} - {counted}" +
+        return $"{progress.Phase} - {doing}" +
             (pause is { } waiting ? ", " + Waiting(waiting) : string.Empty) +
             ", " + CodeSearchText.RecordedAgo(RecordedAge.Of(progress.UpdatedAtUtc));
     }

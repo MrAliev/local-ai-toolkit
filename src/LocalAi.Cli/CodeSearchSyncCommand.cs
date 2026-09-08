@@ -116,7 +116,11 @@ public static class CodeSearchSyncCommand
             0,
             0,
             null,
-            DateTimeOffset.UtcNow);
+            DateTimeOffset.UtcNow,
+            Pause: null,
+            // Planning is one piece of work — listing what is in the tree and hashing every
+            // candidate — and it is the first thing a reader ever sees said about a build.
+            Step: IndexBuildStep.ReadingRepository);
         progressStore.Save(lastProgress);
 
         // Before the lease does any work, and long before the semantic phase: this is the only
@@ -169,7 +173,20 @@ public static class CodeSearchSyncCommand
         // Phases that do not count chunks still have to be announced, or the last embedding
         // report stands as the whole story for as long as they run. The counters are cleared with
         // the phase rather than carried into it: a stale "1415/1415" is worse than no number.
-        void ReportPhase(RepositoryIndexProgressPhase phase, string root)
+        void ReportPhase(RepositoryIndexProgressPhase phase, string root) =>
+            ReportStep(phase, root, step: null, done: 0, total: 0);
+
+        // Which piece of work inside the phase, for the phases whose chunk counters mean nothing.
+        // One body for both, because they differ in one field and two bodies are two places to
+        // forget the next one; and one write rather than a phase report followed by a step report,
+        // which would leave the record, for the moment between them, saying the phase had no step
+        // — which is what a reader is told by a build too old to have one.
+        void ReportStep(
+            RepositoryIndexProgressPhase phase,
+            string root,
+            IndexBuildStep? step,
+            int done,
+            int total)
         {
             lastProgress = lastProgress with
             {
@@ -184,7 +201,23 @@ public static class CodeSearchSyncCommand
                 // over. Carrying the pause across would leave a reader told the build is waiting
                 // for a backend it has already been answered by.
                 Pause = null,
+                Step = step,
+                StepDone = done,
+                StepTotal = total,
             };
+            progressStore.Save(lastProgress);
+        }
+
+        // A step that is still running, said by moving the timestamp and nothing else.
+        //
+        // This used to be a second call to ReportPhase, which was harmless while a record carried
+        // nothing but a phase name: recording the same phase again moved only the timestamp. With
+        // a step in the record it would erase, on every heartbeat line the console prints, the
+        // step that line is about — so a reader would watch `analysed 12/26 projects` flicker
+        // back to `no step recorded` every few seconds.
+        void Touch()
+        {
+            lastProgress = lastProgress with { UpdatedAtUtc = DateTimeOffset.UtcNow };
             progressStore.Save(lastProgress);
         }
 
@@ -251,6 +284,13 @@ public static class CodeSearchSyncCommand
                         mainline.Identity.WorkingRoot.Value,
                         progress),
                     phase => ReportPhase(phase, mainline.Identity.WorkingRoot.Value),
+                    (phase, step, done, total) => ReportStep(
+                        phase,
+                        mainline.Identity.WorkingRoot.Value,
+                        step,
+                        done,
+                        total),
+                    Touch,
                     runtimeRoot,
                     requireSemantics,
                     error,
@@ -323,11 +363,13 @@ public static class CodeSearchSyncCommand
                         generation.Identity,
                         runtimeRoot,
                         error,
-                        // Recording the same phase again, which moves nothing but the timestamp:
-                        // the counters are already the zeroes ReportPhase set a line above.
-                        () => ReportPhase(
+                        Touch,
+                        (step, done, total) => ReportStep(
                             RepositoryIndexProgressPhase.SemanticOverlay,
-                            identity.WorkingRoot.Value),
+                            identity.WorkingRoot.Value,
+                            step,
+                            done,
+                            total),
                         cancellationToken);
 
                     // A failed adapter aborts the base generation and deliberately does not abort
@@ -421,7 +463,12 @@ public static class CodeSearchSyncCommand
                 }
             }
 
-            ReportPhase(RepositoryIndexProgressPhase.Publishing, requested.WorkingRoot.Value);
+            ReportStep(
+                RepositoryIndexProgressPhase.Publishing,
+                requested.WorkingRoot.Value,
+                IndexBuildStep.SwitchingOver,
+                0,
+                0);
             store.SetCurrent(generation, current);
             var manifest = new RepositoryManifest(
                 requested.RepositoryId,
@@ -748,6 +795,8 @@ public static class CodeSearchSyncCommand
         WorkingIndexIdentity dev,
         Action<IndexBuildProgress> progress,
         Action<RepositoryIndexProgressPhase> phase,
+        Action<RepositoryIndexProgressPhase, IndexBuildStep, int, int> step,
+        Action touch,
         string? runtimeRoot,
         bool requireSemantics,
         TextWriter error,
@@ -813,9 +862,12 @@ public static class CodeSearchSyncCommand
                     generation,
                     runtimeRoot,
                     error,
-                    // The phase it is still in, recorded again: nothing moves but the timestamp,
-                    // and that is the whole point — see RoslynNarration.
-                    () => phase(RepositoryIndexProgressPhase.SemanticBase),
+                    touch,
+                    (built, done, total) => step(
+                        RepositoryIndexProgressPhase.SemanticBase,
+                        built,
+                        done,
+                        total),
                     cancellationToken);
                 EnsureSemanticAdaptersSucceeded(built.AdapterStatuses);
                 built.Index.Save(workSemanticIndex);
@@ -863,8 +915,14 @@ public static class CodeSearchSyncCommand
                     $"{generation.EmbeddingDimension}.");
             }
 
-            // Copying a half-gigabyte corpus and hashing it twice is not instant either.
-            phase(RepositoryIndexProgressPhase.PublishingGeneration);
+            // Copying a half-gigabyte corpus and hashing it twice is not instant either, and
+            // nothing inside PublishIndex has a callback to count from — so the record names the
+            // work rather than counting it.
+            step(
+                RepositoryIndexProgressPhase.PublishingGeneration,
+                IndexBuildStep.CopyingGeneration,
+                0,
+                0);
             var published = store.PublishIndex(
                 workIndex,
                 generation,
@@ -1128,10 +1186,16 @@ public static class CodeSearchSyncCommand
     /// of life too, and it is the one that arrives while <c>WhileTheStepRunsAsync</c> is not
     /// running. What the record then means is "the build last said something this long ago".
     ///
-    /// Nothing but the timestamp moves. The counters stay the zeroes <c>ReportPhase</c> set,
-    /// because <c>RepositoryIndexProgressPhaseExtensions.CountsChunks</c> exists to keep a phase
-    /// that is not embedding from showing chunk figures, and filling them with projects would make
-    /// that guard lie.
+    /// Nothing but the timestamp moves, and that is now load-bearing rather than incidental. This
+    /// used to call <c>ReportPhase</c> again, which was harmless while a record carried nothing
+    /// but a phase name; the step is written by the work itself, so re-reporting the phase here
+    /// would erase it on every line the console prints. <c>Touch</c> is the operation this wants:
+    /// the record says the build spoke, and what it was doing is left to whoever knows.
+    ///
+    /// The chunk counters stay the zeroes <c>ReportPhase</c> set, because
+    /// <c>RepositoryIndexProgressPhaseExtensions.CountsChunks</c> exists to keep a phase that is
+    /// not embedding from showing chunk figures, and filling them with projects would make that
+    /// guard lie. The project count travels as the step's own pair instead.
     /// </summary>
     internal static Action<string> RoslynNarration(TextWriter error, Action stillRunning) =>
         message =>
@@ -1147,6 +1211,7 @@ public static class CodeSearchSyncCommand
         string? runtimeRoot,
         TextWriter error,
         Action stillRunning,
+        Action<IndexBuildStep, int, int> step,
         CancellationToken cancellationToken)
     {
         // One sink for the whole phase, named rather than repeated: the prefix is what marks a
@@ -1156,6 +1221,7 @@ public static class CodeSearchSyncCommand
         await using var loaded = await RoslynSolutionLoader.LoadAsync(
             sourceRoot,
             roslyn,
+            step,
             cancellationToken: cancellationToken);
         // Built once and used by both branches, rather than spelled out in each. What this index
         // was built for is the state of the files the semantic layer reads, which is what
@@ -1189,6 +1255,7 @@ public static class CodeSearchSyncCommand
                 sourceRoot,
                 identity,
                 roslyn,
+                step,
                 cancellationToken);
             languageIndex = new XamlSemanticIndexer().Supplement(csharp, sourceRoot);
         }
@@ -1198,6 +1265,7 @@ public static class CodeSearchSyncCommand
             sourceRoot,
             runtimeRoot,
             error,
+            step,
             cancellationToken);
         return built with { UncoveredProjects = loaded?.UncoveredProjects };
     }
@@ -1241,11 +1309,18 @@ public static class CodeSearchSyncCommand
         }
     }
 
+    /// <param name="step">
+    /// Which adapter is running, recorded before its process starts rather than after it returns:
+    /// each is allowed 300 seconds by policy, and what a reader had for that stretch was a phase
+    /// name and nothing else. It does not keep the record's age fresh through the run — nothing
+    /// here writes while the process is alive, which is issue #491.
+    /// </param>
     private static async Task<SemanticBuildResult> RunScipAdaptersAsync(
         SemanticIndex index,
         string sourceRoot,
         string? runtimeRoot,
         TextWriter error,
+        Action<IndexBuildStep, int, int>? step,
         CancellationToken cancellationToken)
     {
         // The adapter policy belongs to the installation, so it is read from the same one the
@@ -1318,6 +1393,7 @@ public static class CodeSearchSyncCommand
                         project.Replace('\\', '/')));
                 }
 
+                step?.Invoke(IndexBuildStep.ScipTypeScript, 0, 0);
                 var result = await runner.RunAsync(
                     index,
                     adapterRoot,
@@ -1349,6 +1425,7 @@ public static class CodeSearchSyncCommand
         }
         else
         {
+            step?.Invoke(IndexBuildStep.ScipPython, 0, 0);
             var result = await runner.RunAsync(
                 index,
                 sourceRoot,

@@ -58,6 +58,60 @@ public enum IndexBuildPause
     BackendUnavailable
 }
 
+/// <summary>
+/// Which piece of work a phase is on, or null where nothing recorded one.
+///
+/// The phase alone was never enough for the phases that do not count chunks. `SemanticBase` is
+/// five pieces of work in a row with three different answers to "how far": a `dotnet restore`
+/// with no per-item callback that <c>RoslynSolutionLoader.RestoreTimeout</c> allows ten minutes,
+/// an <c>OpenSolutionAsync</c> that is one call, an analysis that counts projects because it
+/// awaits them in turn, and two SCIP adapters that each get 300 seconds by
+/// <c>SemanticIndexingPolicy.Default</c>. For all of it a reader saw the phase name, a timestamp
+/// and `not counted in this phase`, which answers neither "what is it doing" nor "is it moving".
+///
+/// A step rather than a unit, because a unit would speak only for the one piece that counts
+/// anything and leave the rest — most of the minutes on a cold machine — as silent as before.
+/// The count, where a step has one, then belongs to the step.
+///
+/// A token rather than a sentence, and read by another program possibly set to another language,
+/// exactly as the phase and <see cref="IndexBuildPause"/> are: the surface that shows it to a
+/// person is where it becomes words.
+///
+/// The embedding phases have no member here. Their phase is their step, they count chunks, and
+/// <c>CountsChunks</c> already says so — a second name for one thing is how two faces come to
+/// disagree about it.
+/// </summary>
+[JsonConverter(typeof(StrictJsonStringEnumConverter))]
+public enum IndexBuildStep
+{
+    /// <summary>Listing what is in the repository and hashing it, before anything is chunked.</summary>
+    ReadingRepository,
+
+    /// <summary>`dotnet restore` for the solution the semantic phase is about to open.</summary>
+    RestoringDependencies,
+
+    /// <summary>Opening the solution, or the one project a repository without a solution has.</summary>
+    OpeningProjects,
+
+    /// <summary>
+    /// Walking the projects for definitions and references. The one step of a semantic build with
+    /// a figure of its own: the project count is known before the first iteration.
+    /// </summary>
+    AnalysingProjects,
+
+    /// <summary>The scip-typescript adapter.</summary>
+    ScipTypeScript,
+
+    /// <summary>The scip-python adapter.</summary>
+    ScipPython,
+
+    /// <summary>Copying the corpus into the generation and checksumming it.</summary>
+    CopyingGeneration,
+
+    /// <summary>Moving the pointer, after which answers come from the new generation.</summary>
+    SwitchingOver,
+}
+
 public static class RepositoryIndexProgressPhaseExtensions
 {
     /// <summary>
@@ -82,7 +136,18 @@ public sealed record RepositoryIndexProgress(
     DateTimeOffset UpdatedAtUtc,
     // Optional so a progress record written by an older build still deserialises: absent means
     // the build was running, which is what every record written before this field meant.
-    IndexBuildPause? Pause = null);
+    IndexBuildPause? Pause = null,
+    // The same rule again, and the same reason. Absent means a build that did not know to write
+    // it, which is a state the surfaces name rather than guess at: the phase is there and the
+    // step is not.
+    //
+    // The counters are the step's own and are read only where the step declares it has them.
+    // They are deliberately not ProcessedChunks and TotalChunks: those two belong to embedding,
+    // CountsChunks is the guard that keeps a finished tally from standing beside a phase that
+    // counts nothing, and filling them with projects would make that guard lie.
+    IndexBuildStep? Step = null,
+    int StepDone = 0,
+    int StepTotal = 0);
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record RepositoryWorktree(

@@ -1,4 +1,5 @@
 using CodeSearch.Core.Semantics;
+using LocalAi.Contracts;
 using LocalAi.Tests.Shared;
 
 namespace CodeSearch.Tests;
@@ -30,10 +31,12 @@ public sealed class TheSemanticPhaseSaysWhatItIsDoingTests
         using var reading = TestCulture.Reading("en");
         var root = Path.Combine(RepositoryRoot(), "src", ProjectDirectory);
         var said = new List<string>();
+        var steps = new List<IndexBuildStep>();
 
         await using var loaded = await RoslynSolutionLoader.LoadAsync(
             root,
             said.Add,
+            (step, _, _) => steps.Add(step),
             cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.NotNull(loaded);
@@ -46,6 +49,13 @@ public sealed class TheSemanticPhaseSaysWhatItIsDoingTests
         // 36 seconds was the restore or the open.
         Assert.Contains(said, line => line.StartsWith("Dependencies restored in", StringComparison.Ordinal));
         Assert.Contains(said, line => line.StartsWith("Opened ", StringComparison.Ordinal));
+
+        // The same two steps into the record, in the order they run and each before its own
+        // silence. A console line reaches whoever is watching the console; this reaches everyone
+        // else, and until now neither step existed for them.
+        Assert.Equal(
+            [IndexBuildStep.RestoringDependencies, IndexBuildStep.OpeningProjects],
+            steps);
     }
 
     /// <summary>

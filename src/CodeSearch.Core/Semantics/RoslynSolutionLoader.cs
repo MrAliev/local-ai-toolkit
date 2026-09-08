@@ -46,12 +46,14 @@ public sealed class LoadedRoslynSolution : IAsyncDisposable
         string repositoryRoot,
         SemanticIndexBuildIdentity identity,
         Action<string>? log = null,
+        Action<IndexBuildStep, int, int>? step = null,
         CancellationToken cancellationToken = default) =>
         new RoslynSemanticIndexer().BuildAsync(
             solution,
             repositoryRoot,
             identity,
             log,
+            step,
             cancellationToken);
 
     public ValueTask DisposeAsync()
@@ -159,9 +161,16 @@ public static class RoslynSolutionLoader
     /// The pause between heartbeat lines. Both are injectable for the tests and defaulted for
     /// everybody else, so no caller has to know they exist.
     /// </param>
+    /// <param name="step">
+    /// Which of the two steps in here is running, for the progress record. Neither can be counted
+    /// — a restore is a child process with no per-item callback and an open is one call — so what
+    /// this buys a reader is the name of the work and, through the heartbeat above, an age that
+    /// keeps moving while it happens.
+    /// </param>
     public static async Task<LoadedRoslynSolution?> LoadAsync(
         string repositoryRoot,
         Action<string>? diagnostic = null,
+        Action<IndexBuildStep, int, int>? step = null,
         TimeProvider? time = null,
         Func<TimeSpan, CancellationToken, Task>? wait = null,
         CancellationToken cancellationToken = default)
@@ -197,6 +206,7 @@ public static class RoslynSolutionLoader
         // used to print is one silence — 36.72 s on this repository — and a line explaining it
         // afterwards explains a wait the reader has already sat through (#387).
         diagnostic?.Invoke(IndexText.RoslynLoading(selected, (int)RestoreTimeout.TotalMinutes));
+        step?.Invoke(IndexBuildStep.RestoringDependencies, 0, 0);
         var restoring = Stopwatch.StartNew();
         var restored = await WhileTheStepRunsAsync(
             RestoreProjectDependenciesAsync(selected, diagnostic, cancellationToken),
@@ -249,6 +259,7 @@ public static class RoslynSolutionLoader
             });
             try
             {
+                step?.Invoke(IndexBuildStep.OpeningProjects, 0, 0);
                 var opening = Stopwatch.StartNew();
                 var solution = await WhileTheStepRunsAsync(
                     OpenAsync(workspace, selected, cancellationToken),

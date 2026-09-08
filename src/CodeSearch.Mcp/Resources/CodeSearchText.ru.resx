@@ -136,23 +136,56 @@
   <data name="ProcessMemory" xml:space="preserve">
     <value>Процесс занимал больше на ~{0} МБ, сейчас ~{1} МБ ({2}).</value>
   </data>
+  <data name="ProgressAnalysingProjects" xml:space="preserve">
+    <value>разобрано проектов {0}/{1}</value>
+    <comment>The one figure in the semantic phase that is a measurement rather than a guess: the project count is known before the first iteration, and every project is awaited in turn. The words are RoslynAnalysing's own in both languages, verbatim but for the full stop, so a reader watching the console and a reader watching index_status are never told two things about one loop - and `разобрано` is the verb that comment pins for this action. Written on the same elapsed-time throttle the console line uses, not per project: a two-hundred-project solution would otherwise rewrite progress.json two hundred times to say what a five-second cadence already says. No remaining clause, unlike ProgressChunks: there is no Rate row for this phase to convert it into time with, and 26 minus 12 is arithmetic the reader does not need done for him. Both holes are counts and stay invariant.</comment>
+  </data>
   <data name="ProgressChunks" xml:space="preserve">
     <value>чанков {0}/{1}, осталось {2}</value>
   </data>
-  <data name="ProgressNotCounted" xml:space="preserve">
-    <value>в этой фазе не считается</value>
+  <data name="ProgressCopyingGeneration" xml:space="preserve">
+    <value>копируется индекс и считается контрольная сумма</value>
+    <comment>Copying a half-gigabyte corpus and hashing it twice, which GenerationStore.PublishIndex does with no callback of any kind: two copies, two checksums, a manifest and a directory move. Nothing here is countable and nothing here is fast, so the clause names the work instead of counting it. It replaces `not counted in this phase`, which said only that this surface had nothing to offer - true of the old build and useless in the state a reader reaches for it. Two clauses joined by `и` in Russian rather than by a comma: the one-line `Sync:` form already separates its fields with commas, and a third meaning for that character makes the line unreadable.</comment>
   </data>
   <data name="ProgressNotRecordedYet" xml:space="preserve">
     <value>запущена, ход работы ещё не записан</value>
     <comment>Says the gate is held and no progress record has been written yet - the window between a sync starting and its first write. On the one-line form above an answer it fills the figures slot, and 'started' is the antecedent of 'it' in the sentence below; without it SyncNotSearchableYet names nothing. On index_status it is the whole block, in the `Sync phase:` row rather than the figures slot: a reader scanning that row for whether anything is running must not find it missing. No age: nothing was recorded, so there is nothing to date.</comment>
   </data>
+  <data name="ProgressOpeningProjects" xml:space="preserve">
+    <value>открываются проекты</value>
+    <comment>RoslynRestored's own words, and the second of the two steps in a semantic build that no counter can reach: OpenSolutionAsync is one call, about ten seconds on the run that produced #387 and longer on a large solution. What tells the reader the build is alive here is the age beside the clause, not the clause, which never changes.</comment>
+  </data>
   <data name="ProgressPausedBackendUnavailable" xml:space="preserve">
     <value>приостановлена, ждёт эмбеддингов</value>
     <comment>Stands where the ETA does on the one-line `Sync:` form, and only while the build still holds the gate: on a record left behind by a build that died, ProgressStoppedAt already owns the state, and a leftover pause would report a dead process as waiting for something. It replaces the estimate rather than joining it - a paused build writes rate 0 and no estimate by construction, so the slot would otherwise always read EtaCalculating, which claims an estimate is being worked out while nothing is moving. That claim is the defect: frozen counters under `calculating` made a backend outage and a dying build read exactly alike. The figures beside it stay at the count the pause began on while RecordedAgo stays small, because the wait rewrites the record on every rung of the ladder, and this clause is what explains that pairing. Words rather than the token index_status prints: there the row name `Paused:` supplies the word and the value column holds identifiers, here the only field name is the literal 'Sync: ' prefix, so `paused` has to open the value - it is what a reader who sees both faces maps them by. It names no component, and deliberately: EmbeddingUnavailableException arrives by four routes - the broker failing to start, the broker not answering, a job that failed with BackendUnavailableException while Ollama was serving throughout, and an Ollama that was never running - and the one fact true of all four is that the embeddings have not come back, which is also how BuildBackendAnswered states their return. One key per IndexBuildPause member rather than a generic clause plus a token, which is the enum's own rule; a second member gets a second key. Subjectless in both languages, like ProgressNotRecordedYet in the same slot - the Russian keeps its feminine agreement with сборка.</comment>
   </data>
+  <data name="ProgressReadingRepository" xml:space="preserve">
+    <value>читается репозиторий</value>
+    <comment>Planning: listing what is in the tree and hashing every candidate file, before a chunk exists to count. Short on this repository and not on a large one, and until now it was the first thing a reader saw said about a build - as `not counted in this phase`, which reads as an apology rather than as work.</comment>
+  </data>
+  <data name="ProgressRestoringDependencies" xml:space="preserve">
+    <value>восстанавливаются зависимости</value>
+    <comment>The longest silence in a sync, and the one no counter can reach: `dotnet restore` is a child process with no per-item callback, and RoslynSolutionLoader.RestoreTimeout allows it ten minutes. RoslynLoading's own words, minus the entry point and the budget it carries - this slot has a phase name beside it and no room for either. What tells the reader the build is alive here is not this clause, which never changes, but the age beside it: WhileTheStepRunsAsync reports on IndexBuilder.TargetBatchDuration and every such line rewrites the record. Subjectless in both languages, like ProgressPausedBackendUnavailable in the same slot.</comment>
+  </data>
+  <data name="ProgressScipPython" xml:space="preserve">
+    <value>идёт SCIP python</value>
+    <comment>The sibling of ProgressScipTypeScript, and a key of its own for the reason stated there.</comment>
+  </data>
+  <data name="ProgressScipTypeScript" xml:space="preserve">
+    <value>идёт SCIP typescript</value>
+    <comment>One key per adapter rather than one clause with the adapter's name in a hole, which is IndexBuildStep's own rule and IndexBuildPause's before it: the surface is where a token becomes words. `SCIP typescript` is spelled exactly as AdapterLine spells it on the console, and stays English in every language - it is the adapter's identity, and AdapterLine is a deliberate English literal for that reason. Only the clause around it moves. The step is recorded before the process starts, not after it returns: an adapter is allowed 300 seconds by SemanticIndexingPolicy.Default, and what this key exists to end is a record that says nothing for five minutes of healthy work. It does not yet keep the record fresh through that run - #491 is that half.</comment>
+  </data>
+  <data name="ProgressStepNotRecorded" xml:space="preserve">
+    <value>шаг не записан</value>
+    <comment>A progress record written by a build older than IndexBuildStep, read by a renderer that has it. Says what is missing rather than what is happening, because nothing here knows what is happening: the phase is present and the step is not. Not `not counted in this phase`, which was this slot's old answer and would now be false - the step is counted, by a build that did not know to write it. It disappears from a machine one build after it is upgraded, and it exists so that the disappearance is visible rather than silent. Subjectless in both languages, like ProgressNotRecordedYet, whose name it echoes for the same shape of state.</comment>
+  </data>
   <data name="ProgressStoppedAt" xml:space="preserve">
     <value>прервана на {0}</value>
-    <comment>Says a progress record was left behind by a sync that died: it exists, it is neither Completed nor Failed, and the gate is free. 0 carries the phase name, ProgressChunks and RecordedAgo in that order on the one-line form above an answer, and the phase name alone in the `Sync phase:` row of index_status, where the figures have rows of their own. The ETA is dropped on both, because it was the dead process's prediction of a remaining time nobody is spending. Subjectless in both languages, like ProgressNotCounted beside it.</comment>
+    <comment>Says a progress record was left behind by a sync that died: it exists, it is neither Completed nor Failed, and the gate is free. 0 carries the phase name, then the figures or the step it stopped on, then RecordedAgo, in that order on the one-line form above an answer, and the phase name alone in the `Sync phase:` row of index_status, where the figures and the step have rows of their own. The ETA is dropped on both, because it was the dead process's prediction of a remaining time nobody is spending; the step is not dropped, because it belongs to the phase named beside it. Subjectless in both languages, like ProgressPausedBackendUnavailable beside it.</comment>
+  </data>
+  <data name="ProgressSwitchingOver" xml:space="preserve">
+    <value>переключается на новое поколение</value>
+    <comment>The pointer moving to the new generation, which is the moment answers stop coming from the old index and the only fact in this phase a reader acts on. Pruning superseded generations runs after it inside the same phase and is deliberately not named: it deletes directories the reader has no stake in, and a second clause would double the length of the line for the shortest phase in the build. If pruning ever grows a counter or a complaint, it gets a step of its own rather than a clause welded onto this one.</comment>
   </data>
   <data name="RateChunks" xml:space="preserve">
     <value>{0} чанк/с</value>
@@ -231,7 +264,8 @@
     <comment>The `Update:` label and its padding stay literal, aligned to the same column as the rest.</comment>
   </data>
   <data name="WhileItRuns" xml:space="preserve">
-    <value>Пока идёт сборка, каждый ответ поиска и навигации говорит, докуда она дошла; index_status добавляет скорость в чанк/с.</value>
+    <value>Пока идёт сборка, каждый ответ поиска и навигации говорит, докуда она дошла; index_status добавляет скорость в чанк/с, пока идут эмбеддинги.</value>
+    <comment>The first clause is unchanged and stays true: an answer that rides above content still says how far the build has got, and since IndexBuildStep it says so in every phase rather than in two. The second clause gained its condition. index_status prints Rate and ETA only where CountsChunks admits the phase, which is embedding and nothing else, and a sentence promising a rate to a reader watching a ten-minute Roslyn restore would be promising a row that is not there.</comment>
   </data>
   <data name="WorkingSetNotTrimmed" xml:space="preserve">
     <value>рабочий набор не сжимался (не Windows или вызов отклонён)</value>

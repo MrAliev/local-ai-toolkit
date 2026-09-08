@@ -190,17 +190,66 @@ public sealed class SyncNoticeTests
     }
 
     /// <summary>
-    /// A phase that counts nothing says so. Printing the previous phase's finished tally beside it
-    /// is what made a build with minutes left read as one that had finished and stalled.
+    /// A phase that counts no chunks names the work it is on. Printing the previous phase's
+    /// finished tally beside it is what made a build with minutes left read as one that had
+    /// finished and stalled, and that must keep holding; saying `not counted in this phase` in its
+    /// place kept it holding and answered neither question a reader has — what is it doing, and is
+    /// it moving.
     /// </summary>
     [Fact]
-    public void A_phase_that_counts_nothing_says_so_rather_than_showing_a_stale_tally()
+    public void A_phase_that_counts_no_chunks_names_its_step_rather_than_a_stale_tally()
+    {
+        var notice = Watching(OnStep(
+            RepositoryIndexProgressPhase.SemanticBase,
+            IndexBuildStep.RestoringDependencies));
+
+        var above = notice.Above("R:\\LocalAi", SyncNoticeAudience.Answer);
+
+        Assert.StartsWith("Sync: SemanticBase - ", above, StringComparison.Ordinal);
+        Assert.Contains(
+            CodeSearchText.ProgressRestoringDependencies,
+            above,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("1511", above, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The one step of a semantic build that has a figure: the project count is known before the
+    /// first iteration, and every project is awaited in turn. It is the step's own count and not
+    /// the chunk pair, which belongs to embedding and stays empty here.
+    /// </summary>
+    [Fact]
+    public void A_step_that_counts_something_prints_its_own_figures()
+    {
+        var notice = Watching(OnStep(
+            RepositoryIndexProgressPhase.SemanticBase,
+            IndexBuildStep.AnalysingProjects,
+            done: 12,
+            total: 26));
+
+        var above = notice.Above("R:\\LocalAi", SyncNoticeAudience.Answer);
+
+        Assert.Contains(
+            CodeSearchText.ProgressAnalysingProjects(12, 26),
+            above,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("chunks", above, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// A record written by a build older than the step, read by a renderer that has it. It says
+    /// what is missing rather than what is happening, because nothing here knows what is
+    /// happening — and it says it rather than falling silent, so that a machine one build away
+    /// from telling the truth is visibly that.
+    /// </summary>
+    [Fact]
+    public void A_record_written_before_steps_existed_says_the_step_is_missing()
     {
         var notice = Watching(Running(RepositoryIndexProgressPhase.SemanticBase, 1511, 1511));
 
         var above = notice.Above("R:\\LocalAi", SyncNoticeAudience.Answer);
 
-        Assert.Contains(CodeSearchText.ProgressNotCounted, above, StringComparison.Ordinal);
+        Assert.Contains(CodeSearchText.ProgressStepNotRecorded, above, StringComparison.Ordinal);
         Assert.DoesNotContain("1511", above, StringComparison.Ordinal);
     }
 
@@ -464,6 +513,29 @@ public sealed class SyncNoticeTests
                 ChunksPerSecond = 0,
                 EstimatedRemaining = null,
                 Pause = IndexBuildPause.BackendUnavailable,
+            });
+
+    /// <summary>
+    /// A sync holding the gate, on a step of a phase that counts no chunks. The chunk pair is
+    /// deliberately the stale tally a previous phase left: that is the state a record is actually
+    /// in here — <c>ReportPhase</c> zeroes it, but a fixture that also zeroed it could not catch a
+    /// renderer that started printing it again.
+    /// </summary>
+    private static SyncSighting OnStep(
+        RepositoryIndexProgressPhase phase,
+        IndexBuildStep step,
+        int done = 0,
+        int total = 0) =>
+        new(
+            Repository,
+            BuildHoldsTheGate: true,
+            Progress(phase, 1511, 1511, TimeSpan.Zero) with
+            {
+                ChunksPerSecond = 0,
+                EstimatedRemaining = null,
+                Step = step,
+                StepDone = done,
+                StepTotal = total,
             });
 
     /// <summary>A sync that wrote its end and let go of the gate.</summary>

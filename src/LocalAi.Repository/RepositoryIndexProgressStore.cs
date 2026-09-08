@@ -87,6 +87,13 @@ public sealed class RepositoryIndexProgressStore
             !double.IsFinite(progress.ChunksPerSecond) ||
             progress.ChunksPerSecond < 0 ||
             progress.EstimatedRemaining < TimeSpan.Zero ||
+            // Held to what the chunk pair beside them is held to, because both are printed as a
+            // fraction: `analysed 30/26 projects` is a sentence a reader can do nothing with, and
+            // a renderer should not have to defend itself against its own record. Zero of zero is
+            // valid and is the common case — most steps have no figure at all.
+            progress.StepDone < 0 ||
+            progress.StepTotal < 0 ||
+            progress.StepDone > progress.StepTotal ||
             progress.UpdatedAtUtc == default)
         {
             throw new InvalidDataException("Repository progress is invalid.");

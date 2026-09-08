@@ -1,4 +1,5 @@
 using CodeSearch.Core.Semantics;
+using LocalAi.Contracts;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Text;
@@ -64,6 +65,59 @@ public sealed class TheAnalysisSaysHowFarItIsTests : IDisposable
         Assert.Equal("Analysed 1/2 projects.", lines[0]);
         Assert.Equal("Analysed 2/2 projects.", lines[1]);
         Assert.StartsWith("Analysed 2 projects and ", lines[2], StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The record a watcher reads gets the same fraction as the console line, from the same
+    /// throttle: a line and a record that disagree about one loop are two accounts of it.
+    ///
+    /// And one report before the first project, which the line deliberately does not make. The
+    /// line waits for a measurement; the record is answering a different question — what is this
+    /// phase doing — and until something answers it the record still names the step that has just
+    /// finished. Zero of two is a fact here: the total is known and none of them has been through.
+    /// </summary>
+    [Fact]
+    public async Task The_record_gets_the_same_fraction_as_the_line()
+    {
+        var lines = new List<string>();
+        var steps = new List<(IndexBuildStep Step, int Done, int Total)>();
+
+        await new RoslynSemanticIndexer(new ClockPastTheInterval()).BuildAsync(
+            Solution(),
+            _root,
+            Identity(),
+            lines.Add,
+            (step, done, total) => steps.Add((step, done, total)),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            [
+                (IndexBuildStep.AnalysingProjects, 0, 2),
+                (IndexBuildStep.AnalysingProjects, 1, 2),
+                (IndexBuildStep.AnalysingProjects, 2, 2),
+            ],
+            steps);
+        Assert.Equal("Analysed 1/2 projects.", lines[0]);
+    }
+
+    /// <summary>
+    /// An analysis too quick to have anything to report along the way still names its step, once.
+    /// That single write is what stops a fast phase from being described by the phase before it.
+    /// </summary>
+    [Fact]
+    public async Task An_analysis_with_nothing_to_report_still_names_its_step()
+    {
+        var steps = new List<(IndexBuildStep Step, int Done, int Total)>();
+
+        await new RoslynSemanticIndexer(new FrozenClock()).BuildAsync(
+            Solution(),
+            _root,
+            Identity(),
+            log: null,
+            (step, done, total) => steps.Add((step, done, total)),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal((IndexBuildStep.AnalysingProjects, 0, 2), Assert.Single(steps));
     }
 
     /// <summary>A build that is not asked to report says nothing and costs nothing.</summary>

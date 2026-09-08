@@ -187,7 +187,44 @@ public static class CodeSearchText
 
     public static string SyncStopped => Catalogue.Get(nameof(SyncStopped));
 
-    public static string ProgressNotCounted => Catalogue.Get(nameof(ProgressNotCounted));
+    /// <summary>
+    /// One clause per <see cref="LocalAi.Contracts.IndexBuildStep"/> member, in the slot that used
+    /// to hold `not counted in this phase` for every phase but the two that embed.
+    ///
+    /// They replace that line rather than joining it. It said only that this surface had nothing
+    /// to offer, which was true of the old build and useless in the state a reader reaches for it:
+    /// the question is never "does it count" but "what is it doing, and is it moving". Only one of
+    /// these carries figures, because only one step has any — the rest name the work, and what
+    /// says a build is alive there is the age printed beside them.
+    /// </summary>
+    public static string ProgressReadingRepository =>
+        Catalogue.Get(nameof(ProgressReadingRepository));
+
+    public static string ProgressRestoringDependencies =>
+        Catalogue.Get(nameof(ProgressRestoringDependencies));
+
+    public static string ProgressOpeningProjects =>
+        Catalogue.Get(nameof(ProgressOpeningProjects));
+
+    public static string ProgressAnalysingProjects(int analysed, int total) =>
+        Catalogue.Format(nameof(ProgressAnalysingProjects), analysed, total);
+
+    public static string ProgressScipTypeScript =>
+        Catalogue.Get(nameof(ProgressScipTypeScript));
+
+    public static string ProgressScipPython => Catalogue.Get(nameof(ProgressScipPython));
+
+    public static string ProgressCopyingGeneration =>
+        Catalogue.Get(nameof(ProgressCopyingGeneration));
+
+    public static string ProgressSwitchingOver => Catalogue.Get(nameof(ProgressSwitchingOver));
+
+    /// <summary>
+    /// What stands there for a record written by a build that predates the step. It names what is
+    /// missing rather than what is happening, because nothing here knows what is happening.
+    /// </summary>
+    public static string ProgressStepNotRecorded =>
+        Catalogue.Get(nameof(ProgressStepNotRecorded));
 
     public static string ProgressChunks(int processed, int total, int remaining) =>
         Catalogue.Format(nameof(ProgressChunks), processed, total, remaining);
