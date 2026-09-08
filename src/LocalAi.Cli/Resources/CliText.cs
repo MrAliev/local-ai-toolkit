@@ -260,6 +260,30 @@ public static class CliText
     public static string PruneTelemetry(int records, string megabytes) =>
         Catalogue.Format(nameof(PruneTelemetry), records, megabytes);
 
+    /// <summary>
+    /// Not a shared CommandUnknownArgument: this is the one command in this binary whose ignored
+    /// argument deleted data, so the refusal says what did not happen as well as what was not
+    /// understood. The usage hole carries the correct spelling of --dry-run beside the wrong one.
+    /// </summary>
+    public static string PruneUnknownArgument(string argument, string usage) =>
+        Catalogue.Format(nameof(PruneUnknownArgument), argument, usage);
+
+    /// <summary>
+    /// The two counts are holes because the block must not name a bound the machine does not
+    /// apply: both come from the retention policy this installation actually reads. Line endings
+    /// are normalised for the same reason as <see cref="PolicyUsage"/> — XML hands back LF.
+    /// </summary>
+    public static string PruneUsage(
+        int versionsKept,
+        int generationsKept,
+        string runtimeRoot) =>
+        Catalogue.Format(
+            nameof(PruneUsage),
+            versionsKept,
+            generationsKept,
+            runtimeRoot)
+            .ReplaceLineEndings();
+
     public static string PruneVersions(int removed, string megabytes) =>
         Catalogue.Format(nameof(PruneVersions), removed, megabytes);
 

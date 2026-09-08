@@ -388,6 +388,30 @@
   <data name="PruneTelemetry" xml:space="preserve">
     <value>telemetry: {0} record(s), {1} MB</value>
   </data>
+  <data name="PruneUnknownArgument" xml:space="preserve">
+    <value>localai prune does not understand '{0}'. Nothing was removed. Usage: {1}</value>
+    <comment>Not CommandUnknownArgument: this is the one command in this binary whose ignored argument deleted data. `localai prune --help` ran a real prune, so the refusal says what did not happen as well as what was not understood. 0 is the argument as it was typed, 1 is CliUsage.Prune, which carries the correct spelling of --dry-run. "Nothing was removed." is taken word for word from PruneWouldReclaim so the two situations sound the same on one machine.</comment>
+  </data>
+  <data name="PruneUsage" xml:space="preserve">
+    <value>Usage: localai prune [--dry-run]
+
+  Applies the retention bounds in one pass: superseded index generations
+  and the overlay sets under them, overlays for commits and worktrees
+  nothing is on any more, the whole record of a repository whose checkout
+  is gone or whose first indexing never finished, finished broker jobs and
+  the answers stored with them, quarantined entries, telemetry past its
+  retention, installed versions beyond the {0} kept, and installer backups.
+
+  Kept whatever the bounds say: the generation each repository is answered
+  from now, the overlay every existing worktree is on now, the running
+  version, and any job a client may still be collecting. This installation
+  keeps at least {1} generation(s) per repository.
+
+  --dry-run  Report what would go, and remove nothing.
+
+Everything named above is under {2}.</value>
+    <comment>Usage: and the option name are byte-identical in both languages. Both counts are holes fed from the retention policy this installation reads, so the block cannot name a bound the code does not apply. The list is deliberately complete: shortening it would understate what a run removes.</comment>
+  </data>
   <data name="PruneVersions" xml:space="preserve">
     <value>versions: {0}, {1} MB</value>
     <comment>The field name supplies the noun; repeating it stutters in English.</comment>

@@ -16,6 +16,63 @@ public sealed class PruneCommandTests : IDisposable
         Path.GetTempPath(),
         "localai-prune-" + Guid.NewGuid().ToString("N"));
 
+    /// <summary>
+    /// The rehearsal is selected by one exact string, and every near miss used to fall off it in
+    /// silence: the dispatch matched <c>["prune", ..]</c>, read <c>--dry-run</c> and discarded the
+    /// rest, so <c>--dryrun</c>, <c>-n</c> and <c>--help</c> each performed a real prune while the
+    /// reader believed they had asked for a preview or for usage. Refusing costs a retyped
+    /// command; ignoring costs the generations.
+    /// </summary>
+    [Theory]
+    [InlineData("--dryrun")]
+    [InlineData("--dry_run")]
+    [InlineData("-n")]
+    [InlineData("--root")]
+    public void An_argument_it_does_not_understand_is_refused(string argument)
+    {
+        Assert.False(PruneCommand.TryParseArguments([argument], out var request, out var refusal));
+
+        Assert.Null(request);
+        Assert.NotNull(refusal);
+        Assert.Equal("argument_unknown", refusal.Code, StringComparer.Ordinal);
+    }
+
+    [Fact]
+    public void The_rehearsal_is_read_and_its_absence_is_the_real_run()
+    {
+        Assert.True(PruneCommand.TryParseArguments(["--dry-run"], out var rehearsal, out _));
+        Assert.True(rehearsal!.DryRun);
+        Assert.False(rehearsal.HelpWanted);
+
+        Assert.True(PruneCommand.TryParseArguments([], out var real, out _));
+        Assert.False(real!.DryRun);
+        Assert.False(real.HelpWanted);
+    }
+
+    /// <summary>
+    /// Usage is answered before any other argument is read, so the one spelling that used to be a
+    /// real prune is now the one that cannot be: <c>--dry-run --help</c> prints and removes
+    /// nothing.
+    /// </summary>
+    [Theory]
+    [InlineData("--help")]
+    [InlineData("-h")]
+    [InlineData("/?")]
+    public void Asking_for_usage_asks_for_nothing_else(string flag)
+    {
+        Assert.True(PruneCommand.TryParseArguments([flag], out var request, out var refusal));
+
+        Assert.Null(refusal);
+        Assert.True(request!.HelpWanted);
+        Assert.False(request.DryRun);
+
+        Assert.True(PruneCommand.TryParseArguments(
+            ["--dry-run", flag],
+            out var alongside,
+            out _));
+        Assert.True(alongside!.HelpWanted);
+    }
+
     [Fact]
     public void A_repository_whose_checkout_is_gone_is_forgotten()
     {

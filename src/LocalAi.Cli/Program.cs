@@ -610,8 +610,29 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
 
     if (args is ["prune", ..])
     {
+        if (!PruneCommand.TryParseArguments(
+                args.AsSpan(1).ToArray(),
+                out var pruneRequest,
+                out var pruneRefusal))
+        {
+            return Refuse("prune", pruneRefusal!, machineReadable);
+        }
+
         var runtimeRoot = ModelResidencyPolicyStore.DefaultRuntimeRoot;
-        var dryRun = args.Contains("--dry-run", StringComparer.Ordinal);
+        if (pruneRequest!.HelpWanted)
+        {
+            // The counts come from the policy this machine reads rather than from the defaults:
+            // a block naming a bound the code does not apply would be a lie no parity test can
+            // catch. Usage goes to standard error and exits 2, as `update` and `policy` do.
+            var retention = new RuntimeRetentionPolicyStore(runtimeRoot).Read();
+            Console.Error.WriteLine(CliText.PruneUsage(
+                retention.InstalledVersions,
+                retention.GenerationsPerRepository,
+                runtimeRoot));
+            return 2;
+        }
+
+        var dryRun = pruneRequest.DryRun;
         var report = PruneCommand.Execute(runtimeRoot, dryRun, DateTimeOffset.UtcNow);
         foreach (var line in report.Lines)
         {
