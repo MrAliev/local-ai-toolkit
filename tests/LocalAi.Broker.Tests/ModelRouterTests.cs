@@ -256,6 +256,35 @@ public sealed class ModelRouterTests
         Assert.Null(selection);
     }
 
+    /// <summary>
+    /// Which model each of these four profiles reaches on a card holding none of them yet.
+    /// Every one was measured against a fixture with a known answer: qwen2.5-coder declined four
+    /// judgement tasks that gpt-oss answered correctly, qwen3.5 called a service class a
+    /// configuration, and translategemma spent 14 s on an image qwen3-vl translated in 2 s and
+    /// in better English.
+    ///
+    /// Asserted through the router rather than by reading the order of Candidates, because that
+    /// order is not what decides: an experimental candidate is taken ahead of the whole list, and
+    /// a resident model ahead of a better-placed one. Only a selection says which model a caller
+    /// actually gets.
+    /// </summary>
+    [Theory]
+    [InlineData(LocalTaskProfile.CodeReview, "gpt-oss:20b")]
+    [InlineData(LocalTaskProfile.CodeAnalysis, "gpt-oss:20b")]
+    [InlineData(LocalTaskProfile.Classification, "qwen2.5-coder:14b")]
+    [InlineData(LocalTaskProfile.ImageTranslation, "qwen3-vl:8b-instruct-q8_0")]
+    public void Measured_profiles_reach_the_model_that_answered_them_best(
+        LocalTaskProfile profile,
+        string expected)
+    {
+        var selection = new ModelRouter(Catalog).Select(
+            Request(profile),
+            Availability([.. Catalog.Models.Select(model => model.Tag)]),
+            ExperimentSnapshot.Empty);
+
+        Assert.Equal(expected, selection!.Model, StringComparer.Ordinal);
+    }
+
     private static ModelRoutingRequest Request(
         LocalTaskProfile profile,
         int contextTokens = 2048,
