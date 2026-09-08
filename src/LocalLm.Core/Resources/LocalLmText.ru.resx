@@ -140,6 +140,10 @@
   <data name="NoTriageModelNoneTried" xml:space="preserve">
     <value>Ни одна пара модель/контекст для разбора логов не помещается в видеопамять целиком. Проверять было нечего.</value>
   </data>
+  <data name="ProfileHasItsOwnPipeline" xml:space="preserve">
+    <value>У профиля задачи '{0}' свой конвейер: модель выбирается для лога, лог читается фрагментами, частичные ответы сводятся. Ни ask_local, ни localai ask этого не делают. Отправьте лог в triage_log или в localai triage в командной строке.</value>
+    <comment>The guard both surfaces cross, and the only one ask_local has: the console refuses in AskCommand.TryParse before any broker work, and nothing refuses an MCP caller earlier than this. Separate from NotATextChatProfile, which stays for the seven profiles that really are not text-chat ones -- a refusal naming a cause that is false is the mistake AskProfileNotSupported's own comment records. Both routes are named because this string cannot know which surface is asking, and an agent has both. Profile and tool names are identifiers and stay Latin in both languages.</comment>
+  </data>
   <data name="NotATextChatProfile" xml:space="preserve">
     <value>Профиль задачи '{0}' не относится к текстовому чату.</value>
   </data>
