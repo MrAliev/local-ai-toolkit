@@ -799,12 +799,19 @@ public static class CodeSearchTools
     /// prints at all: the row a reader looks at to answer "is a sync happening" must never be the
     /// one that is missing.
     ///
-    /// `ETA:` is the only prediction here, and it goes when the process that made it is gone - it
-    /// was that process's estimate of a remaining time nobody is spending. `Rate:` stays, because a
-    /// measured average over work that happened is still a fact, and it is the number this reader
-    /// came for: 26480 chunks at 10.2/s is what a restart will cost.
+    /// `ETA:` is the only prediction here, and it goes wherever nobody is spending the time it
+    /// predicts - when the process that made it is gone, and while that process is paused. `Rate:`
+    /// stays wherever a rate was measured, because a measured average over work that happened is
+    /// still a fact, and it is the number this reader came for: 26480 chunks at 10.2/s is what a
+    /// restart will cost. Where nothing was measured it goes too: the zero a pause writes is a
+    /// sentinel, and under a unit it reads as a machine that has stopped.
     /// </summary>
-    private static string FormatProgress(SyncSighting? sighting)
+    /// <remarks>
+    /// Internal rather than private because these rows are the product here — what a reader acts
+    /// on during an outage is which of them appear — and the only other way to reach them is a
+    /// repository with a live build behind it, which no test can arrange.
+    /// </remarks>
+    internal static string FormatProgress(SyncSighting? sighting)
     {
         if (sighting is null)
         {
@@ -843,19 +850,29 @@ public static class CodeSearchTools
                         progress.TotalChunks,
                         Math.Max(0, progress.TotalChunks - progress.ProcessedChunks))
                     : ProgressStepText.Of(progress)),
-            counts && !sighting.Ended
+            // Only while the build is running: on one that died this would report it as waiting
+            // for something, which is the reading the phase row exists to prevent. The token is
+            // printed as it stands, like the phase — it is written by one process and read by
+            // another, and the two need not be set to the same language.
+            //
+            // Where the estimate used to be, because it is what a reader wants in that position
+            // during an outage, and because the one-line form already lets the pause take that
+            // slot. Two faces of one build must not read as two accounts of it.
+            progress.Pause is { } pause && sighting.BuildIsRunning
+                ? "Paused:     " + pause
+                : string.Empty,
+            // Only where a rate was measured. Zero is the sentinel Pausing writes, not a reading,
+            // and printed under a unit that implies measurement it says the machine has ground to
+            // a halt. The value rather than the pause, because the same sentinel stands in the
+            // first seconds of a phase and after a checkpoint restore, and one rule covers all
+            // three. A genuinely slow batch measures a positive rate and keeps its row, so the
+            // row's absence means "nothing measured" and never "slow".
+            counts && !sighting.Ended && progress.ChunksPerSecond > 0
                 ? "Rate:       " + CodeSearchText.RateChunks(
                     progress.ChunksPerSecond.ToString("F1", CultureInfo.InvariantCulture))
                 : string.Empty,
-            counts && sighting.BuildIsRunning
+            counts && sighting.BuildIsRunning && progress.Pause is null
                 ? "ETA:        " + Eta(progress.EstimatedRemaining)
-                : string.Empty,
-            // Only while the build is running: on one that died this would report it as waiting
-            // for something, which is the reading the row above this one exists to prevent. The
-            // token is printed as it stands, like the phase — it is written by one process and
-            // read by another, and the two need not be set to the same language.
-            progress.Pause is { } pause && sighting.BuildIsRunning
-                ? "Paused:     " + pause
                 : string.Empty,
             "Updated:    " +
                 progress.UpdatedAtUtc.ToString("u", CultureInfo.InvariantCulture) + ", " +
