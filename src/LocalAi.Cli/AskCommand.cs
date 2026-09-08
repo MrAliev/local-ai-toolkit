@@ -9,7 +9,8 @@ public sealed record AskRequest(
     string Prompt,
     IReadOnlyList<string> Files,
     LocalTaskProfile Profile,
-    string? Model);
+    string? Model,
+    string? Language = null);
 
 /// <summary>
 /// A mechanical task over known files, run on a local model: summarise this, list every method
@@ -39,6 +40,7 @@ public static class AskCommand
         var files = new List<string>();
         var profile = LocalTaskProfile.ShortSummary;
         string? model = null;
+        string? language = null;
 
         for (var index = 0; index < arguments.Count; index++)
         {
@@ -47,6 +49,7 @@ public static class AskCommand
             {
                 case "--profile":
                 case "--model":
+                case "--language":
                     if (index + 1 >= arguments.Count)
                     {
                         refusal = new CommandRefusal(
@@ -59,6 +62,26 @@ public static class AskCommand
                     if (argument == "--model")
                     {
                         model = value;
+                        break;
+                    }
+
+                    if (argument == "--language")
+                    {
+                        // Checked before it is used, because OutputCulture.Resolve answers an
+                        // unknown value with English rather than refusing — so a caller who asked
+                        // for German would be handed the very failure this option exists to fix.
+                        if (!LanguageOption.IsSupported(value))
+                        {
+                            refusal = new CommandRefusal(
+                                "language_not_supported",
+                                CliText.LanguageNotSupported(
+                                    "ask",
+                                    value,
+                                    LanguageOption.Supported));
+                            return false;
+                        }
+
+                        language = value;
                         break;
                     }
 
@@ -113,7 +136,7 @@ public static class AskCommand
             return false;
         }
 
-        request = new AskRequest(prompt, files, profile, model);
+        request = new AskRequest(prompt, files, profile, model, language);
         return true;
     }
 

@@ -551,12 +551,16 @@ a locale with no translation is answered in English rather than refused.
 one, otherwise the operating system's language, otherwise English. Regional names resolve to
 their language — `ru-RU`, `ru-KZ` and `ru` all read the same strings.
 
-**How to change it.** Two ways, for two different situations:
+**How to change it.** Three ways, for three situations:
 
 ```powershell
 lai localai policy set --language ru        # remembered: ru, en or system
 $env:LOCALAI_LANGUAGE = "ru"                # for one session, over the remembered choice
+lai localai ask "…" file.cs --language en   # one call, over both
 ```
+
+The same choice decides what the local model answers in: a Russian machine gets a Russian triage
+of an English log, with paths, line numbers, error codes and quoted lines untouched.
 
 The environment variable is not decoration: the MCP servers are started by the launcher and
 read no settings file of their own before their first line of output. So the variable is the
@@ -568,8 +572,10 @@ language, even months later.
 
 **What is never translated.** Commands, option names, identifiers, enum values, paths, wire
 formats, numbers and dates: the same in every language, because they are quoted verbatim and
-parsed by programs. For the same reason `--json` **always answers in English** — output meant
-for a program must not depend on whose machine produced it.
+parsed by programs. For the same reason `--json` **answers in English whatever the
+machine speaks** — output meant for a program must not depend on whose machine produced it. Only
+`--language` on the same command line changes that, because then the language came from the caller
+rather than from the machine.
 
 ---
 

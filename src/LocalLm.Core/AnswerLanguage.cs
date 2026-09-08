@@ -27,9 +27,18 @@ internal static class AnswerLanguage
     /// the profiles that carry it quote code, paths and log lines by design.
     /// </summary>
     public static string Instruction =>
-        "Answer in " + Name +
-        ", whatever language the supplied material is in. Leave file paths, line numbers, " +
-        "identifiers, error codes and quoted lines exactly as they appear.";
+        "Write everything you say in " + Name +
+        ". Quoted material is not yours: file paths, line and column numbers, identifiers, " +
+        "error codes and lines copied from the input keep their exact original characters " +
+        "and language.";
+
+    /// <summary>
+    /// The other half of the same decision, for the one profile whose whole output is a
+    /// translation. Its prompt named no target language at all, so the model translated wherever
+    /// it liked; the instruction above would have told it to translate and to keep the original
+    /// language in the same breath.
+    /// </summary>
+    public static string TranslateInstruction => "Translate into " + Name + ".";
 
     /// <summary>
     /// English for the model to read, not a token: it is the name of a language inside a
