@@ -133,7 +133,7 @@ public static partial class OutputValidation
     /// Both numbers are calibrated between the two measured points rather than derived from a
     /// corpus, and deliberately far from each of them. A false failure costs a fallback run
     /// against a model that was going to be second choice anyway; a false pass hands over an
-    /// answer that is 96 percent noise.
+    /// answer in which 726 lines of 727 were noise.
     /// </summary>
     private static ModelValidationResult OcrCompleteness(BrokerExecutionResult result)
     {
