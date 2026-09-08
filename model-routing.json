@@ -84,8 +84,8 @@
     {
       "Profile": "ImageTranslation",
       "Mode": "Model",
-      "Candidates": [ "translategemma:12b" ],
-      "Fallbacks": [ "qwen3-vl:8b-instruct-q8_0", "qwen3.5:9b" ],
+      "Candidates": [ "qwen3-vl:8b-instruct-q8_0" ],
+      "Fallbacks": [ "translategemma:12b", "qwen3.5:9b" ],
       "Validator": "TranslationStructure",
       "DefaultDuration": "Medium"
     },
@@ -132,7 +132,7 @@
     {
       "Profile": "CodeAnalysis",
       "Mode": "Model",
-      "Candidates": [ "qwen2.5-coder:14b", "gpt-oss:20b" ],
+      "Candidates": [ "gpt-oss:20b", "qwen2.5-coder:14b" ],
       "Fallbacks": [ "qwen3.5:9b" ],
       "Validator": "CodeReferences",
       "DefaultDuration": "Medium"
@@ -148,7 +148,7 @@
     {
       "Profile": "CodeReview",
       "Mode": "Model",
-      "Candidates": [ "qwen2.5-coder:14b", "gpt-oss:20b" ],
+      "Candidates": [ "gpt-oss:20b", "qwen2.5-coder:14b" ],
       "Fallbacks": [ "qwen3.5:9b" ],
       "Validator": "CodeReferences",
       "DefaultDuration": "Medium"
@@ -172,8 +172,8 @@
     {
       "Profile": "Classification",
       "Mode": "Model",
-      "Candidates": [ "qwen3.5:9b", "qwen2.5-coder:14b" ],
-      "Fallbacks": [ "qwen2.5-coder:14b", "qwen3.5:9b" ],
+      "Candidates": [ "qwen2.5-coder:14b", "qwen3.5:9b" ],
+      "Fallbacks": [ "qwen3.5:9b", "qwen2.5-coder:14b" ],
       "Validator": "StructuredOutput",
       "DefaultDuration": "Short"
     },
