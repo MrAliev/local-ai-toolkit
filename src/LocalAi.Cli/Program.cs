@@ -457,9 +457,14 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
         // One report, two renderings. Its exit code is a verdict about the machine and does not
         // change with the face: a caller that added --json to get something parseable must not
         // lose the signal it was reading from $? before.
+        // The working directory is passed rather than defaulted inside Inspect, so a test that
+        // names no directory keeps answering about the runtime root alone instead of about the
+        // machine it happens to run on. This is the one caller that has a reader standing
+        // somewhere, and it is the caller that says so.
         var report = DoctorCommand.Inspect(
             ModelResidencyPolicyStore.DefaultRuntimeRoot,
-            repositoryRoot);
+            repositoryRoot,
+            Environment.CurrentDirectory);
         if (machineReadable)
         {
             Console.WriteLine(MachineOutput.Answer("doctor", DoctorCommand.Describe(report)));
