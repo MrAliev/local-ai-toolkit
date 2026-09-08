@@ -95,6 +95,8 @@ public static class CodeSearchSyncCommand
         // took: a run that spent four minutes queued behind another one waited four minutes.
         var elapsed = Stopwatch.StartNew();
         var requested = RuntimeIndexLayout.Inspect(workingRoot, runtimeRoot);
+        var batchProfiles = new EmbeddingBatchProfileStore(
+            runtimeRoot ?? RuntimeIndexLayout.DefaultRuntimeRoot);
         // The gate comes before the first write of any shared state — progress included.
         // Everything below (progress, manifest, generation directories, checkpoints, the
         // current pointer, prune) is single-writer while the lease is held, which is what
@@ -291,6 +293,7 @@ public static class CodeSearchSyncCommand
                         done,
                         total),
                     Touch,
+                    batchProfiles,
                     runtimeRoot,
                     requireSemantics,
                     error,
@@ -426,7 +429,8 @@ public static class CodeSearchSyncCommand
                             RepositoryIndexProgressPhase.EmbeddingOverlay,
                             identity.WorkingRoot.Value,
                             progress),
-                        definitions);
+                        definitions,
+                        batchProfiles: batchProfiles);
                     await builder.BuildOverlayAsync(
                         identity.WorkingRoot.Value,
                         store.IndexPath(generation.Identity.Id),
@@ -797,6 +801,7 @@ public static class CodeSearchSyncCommand
         Action<RepositoryIndexProgressPhase> phase,
         Action<RepositoryIndexProgressPhase, IndexBuildStep, int, int> step,
         Action touch,
+        EmbeddingBatchProfileStore batchProfiles,
         string? runtimeRoot,
         bool requireSemantics,
         TextWriter error,
@@ -893,7 +898,8 @@ public static class CodeSearchSyncCommand
                 // The definition bodies the phase above just produced. This is the whole reason
                 // it runs first: a file the adapters covered is cut on its definitions instead
                 // of on a line window, and a file they did not is cut exactly as before.
-                SymbolDefinitionCatalog.FromSemanticIndex(semanticIndex.Index));
+                SymbolDefinitionCatalog.FromSemanticIndex(semanticIndex.Index),
+                batchProfiles: batchProfiles);
             await builder.BuildAsync(
                 snapshot.Root,
                 workIndex,

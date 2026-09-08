@@ -71,6 +71,12 @@ public static class IndexText
     public static string BuildBatchHalved(int chunks, string reason) =>
         Catalogue.Format(nameof(BuildBatchHalved), chunks, reason);
 
+    public static string BuildBatchGrowing(int stableItems, int nextItems) =>
+        Catalogue.Format(nameof(BuildBatchGrowing), stableItems, nextItems);
+
+    public static string BuildBatchSteppedBack(int failedItems, int retryItems, string reason) =>
+        Catalogue.Format(nameof(BuildBatchSteppedBack), failedItems, retryItems, reason);
+
     /// <param name="refusal">
     /// The refusal's own message, taken from the exception rather than re-derived from a code.
     /// It is already composed, catalogued and length-bounded by the layer that owns the

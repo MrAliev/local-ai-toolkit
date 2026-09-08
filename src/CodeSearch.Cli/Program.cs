@@ -127,7 +127,10 @@ async Task<int> IndexAsync(Dictionary<string, string> opts)
     Console.WriteLine($"Model:      {model}");
 
     var embedder = CreateEmbedder(model);
-    var builder = new IndexBuilder(embedder, Console.WriteLine);
+    var builder = new IndexBuilder(
+        embedder,
+        Console.WriteLine,
+        batchProfiles: new EmbeddingBatchProfileStore(RuntimeIndexLayout.DefaultRuntimeRoot));
     var result = await builder.BuildAsync(root, indexPath, force);
 
     Console.WriteLine();
@@ -164,7 +167,10 @@ async Task<int> OverlayAsync(Dictionary<string, string> opts)
     Console.WriteLine($"Model:        {model} (from the base)");
 
     var embedder = CreateEmbedder(model);
-    var builder = new IndexBuilder(embedder, Console.WriteLine);
+    var builder = new IndexBuilder(
+        embedder,
+        Console.WriteLine,
+        batchProfiles: new EmbeddingBatchProfileStore(RuntimeIndexLayout.DefaultRuntimeRoot));
     var result = await builder.BuildOverlayAsync(workingRoot, basePath, overlayPath);
 
     Console.WriteLine();

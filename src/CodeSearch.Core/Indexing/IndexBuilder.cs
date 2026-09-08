@@ -46,7 +46,8 @@ public sealed class IndexBuilder(
     Action<string>? log = null,
     Action<IndexBuildProgress>? progress = null,
     SymbolDefinitionCatalog? definitions = null,
-    Func<TimeSpan, CancellationToken, Task>? backendWait = null)
+    Func<TimeSpan, CancellationToken, Task>? backendWait = null,
+    EmbeddingBatchProfileStore? batchProfiles = null)
 {
     /// <summary>
     /// How the build waits for a backend that has gone, in the shape <c>OllamaTransport</c>
@@ -120,18 +121,18 @@ public sealed class IndexBuilder(
     private readonly SymbolDefinitionCatalog _definitions = definitions ?? SymbolDefinitionCatalog.Empty;
 
     /// <summary>
-    /// Batches are capped by total characters, not item count. Chunk sizes vary by an order of
-    /// magnitude, so a fixed count either starves the GPU on small chunks or sends an oversized
-    /// request on large ones.
+    /// The character budget follows compute throughput. A separate learned item limit bounds the
+    /// concurrent per-input tokenisation Ollama performs before its embedding semaphore.
     /// </summary>
     private const int InitialBatchChars = 48_000;
     private const int MinimumBatchChars = 8_000;
     private const int MaximumBatchChars = 400_000;
-    private const int BatchMaxItems = 512;
+    private readonly AdaptiveEmbeddingBatchPolicy _batchPolicy = new(embedder.Model, batchProfiles);
 
     /// <summary>
-    /// The size is measured, not configured, because the right one differs by an order of
-    /// magnitude between machines.
+    /// The character size is measured, not configured, because the right one differs by an order
+    /// of magnitude between machines. Item count has its own policy above: it starts cautiously,
+    /// grows only after consecutive successes and is remembered in machine-local settings.
     ///
     /// Every request carries a fixed cost that has nothing to do with the model: assembling the
     /// batch, writing the job to the durable queue, polling for its result, writing the vectors
@@ -745,7 +746,8 @@ public sealed class IndexBuilder(
                 {
                     var batch = new List<(string RelPath, int Slot, string Text)>();
                     var chars = 0;
-                    while (position < queue.Count && batch.Count < BatchMaxItems &&
+                    var maximumItems = _batchPolicy.CurrentItems;
+                    while (position < queue.Count && batch.Count < maximumItems &&
                            (batch.Count == 0 || chars + queue[position].Text.Length <= budget))
                     {
                         chars += queue[position].Text.Length;
@@ -906,9 +908,9 @@ public sealed class IndexBuilder(
     ///
     /// Here rather than above the build, because here the work already done is kept: the caller
     /// checkpoints each batch, and a build that resumes from the batch it was on loses nothing.
-    /// The exception is the one <see cref="EmbedBatchAsync"/> deliberately refuses to halve on —
-    /// halving cannot make a missing runner answer (#369) — so this is the only place that can
-    /// treat it as a pause instead of an end.
+    /// A general availability failure comes here immediately. A runner-specific refusal first
+    /// gets one retry at the previous proved item count; if that retry also fails, it comes here
+    /// as confirmation that reducing fan-out did not restore the backend.
     ///
     /// Cancellation is not caught: the wait is interruptible, and a build a person stopped must
     /// stop.
@@ -916,7 +918,8 @@ public sealed class IndexBuilder(
     private async Task<float[][]> EmbedWaitingForABackendAsync(
         IReadOnlyList<string> inputs,
         Action<IndexBuildPause> pausing,
-        CancellationToken ct)
+        CancellationToken ct,
+        bool surfaceRunnerFailure)
     {
         var deduplicationKey = EmbeddingDeduplicationKey(inputs);
         try
@@ -926,6 +929,10 @@ public sealed class IndexBuilder(
                 LocalJobPriority.Background,
                 deduplicationKey,
                 ct);
+        }
+        catch (EmbeddingRunnerUnavailableException) when (surfaceRunnerFailure)
+        {
+            throw;
         }
         catch (EmbeddingUnavailableException)
         {
@@ -1010,12 +1017,36 @@ public sealed class IndexBuilder(
         IReadOnlyList<(string RelPath, int Slot, string Text)> batch,
         EmbeddingCheckpointStore? checkpoint,
         Action<IndexBuildPause> pausing,
-        CancellationToken ct)
+        CancellationToken ct,
+        bool mayStepBack = true)
     {
         var inputs = batch.Select(b => b.Text).ToList();
         try
         {
-            return await EmbedWaitingForABackendAsync(inputs, pausing, ct);
+            var embeddings = await EmbedWaitingForABackendAsync(
+                inputs,
+                pausing,
+                ct,
+                surfaceRunnerFailure:
+                    mayStepBack && batch.Count > AdaptiveEmbeddingBatchPolicy.MinimumItems);
+            if (_batchPolicy.RecordSuccess(batch.Count) is { } growth)
+            {
+                _log(IndexText.BuildBatchGrowing(growth.StableItems, growth.NextItems));
+            }
+
+            return embeddings;
+        }
+        catch (EmbeddingRunnerUnavailableException exception) when (
+            mayStepBack &&
+            _batchPolicy.TryStepBack(batch.Count, out var retryItems))
+        {
+            _log(IndexText.BuildBatchSteppedBack(batch.Count, retryItems, exception.Message));
+            return await EmbedBatchInSegmentsAsync(
+                batch,
+                retryItems,
+                checkpoint,
+                pausing,
+                ct);
         }
         catch (Exception exception) when (
             exception is not OperationCanceledException and
@@ -1056,6 +1087,45 @@ public sealed class IndexBuilder(
                 $"Chunk {chunk.Slot} of '{chunk.RelPath}' ({chunk.Text.Length} characters) " +
                 $"could not be embedded: {exception.Message}",
                 exception);
+        }
+    }
+
+    private async Task<float[][]> EmbedBatchInSegmentsAsync(
+        IReadOnlyList<(string RelPath, int Slot, string Text)> batch,
+        int segmentItems,
+        EmbeddingCheckpointStore? checkpoint,
+        Action<IndexBuildPause> pausing,
+        CancellationToken ct)
+    {
+        var completed = new List<(
+            IReadOnlyList<(string RelPath, int Slot, string Text)> Items,
+            float[][] Embeddings)>();
+        try
+        {
+            for (var offset = 0; offset < batch.Count; offset += segmentItems)
+            {
+                var items = batch.Skip(offset).Take(segmentItems).ToArray();
+                var embeddings = await EmbedBatchAsync(
+                    items,
+                    checkpoint,
+                    pausing,
+                    ct,
+                    mayStepBack: false);
+                completed.Add((items, embeddings));
+            }
+
+            return [.. completed.SelectMany(item => item.Embeddings)];
+        }
+        catch
+        {
+            foreach (var (items, embeddings) in completed)
+            {
+                checkpoint?.SaveBatch(
+                    [.. items.Select(item => item.Text)],
+                    embeddings);
+            }
+
+            throw;
         }
     }
 

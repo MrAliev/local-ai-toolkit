@@ -138,47 +138,11 @@ public sealed class OllamaTransportTests
     }
 
     /// <summary>
-    /// A 400 whose body says the server could not reach its own runner is not a bad request. It
-    /// is the backend being briefly unavailable, and it is retryable.
+    /// An embedding runner refusal must not look like a bad request or spend two more attempts at
+    /// the same fan-out.
     ///
-    /// Counted before this was written (#349): 40 embed jobs failed this way in four days, every
-    /// one an HTTP 400 with no accompanying line in Ollama's own log, and every one succeeded on
-    /// the retry. The layer above answered by halving the batch to isolate an offending chunk —
-    /// and there was none, so it halved a batch whose backend had gone away and failed twice
-    /// instead of once.
-    /// </summary>
-    [Fact]
-    public async Task A_backend_that_cannot_reach_its_own_runner_is_retried_rather_than_refused()
-    {
-        var fake = new FakeOllamaServer();
-        fake.EnqueueJson(
-            HttpStatusCode.BadRequest,
-            """
-            {"error":"Post \"http://127.0.0.1:59268/tokenize\": dial tcp 127.0.0.1:59268: connectex: No connection could be made because the target machine actively refused it."}
-            """);
-        fake.EnqueueJson(HttpStatusCode.OK, """{"embeddings":[[1.0,2.0]]}""");
-        using var client = new HttpClient(fake);
-        using var transport = new OllamaTransport(client, BaseUri, NoDelay);
-
-        await transport.ExecuteAsync(
-            LocalJobRequestFactory.CreateEmbed(
-                "retryable",
-                LocalJobPriority.Background,
-                "embed-model",
-                ["one"]),
-            TestContext.Current.CancellationToken);
-
-        Assert.Equal(2, fake.Requests.Count);
-    }
-
-    /// <summary>
-    /// And when the retries run out, it must still not look like a bad request.
-    ///
-    /// The retry above is only half the answer: a runner that stays unreachable for all
-    /// three attempts ends as an HttpRequestException, which is what a genuinely malformed
-    /// request ends as too. The layer above cannot tell them apart, so it does the only
-    /// thing it knows - halves the batch to isolate a chunk that was never the problem, and
-    /// fails again smaller (#369).
+    /// The layer above owns an adaptive item policy, so it needs the first typed refusal in order
+    /// to retry the batch at its previous proved size.
     ///
     /// The type is the whole signal. BrokerHost records `exception.GetType().Name` as the
     /// failure code, and BrokerJobFailedException says of that code that it is "ours and
@@ -186,22 +150,19 @@ public sealed class OllamaTransportTests
     /// rather than parsed. So Ollama's vocabulary stays in this file and a name leaves it.
     /// </summary>
     [Fact]
-    public async Task A_runner_that_never_comes_back_is_not_reported_as_a_bad_request()
+    public async Task An_embedding_runner_refusal_is_typed_on_the_first_attempt()
     {
         var fake = new FakeOllamaServer();
-        for (var attempt = 0; attempt < 3; attempt++)
-        {
-            fake.EnqueueJson(
-                HttpStatusCode.BadRequest,
-                """
-                {"error":"Post \"http://127.0.0.1:59268/tokenize\": dial tcp 127.0.0.1:59268: connectex: No connection could be made because the target machine actively refused it."}
-                """);
-        }
+        fake.EnqueueJson(
+            HttpStatusCode.BadRequest,
+            """
+            {"error":"Post \"http://127.0.0.1:59268/tokenize\": dial tcp 127.0.0.1:59268: connectex: No connection could be made because the target machine actively refused it."}
+            """);
 
         using var client = new HttpClient(fake);
         using var transport = new OllamaTransport(client, BaseUri, NoDelay);
 
-        await Assert.ThrowsAsync<BackendUnavailableException>(() => transport.ExecuteAsync(
+        await Assert.ThrowsAsync<BackendRunnerUnavailableException>(() => transport.ExecuteAsync(
             LocalJobRequestFactory.CreateEmbed(
                 "gone",
                 LocalJobPriority.Background,
@@ -209,8 +170,8 @@ public sealed class OllamaTransportTests
                 ["one"]),
             TestContext.Current.CancellationToken));
 
-        // Every attempt was made: the type changes, the waiting does not.
-        Assert.Equal(3, fake.Requests.Count);
+        // Embedding recovery needs the first typed refusal so it can reduce fan-out immediately.
+        Assert.Single(fake.Requests);
     }
 
     /// <summary>
