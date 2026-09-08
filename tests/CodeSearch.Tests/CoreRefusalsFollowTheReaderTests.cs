@@ -37,6 +37,44 @@ public sealed class CoreRefusalsFollowTheReaderTests
     }
 
     /// <summary>
+    /// The embedding refusal opened with "Ollama is not available", and the catch it is thrown
+    /// from cannot establish that.
+    ///
+    /// It matches one failure code, and five states arrive under it: `runner_unreachable` from the
+    /// transport's exhausted retries, and `active_model_missing`, `backend_unreachable`,
+    /// `backend_http_NNN` and `backend_io_failure` from the watchdog's probe. Only one is
+    /// consistent with an absent Ollama, and that one never reaches here — a job that never ran
+    /// fails as `BrokerBackendUnreachableException`, which carries its own sentence and its own
+    /// action, backed by a TCP connect to the endpoint.
+    ///
+    /// Measured twice while the old line was printing: `ollama.exe` serving, the model holding
+    /// 11.7 GB of the card at 82-91% utilisation, and `llama-server` listening on the very port
+    /// the body reported as refusing. So the sentence says what was observed — the job did not
+    /// finish — and leaves which state it was to the backend's own words.
+    /// </summary>
+    [Fact]
+    public void The_embedding_refusal_claims_no_cause_it_did_not_establish()
+    {
+        const string model = "qwen3-embedding:8b-q8_0";
+        const string reported =
+            "Broker job 'a1b2' failed with 'BackendUnavailableException'. Reported: " +
+            "The model backend is unavailable: runner_unreachable.";
+
+        NamesTheJobAndNotItsCause(IndexText.EmbeddingBackendUnavailable(model, reported));
+        using (TestCulture.Reading("ru"))
+        {
+            NamesTheJobAndNotItsCause(IndexText.EmbeddingBackendUnavailable(model, reported));
+        }
+
+        static void NamesTheJobAndNotItsCause(string refusal)
+        {
+            Assert.DoesNotContain("Ollama", refusal, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains(model, refusal, StringComparison.Ordinal);
+            Assert.Contains("runner_unreachable", refusal, StringComparison.Ordinal);
+        }
+    }
+
+    /// <summary>
     /// A refusal that names a repair has to name one the reader can type. `localai sync` is a
     /// command, `semantic.sidx` is a file name, and neither is a word — they stay as they are in
     /// every language, exactly as the tool catalogue next door already does it.
