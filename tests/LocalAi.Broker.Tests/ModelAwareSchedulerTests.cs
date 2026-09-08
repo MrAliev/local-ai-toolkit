@@ -59,6 +59,44 @@ public sealed class ModelAwareSchedulerTests
         Assert.Equal(JobId(2), ready.JobId);
     }
 
+    /// <summary>
+    /// The window is for choosing a model, and when the model does not change there is nothing to
+    /// choose. Opening it on long work for the model already loaded bought a chance that something
+    /// shorter might turn up, and paid two seconds of an idle GPU at every selection to hold it —
+    /// visible on a memory graph as the card going quiet with the model still resident.
+    /// </summary>
+    [Fact]
+    public void Long_work_for_the_model_already_loaded_starts_without_a_wait()
+    {
+        var scheduler = new ModelAwareScheduler(_time);
+        var job = Job(
+            1,
+            "resident",
+            seconds: 300,
+            durationClass: LocalDurationClass.Long);
+
+        var decision = scheduler.Decide([job], residentModel: "resident");
+
+        Assert.Equal(job.JobId, decision.JobId);
+        Assert.Null(decision.WaitUntilUtc);
+    }
+
+    /// <summary>
+    /// And the window survives where it earns its cost: a switch is the decision it protects, and
+    /// long work does not change that.
+    /// </summary>
+    [Fact]
+    public void Long_work_that_changes_the_model_still_waits()
+    {
+        var scheduler = new ModelAwareScheduler(_time);
+        var job = Job(1, "cold", seconds: 300, durationClass: LocalDurationClass.Long);
+
+        var decision = scheduler.Decide([job], residentModel: "resident");
+
+        Assert.Null(decision.JobId);
+        Assert.Equal(_time.GetUtcNow().AddSeconds(2), decision.WaitUntilUtc);
+    }
+
     [Fact]
     public void Fifteen_minute_age_forces_the_next_compatible_snapshot()
     {
@@ -208,7 +246,8 @@ public sealed class ModelAwareSchedulerTests
         int seconds,
         DateTimeOffset? createdAtUtc = null,
         bool dependencyReady = true,
-        LocalJobPriority priority = LocalJobPriority.Foreground) =>
+        LocalJobPriority priority = LocalJobPriority.Foreground,
+        LocalDurationClass durationClass = LocalDurationClass.Short) =>
         new(
             JobId(sequence),
             sequence,
@@ -216,7 +255,7 @@ public sealed class ModelAwareSchedulerTests
             createdAtUtc ?? _time.GetUtcNow(),
             model,
             TimeSpan.FromSeconds(seconds),
-            LocalDurationClass.Short,
+            durationClass,
             dependencyReady);
 
     private static Guid JobId(long value)

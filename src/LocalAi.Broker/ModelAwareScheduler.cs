@@ -127,10 +127,17 @@ public sealed class ModelAwareScheduler
             .ToArray();
         var switchesModel =
             !string.Equals(selectedModel, residentModel, StringComparison.Ordinal);
-        var requiresGatherWindow =
-            starved is null &&
-            (switchesModel ||
-             group.Any(candidate => candidate.DurationClass == LocalDurationClass.Long));
+        // Only a switch. The window's job is to avoid choosing a model prematurely — waiting a
+        // moment in case work for the model already loaded is on its way is worth it when the
+        // alternative is unloading eight gigabytes and loading another eight.
+        //
+        // It used to open for long work on the resident model too, on the argument that something
+        // shorter might arrive and should go first. Nothing is being chosen there: the model does
+        // not change either way, so the wait bought a possibility and paid for it with an idle GPU
+        // at every selection. On a machine watching video memory it showed as the card going quiet
+        // for two seconds with the model still loaded, over and over. Ordering already puts the
+        // shorter job first among everything actually queued at the moment of choosing.
+        var requiresGatherWindow = starved is null && switchesModel;
         if (requiresGatherWindow)
         {
             // Two seconds, and deliberately not the idle keep-alive. The keep-alive says how
