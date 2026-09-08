@@ -162,6 +162,14 @@ public static class LocalLmText
     public static string NotATextChatProfile(LocalTaskProfile profile) =>
         Format(nameof(NotATextChatProfile), profile);
 
+    /// <summary>
+    /// The guard both surfaces cross, and the only one <c>ask_local</c> has. Separate from
+    /// <see cref="NotATextChatProfile"/>, which stays for the seven profiles that really are not
+    /// text-chat ones: naming a cause that is false is the mistake its sibling was corrected for.
+    /// </summary>
+    public static string ProfileHasItsOwnPipeline(LocalTaskProfile profile) =>
+        Format(nameof(ProfileHasItsOwnPipeline), profile);
+
     public static string TooManyFiles(int given, int limit) =>
         Format(nameof(TooManyFiles), given, limit);
 

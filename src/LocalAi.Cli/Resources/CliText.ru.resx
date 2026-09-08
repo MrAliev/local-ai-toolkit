@@ -47,6 +47,10 @@
   <data name="AdaptersFailed" xml:space="preserve">
     <value>Семантическое поколение не опубликовано, потому что обязательные адаптеры не отработали: {0}</value>
   </data>
+  <data name="AskProfileHasOwnCommand" xml:space="preserve">
+    <value>Команда localai ask не выполняет профиль задачи '{0}': она отправляет один запрос и больше ничего. Команда localai triage выбирает модель для лога, читает его фрагментами и сводит частичные ответы. Usage: {1}</value>
+    <comment>Not AskProfileNotSupported: that sentence gives the cause as "it is not a text-chat profile", and LogTriage is one -- it routes to a chat model and returns text. What it is not is work localai ask performs: the profile owns LogTriagePipeline, which probes a model and context pair that fits, splits the log with overlap and reduces the findings, and ask enters none of it. Measured before this key existed: qwen2.5-coder:14b through --profile LogTriage said a log whose last line is "Build FAILED. 1 Error(s)" did not say what failed; the same model on the same log through localai triage named the failure. The three verbs are lifted from the progress lines that same run prints, so the sentence and the run agree. No profile list, unlike its two siblings: this reader named a profile that exists and meant it, and a set of alternatives here invites rerunning the log under CodeAnalysis, which is the defect again. The set is still on ProfileUnknown, one typo away on the same option. Usage: carries localai triage's form, because that is where the prompt they typed becomes --question.</comment>
+  </data>
   <data name="AskProfileNotSupported" xml:space="preserve">
     <value>Команда localai ask не выполняет профиль задачи '{0}': он не относится к текстовому чату. Поддерживаемые профили: {1}</value>
     <comment>The cause is the one the code checks. An earlier draft said the model could not hold a conversation, which is false for four of the seven excluded profiles: translation and image profiles route through the same chat call, and it is the task that does not fit. The clause after the colon is LocalLmText.NotATextChatProfile word for word.</comment>

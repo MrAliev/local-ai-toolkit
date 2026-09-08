@@ -158,6 +158,38 @@ public sealed class LocalModelCommandTests
         Assert.Equal("profile_unknown", refusal!.Code, StringComparer.Ordinal);
     }
 
+    /// <summary>
+    /// LogTriage owns a pipeline that ask does not run. LogTriagePipeline has its own system
+    /// prompt, its own fragmenting of a long log and its own capacity probe, all reached by
+    /// localai triage; ask sends one hard-coded prompt for every profile and lets the name pick
+    /// only the model and the validator.
+    ///
+    /// The gap is not cosmetic. Measured on this machine, qwen2.5-coder:14b through
+    /// `ask --profile LogTriage` answered that the build log does not say what failed, about a log
+    /// ending `Build FAILED. 1 Error(s)`; the same model on the same log through `localai triage`
+    /// produced a correct analysis. An option that reads as "do this kind of task" and means
+    /// "route as if you were" costs a worse answer with nothing on screen saying so.
+    /// </summary>
+    [Fact]
+    public void Ask_does_not_take_a_profile_that_owns_a_command_of_its_own()
+    {
+        Assert.False(AskCommand.TryParse(
+            ["summarise", "--profile", "LogTriage"],
+            out var request,
+            out var refusal));
+
+        Assert.Null(request);
+        Assert.Equal("profile_elsewhere", refusal!.Code, StringComparer.Ordinal);
+
+        // Its own code, not profile_not_supported: that one tells a program to retry with another
+        // profile from the list, and retrying a log under CodeAnalysis is this defect again.
+        Assert.Contains("localai triage", refusal.Message, StringComparison.Ordinal);
+
+        // And the list the neighbouring refusal prints must not offer what this one rejects.
+        Assert.False(AskCommand.TryParse(["summarise", "--profile", "Nonsense"], out _, out var typo));
+        Assert.DoesNotContain("LogTriage", typo!.Message, StringComparison.Ordinal);
+    }
+
     /// <summary>A word that is not a profile at all is a different mistake from a profile that
     /// exists but is for images.</summary>
     [Fact]
