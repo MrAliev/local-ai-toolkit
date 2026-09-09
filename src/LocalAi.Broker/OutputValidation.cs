@@ -14,11 +14,29 @@ namespace LocalAi.Broker;
 /// back to another model — and the broker's own composition root passed no check at all, so the
 /// default stood and everything passed.
 ///
-/// This is the missing half. It dispatches on the field the catalogue already carries, so a route
-/// naming a check gets it and a route naming <c>None</c> is explicit about wanting none.
+/// This is where those checks live. It dispatches on the field the catalogue already carries, so
+/// a route naming a check gets it and a route naming <c>None</c> is explicit about wanting none.
 /// </summary>
 public static partial class OutputValidation
 {
+    /// <summary>
+    /// How many lines an answer needs before a loop is visible in it at all. Below this a
+    /// legitimate reading can be one short line repeated -- a label, an error toast, a column
+    /// of identical cells -- and nothing tells that apart from a decoder that will not stop.
+    /// </summary>
+    private const int LinesBeforeALoopIsVisible = 12;
+
+    /// <summary>
+    /// How many times over, on average, every distinct line has to appear before the answer is
+    /// a loop rather than a transcript.
+    ///
+    /// Written as an average rather than as a share of distinct lines, because a share turns
+    /// into "the block was repeated twenty times" whatever the block's size -- which let the
+    /// four lines repeated six times that #517 reported pass, while catching only the far more
+    /// extreme case measured later. A loop is a loop at the sixth repetition.
+    /// </summary>
+    private const int RepeatsThatMeanALoop = 4;
+
     public static ModelValidationResult For(
         ModelRoutingCatalog catalog,
         LocalJobRequest request,
@@ -33,13 +51,13 @@ public static partial class OutputValidation
         return validator switch
         {
             LocalOutputValidator.CodeReferences => CodeReferences(request, result),
+            LocalOutputValidator.OcrCompleteness => OcrCompleteness(result),
 
             // Named rather than folded into a default, so a validator added to the enum without a
             // check here is a compile-time hole rather than a silent pass. The code carries the
             // name, so a receipt says which check was asked for even when none was performed.
             LocalOutputValidator.None or
             LocalOutputValidator.TranslationStructure or
-            LocalOutputValidator.OcrCompleteness or
             LocalOutputValidator.StructuredOutput =>
                 ModelValidationResult.Pass(validator.ToString()),
             _ => throw new ArgumentOutOfRangeException(
@@ -100,6 +118,56 @@ public static partial class OutputValidation
         }
 
         return ModelValidationResult.Pass("code_references");
+    }
+
+    /// <summary>
+    /// Whether an OCR answer stopped when the image ran out.
+    ///
+    /// Measured on this machine on 2026-09-09: a 1200x300 image carrying the single line
+    /// "LOCAL AI OCR 2048" produced that line 727 times from <c>glm-ocr:bf16</c>, over 22 s, and
+    /// once from <c>qwen3-vl:8b-instruct-q8_0</c>. On a dense 1920x1080 console screenshot the
+    /// same model transcribed all 33 lines exactly and faster than qwen3-vl, so the defect is a
+    /// property of sparse input rather than of the model or the prompt, and neither a model swap
+    /// nor a reworded prompt removes it.
+    ///
+    /// Repetition on its own is not the signal: a real transcript repeats a table column, a log
+    /// line, a status token. The absence of anything else is. So the check reads variety, not
+    /// repeats, and it declines to judge an answer too short for variety to mean anything.
+    ///
+    /// Both numbers are calibrated against the two shapes that were measured rather than
+    /// derived from a corpus, and that is worth saying plainly. A false failure costs one
+    /// fallback run against the model that was second choice anyway, and the coordinator
+    /// returns the fallback's answer without re-checking it, so the cost is bounded at that.
+    /// A false pass hands over an answer in which 726 lines of 727 were noise. The asymmetry
+    /// is why the rule is set to catch rather than to spare.
+    ///
+    /// Known limit: the signal is the line, so a decoder that repeats itself inside one line,
+    /// with no breaks, is invisible here.
+    /// </summary>
+    private static ModelValidationResult OcrCompleteness(BrokerExecutionResult result)
+    {
+        if (Answer(result) is not { Length: > 0 } answer)
+        {
+            return ModelValidationResult.Pass("ocr_completeness_no_answer");
+        }
+
+        var lines = answer
+            .Split('\n')
+            .Select(line => line.Trim())
+            .Where(line => line.Length > 0)
+            .ToArray();
+
+        if (lines.Length < LinesBeforeALoopIsVisible)
+        {
+            return ModelValidationResult.Pass("ocr_completeness_too_short_to_judge");
+        }
+
+        var distinct = lines.Distinct(StringComparer.Ordinal).Count();
+        return lines.Length >= distinct * RepeatsThatMeanALoop
+            ? ModelValidationResult.Fail(
+                ModelExecutionOutcome.StructuralFailure,
+                "ocr_repeats_without_stopping")
+            : ModelValidationResult.Pass("ocr_completeness");
     }
 
     /// <summary>

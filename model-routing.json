@@ -102,7 +102,7 @@
     {
       "Profile": "Ocr",
       "Mode": "Model",
-      "Candidates": [ "glm-ocr:bf16", "qwen3-vl:8b-instruct-q8_0" ],
+      "Candidates": [ "qwen3-vl:8b-instruct-q8_0", "glm-ocr:bf16" ],
       "Fallbacks": [ "qwen3-vl:8b-instruct-q8_0", "qwen3.5:9b" ],
       "Validator": "OcrCompleteness",
       "DefaultDuration": "Medium"
