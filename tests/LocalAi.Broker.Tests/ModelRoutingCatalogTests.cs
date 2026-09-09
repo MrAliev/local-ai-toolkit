@@ -130,4 +130,30 @@ public sealed class ModelRoutingCatalogTests
             model => Assert.False(model.DisableThinking));
         Assert.False(catalog.DisablesThinking("model-outside-the-catalog"));
     }
+
+    /// <summary>
+    /// Which model leads <c>Ocr</c>, and why the other one stays.
+    ///
+    /// Measured on the reference machine on 2026-09-09, same command and same question:
+    /// <c>glm-ocr:bf16</c> transcribed all 33 lines of a dense 1920x1080 console screenshot
+    /// exactly in 7.5 s, where <c>qwen3-vl:8b-instruct-q8_0</c> took 18 s and merged one
+    /// wrapped line -- and on a 1200x300 image carrying one line it repeated that line 727
+    /// times over 22 s, where qwen3-vl answered once in 6.5 s. qwen3-vl was right on both
+    /// shapes, so it leads; glm-ocr is better on the shape it is good at, so it stays behind
+    /// it rather than being dropped.
+    ///
+    /// This order is not what runs while glm-ocr's per-profile experiment is active:
+    /// <see cref="ModelRouter.Select"/> takes an active experimental candidate before the
+    /// ordered list at all. It is the default the route settles into once that experiment ends
+    /// without promotion, and <c>OcrCompleteness</c> is what guards the attempt itself either
+    /// way.
+    /// </summary>
+    [Fact]
+    public void Ocr_leads_with_the_model_that_stops()
+    {
+        var ocr = ModelRoutingCatalog.LoadEmbedded().Route(LocalTaskProfile.Ocr);
+
+        Assert.Equal(["qwen3-vl:8b-instruct-q8_0", "glm-ocr:bf16"], ocr.Candidates);
+        Assert.Equal(LocalOutputValidator.OcrCompleteness, ocr.Validator);
+    }
 }
