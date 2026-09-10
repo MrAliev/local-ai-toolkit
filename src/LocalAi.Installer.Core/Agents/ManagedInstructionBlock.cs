@@ -288,12 +288,13 @@ public static class ManagedInstructionBlock
         long as what it was handed: start it so the turn carries on, its output to a file
         rather than a pipe nobody is draining, and keep working. Everything else is waited on
         as usual. Such a run is reported while it happens, not summarised once it is over: say
-        what has started the moment it starts, then put its newest lines in every reply until
-        it ends — the console's own, `index_status`, or the `Sync:` line search and navigation
-        answers carry on their own — as they are printed, without converting them into a claim
-        they do not make, and never filter that progress away to keep a reply tidy. A reply
-        that lands with the run already over and nothing said while it ran has broken this,
-        however it describes the run: hidden work is indistinguishable from a hung machine.
+        what has started the moment it starts, then put its newest lines in every reply until it
+        ends — the console's own, `index_status`, or the `Sync:` line search answers carry — and
+        never filter that progress away. Its figures reach the person at least once a minute,
+        whether or not the conversation has anything to say: arm something that emits them
+        rather than undertaking to remember, because a rule riding on replies stops when the
+        replies do. What emits them says so when the build fails as well as when it finishes —
+        a quiet minute leaves a hung machine looking like a working one.
         """;
 
     /// <summary>The part read once a decision is taken, which Claude loads on demand.</summary>
@@ -577,12 +578,13 @@ public static class ManagedInstructionBlock
         long as what it was handed: start it so the turn carries on, its output to a file
         rather than a pipe nobody is draining, and keep working. Everything else is waited on
         as usual. Such a run is reported while it happens, not summarised once it is over: say
-        what has started the moment it starts, then put its newest lines in every reply until
-        it ends — the console's own, `index_status`, or the `Sync:` line search and navigation
-        answers carry on their own — as they are printed, without converting them into a claim
-        they do not make, and never filter that progress away to keep a reply tidy. A reply
-        that lands with the run already over and nothing said while it ran has broken this,
-        however it describes the run: hidden work is indistinguishable from a hung machine.
+        what has started the moment it starts, then put its newest lines in every reply until it
+        ends — the console's own, `index_status`, or the `Sync:` line search answers carry — and
+        never filter that progress away. Its figures reach the person at least once a minute,
+        whether or not the conversation has anything to say: arm something that emits them
+        rather than undertaking to remember, because a rule riding on replies stops when the
+        replies do. What emits them says so when the build fails as well as when it finishes —
+        a quiet minute leaves a hung machine looking like a working one.
 
         ### Transport and residency
 
