@@ -360,30 +360,51 @@ public static class CodeSearchSyncCommand
                     ReportPhase(
                         RepositoryIndexProgressPhase.SemanticOverlay,
                         identity.WorkingRoot.Value);
-                    var semanticBuild = await BuildSemanticIndexAsync(
+                    // How wide this has to be, decided before anything is opened. Nothing at
+                    // all means it could not be narrowed -- a language whose declarations
+                    // cannot be read, a file outside every project, an earlier version git
+                    // could not produce -- and then the whole solution is reopened as before.
+                    var baseSemanticIndex = SemanticIndex.Load(
+                        store.SemanticIndexPath(generation.Identity.Id));
+                    var plan = PlanScopedSemanticRebuild(
                         identity.WorkingRoot.Value,
-                        identity,
-                        generation.Identity,
-                        runtimeRoot,
-                        error,
-                        Touch,
-                        (step, done, total) => ReportStep(
+                        generation.Identity.DevTree);
+                    void SemanticStep(IndexBuildStep step, int done, int total) =>
+                        ReportStep(
                             RepositoryIndexProgressPhase.SemanticOverlay,
                             identity.WorkingRoot.Value,
                             step,
                             done,
-                            total),
-                        cancellationToken);
+                            total);
+                    var semanticBuild = plan is null
+                        ? await BuildSemanticIndexAsync(
+                            identity.WorkingRoot.Value,
+                            identity,
+                            generation.Identity,
+                            runtimeRoot,
+                            error,
+                            Touch,
+                            SemanticStep,
+                            cancellationToken)
+                        : await BuildScopedSemanticIndexAsync(
+                            identity.WorkingRoot.Value,
+                            plan,
+                            identity,
+                            generation.Identity,
+                            error,
+                            Touch,
+                            SemanticStep,
+                            cancellationToken);
 
-                    // A failed adapter aborts the base generation and deliberately does not abort
-                    // this. The base is immutable: boundaries cut by the window because an
-                    // indexer was broken would be frozen into a generation that is never rebuilt
-                    // while the tree stands still. An overlay is not — it is rebuilt whenever the
-                    // branch moves or a file changes, so the degradation lasts as long as the
-                    // breakage does. And the alternative is worse in both directions: refusing
-                    // the overlay fails the post-commit hook on every commit until someone
-                    // repairs a Node package, and answering from the base alone would answer
-                    // about code the branch has already changed.
+                    // A failed adapter aborts the base generation and deliberately does not
+                    // abort this. The base is immutable: boundaries cut by the window because
+                    // an indexer was broken would be frozen into a generation that is never
+                    // rebuilt while the tree stands still. An overlay is not — it is rebuilt
+                    // whenever the branch moves or a file changes, so the degradation lasts as
+                    // long as the breakage does. And the alternative is worse in both
+                    // directions: refusing the overlay fails the post-commit hook on every
+                    // commit until someone repairs a Node package, and answering from the base
+                    // alone would answer about code the branch has already changed.
                     //
                     // It is a degradation, not a non-event, so it is said out loud rather than
                     // left to be inferred from the adapter line above.
@@ -391,16 +412,24 @@ public static class CodeSearchSyncCommand
                         semanticBuild.AdapterStatuses,
                         identity.WorkingRoot.Value,
                         error);
-                    var baseSemanticIndex = SemanticIndex.Load(
-                        store.SemanticIndexPath(generation.Identity.Id));
-                    // The dirty paths this layer can see, not every dirty path: feeding it the
-                    // corpus list would record a saved `.md` as a document this overlay speaks
-                    // for, which it does not (#385).
-                    var semanticOverlay = SemanticIndexOverlay.Create(
-                        baseSemanticIndex,
-                        semanticBuild.Index,
-                        RuntimeIndexLayout.GetDirtyPaths(identity.WorkingRoot.Value)
-                            .Where(SemanticCorpusPolicy.ChangesSemantics));
+                    var semanticOverlay = plan is null
+                        // The dirty paths this layer can see, not every dirty path: feeding it
+                        // the corpus list would record a saved `.md` as a document this overlay
+                        // speaks for, which it does not (#385).
+                        ? SemanticIndexOverlay.Create(
+                            baseSemanticIndex,
+                            semanticBuild.Index,
+                            RuntimeIndexLayout.GetDirtyPaths(identity.WorkingRoot.Value)
+                                .Where(SemanticCorpusPolicy.ChangesSemantics))
+                        // What the narrow rebuild actually looked at: the documents it produced,
+                        // and the changed paths, so a file that is gone is recognised as gone
+                        // rather than left behind by an index that no longer mentions it.
+                        : SemanticIndexOverlay.CreateScoped(
+                            baseSemanticIndex,
+                            semanticBuild.Index,
+                            semanticBuild.Index.Documents
+                                .Select(document => document.RelPath)
+                                .Concat(plan.ChangedPaths));
                     semanticOverlay.Save(semanticOverlayPath);
                     worktreeSemantics = semanticBuild.Index;
                     builtOverlay = true;
@@ -1235,6 +1264,111 @@ public static class CodeSearchSyncCommand
             error.WriteLine($"Roslyn: {message}");
             stillRunning();
         };
+
+    /// <summary>
+    /// How wide this worktree's semantic rebuild has to be, or nothing when it cannot be
+    /// narrowed and the whole solution has to be reopened as it is today.
+    /// </summary>
+    internal static ScopedRebuildPlan? PlanScopedSemanticRebuild(
+        string workingRoot,
+        string baseTree)
+    {
+        var changed = RuntimeIndexLayout.GetPathsChangedSince(workingRoot, baseTree);
+        if (changed is null)
+        {
+            return null;
+        }
+
+        var semantic = changed.Where(SemanticCorpusPolicy.ChangesSemantics).ToArray();
+        if (semantic.Length == 0)
+        {
+            return null;
+        }
+
+        return ScopedRebuild.Plan(
+            semantic,
+            ProjectGraph.Load(workingRoot),
+            path => ReadWorkingCopy(workingRoot, path),
+            path => RuntimeIndexLayout.GetTextAt(workingRoot, baseTree, path));
+    }
+
+    private static string? ReadWorkingCopy(string workingRoot, string relativePath)
+    {
+        var root = Path.GetFullPath(workingRoot).TrimEnd(Path.DirectorySeparatorChar);
+        var full = Path.GetFullPath(Path.Combine(
+            root,
+            relativePath.Replace('/', Path.DirectorySeparatorChar)));
+        if (!full.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) ||
+            !File.Exists(full))
+        {
+            return null;
+        }
+
+        try
+        {
+            return File.ReadAllText(full);
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// The C# analysis over the projects a change reaches, rather than the solution.
+    ///
+    /// Neither the XAML supplement nor the SCIP adapters run here, and that is not a shortcut:
+    /// a plan exists only when every changed file is C#, so no XAML, TypeScript or Python
+    /// document is among the paths this rebuild speaks for, and
+    /// <see cref="SemanticIndexOverlay.CreateScoped"/> leaves every path it was not told about
+    /// exactly as the base has it. Skipping them is what the narrowing means, not a corner cut
+    /// -- and on this repository they are 4.8 s and 5.6 s of a 53 s sync.
+    /// </summary>
+    private static async Task<SemanticBuildResult> BuildScopedSemanticIndexAsync(
+        string sourceRoot,
+        ScopedRebuildPlan plan,
+        WorkingIndexIdentity snapshot,
+        GenerationIdentity generation,
+        TextWriter error,
+        Action stillRunning,
+        Action<IndexBuildStep, int, int> step,
+        CancellationToken cancellationToken)
+    {
+        var roslyn = RoslynNarration(error, stillRunning);
+        await using var loaded = await RoslynSolutionLoader.LoadScopedAsync(
+            sourceRoot,
+            plan.Projects,
+            roslyn,
+            step,
+            cancellationToken: cancellationToken);
+        var identity = new SemanticIndexBuildIdentity(
+            generation.RepositoryId,
+            generation.Id,
+            snapshot.HeadTree,
+            snapshot.SemanticDirtyHash,
+            snapshot.HeadCommit,
+            CommitTimestamp(snapshot.WorkingRoot.Value, snapshot.HeadCommit));
+        var index = loaded is null
+            ? EmptySemanticIndex(generation) with
+            {
+                GitTree = identity.GitTree,
+                DirtyHash = identity.DirtyHash,
+                BaseCommit = identity.BaseCommit,
+            }
+            : await loaded.BuildIndexAsync(
+                sourceRoot,
+                identity,
+                roslyn,
+                step,
+                cancellationToken);
+        return new SemanticBuildResult(
+            index,
+            [
+                Skipped("typescript", "Only C# changed; this rebuild speaks for C# alone."),
+                Skipped("python", "Only C# changed; this rebuild speaks for C# alone."),
+            ]);
+    }
 
     private static async Task<SemanticBuildResult> BuildSemanticIndexAsync(
         string sourceRoot,
