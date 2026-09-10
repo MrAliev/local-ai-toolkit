@@ -314,8 +314,20 @@ public sealed record SemanticIndexOverlay
 
         var touched = DeletedDocuments.Concat(Changed.Documents.Select(document => document.RelPath))
             .ToHashSet(StringComparer.Ordinal);
-        var impacted = baseIndex.Occurrences.Concat(Changed.Occurrences)
-            .Where(occurrence => touched.Contains(occurrence.DocumentPath))
+        // A relationship is read off the declaration it belongs to -- the indexer walks
+        // `class Bar : IService` and writes `Bar -> IService` down against `Bar` -- so whether the
+        // base's copy still holds is a question about the file `Bar` is declared in. A save that
+        // touches `IService` says nothing about it.
+        //
+        // Dropping on either endpoint was harmless while every overlay carried a rebuild of the
+        // whole tree: whatever went came straight back in `Changed`. Since #521 a rebuild covers
+        // the projects it opened, and those are the ones the changed file references, never the
+        // ones that reference it -- so a doc comment on an interface, the narrowest plan there
+        // is, emptied `find_implementations` for it until the next commit.
+        var redeclared = baseIndex.Occurrences.Concat(Changed.Occurrences)
+            .Where(occurrence =>
+                occurrence.Roles.HasFlag(SemanticOccurrenceRoles.Definition) &&
+                touched.Contains(occurrence.DocumentPath))
             .Select(occurrence => occurrence.SymbolId)
             .ToHashSet(StringComparer.Ordinal);
         var documents = baseIndex.Documents.Where(document => !touched.Contains(document.RelPath))
@@ -325,10 +337,10 @@ public sealed record SemanticIndexOverlay
             .Where(occurrence => !touched.Contains(occurrence.DocumentPath))
             .Concat(Changed.Occurrences)
             .ToList();
-        var relationships = baseIndex.Relationships.Where(relationship =>
-                !impacted.Contains(relationship.SourceSymbolId) &&
-                !impacted.Contains(relationship.TargetSymbolId))
+        var relationships = baseIndex.Relationships
+            .Where(relationship => !redeclared.Contains(relationship.SourceSymbolId))
             .Concat(Changed.Relationships)
+            .Distinct()
             .ToList();
         var symbols = baseIndex.Symbols.ToDictionary(symbol => symbol.Id, StringComparer.Ordinal);
         foreach (var symbol in Changed.Symbols)

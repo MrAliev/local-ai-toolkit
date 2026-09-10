@@ -100,6 +100,96 @@ public sealed class AnOverlayFromAScopedRebuildTests
         Assert.Contains(materialized.Documents, document => document.RelPath == "Use.cs");
     }
 
+    /// <summary>
+    /// An implementor in a project the rebuild never opened keeps implementing.
+    ///
+    /// A relationship is read off the declaration it belongs to: the indexer walks `class Bar :
+    /// IService` and writes `Bar -> IService` down against `Bar`. So the question of whether a
+    /// base relationship still holds is a question about the file `Bar` is declared in, and a
+    /// save that touches `IService` says nothing about it.
+    ///
+    /// Dropping on either endpoint, as this did, was harmless while every overlay carried a
+    /// rebuild of the whole tree -- whatever was dropped came straight back. Since #521 a rebuild
+    /// covers the projects it opened, and those are the ones the changed file *references*, never
+    /// the ones that reference it. Adding a doc comment to an interface -- not a surface change,
+    /// so the narrowest plan there is -- would empty `find_implementations` for it until the next
+    /// commit.
+    /// </summary>
+    [Fact]
+    public void An_implementor_the_rebuild_never_opened_keeps_implementing()
+    {
+        const string bar = "dotnet T:Demo.Bar";
+        const string service = "dotnet T:Demo.IService";
+        var @base = Index(
+            "base-tree",
+            [Document("Bar.cs", 1), Document("IService.cs", 2)],
+            []) with
+        {
+            Symbols = [Type(bar, "Bar"), Type(service, "IService")],
+            Occurrences =
+            [
+                Declaration("Bar.cs", 1, bar),
+                Declaration("IService.cs", 1, service),
+                Use("Bar.cs", 1, service),
+            ],
+            Relationships =
+            [
+                new SemanticRelationship
+                {
+                    SourceSymbolId = bar,
+                    TargetSymbolId = service,
+                    Kind = SemanticRelationshipKind.Implementation,
+                },
+            ],
+        };
+        // A doc comment on the interface. Its own project is reopened; `Bar.cs` lives in one that
+        // references it, so nothing about `Bar` is recomputed and no relationship is re-emitted.
+        var scoped = Index("working-tree", [Document("IService.cs", 3)], []) with
+        {
+            Symbols = [Type(service, "IService")],
+            Occurrences = [Declaration("IService.cs", 4, service)],
+            Relationships = [],
+        };
+
+        var materialized = SemanticIndexOverlay
+            .CreateScoped(@base, scoped, ["IService.cs"])
+            .Materialize(@base);
+
+        Assert.Contains(
+            materialized.Relationships,
+            relationship =>
+                relationship.SourceSymbolId == bar && relationship.TargetSymbolId == service);
+    }
+
+    private static SemanticSymbol Type(string id, string name) =>
+        new()
+        {
+            Id = id,
+            DisplayName = name,
+            Kind = SemanticSymbolKind.Type,
+            Signature = "Demo." + name,
+        };
+
+    private static SemanticOccurrence Declaration(string path, int line, string symbolId) =>
+        At(path, line, SemanticOccurrenceRoles.Definition, symbolId);
+
+    private static SemanticOccurrence Use(string path, int line, string symbolId) =>
+        At(path, line, SemanticOccurrenceRoles.Reference, symbolId);
+
+    private static SemanticOccurrence At(
+        string path,
+        int line,
+        SemanticOccurrenceRoles roles,
+        string symbolId) =>
+        new()
+        {
+            DocumentPath = path,
+            Range = new SourceRange(line, 0, line, 4),
+            SymbolId = symbolId,
+            Roles = roles,
+            Precision = NavigationPrecision.Precise,
+        };
+
     private static SemanticIndex Index(
         string gitTree,
         List<SemanticDocument> documents,
