@@ -33,7 +33,10 @@ public sealed class WhatASaveChangedSinceTheCommitTests : IDisposable
     {
         Write("Kept.cs", "class Kept { }");
 
-        Assert.Empty(SemanticOverlayReuse.ChangedSince([IndexOf("Kept.cs")], _root, ["Kept.cs"]));
+        Assert.Empty(SemanticOverlayReuse.ChangedSince(
+            [SemanticLayer.Of(IndexOf("Kept.cs"))],
+            _root,
+            ["Kept.cs"]));
     }
 
     [Fact]
@@ -45,7 +48,10 @@ public sealed class WhatASaveChangedSinceTheCommitTests : IDisposable
 
         Assert.Equal(
             ["Edited.cs"],
-            SemanticOverlayReuse.ChangedSince([committed], _root, ["Edited.cs"]));
+            SemanticOverlayReuse.ChangedSince(
+                [SemanticLayer.Of(committed)],
+                _root,
+                ["Edited.cs"]));
     }
 
     [Fact]
@@ -57,7 +63,10 @@ public sealed class WhatASaveChangedSinceTheCommitTests : IDisposable
 
         Assert.Equal(
             ["Fresh.cs"],
-            SemanticOverlayReuse.ChangedSince([committed], _root, ["Known.cs", "Fresh.cs"]));
+            SemanticOverlayReuse.ChangedSince(
+                [SemanticLayer.Of(committed)],
+                _root,
+                ["Known.cs", "Fresh.cs"]));
     }
 
     /// <summary>
@@ -73,7 +82,10 @@ public sealed class WhatASaveChangedSinceTheCommitTests : IDisposable
 
         Assert.Equal(
             ["Doomed.cs"],
-            SemanticOverlayReuse.ChangedSince([committed], _root, ["Doomed.cs"]));
+            SemanticOverlayReuse.ChangedSince(
+                [SemanticLayer.Of(committed)],
+                _root,
+                ["Doomed.cs"]));
     }
 
     /// <summary>
@@ -89,7 +101,10 @@ public sealed class WhatASaveChangedSinceTheCommitTests : IDisposable
         var committed = IndexOf("Marked.cs");
         File.WriteAllText(Path.Combine(_root, "Marked.cs"), source, new UTF8Encoding(true));
 
-        Assert.Empty(SemanticOverlayReuse.ChangedSince([committed], _root, ["Marked.cs"]));
+        Assert.Empty(SemanticOverlayReuse.ChangedSince(
+            [SemanticLayer.Of(committed)],
+            _root,
+            ["Marked.cs"]));
     }
 
     /// <summary>
@@ -105,7 +120,7 @@ public sealed class WhatASaveChangedSinceTheCommitTests : IDisposable
         var committed = IndexOf("Branch.cs");
 
         Assert.Empty(SemanticOverlayReuse.ChangedSince(
-            [committed, @base],
+            [SemanticLayer.Of(committed), SemanticLayer.Of(@base)],
             _root,
             ["Untouched.cs", "Branch.cs"]));
     }
@@ -122,7 +137,36 @@ public sealed class WhatASaveChangedSinceTheCommitTests : IDisposable
         Write("Branch.cs", "class Branch { public int Added() => 1; }");
         var committed = IndexOf("Branch.cs");
 
-        Assert.Empty(SemanticOverlayReuse.ChangedSince([committed, stale], _root, ["Branch.cs"]));
+        Assert.Empty(SemanticOverlayReuse.ChangedSince(
+            [SemanticLayer.Of(committed), SemanticLayer.Of(stale)],
+            _root,
+            ["Branch.cs"]));
+    }
+
+    /// <summary>
+    /// A file the branch deleted and the working copy put back, byte for byte as the base has
+    /// it. The nearest layer says it is gone, so "unchanged since the base" is the wrong answer:
+    /// left out of the recompute set it is tombstoned all over again, and the file that is
+    /// plainly on disk answers nothing.
+    ///
+    /// This is why a layer is its documents *and* its tombstones. Reading only the documents
+    /// makes the base the nearest layer that describes the path, which is exactly the layer the
+    /// commit overruled.
+    /// </summary>
+    [Fact]
+    public void A_file_the_branch_deleted_and_the_save_put_back_needs_recomputing()
+    {
+        Write("Restored.cs", "class Restored { }");
+        var @base = IndexOf("Restored.cs");
+        var committed = SemanticIndexOverlay.CreateScoped(@base, IndexOf(), ["Restored.cs"]);
+        Assert.Contains("Restored.cs", committed.DeletedDocuments);
+
+        Assert.Equal(
+            ["Restored.cs"],
+            SemanticOverlayReuse.ChangedSince(
+                [SemanticLayer.Of(committed), SemanticLayer.Of(@base)],
+                _root,
+                ["Restored.cs"]));
     }
 
     [Fact]

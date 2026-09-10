@@ -17,6 +17,33 @@ namespace CodeSearch.Core.Semantics;
 /// projects opened and 296.9 s for a one-line comment, against 314.4 s before any of this was
 /// narrowed at all (#519).
 /// </summary>
+/// <summary>
+/// One layer of what a worktree's semantics are made of, as far as deciding what to recompute
+/// needs to see it: which files it describes, and which it says are gone.
+///
+/// The tombstones are half of it and not a detail. A layer that only listed its documents would
+/// let a file the commit deleted fall through to the base, whose copy the commit overruled --
+/// and a working copy that restores that file byte for byte would then read as unchanged and be
+/// tombstoned all over again.
+/// </summary>
+public readonly record struct SemanticLayer(
+    IReadOnlyList<SemanticDocument> Documents,
+    IReadOnlyList<string> Deleted)
+{
+    /// <summary>The base generation, which describes everything and deletes nothing.</summary>
+    public static SemanticLayer Of(SemanticIndex index)
+    {
+        ArgumentNullException.ThrowIfNull(index);
+        return new SemanticLayer(index.Documents, []);
+    }
+
+    public static SemanticLayer Of(SemanticIndexOverlay overlay)
+    {
+        ArgumentNullException.ThrowIfNull(overlay);
+        return new SemanticLayer(overlay.Changed.Documents, overlay.DeletedDocuments);
+    }
+}
+
 public static class SemanticOverlayReuse
 {
     /// <summary>
@@ -58,13 +85,14 @@ public static class SemanticOverlayReuse
     /// there.
     /// </summary>
     /// <param name="layers">
-    /// Nearest first: the committed overlay's own documents, then the base generation. A file the
-    /// branch never committed is described only by the base, and one the branch changed is
-    /// described by both -- where they disagree the nearer layer is the one that stands, or every
-    /// committed change would be recomputed on every save.
+    /// Nearest first: the committed overlay, then the base generation. A file the branch never
+    /// committed is described only by the base, and one the branch changed is described by both
+    /// -- where they disagree the nearer layer is the one that stands, or every committed change
+    /// would be recomputed on every save. A file the nearer layer says is gone is described by
+    /// nothing, whatever the base still remembers of it.
     /// </param>
     public static IReadOnlyList<string> ChangedSince(
-        IReadOnlyList<SemanticIndex> layers,
+        IReadOnlyList<SemanticLayer> layers,
         string workingRoot,
         IEnumerable<string> candidates)
     {
@@ -72,12 +100,17 @@ public static class SemanticOverlayReuse
         ArgumentException.ThrowIfNullOrWhiteSpace(workingRoot);
         ArgumentNullException.ThrowIfNull(candidates);
         var root = Path.GetFullPath(workingRoot).TrimEnd(Path.DirectorySeparatorChar);
-        var known = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
+        var known = new Dictionary<string, byte[]>(StringComparer.Ordinal);
         foreach (var layer in layers.Reverse())
         {
             foreach (var document in layer.Documents)
             {
                 known[Normalize(document.RelPath)] = document.Hash;
+            }
+
+            foreach (var deleted in layer.Deleted)
+            {
+                known.Remove(Normalize(deleted));
             }
         }
 

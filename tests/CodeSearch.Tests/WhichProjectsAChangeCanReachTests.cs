@@ -169,6 +169,41 @@ public sealed class WhichProjectsAChangeCanReachTests : IDisposable
             reached.OrderBy(project => project, StringComparer.Ordinal));
     }
 
+    /// <summary>
+    /// Opening a project opens what it references, and restoring one restores what it references,
+    /// so an entry point already inside another's reach costs a whole restore for nothing. The
+    /// restore is per entry point — 104.9 s of the 296.9 s measured in #519 — and it is the one
+    /// cost the reach count does not model.
+    /// </summary>
+    [Fact]
+    public void An_entry_point_another_already_reaches_is_not_opened_separately()
+    {
+        Project("Leaf");
+        Project("Middle", ["../Leaf/Leaf.csproj"]);
+        Project("Top", ["../Middle/Middle.csproj"]);
+
+        var roots = ProjectGraph.Load(_root).Roots(
+            ["Leaf/Leaf.csproj", "Middle/Middle.csproj", "Top/Top.csproj"]);
+
+        Assert.Equal(["Top/Top.csproj"], roots);
+    }
+
+    /// <summary>
+    /// Two projects that reference each other reach one another, so "keep only what nothing else
+    /// reaches" would keep neither and open nothing at all. One of them is kept, and which one
+    /// does not vary between runs.
+    /// </summary>
+    [Fact]
+    public void Projects_that_reference_each_other_keep_one_entry_point()
+    {
+        Project("One", ["../Two/Two.csproj"]);
+        Project("Two", ["../One/One.csproj"]);
+
+        var roots = ProjectGraph.Load(_root).Roots(["One/One.csproj", "Two/Two.csproj"]);
+
+        Assert.Equal(["One/One.csproj"], roots);
+    }
+
     private void Project(string directory, IReadOnlyList<string>? references = null)
     {
         var full = Path.Combine(_root, directory);

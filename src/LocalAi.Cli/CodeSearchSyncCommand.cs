@@ -353,6 +353,10 @@ public static class CodeSearchSyncCommand
                 // a branch would re-chunk by line window everything it touched, and the shape of
                 // a hit would depend on whether the file happened to be in an overlay.
                 SemanticIndex? worktreeSemantics = null;
+                // Kept for the definition catalogue below, which needs the same base to
+                // materialise against. Reading it twice is a second parse of a file that is
+                // 16.1 MB on this repository and larger on the tree that reported #519.
+                SemanticIndex? baseSemantics = null;
                 if (!IsCurrentSemanticOverlay(
                         semanticOverlayPath,
                         identity,
@@ -367,6 +371,7 @@ public static class CodeSearchSyncCommand
                     // could not produce -- and then the whole solution is reopened as before.
                     var baseSemanticIndex = SemanticIndex.Load(
                         store.SemanticIndexPath(generation.Identity.Id));
+                    baseSemantics = baseSemanticIndex;
                     // A save laid over the overlay of the commit it was made against, where that
                     // commit has one; otherwise the whole worktree measured against the base
                     // generation, which on a branch a hundred commits ahead means recomputing a
@@ -487,7 +492,7 @@ public static class CodeSearchSyncCommand
                     var definitions = SymbolDefinitionCatalog.FromSemanticIndex(
                         worktreeSemantics ?? SemanticIndexOverlay
                             .Load(semanticOverlayPath)
-                            .Materialize(SemanticIndex.Load(
+                            .Materialize(baseSemantics ?? SemanticIndex.Load(
                                 store.SemanticIndexPath(generation.Identity.Id))));
                     var embeddingCheckpointPath = overlayPath + ".embedding-checkpoint";
                     var embedder = new BrokerEmbeddingClient(
@@ -1354,17 +1359,32 @@ public static class CodeSearchSyncCommand
             return null;
         }
 
+        var dirty = RuntimeIndexLayout.GetDirtyPaths(workingRoot)
+            .Where(SemanticCorpusPolicy.ChangesSemantics)
+            .ToArray();
+        if (dirty.Length == 0)
+        {
+            // This worktree's identity was taken from a dirty list that had something semantic in
+            // it, so an empty one now is git failing to answer or the tree moving under the
+            // build, not a save with nothing in it. GetDirtyPaths cannot tell those apart -- it
+            // returns an empty list for a git that did not run -- and reading it as "nothing
+            // changed" here would write the commit's own records out under the save's name and
+            // lose the save without a word.
+            return null;
+        }
+
         var saved = SemanticOverlayReuse.ChangedSince(
-            [committed.Changed, baseIndex],
+            [SemanticLayer.Of(committed), SemanticLayer.Of(baseIndex)],
             workingRoot,
-            RuntimeIndexLayout.GetDirtyPaths(workingRoot)
-                .Where(SemanticCorpusPolicy.ChangesSemantics));
+            dirty);
         if (saved.Count == 0)
         {
             // The commit's own records, under the name this state is asked for by. Reached when
             // something changed a file the semantic layer reads without changing what it reads in
             // it -- a byte-order mark, a line ending, a file touched and saved unaltered.
-            return new LayeredSemanticRebuild(committed, new ScopedRebuildPlan([], false, []));
+            return new LayeredSemanticRebuild(
+                committed,
+                new ScopedRebuildPlan([], false, [], []));
         }
 
         var graph = ProjectGraph.Load(workingRoot);
@@ -1402,11 +1422,21 @@ public static class CodeSearchSyncCommand
             return null;
         }
 
-        return ScopedRebuild.Plan(
-            semantic,
-            ProjectGraph.Load(workingRoot),
-            path => ReadWorkingCopy(workingRoot, path),
-            path => RuntimeIndexLayout.GetTextAt(workingRoot, baseTree, path));
+        var graph = ProjectGraph.Load(workingRoot);
+        if (ScopedRebuild.Plan(
+                semantic,
+                graph,
+                path => ReadWorkingCopy(workingRoot, path),
+                path => RuntimeIndexLayout.GetTextAt(workingRoot, baseTree, path)) is not { } plan)
+        {
+            return null;
+        }
+
+        // The same guard the layered plan gets, and it was missing here. A plan measured against
+        // the base generation covers everything the branch has changed, so its reach is a
+        // superset of the layered one's — rejecting that as too wide and then running this
+        // instead is choosing the wider of the two, which is the 373-project route #519 measured.
+        return ScopedRebuild.NarrowerThanTheSolution(plan, graph) ? plan : null;
     }
 
     private static string? ReadWorkingCopy(string workingRoot, string relativePath)
@@ -1455,7 +1485,9 @@ public static class CodeSearchSyncCommand
         var roslyn = RoslynNarration(error, stillRunning);
         await using var loaded = await RoslynSolutionLoader.LoadScopedAsync(
             sourceRoot,
-            plan.Projects,
+            // The entry points rather than every project the change reaches: Roslyn opens what a
+            // named project references anyway, and each name costs its own restore.
+            plan.EntryPoints,
             roslyn,
             step,
             cancellationToken: cancellationToken);

@@ -22,6 +22,7 @@ public sealed class LayeringASaveOnTheCommittedOverlayTests
 {
     private const string Symbol = "dotnet M:Demo.Service.Go";
     private const string Contract = "dotnet T:Demo.IService";
+    private const string Implementation = "dotnet T:Demo.Bar";
     private static readonly DateTime IndexedAt =
         new(2026, 9, 10, 12, 0, 0, DateTimeKind.Utc);
 
@@ -302,6 +303,80 @@ public sealed class LayeringASaveOnTheCommittedOverlayTests
         Assert.Empty(layered.Materialize(@base).Relationships);
     }
 
+    /// <summary>
+    /// The half the first relationship test missed. A relationship is written down for every
+    /// symbol the indexer meets, references included, so the committed layer holds
+    /// `Bar -> IService` merely because some file the branch changed *mentions* `Bar` -- with no
+    /// definition of `Bar` anywhere in that layer.
+    ///
+    /// Deciding what to drop by looking only at the layer's own definitions therefore misses it,
+    /// and the save that removes the interface from `Bar` leaves `find_implementations` still
+    /// naming `Bar`. Where a symbol is declared is a fact about the base index, not about the
+    /// overlay.
+    /// </summary>
+    [Fact]
+    public void An_implementation_the_save_removed_does_not_survive_a_layer_that_only_saw_a_use()
+    {
+        var @base = new SemanticIndex
+        {
+            RepositoryId = "repository",
+            GenerationId = "generation",
+            GitTree = "base-tree",
+            DirtyHash = null,
+            BaseCommit = "commit",
+            IndexedAtUtc = IndexedAt,
+            Documents = [Document("Bar.cs", 1), Document("Uses.cs", 2)],
+            Symbols = [Implementor(), Interface()],
+            Occurrences =
+            [
+                Occurrence("Bar.cs", 1, SemanticOccurrenceRoles.Definition, Implementation),
+                Occurrence("Uses.cs", 2, SemanticOccurrenceRoles.Reference, Implementation),
+            ],
+            Relationships = [Implements()],
+        };
+        // The branch changed `Uses.cs` and nothing else, so the committed overlay holds a use of
+        // `Bar` and the relationship that came with it, and no declaration of `Bar` at all.
+        var committed = SemanticIndexOverlay.CreateScoped(
+            @base,
+            @base with
+            {
+                GitTree = "head-tree",
+                Documents = [Document("Bar.cs", 1), Document("Uses.cs", 3)],
+                Occurrences =
+                [
+                    Occurrence("Bar.cs", 1, SemanticOccurrenceRoles.Definition, Implementation),
+                    Occurrence("Uses.cs", 7, SemanticOccurrenceRoles.Reference, Implementation),
+                ],
+            },
+            ["Uses.cs"]);
+        Assert.DoesNotContain(
+            committed.Changed.Occurrences,
+            occurrence => occurrence.Roles.HasFlag(SemanticOccurrenceRoles.Definition));
+        Assert.NotEmpty(committed.Changed.Relationships);
+        // The save removes `: IService` from `Bar`, so the rebuild reports no relationship.
+        var recomputed = new SemanticIndex
+        {
+            RepositoryId = "repository",
+            GenerationId = "generation",
+            GitTree = "head-tree",
+            DirtyHash = "dirty",
+            BaseCommit = "commit",
+            IndexedAtUtc = IndexedAt,
+            Documents = [Document("Bar.cs", 9)],
+            Symbols = [Implementor()],
+            Occurrences =
+            [
+                Occurrence("Bar.cs", 12, SemanticOccurrenceRoles.Definition, Implementation),
+            ],
+            Relationships = [],
+        };
+
+        var layered = SemanticIndexOverlay.Layer(committed, @base, recomputed, ["Bar.cs"]);
+
+        Assert.Empty(layered.Changed.Relationships);
+        Assert.Empty(layered.Materialize(@base).Relationships);
+    }
+
     private static SemanticIndex Index(
         string gitTree,
         string? dirtyHash,
@@ -344,6 +419,37 @@ public sealed class LayeringASaveOnTheCommittedOverlayTests
             DisplayName = "IService",
             Kind = SemanticSymbolKind.Type,
             Signature = "Demo.IService",
+        };
+
+    private static SemanticSymbol Implementor() =>
+        new()
+        {
+            Id = Implementation,
+            DisplayName = "Bar",
+            Kind = SemanticSymbolKind.Type,
+            Signature = "Demo.Bar",
+        };
+
+    private static SemanticRelationship Implements() =>
+        new()
+        {
+            SourceSymbolId = Implementation,
+            TargetSymbolId = Contract,
+            Kind = SemanticRelationshipKind.Implementation,
+        };
+
+    private static SemanticOccurrence Occurrence(
+        string path,
+        int line,
+        SemanticOccurrenceRoles roles,
+        string symbolId) =>
+        new()
+        {
+            DocumentPath = path,
+            Range = new SourceRange(line, 0, line, 4),
+            SymbolId = symbolId,
+            Roles = roles,
+            Precision = NavigationPrecision.Precise,
         };
 
     private static SemanticOccurrence Definition(string path, int line) =>

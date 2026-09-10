@@ -159,7 +159,7 @@ public sealed record SemanticIndexOverlay
         var replaced = recomputedPaths.Select(NormalizePath)
             .Concat(recomputedIndex.Documents.Select(document => NormalizePath(document.RelPath)))
             .ToHashSet(StringComparer.Ordinal);
-        var merged = Merge(committed.Changed, recomputedIndex, replaced);
+        var merged = Merge(committed.Changed, baseIndex, recomputedIndex, replaced);
         var affected = replaced
             .Concat(committed.DeletedDocuments.Select(NormalizePath))
             .Concat(committed.Changed.Documents.Select(document => NormalizePath(document.RelPath)))
@@ -181,13 +181,22 @@ public sealed record SemanticIndexOverlay
     /// declaration and writes down what it implements or overrides -- so the committed layer's
     /// relationships survive except where their source is declared in a file this rebuild looked
     /// at again. Keeping those would keep an interface a save has just removed.
+    ///
+    /// Where a symbol is declared is a fact about the whole index and not about the layer, which
+    /// is why the base is consulted as well. The indexer writes a relationship down for every
+    /// symbol it meets, references included, so the committed layer holds `Bar -> IService`
+    /// merely because a file the branch changed *mentions* `Bar`, with no declaration of `Bar`
+    /// anywhere in that layer -- and asking the layer alone would find nothing to drop.
     /// </summary>
     private static SemanticIndex Merge(
         SemanticIndex committed,
+        SemanticIndex baseIndex,
         SemanticIndex recomputed,
         HashSet<string> replaced)
     {
-        var recomputedSources = committed.Occurrences
+        var recomputedSources = baseIndex.Occurrences
+            .Concat(committed.Occurrences)
+            .Concat(recomputed.Occurrences)
             .Where(occurrence =>
                 occurrence.Roles.HasFlag(SemanticOccurrenceRoles.Definition) &&
                 replaced.Contains(NormalizePath(occurrence.DocumentPath)))

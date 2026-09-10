@@ -143,6 +143,49 @@ public sealed class ProjectGraph
         return Closure(projects, _references);
     }
 
+    /// <summary>
+    /// The ones worth opening by name: every project in the set that no kept project already
+    /// reaches. Opening one opens what it references and restoring one restores what it
+    /// references, so an entry point inside another's reach adds a whole restore and nothing
+    /// else -- and the restore is per entry point, which was 104.9 s of the 296.9 s in #519.
+    ///
+    /// Widest reach first, and that ordering is the whole algorithm rather than a detail: taken
+    /// alphabetically, a leaf is kept before the project above it is ever considered, and by then
+    /// nothing can take it back. Ties break on the ordinal path, so the answer does not move
+    /// between runs, and that is also what decides which member of a reference cycle is kept --
+    /// keeping neither is the alternative, since each of two projects that reference each other
+    /// reaches the other, and a rule phrased as "nothing else reaches it" would open nothing.
+    /// </summary>
+    public IReadOnlyList<string> Roots(IEnumerable<string> projects)
+    {
+        ArgumentNullException.ThrowIfNull(projects);
+        var candidates = projects
+            .Select(project => project.Replace((char)92, '/'))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(project => (Project: project, Reach: Closure([project], _references)))
+            .OrderByDescending(candidate => candidate.Reach.Count)
+            .ThenBy(candidate => candidate.Project, StringComparer.Ordinal)
+            .ToArray();
+        var covered = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var roots = new List<string>();
+        foreach (var (project, reach) in candidates)
+        {
+            if (covered.Contains(project))
+            {
+                continue;
+            }
+
+            roots.Add(project);
+            foreach (var reached in reach)
+            {
+                covered.Add(reached);
+            }
+        }
+
+        roots.Sort(StringComparer.Ordinal);
+        return roots;
+    }
+
     private static IReadOnlyCollection<string> Closure(
         IEnumerable<string> projects,
         IReadOnlyDictionary<string, IReadOnlyList<string>> edges)
