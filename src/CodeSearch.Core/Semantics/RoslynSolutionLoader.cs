@@ -42,6 +42,13 @@ public sealed class LoadedRoslynSolution : IAsyncDisposable
     /// Passed through to the analysis, the one step of this phase that can say how far it is.
     /// Optional and before the token, so a caller that does not report keeps its shape.
     /// </param>
+    /// <summary>
+    /// The names of the projects actually opened. What a scoped load has to be judged by:
+    /// asking for one project and getting the solution would look identical otherwise.
+    /// </summary>
+    public IEnumerable<string> ProjectNames() =>
+        solution.Projects.Select(project => project.Name);
+
     public Task<SemanticIndex> BuildIndexAsync(
         string repositoryRoot,
         SemanticIndexBuildIdentity identity,
@@ -174,18 +181,108 @@ public static class RoslynSolutionLoader
             return null;
         }
 
-        // Before the wait rather than after it. Everything from here to the first line the sync
-        // used to print is one silence — 36.72 s on this repository — and a line explaining it
-        // afterwards explains a wait the reader has already sat through (#387).
-        diagnostic?.Invoke(IndexText.RoslynLoading(selected, (int)RestoreTimeout.TotalMinutes));
-        step?.Invoke(IndexBuildStep.RestoringDependencies, 0, 0);
-        var restoring = Stopwatch.StartNew();
-        var restored = await QuietStep.WhileItRunsAsync(
-            RestoreProjectDependenciesAsync(selected, diagnostic, cancellationToken),
+        return await OpenEntryPointsAsync(
+            [selected],
+            selected,
+            candidates.Length + projectCandidates.Length > 1,
+            // Only the project fallback leaves anything out. A solution is opened whole, so
+            // several solutions in one tree means the others were not asked for rather than
+            // silently dropped.
+            projectCandidates
+                .Where(path => !string.Equals(path, selected, StringComparison.Ordinal))
+                .ToArray(),
             diagnostic,
+            step,
             time,
             wait,
             cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Restore, open and hand back what was asked for. One body for both entry points into
+    /// this file, because everything delicate lives here -- the MSBuild registration, the
+    /// build host lease, the failure digest and the AppContext data it borrows -- and two
+    /// copies of that is how two of anything come to disagree.
+    /// </summary>
+    /// <summary>
+    /// Open the named projects and whatever they reference, rather than the solution.
+    ///
+    /// Roslyn pulls a referenced project in by itself, so the caller names only the projects
+    /// the change reaches -- <see cref="ProjectGraph"/> works those out -- and gets their
+    /// dependencies for free. On the solution that reported #519 one saved file opened 414
+    /// projects and parsed 7057 files, 314.4 s; one worker service and its references was 40
+    /// projects and 9.0 s there.
+    ///
+    /// A path that names nothing on disk is skipped rather than widened away: falling back to
+    /// the whole solution is the behaviour being replaced, and doing that silently would hide
+    /// the mistake behind five minutes of work.
+    /// </summary>
+    public static async Task<LoadedRoslynSolution?> LoadScopedAsync(
+        string repositoryRoot,
+        IReadOnlyList<string> projects,
+        Action<string>? diagnostic = null,
+        Action<IndexBuildStep, int, int>? step = null,
+        TimeProvider? time = null,
+        Func<TimeSpan, CancellationToken, Task>? wait = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryRoot);
+        ArgumentNullException.ThrowIfNull(projects);
+        time ??= TimeProvider.System;
+        wait ??= Task.Delay;
+        var root = Path.GetFullPath(repositoryRoot).TrimEnd(Path.DirectorySeparatorChar);
+        var entryPoints = projects
+            .Select(project => Path.GetFullPath(Path.Combine(
+                root,
+                project.Replace('/', Path.DirectorySeparatorChar))))
+            .Where(File.Exists)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(path => path, StringComparer.Ordinal)
+            .ToArray();
+        if (entryPoints.Length == 0)
+        {
+            return null;
+        }
+
+        return await OpenEntryPointsAsync(
+            entryPoints,
+            entryPoints[0],
+            otherEntryPointsExist: false,
+            uncovered: [],
+            diagnostic,
+            step,
+            time,
+            wait,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task<LoadedRoslynSolution?> OpenEntryPointsAsync(
+        IReadOnlyList<string> entryPoints,
+        string announced,
+        bool otherEntryPointsExist,
+        IReadOnlyList<string> uncovered,
+        Action<string>? diagnostic,
+        Action<IndexBuildStep, int, int>? step,
+        TimeProvider time,
+        Func<TimeSpan, CancellationToken, Task> wait,
+        CancellationToken cancellationToken)
+    {
+        // Before the wait rather than after it. Everything from here to the first line the sync
+        // used to print is one silence — 36.72 s on this repository — and a line explaining it
+        // afterwards explains a wait the reader has already sat through (#387).
+        diagnostic?.Invoke(IndexText.RoslynLoading(announced, (int)RestoreTimeout.TotalMinutes));
+        step?.Invoke(IndexBuildStep.RestoringDependencies, 0, 0);
+        var restoring = Stopwatch.StartNew();
+        var restored = true;
+        foreach (var entryPoint in entryPoints)
+        {
+            restored &= await QuietStep.WhileItRunsAsync(
+                RestoreProjectDependenciesAsync(entryPoint, diagnostic, cancellationToken),
+                diagnostic,
+                time,
+                wait,
+                cancellationToken).ConfigureAwait(false);
+        }
         if (restored)
         {
             // Only on success. The failure and timeout paths print their own diagnostics, so a
@@ -226,35 +323,53 @@ public static class RoslynSolutionLoader
                 if (line is not null)
                 {
                     diagnostic?.Invoke(
-                        $"{args.Diagnostic.Kind} while loading '{selected}': {line}");
+                        $"{args.Diagnostic.Kind} while loading '{announced}': {line}");
                 }
             });
             try
             {
                 step?.Invoke(IndexBuildStep.OpeningProjects, 0, 0);
                 var opening = Stopwatch.StartNew();
-                var solution = await QuietStep.WhileItRunsAsync(
-                    OpenAsync(workspace, selected, cancellationToken),
-                    diagnostic,
-                    time,
-                    wait,
-                    cancellationToken).ConfigureAwait(false);
+                // Into one workspace, one after another. Roslyn refuses a project that is
+                // already there -- "X is already part of the workspace" -- and opening one
+                // project brings its references in with it, so an entry point that arrived
+                // that way is skipped rather than asked for a second time. Found on a real
+                // solution: alphabetical order put a dependency after the project that pulls
+                // it in, and the load threw where a single entry point never would.
+                //
+                // A solution entry point is one element here and behaves as it did.
+                Solution? opened = null;
+                foreach (var entryPoint in entryPoints)
+                {
+                    if (opened is not null && opened.Projects.Any(project =>
+                            string.Equals(
+                                project.FilePath,
+                                entryPoint,
+                                StringComparison.OrdinalIgnoreCase)))
+                    {
+                        continue;
+                    }
+
+                    opened = await QuietStep.WhileItRunsAsync(
+                        OpenAsync(workspace, entryPoint, cancellationToken),
+                        diagnostic,
+                        time,
+                        wait,
+                        cancellationToken).ConfigureAwait(false);
+                }
+
+                var solution = opened ?? workspace.CurrentSolution;
                 // After the call, because that is the first moment the count exists: opening a
                 // solution is one opaque operation with no per-project callback to count from.
                 diagnostic?.Invoke(
                     IndexText.RoslynOpened(solution.Projects.Count(), Seconds(opening)));
-                if (candidates.Length + projectCandidates.Length > 1)
+                if (otherEntryPointsExist)
                 {
                     diagnostic?.Invoke(
-                        $"Multiple C# entry points found; semantic indexing selected '{selected}'.");
+                        $"Multiple C# entry points found; semantic indexing selected " +
+                        $"'{announced}'.");
                 }
 
-                // Only the project fallback leaves anything out. A solution is opened whole, so
-                // several solutions in one tree means the others were not asked for rather than
-                // silently dropped.
-                var uncovered = projectCandidates
-                    .Where(path => !string.Equals(path, selected, StringComparison.Ordinal))
-                    .ToArray();
                 return new LoadedRoslynSolution(
                     workspace,
                     solution,

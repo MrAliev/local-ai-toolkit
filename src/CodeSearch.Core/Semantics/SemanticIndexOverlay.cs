@@ -55,6 +55,65 @@ public sealed record SemanticIndexOverlay
             }
         }
 
+        return From(baseIndex, currentIndex, baseDocuments, currentDocuments, affected);
+    }
+
+    /// <summary>
+    /// An overlay from a rebuild that only looked at part of the tree.
+    ///
+    /// <see cref="Create"/> works out what changed by diffing the base against a current
+    /// index of everything, and reads a document present in the base but absent from the
+    /// current one as deleted. Hand that an index built from three projects out of four
+    /// hundred and it tombstones the rest of the repository.
+    ///
+    /// So this is told which paths were recomputed rather than inferring it. Everything
+    /// outside that set is left exactly as the base has it -- sound because a file the rebuild
+    /// did not look at cannot bind differently unless something it references changed, and
+    /// deciding that is the caller's job before it gets here (#519).
+    /// </summary>
+    public static SemanticIndexOverlay CreateScoped(
+        SemanticIndex baseIndex,
+        SemanticIndex recomputedIndex,
+        IEnumerable<string> recomputedPaths)
+    {
+        ArgumentNullException.ThrowIfNull(baseIndex);
+        ArgumentNullException.ThrowIfNull(recomputedIndex);
+        ArgumentNullException.ThrowIfNull(recomputedPaths);
+        if (!string.Equals(
+                baseIndex.RepositoryId,
+                recomputedIndex.RepositoryId,
+                StringComparison.Ordinal) ||
+            !string.Equals(
+                baseIndex.GenerationId,
+                recomputedIndex.GenerationId,
+                StringComparison.Ordinal))
+        {
+            throw new InvalidDataException(
+                "Semantic overlay indexes belong to different generations.");
+        }
+
+        return From(
+            baseIndex,
+            recomputedIndex,
+            baseIndex.Documents.ToDictionary(
+                document => NormalizePath(document.RelPath), StringComparer.Ordinal),
+            recomputedIndex.Documents.ToDictionary(
+                document => NormalizePath(document.RelPath), StringComparer.Ordinal),
+            recomputedPaths.Select(NormalizePath).ToHashSet(StringComparer.Ordinal));
+    }
+
+    /// <summary>
+    /// The overlay itself, once the affected paths are settled. Both constructors end here:
+    /// they differ only in how that set is arrived at, and two copies of this would be two
+    /// answers to what an overlay contains.
+    /// </summary>
+    private static SemanticIndexOverlay From(
+        SemanticIndex baseIndex,
+        SemanticIndex currentIndex,
+        IReadOnlyDictionary<string, SemanticDocument> baseDocuments,
+        IReadOnlyDictionary<string, SemanticDocument> currentDocuments,
+        HashSet<string> affected)
+    {
         var deleted = affected.Where(path =>
                 baseDocuments.ContainsKey(path) && !currentDocuments.ContainsKey(path))
             .OrderBy(path => path, StringComparer.Ordinal)
@@ -109,6 +168,7 @@ public sealed record SemanticIndexOverlay
             Changed = changed,
         }.Validate();
     }
+
 
     public SemanticIndex Materialize(SemanticIndex baseIndex)
     {

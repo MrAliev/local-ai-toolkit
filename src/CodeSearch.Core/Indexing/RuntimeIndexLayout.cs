@@ -152,6 +152,55 @@ public static class RuntimeIndexLayout
             (identity.SemanticDirtyHash ?? "clean") + ".sidx");
     }
 
+    /// <summary>
+    /// What differs between the tree a published index was built from and the tree in front of
+    /// us: the commits made on this branch since, and the edits not committed at all.
+    ///
+    /// One `git diff` covers both, because comparing a tree with no second argument compares it
+    /// with the working copy; untracked files need the second call. Null rather than an empty
+    /// list when git cannot answer -- a tree it does not know is not "nothing changed", and a
+    /// caller scoping a rebuild to nothing would rebuild nothing at all (#519).
+    /// </summary>
+    public static List<string>? GetPathsChangedSince(string workingRoot, string baseTree)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(workingRoot);
+        ArgumentException.ThrowIfNullOrWhiteSpace(baseTree);
+        var root = RepoLocator.ResolveWorkingRoot(workingRoot).Value;
+        var changed = RepoLocator.GitOutputBytes(
+            root,
+            ["diff", "--name-only", "-z", baseTree, "--"]);
+        if (changed is null)
+        {
+            return null;
+        }
+
+        var untracked = RepoLocator.GitOutputBytes(
+            root,
+            ["ls-files", "--others", "--exclude-standard", "-z"]);
+        return ParseNullPaths(changed)
+            .Concat(ParseNullPaths(untracked))
+            .Where(path => DirtyCorpusPolicy.IsAllowed(path, gitIgnored: false))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    /// <summary>
+    /// A file as it stood in that tree, or null where it did not exist then. What the surface
+    /// of an edit is compared against.
+    /// </summary>
+    public static string? GetTextAt(string workingRoot, string treeish, string relativePath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(workingRoot);
+        ArgumentException.ThrowIfNullOrWhiteSpace(treeish);
+        ArgumentException.ThrowIfNullOrWhiteSpace(relativePath);
+        var root = RepoLocator.ResolveWorkingRoot(workingRoot).Value;
+        var bytes = RepoLocator.GitOutputBytes(
+            root,
+            ["show", treeish + ":" + relativePath.Replace((char)92, '/')]);
+        return bytes is null ? null : System.Text.Encoding.UTF8.GetString(bytes);
+    }
+
     public static List<string> GetDirtyPaths(string workingRoot)
     {
         var root = RepoLocator.ResolveWorkingRoot(workingRoot).Value;
