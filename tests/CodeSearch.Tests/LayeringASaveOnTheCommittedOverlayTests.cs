@@ -204,6 +204,57 @@ public sealed class LayeringASaveOnTheCommittedOverlayTests
     }
 
     /// <summary>
+    /// How many files came across untouched, which is the figure the sync line reports. It is a
+    /// subtraction rather than a count of its own: the layered overlay holds the committed
+    /// documents the rebuild did not replace plus every document it produced, and those two are
+    /// disjoint because everything produced counts as replaced.
+    ///
+    /// Reported rather than counted because the rebuild's own document count is not the number of
+    /// files it was asked about: Roslyn opens a requested project's references too, and the
+    /// indexer writes a document for every file in every project it ends up with.
+    ///
+    /// A pin on behaviour that already held, written to depend on it deliberately rather than by
+    /// accident.
+    /// </summary>
+    [Fact]
+    public void What_came_across_is_the_layer_minus_what_was_recomputed()
+    {
+        var @base = Index(
+            "base-tree",
+            null,
+            [Document("A.cs", 1), Document("B.cs", 2), Document("C.cs", 3)],
+            [Definition("A.cs", 1), Reference("B.cs", 2), Reference("C.cs", 3)]);
+        var committed = SemanticIndexOverlay.CreateScoped(
+            @base,
+            Index(
+                "head-tree",
+                null,
+                [Document("A.cs", 4), Document("B.cs", 5), Document("C.cs", 6)],
+                [Definition("A.cs", 4), Reference("B.cs", 5), Reference("C.cs", 6)]),
+            ["A.cs", "B.cs", "C.cs"]);
+        // One file saved, and the rebuild that answered for it also produced a file from a
+        // project it opened along the way.
+        var recomputed = Index(
+            "head-tree",
+            "dirty",
+            [Document("C.cs", 7), Document("D.cs", 8)],
+            [Reference("C.cs", 7), Reference("D.cs", 8)]);
+
+        var layered = SemanticIndexOverlay.Layer(committed, @base, recomputed, ["C.cs"]);
+
+        Assert.Equal(4, layered.Changed.Documents.Count);
+        Assert.Equal(
+            2,
+            layered.Changed.Documents.Count - recomputed.Documents.Count);
+        Assert.Equal(
+            ["A.cs", "B.cs"],
+            layered.Changed.Documents
+                .Select(document => document.RelPath)
+                .Except(recomputed.Documents.Select(document => document.RelPath))
+                .OrderBy(path => path, StringComparer.Ordinal));
+    }
+
+    /// <summary>
     /// A relationship is held against the symbol it was read from: the indexer walks a
     /// declaration and writes down what it implements. Remove the interface from that
     /// declaration and the committed layer's copy has to go with it, or `find_implementations`

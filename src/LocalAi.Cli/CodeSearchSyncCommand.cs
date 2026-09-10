@@ -1,6 +1,7 @@
 ﻿using CodeSearch.Core.Chunking;
 using CodeSearch.Core.Embedding;
 using CodeSearch.Core.Indexing;
+using CodeSearch.Core.Resources;
 using CodeSearch.Core.Semantics;
 using LocalAi.Broker.Client;
 using LocalAi.Cli.Resources;
@@ -452,6 +453,20 @@ public static class CodeSearchSyncCommand
                                 semanticBuild.Index,
                                 recomputed);
                     semanticOverlay.Save(semanticOverlayPath);
+                    // Which route this took, said out loud. The corpus layer prints the same
+                    // accounting a few lines below, and until now the semantic layer printed
+                    // nothing a reader could tell the two routes apart by.
+                    error.WriteLine(layered is null
+                        ? IndexText.SemanticOverlayFromBase(
+                            semanticOverlay.Changed.Documents.Count)
+                        // What came across is a subtraction, not a count of its own: the rebuild
+                        // writes a document for every file in every project Roslyn opened, which
+                        // is the plan's projects and everything they reference, so its own count
+                        // is not the number of files it was asked about.
+                        : IndexText.SemanticOverlayLayered(
+                            layered.Plan.ChangedPaths.Count,
+                            semanticOverlay.Changed.Documents.Count -
+                            semanticBuild.Index.Documents.Count));
                     // Only a rebuild that looked at the whole worktree can stand in for it. A
                     // narrowed one holds the definitions of the projects it opened and no others,
                     // and the corpus overlay below cuts every changed file by these -- so a file

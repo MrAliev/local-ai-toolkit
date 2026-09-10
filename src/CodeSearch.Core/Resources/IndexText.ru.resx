@@ -282,4 +282,14 @@
     <value>Эмбеддинги не приходят. {0}</value>
     <comment>Printed once per outage, immediately before the first countdown line and never again while that outage lasts: the cause is worth one line and the countdown is worth a dozen. {0} is EmbeddingUnavailableException's own message, which is already the composed, catalogued, length-bounded sentence for whichever state this is - broker_start_timeout, runner_unreachable, active_model_missing, backend_unreachable, backend_http_NNN, backend_io_failure, or an endpoint answering nothing at all - so nothing here re-derives it from a code and nothing up here learns Ollama's vocabulary, which is what OllamaTransport.NamesAnUnreachableRunner's own comment argues for. Named for the build rather than for Ollama, and deliberately: on the commonest of those states Ollama is up and answering in the same 7-16 seconds a success takes, and what has gone is the runner behind it. The clause before {0} is close to a restatement of what follows it, and that is the point: {0} ends in a foreign sentence of unbounded shape, and one owned clause in the reader's own language has to stand in front of it. It says nothing about giving up, because the line under it says the opposite.</comment>
   </data>
+
+  <data name="SemanticOverlayLayered" xml:space="preserve">
+    <value>Семантический overlay: после коммита изменено файлов {0}, из его overlay взято {1}.</value>
+    <comment>Russian pair of SemanticOverlayLayered. `overlay` stays Latin and indeclinable, as SemanticOverlayUnreadableFact already writes it, and the number follows the noun so an invariant figure agrees with no case ending.</comment>
+  </data>
+
+  <data name="SemanticOverlayFromBase" xml:space="preserve">
+    <value>Семантический overlay: файлов {0}, всё пересчитано относительно базового индекса.</value>
+    <comment>Russian pair of SemanticOverlayFromBase. The wording for the base index is BuildOverlayDivergence's, so one concept keeps one spelling; the verb is impersonal, which agrees with nothing and so cannot disagree with an invariant number.</comment>
+  </data>
 </root>
