@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Text;
 using System.Text.Json;
 using CodeSearch.Core.Indexing;
 using LocalAi.Cli.Resources;
@@ -10,35 +9,38 @@ namespace LocalAi.Cli;
 
 /// <summary>
 /// Makes and drops the worktree a branch is worked in, at
-/// <c>&lt;repository&gt;\.worktrees\&lt;name&gt;</c>.
+/// <c>&lt;parent of the repository&gt;\worktrees\&lt;repository&gt;\&lt;branch&gt;</c>.
 ///
-/// The place is the point. Claude Code's own default is <c>&lt;repository&gt;\.claude\worktrees</c>,
-/// which belongs to one client and means Codex opening the same branch gets a different directory
-/// — two checkouts of one branch, each with its own uncommitted state. In the repository's root
-/// both arrive at the same one, and so does a person with a terminal.
+/// Beside the repository rather than inside it. A worktree in the working tree is an untracked
+/// second checkout that only an ignore rule keeps out of <c>git status</c> and out of the index --
+/// <see cref="FileScanner"/> lists files with <c>git ls-files --others --exclude-standard</c>, so
+/// that rule was load-bearing for indexing and not merely for tidiness -- and JetBrains' IDEs
+/// document that nesting one there makes them read the project as multi-root and breaks their
+/// worktree integration. Outside, the repository does not have to know anything about us.
 ///
 /// Two callers, one behaviour. A client's hook sends a JSON payload on standard input; a person
-/// types the name. Standard output carries the created path and nothing else, on both faces,
-/// because that is the client's contract for <c>WorktreeCreate</c> — and making it a property of
-/// the command rather than a rule to remember is what stops the next message added here from
-/// breaking it. Every sentence goes to standard error, removal included.
+/// types the branch. Standard output carries the created path and nothing else, on both faces,
+/// because that is the client's contract for <c>WorktreeCreate</c> -- a property of the command
+/// rather than a rule to remember. Every sentence goes to standard error.
 /// </summary>
 internal static class AgentWorktreeCommand
 {
+    /// <summary>The folder under the root that holds one repository's worktrees.</summary>
+    private const string WorktreesDirectory = "worktrees";
+
+    /// <summary>Where a root of somebody's own is named, per repository or per machine.</summary>
+    private const string RootSetting = "localai.worktreeRoot";
+
     /// <summary>
-    /// The folder worktrees live in, and the rules that keep git from seeing them.
+    /// The branch prefixes a client's one-word slug may carry.
     ///
-    /// A second checkout inside the working tree is an untracked directory: it turns up in
-    /// <c>git status</c>, is swept into <c>git add -A</c>, and trips everything that refuses to
-    /// act on a dirty tree. <c>.localai/</c> joins it because the same root holds this
-    /// repository's indexes and cache, and a repository is better served gaining both rules in
-    /// one edit than growing an untracked cache directory later.
+    /// A client sends `feature-auth`, never `feature/auth`: its field is a slug. Taken verbatim,
+    /// every worktree a client opens would carry a branch that breaks the naming rule, and a
+    /// person later asking for `feature/auth` would get a second worktree for the same work.
     /// </summary>
-    private const string WorktreesDirectory = ".worktrees";
+    private static readonly string[] BranchTypes =
+        ["fix", "feature", "test", "docs", "refactor", "chore"];
 
-    private static readonly string[] IgnoreRules = [".worktrees/", ".localai/"];
-
-    /// <summary>Seconds. A git that has not answered by now is not going to.</summary>
     private const int GitTimeoutMs = 120_000;
 
     public static int Execute(
@@ -79,30 +81,27 @@ internal static class AgentWorktreeCommand
         bool inputRedirected)
     {
         var (operand, root) = Parse(rest);
-        var name = operand;
-        if (name is null)
+        var asked = operand;
+        var fromClient = false;
+        if (asked is null)
         {
             if (!inputRedirected)
             {
                 streams.Error.WriteLine(
-                    CliText.AgentWorktreeNameMissing(CliUsage.AgentWorktreeCreate));
+                    CliText.AgentWorktreeBranchMissing(CliUsage.AgentWorktreeCreate));
                 return 2;
             }
 
             var payload = Payload(input);
-            name = Field(payload, "name");
+            asked = Field(payload, "name");
             root ??= Field(payload, "cwd");
-            if (name is null)
+            if (asked is null)
             {
                 streams.Error.WriteLine(CliText.AgentWorktreePayloadFieldMissing("name"));
                 return 2;
             }
-        }
 
-        if (!IsOneDirectoryName(name))
-        {
-            streams.Error.WriteLine(CliText.AgentWorktreeNameNotUsable(name));
-            return 2;
+            fromClient = true;
         }
 
         var checkout = Checkout(root ?? Environment.CurrentDirectory);
@@ -113,18 +112,54 @@ internal static class AgentWorktreeCommand
             return 2;
         }
 
-        var target = Path.GetFullPath(Path.Combine(checkout, WorktreesDirectory, name));
-
-        // Before the directory exists, so git never sees an untracked second checkout -- not even
-        // for the moment between creating it and writing the rule.
-        Ignore(checkout, streams);
-
-        if (Registered(checkout).Any(path => SamePath(path, target)))
+        var branch = fromClient ? BranchFromSlug(checkout, asked) : asked.Trim();
+        if (!IsUsableBranch(checkout, branch))
         {
-            // The second client asking for what the first one made is the case this command
-            // exists for, not a collision. It gets the path and a zero exit.
-            streams.Out.WriteLine(target);
+            streams.Error.WriteLine(CliText.AgentWorktreeBranchNotUsable(asked));
+            return 2;
+        }
+
+        var home = Home(checkout);
+        if (home is null)
+        {
+            streams.Error.WriteLine(CliText.AgentWorktreeRootUnknown(checkout));
+            return 2;
+        }
+
+        var target = Path.GetFullPath(Path.Combine(home, Flatten(branch)));
+        var registered = Registered(checkout);
+
+        // The branch first: git keeps a branch in one worktree at a time, so if it has one
+        // anywhere, that one is the answer -- or, for the main checkout, the refusal.
+        if (registered.FirstOrDefault(one => Names(one, branch)) is { } owner)
+        {
+            if (SamePath(owner.Path, checkout))
+            {
+                streams.Error.WriteLine(
+                    CliText.AgentWorktreeBranchInMainCheckout(branch, checkout));
+                return 2;
+            }
+
+            if (!SamePath(owner.Path, target))
+            {
+                streams.Error.WriteLine(CliText.AgentWorktreeBranchElsewhere(
+                    branch,
+                    Path.GetFullPath(owner.Path),
+                    target));
+            }
+
+            streams.Out.WriteLine(Path.GetFullPath(owner.Path));
             return 0;
+        }
+
+        // Then the directory. Two branches can flatten to one name -- `feature/hooks` and
+        // `feature-hooks` -- and Windows compares paths without case, so `fix/a` and `Fix/A` do
+        // too. Handing back the other branch's worktree would put the work on the wrong branch.
+        if (registered.FirstOrDefault(one => SamePath(one.Path, target)) is { } holder)
+        {
+            streams.Error.WriteLine(
+                CliText.AgentWorktreePathHoldsAnotherBranch(target, BranchOf(holder) ?? branch));
+            return 2;
         }
 
         if (Directory.Exists(target))
@@ -133,35 +168,45 @@ internal static class AgentWorktreeCommand
             return 2;
         }
 
-        Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-        var added = Add(checkout, target, name);
-        if (added is not null)
+        try
         {
-            streams.Error.WriteLine(CliText.AgentWorktreeGitRefused(added));
+            Directory.CreateDirectory(home);
+        }
+        catch (Exception failure) when (failure is IOException or UnauthorizedAccessException)
+        {
+            streams.Error.WriteLine(
+                CliText.AgentWorktreeRootNotWritable(home, failure.Message));
             return 2;
         }
 
+        if (Add(checkout, target, branch) is { } refused)
+        {
+            streams.Error.WriteLine(CliText.AgentWorktreeGitRefused(refused));
+            return 2;
+        }
+
+        streams.Error.WriteLine(CliText.AgentWorktreeCreated(target, branch));
         streams.Out.WriteLine(target);
         return 0;
     }
 
     /// <summary>
-    /// Attaches the worktree to the branch of that name when there is one, and lets git create it
-    /// otherwise -- from the remote's default branch when that ref is at hand, which is the
-    /// "start clean" default this replaces, and from local HEAD when it is not.
+    /// Attaches to the branch when it exists, and lets git create it otherwise -- from the
+    /// remote's default branch where that ref is at hand, which is the "start clean" default the
+    /// client applies itself, and from local HEAD when it is not.
     /// </summary>
-    private static string? Add(string checkout, string target, string name)
+    private static string? Add(string checkout, string target, string branch)
     {
-        if (Git(checkout, "rev-parse", "--verify", "--quiet", "refs/heads/" + name).Ok)
+        if (Git(checkout, "rev-parse", "--verify", "--quiet", "refs/heads/" + branch).Ok)
         {
-            return Git(checkout, "worktree", "add", target, name) is { Ok: false } refused
+            return Git(checkout, "worktree", "add", target, branch) is { Ok: false } refused
                 ? refused.Error
                 : null;
         }
 
         var head = Git(checkout, "rev-parse", "--verify", "--quiet", "origin/HEAD");
         var start = head.Ok && head.Output.Length > 0 ? head.Output : "HEAD";
-        return Git(checkout, "worktree", "add", "-b", name, target, start) is { Ok: false } failed
+        return Git(checkout, "worktree", "add", "-b", branch, target, start) is { Ok: false } failed
             ? failed.Error
             : null;
     }
@@ -183,10 +228,16 @@ internal static class AgentWorktreeCommand
                 return 2;
             }
 
-            named = Field(Payload(input), "path");
+            // `worktree_path` is what the client sends -- observed from this machine on
+            // 2026-09-11 and stated by the hooks reference. `path` is read as well because an
+            // earlier payload recorded here carried that spelling, and a removal that refuses
+            // because a field was renamed leaves a worktree behind on every session exit.
+            var payload = Payload(input);
+            named = Field(payload, "worktree_path") ?? Field(payload, "path");
             if (named is null)
             {
-                streams.Error.WriteLine(CliText.AgentWorktreePayloadFieldMissing("path"));
+                streams.Error.WriteLine(
+                    CliText.AgentWorktreePayloadFieldMissing("worktree_path"));
                 return 2;
             }
         }
@@ -202,7 +253,7 @@ internal static class AgentWorktreeCommand
         var checkout = Checkout(target);
         if (checkout is null ||
             SamePath(checkout, target) ||
-            !Registered(checkout).Any(path => SamePath(path, target)))
+            !Registered(checkout).Any(one => SamePath(one.Path, target)))
         {
             streams.Error.WriteLine(CliText.AgentWorktreeNotAWorktree(target));
             return 2;
@@ -228,92 +279,74 @@ internal static class AgentWorktreeCommand
     }
 
     /// <summary>
-    /// Adds the two rules to the repository's own <c>.gitignore</c>, once each.
-    ///
-    /// Appended rather than rewritten, in the shape <c>HookInstaller.Exclude</c> settled on: the
-    /// file belongs to the repository, and reading it as lines and joining them back rewrote
-    /// every line of a CRLF file to add two patterns -- harmless to git and the whole of the
-    /// reader's next diff. No header of ours goes in: `.gitignore` is committed, an uninstall
-    /// deliberately does not take these rules back out, and a marker nothing ever reads again
-    /// would outlive the installation that wrote it.
-    ///
-    /// A failure to write is said and carried on from. Refusing a worktree because a comment file
-    /// is read-only would cost more than the untracked entries do.
+    /// Where this repository's worktrees live: a configured root, or the sibling of the
+    /// repository. Null when the repository is at the top of a drive and has no sibling.
     /// </summary>
-    private static void Ignore(string checkout, CommandStreams streams)
+    private static string? Home(string checkout)
     {
-        var path = Path.Combine(checkout, ".gitignore");
-        string existing;
-        try
-        {
-            existing = File.Exists(path) ? File.ReadAllText(path) : string.Empty;
-        }
-        catch (Exception failure) when (failure is IOException or UnauthorizedAccessException)
-        {
-            streams.Error.WriteLine(CliText.AgentWorktreeIgnoreNotWritten(
-                string.Join(", ", IgnoreRules),
-                path,
-                failure.Message));
-            return;
-        }
-
-        var newLine = existing.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
-        var lines = existing.Length == 0
-            ? []
-            : existing.ReplaceLineEndings("\n").TrimEnd('\n').Split('\n').ToList();
-        var missing = IgnoreRules
-            .Where(rule => !lines.Any(line => Means(line, rule)))
-            .ToArray();
-        if (missing.Length == 0)
-        {
-            return;
-        }
-
-        lines.AddRange(missing);
-        try
-        {
-            File.WriteAllText(
-                path,
-                string.Join(newLine, lines) + newLine,
-                new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-        }
-        catch (Exception failure) when (failure is IOException or UnauthorizedAccessException)
-        {
-            streams.Error.WriteLine(CliText.AgentWorktreeIgnoreNotWritten(
-                string.Join(", ", missing),
-                path,
-                failure.Message));
-            return;
-        }
-
-        streams.Error.WriteLine(CliText.AgentWorktreeIgnoreAdded(
-            string.Join(", ", missing),
-            path));
-    }
-
-    /// <summary>Every way of writing one rule, so a hand-written one is recognised, not doubled.</summary>
-    private static bool Means(string line, string rule)
-    {
-        var written = line.Trim();
-        var bare = rule.TrimEnd('/');
-        return written == rule ||
-            written == "/" + rule ||
-            written == bare ||
-            written == "/" + bare;
+        var configured = Git(checkout, "config", "--get", RootSetting);
+        var root = configured.Ok && configured.Output.Length > 0
+            ? Path.IsPathRooted(configured.Output)
+                ? configured.Output
+                : Path.Combine(checkout, configured.Output)
+            : Path.GetDirectoryName(checkout.TrimEnd('/', '\\')) is { } parent
+                ? Path.Combine(parent, WorktreesDirectory)
+                : null;
+        return root is null
+            ? null
+            : Path.GetFullPath(Path.Combine(root, Path.GetFileName(checkout.TrimEnd('/', '\\'))));
     }
 
     /// <summary>
-    /// The name becomes a directory under <c>.worktrees</c>, and it arrives from a client. A
-    /// separator or <c>..</c> in it would put the worktree anywhere on the disk.
+    /// What a client's slug means as a branch. A slug carrying a known type gains the slash the
+    /// naming rule wants; anything else is taken as it is, so a generated name like
+    /// <c>bold-oak-a3f2</c> stays itself and an existing branch stays reachable.
     /// </summary>
-    private static bool IsOneDirectoryName(string name)
+    private static string BranchFromSlug(string checkout, string slug)
     {
-        var trimmed = name.Trim();
-        return trimmed.Length > 0 &&
-            trimmed is not ("." or "..") &&
-            trimmed == Path.GetFileName(trimmed) &&
-            trimmed.IndexOfAny(['/', '\\']) < 0 &&
-            trimmed.IndexOfAny(Path.GetInvalidFileNameChars()) < 0;
+        var name = slug.Trim();
+        if (name.Contains('/', StringComparison.Ordinal))
+        {
+            return name;
+        }
+
+        if (Git(checkout, "rev-parse", "--verify", "--quiet", "refs/heads/" + name).Ok)
+        {
+            return name;
+        }
+
+        var separator = name.IndexOf('-', StringComparison.Ordinal);
+        if (separator > 0 &&
+            BranchTypes.Contains(name[..separator], StringComparer.Ordinal) &&
+            separator + 1 < name.Length)
+        {
+            return name[..separator] + "/" + name[(separator + 1)..];
+        }
+
+        return name;
+    }
+
+    private static string Flatten(string branch) => branch.Replace('/', '-');
+
+    /// <summary>
+    /// Whether git will take this as a branch, and Windows as a directory.
+    ///
+    /// <c>check-ref-format</c> is asked in its full-ref form rather than with <c>--branch</c>:
+    /// <c>--branch</c> first expands the previous-checkout syntax <c>@{-1}</c>, and this string
+    /// arrives from a client. The two remaining checks are the places where git's rules and the
+    /// file system's differ: a leading dash reads as an option, and characters legal in a ref are
+    /// not all legal in a file name.
+    /// </summary>
+    private static bool IsUsableBranch(string checkout, string branch)
+    {
+        if (string.IsNullOrWhiteSpace(branch) ||
+            branch.StartsWith('-') ||
+            Flatten(branch).IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            return false;
+        }
+
+        return Git(checkout, "check-ref-format", "refs/heads/" + branch).Ok;
     }
 
     /// <summary>The main checkout, not whichever worktree the caller happens to sit in.</summary>
@@ -327,19 +360,29 @@ internal static class AgentWorktreeCommand
             return null;
         }
 
-        var (parent, tail) = (
-            Path.GetDirectoryName(common.Trim().TrimEnd('/', '\\')),
-            Path.GetFileName(common.Trim().TrimEnd('/', '\\')));
-        return tail == ".git" && parent is not null ? Path.GetFullPath(parent) : null;
+        var trimmed = common.Trim().TrimEnd('/', '\\');
+        var parent = Path.GetDirectoryName(trimmed);
+        return Path.GetFileName(trimmed) == ".git" && parent is not null
+            ? Path.GetFullPath(parent)
+            : null;
     }
 
-    private static IReadOnlyList<string> Registered(string checkout)
+    private static IReadOnlyList<GitWorktree> Registered(string checkout)
     {
         var listed = Git(checkout, "worktree", "list", "--porcelain");
-        return listed.Ok
-            ? WorktreeInventory.ParsePorcelain(listed.Output).Select(one => one.Path).ToArray()
-            : [];
+        return listed.Ok ? WorktreeInventory.ParsePorcelain(listed.Output) : [];
     }
+
+    /// <summary>Porcelain records a branch as <c>refs/heads/&lt;name&gt;</c>.</summary>
+    private static string? BranchOf(GitWorktree worktree) =>
+        worktree.Branch is null
+            ? null
+            : worktree.Branch.StartsWith("refs/heads/", StringComparison.Ordinal)
+                ? worktree.Branch["refs/heads/".Length..]
+                : worktree.Branch;
+
+    private static bool Names(GitWorktree worktree, string branch) =>
+        string.Equals(BranchOf(worktree), branch, StringComparison.Ordinal);
 
     private static bool SamePath(string one, string other) =>
         string.Equals(
@@ -425,10 +468,7 @@ internal static class AgentWorktreeCommand
             }
 
             Task.WaitAll([output, error], GitTimeoutMs);
-            return new GitRun(
-                process.ExitCode == 0,
-                output.Result.Trim(),
-                error.Result.Trim());
+            return new GitRun(process.ExitCode == 0, output.Result.Trim(), error.Result.Trim());
         }
         catch (Exception failure) when (failure is IOException or SystemException)
         {

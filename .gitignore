@@ -26,9 +26,6 @@ coverage/
 *.pid
 *.log
 
-# Worktrees, one per branch, in the repository root so every tool opens the same one
-.worktrees/
-
 # Local working files, never published
 .claude/
 CLAUDE.md

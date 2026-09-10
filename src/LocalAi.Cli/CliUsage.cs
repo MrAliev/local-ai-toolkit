@@ -51,21 +51,21 @@ internal static class CliUsage
     // above is Git's and its events are Git's; WorktreeCreate and WorktreeRemove are the
     // client's.
     //
-    // The name and the path are bracketed because the hook face reads them from a payload on
+    // The branch and the path are bracketed because the hook face reads them from a payload on
     // standard input. A console with neither is a refusal rather than a wait, which is the
     // mistake AgentGateNeedsPayload was written for.
     //
     // Deliberately absent from MachineOutput.Commands, like `agent gate`: what create prints is
     // one path a client reads, not a MachineEnvelope, so `--json` must keep refusing it.
     public const string AgentWorktreeCreate =
-        "localai agent worktree create [name] [--root dir]";
+        "localai agent worktree create [branch] [--root dir]";
     public const string AgentWorktreeRemove =
         "localai agent worktree remove [path]";
 
     // The form the top-level listing carries. The two above are what the refusals carry, so a
     // message can never name a form the dispatcher will not accept.
     public const string AgentWorktree =
-        "localai agent worktree <create|remove> [name|path] [--root dir]";
+        "localai agent worktree <create|remove> [branch|path] [--root dir]";
 
     // Every command the binary actually answers to belongs here. The hook command was missing
     // from this list while every installed Git hook invoked it, so anyone debugging a hook was
