@@ -585,6 +585,18 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
             Console.IsInputRedirected);
     }
 
+    if (args is ["agent", "worktree", .. var worktreeArguments])
+    {
+        // The same two faces as the gate above, and standard input handed over for the same
+        // reason: a client writes a JSON payload, and a test writes a document of its own.
+        // Console.IsInputRedirected is what tells a hook from a person who typed the name.
+        return AgentWorktreeCommand.Execute(
+            worktreeArguments,
+            CommandStreams.Standard,
+            Console.In,
+            Console.IsInputRedirected);
+    }
+
     if (args is ["hook", .. var hookArguments])
     {
         // Git hooks are the only caller of this command, so its failures are read from a hook

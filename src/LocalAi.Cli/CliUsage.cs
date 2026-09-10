@@ -46,6 +46,27 @@ internal static class CliUsage
     // `hookSpecificOutput`, not a MachineEnvelope, so `--json` must keep refusing it.
     public const string AgentGate = "localai agent gate";
 
+    // Two words before the operation for the reason `agent gate` has two: this is the next thing
+    // an agent's configuration needs, and the installer registers it in the same file. `hook`
+    // above is Git's and its events are Git's; WorktreeCreate and WorktreeRemove are the
+    // client's.
+    //
+    // The name and the path are bracketed because the hook face reads them from a payload on
+    // standard input. A console with neither is a refusal rather than a wait, which is the
+    // mistake AgentGateNeedsPayload was written for.
+    //
+    // Deliberately absent from MachineOutput.Commands, like `agent gate`: what create prints is
+    // one path a client reads, not a MachineEnvelope, so `--json` must keep refusing it.
+    public const string AgentWorktreeCreate =
+        "localai agent worktree create [name] [--root dir]";
+    public const string AgentWorktreeRemove =
+        "localai agent worktree remove [path]";
+
+    // The form the top-level listing carries. The two above are what the refusals carry, so a
+    // message can never name a form the dispatcher will not accept.
+    public const string AgentWorktree =
+        "localai agent worktree <create|remove> [name|path] [--root dir]";
+
     // Every command the binary actually answers to belongs here. The hook command was missing
     // from this list while every installed Git hook invoked it, so anyone debugging a hook was
     // told by the tool itself that the command it had just run did not exist.
@@ -59,5 +80,5 @@ internal static class CliUsage
         "localai sync [--root dir] [--base-only] [--require-semantics] [--max-inline-files n] | " + Hook + " | " +
         "localai hooks install [--root dir] | " + Prune + " | " + Doctor + " | " +
         Telemetry + " | " + Ask + " | " + Triage + " | " + ReadImage + " | " + Translate +
-        " | " + Capabilities + " | " + AgentGate;
+        " | " + Capabilities + " | " + AgentGate + " | " + AgentWorktree;
 }
