@@ -1,0 +1,107 @@
+        // Before the wait rather than after it. Everything from here to the first line the sync
+        // used to print is one silence — 36.72 s on this repository — and a line explaining it
+        // afterwards explains a wait the reader has already sat through (#387).
+        diagnostic?.Invoke(IndexText.RoslynLoading(selected, (int)RestoreTimeout.TotalMinutes));
+        step?.Invoke(IndexBuildStep.RestoringDependencies, 0, 0);
+        var restoring = Stopwatch.StartNew();
+        var restored = await QuietStep.WhileItRunsAsync(
+            RestoreProjectDependenciesAsync(selected, diagnostic, cancellationToken),
+            diagnostic,
+            time,
+            wait,
+            cancellationToken).ConfigureAwait(false);
+        if (restored)
+        {
+            // Only on success. The failure and timeout paths print their own diagnostics, so a
+            // run that shows the line above, then a failure, and no line here is telling the
+            // truth rather than hiding half of it.
+            diagnostic?.Invoke(IndexText.RoslynRestored(Seconds(restoring)));
+        }
+
+        using (await RoslynBuildHostLease.AcquireLoadLockAsync(cancellationToken))
+        {
+            EnsureMsBuildRegistered(diagnostic);
+            var buildHostLease = RoslynBuildHostLease.CreateIfNeeded();
+            var originalBaseDirectory = AppContext.GetData(
+                RoslynBuildHostLease.BaseDirectoryDataName);
+            if (buildHostLease is not null)
+            {
+                AppContext.SetData(
+                    RoslynBuildHostLease.BaseDirectoryDataName,
+                    buildHostLease.RootPath);
+            }
+
+            var workspace = MSBuildWorkspace.Create(WorkspaceProperties);
+            // Kind and entry point, not the message alone. A workspace failure's message is
+            // whatever exception text Roslyn had at hand, and for a bare DllNotFoundException
+            // that is exactly "Dll was not found." — the one anonymous line issue #139 turned
+            // on, which five reproduction attempts could not trace because it named neither
+            // what was being loaded nor how severe the failure was.
+            // One root cause, one line. A repository whose NuGet configuration trips
+            // source mapping fails once per project — 53 times on the repository that
+            // reported it — and the hostfxr line, or a genuinely different failure,
+            // drowns in the repetition (#291).
+            var digest = new WorkspaceDiagnosticDigest();
+            workspace.RegisterWorkspaceFailedHandler(args =>
+            {
+                var line = digest.Observe(
+                    args.Diagnostic.Kind.ToString(),
+                    args.Diagnostic.Message);
+                if (line is not null)
+                {
+                    diagnostic?.Invoke(
+                        $"{args.Diagnostic.Kind} while loading '{selected}': {line}");
+                }
+            });
+            try
+            {
+                step?.Invoke(IndexBuildStep.OpeningProjects, 0, 0);
+                var opening = Stopwatch.StartNew();
+                var solution = await QuietStep.WhileItRunsAsync(
+                    OpenAsync(workspace, selected, cancellationToken),
+                    diagnostic,
+                    time,
+                    wait,
+                    cancellationToken).ConfigureAwait(false);
+                // After the call, because that is the first moment the count exists: opening a
+                // solution is one opaque operation with no per-project callback to count from.
+                diagnostic?.Invoke(
+                    IndexText.RoslynOpened(solution.Projects.Count(), Seconds(opening)));
+                if (candidates.Length + projectCandidates.Length > 1)
+                {
+                    diagnostic?.Invoke(
+                        $"Multiple C# entry points found; semantic indexing selected '{selected}'.");
+                }
+
+                // Only the project fallback leaves anything out. A solution is opened whole, so
+                // several solutions in one tree means the others were not asked for rather than
+                // silently dropped.
+                var uncovered = projectCandidates
+                    .Where(path => !string.Equals(path, selected, StringComparison.Ordinal))
+                    .ToArray();
+                return new LoadedRoslynSolution(
+                    workspace,
+                    solution,
+                    buildHostLease,
+                    uncovered);
+            }
+            catch
+            {
+                workspace.Dispose();
+                buildHostLease?.Dispose();
+                throw;
+            }
+            finally
+            {
+                // After the load rather than as they arrive: the count is only known once
+                // every project has been through, and the first of each is already above.
+                foreach (var line in digest.Summarise())
+                {
+                    diagnostic?.Invoke(line);
+                }
+
+                AppContext.SetData(
+                    RoslynBuildHostLease.BaseDirectoryDataName,
+                    originalBaseDirectory);
+            }
+        }
