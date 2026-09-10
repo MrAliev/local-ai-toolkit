@@ -14,6 +14,21 @@ public sealed class XamlSemanticIndexer
     private const string MauiNamespace = "http://schemas.microsoft.com/dotnet/2021/maui";
     private const string AvaloniaNamespace = "https://github.com/avaloniaui";
 
+    /// <summary>
+    /// Every occurrence this pass has already written, so a repeat is recognised without
+    /// walking what has been written so far.
+    ///
+    /// It used to be a scan of the whole occurrence list, once per occurrence added -- and
+    /// that list begins as the entire C# index the XAML is being added to, 225 067 entries on
+    /// the reference repository. Measured there: the scan was 0.9 s of the method's 4.8 s, for
+    /// eight XAML files whose parsing takes 0.01 s. The rest of that 4.8 s is elsewhere in the
+    /// per-element work and is not addressed here (#519).
+    ///
+    /// `RoslynSemanticIndexer` has kept a set for exactly this since it was written; this is
+    /// the same shape, down to the key.
+    /// </summary>
+    private readonly HashSet<OccurrenceKey> _written = [];
+
     public SemanticIndex Supplement(SemanticIndex csharpIndex, string repositoryRoot)
     {
         ArgumentNullException.ThrowIfNull(csharpIndex);
@@ -22,6 +37,15 @@ public sealed class XamlSemanticIndexer
         var documents = csharpIndex.Documents.ToList();
         var symbols = csharpIndex.Symbols.ToDictionary(symbol => symbol.Id, StringComparer.Ordinal);
         var occurrences = csharpIndex.Occurrences.ToList();
+        _written.Clear();
+        foreach (var occurrence in occurrences)
+        {
+            _written.Add(new OccurrenceKey(
+                occurrence.DocumentPath,
+                occurrence.Range,
+                occurrence.SymbolId));
+        }
+
         var relationships = csharpIndex.Relationships.ToList();
         var baseTypes = relationships
             .Where(relationship => relationship.Kind == SemanticRelationshipKind.TypeDefinition)
@@ -161,7 +185,7 @@ public sealed class XamlSemanticIndexer
         };
     }
 
-    private static void IndexEventHandler(
+    private void IndexEventHandler(
         XamlAttributeSyntax attribute,
         string documentPath,
         string? xamlClass,
@@ -194,7 +218,7 @@ public sealed class XamlSemanticIndexer
             NavigationPrecision.Precise);
     }
 
-    private static void IndexXamlLanguageAttribute(
+    private void IndexXamlLanguageAttribute(
         XamlAttributeSyntax attribute,
         string localName,
         string documentPath,
@@ -291,7 +315,7 @@ public sealed class XamlSemanticIndexer
             occurrences);
     }
 
-    private static void IndexMarkupExtension(
+    private void IndexMarkupExtension(
         XamlAttributeSyntax attribute,
         string documentPath,
         SourceText sourceText,
@@ -523,7 +547,7 @@ public sealed class XamlSemanticIndexer
         return id;
     }
 
-    private static void AddOccurrence(
+    private void AddOccurrence(
         List<SemanticOccurrence> occurrences,
         string path,
         SourceRange range,
@@ -531,8 +555,7 @@ public sealed class XamlSemanticIndexer
         SemanticOccurrenceRoles roles,
         NavigationPrecision precision)
     {
-        if (occurrences.Any(item =>
-                item.DocumentPath == path && item.Range == range && item.SymbolId == symbolId))
+        if (!_written.Add(new OccurrenceKey(path, range, symbolId)))
         {
             return;
         }
@@ -759,6 +782,8 @@ public sealed class XamlSemanticIndexer
                string.Equals(uri, XamlNamespace, StringComparison.Ordinal);
     }
     private static string LastSegment(string value) => value[(value.LastIndexOf('.') + 1)..];
+
+    private sealed record OccurrenceKey(string Path, SourceRange Range, string SymbolId);
 
     private sealed record ResolvedSymbol(
         string Id,

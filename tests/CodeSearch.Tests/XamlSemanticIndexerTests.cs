@@ -355,6 +355,44 @@ public sealed class XamlSemanticIndexerTests : IDisposable
     private static LinePosition Start(SourceRange range) =>
         new(range.StartLine, range.StartCharacter);
 
+    /// <summary>
+    /// Every occurrence the XAML layer emits, emitted once.
+    ///
+    /// Written because nothing pinned it: removing the guard in `AddOccurrence` altogether
+    /// left every other test in this class green. It did not go red for this change either --
+    /// the change replaces how the repeat is recognised, not whether it is -- so this is a
+    /// guard over a refactor rather than a red step, and is reported as one.
+    /// </summary>
+    [Fact]
+    public void Each_occurrence_is_emitted_once()
+    {
+        const string xaml =
+            """
+            <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:local="clr-namespace:Demo"
+                    x:Class="Demo.MainWindow"
+                    Title="Hello" />
+            """;
+        WriteXaml(xaml);
+
+        var index = new XamlSemanticIndexer().Supplement(CSharpIndex(), _root);
+
+        var repeated = index.Occurrences
+            .Where(occurrence => occurrence.DocumentPath.EndsWith(
+                ".xaml",
+                StringComparison.OrdinalIgnoreCase))
+            .GroupBy(occurrence => (
+                occurrence.DocumentPath,
+                occurrence.Range,
+                occurrence.SymbolId))
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key.ToString())
+            .ToArray();
+
+        Assert.Empty(repeated);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root))
