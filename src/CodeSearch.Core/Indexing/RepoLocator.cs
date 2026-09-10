@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 using LocalAi.Contracts;
+using LocalAi.Repository;
 
 namespace CodeSearch.Core.Indexing;
 
@@ -32,13 +33,80 @@ public static class RepoLocator
         return start;
     }
 
+    /// <summary>The directory a working root keeps what LocalAi builds for it in.</summary>
+    public const string LocalDirectory = ".localai";
+
+    /// <summary>
+    /// The rule that keeps <see cref="LocalDirectory"/> out of git, in the spelling
+    /// <c>info/exclude</c> wants: anchored, so it matches the working root's own directory and
+    /// not one of the same name deeper in the tree.
+    /// </summary>
+    private const string LocalDirectoryRule = "/" + LocalDirectory + "/";
+
     /// <summary>
     /// Where a working root keeps its overlay index. Inside the worktree on purpose: deleting the
-    /// worktree takes the overlay with it, so stale overlays cannot accumulate. Requires
-    /// <c>.claude/</c> to be git-ignored, or a multi-megabyte binary lands in someone's commit.
+    /// worktree takes the overlay with it, so stale overlays cannot accumulate.
+    ///
+    /// Under the product's own directory rather than <c>.claude/</c>, which belongs to one client:
+    /// a second client opening the same checkout would neither write nor find it there, and the
+    /// name said whose file it was. <see cref="EnsureOverlayIgnored"/> is what keeps it out of
+    /// git; the old path relied on the reader having ignored somebody else's directory.
     /// </summary>
     public static string OverlayPathFor(FsPath workingRoot) =>
-        workingRoot.Combine(".claude", "codesearch", "overlay.cidx").Value;
+        workingRoot.Combine(LocalDirectory, "codesearch", "overlay.cidx").Value;
+
+    /// <summary>
+    /// Tells this clone of the repository to ignore <see cref="LocalDirectory"/>.
+    ///
+    /// Written to <c>.git/info/exclude</c> and deliberately not to <c>.gitignore</c>: the ignore
+    /// file belongs to the repository and is committed, so a rule put there would travel to every
+    /// clone and turn up in somebody's diff, while <c>info/exclude</c> is this clone's own and is
+    /// never pushed anywhere. It also lives in the common directory, so one rule covers every
+    /// worktree of the repository rather than needing one per checkout.
+    ///
+    /// Appended rather than rewritten, in the shape <c>HookInstaller.Exclude</c> settled on: this
+    /// file is edited by hand, and reading it as lines and joining them back rewrote every line of
+    /// a CRLF file to add one pattern -- harmless to git, and the whole of the reader's next diff.
+    ///
+    /// Failure is silent on purpose. An index that cannot write an ignore rule is still a working
+    /// index, and refusing to build one because a file is read-only would trade a whole feature
+    /// for a tidy <c>git status</c>.
+    /// </summary>
+    public static void EnsureOverlayIgnored(FsPath workingRoot)
+    {
+        var common = RunGit(
+            workingRoot.Value,
+            "rev-parse --path-format=absolute --git-common-dir");
+        if (string.IsNullOrWhiteSpace(common))
+        {
+            return;
+        }
+
+        try
+        {
+            var exclude = Path.Combine(Path.GetFullPath(common.Trim()), "info", "exclude");
+            Directory.CreateDirectory(Path.GetDirectoryName(exclude)!);
+            var existing = File.Exists(exclude) ? File.ReadAllText(exclude) : string.Empty;
+            var lines = existing.Length == 0
+                ? []
+                : existing.ReplaceLineEndings("\n").TrimEnd('\n').Split('\n').ToList();
+            if (lines.Any(line => line.Trim() == LocalDirectoryRule))
+            {
+                return;
+            }
+
+            lines.Add(LocalDirectoryRule);
+            File.WriteAllText(
+                exclude,
+                string.Join(GitHookLayout.LineEndingOf(existing), lines) +
+                    GitHookLayout.LineEndingOf(existing),
+                new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        }
+        catch (Exception failure) when (
+            failure is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+        }
+    }
 
     /// <summary>For a working root still travelling as text; it is canonicalised on the way in.</summary>
     public static string OverlayPathFor(string workingRoot) =>
