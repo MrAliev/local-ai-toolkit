@@ -157,6 +157,14 @@ async Task<int> OverlayAsync(Dictionary<string, string> opts)
             "index_not_built");
     }
 
+    // After the refusal above and before anything is written, so a run that builds nothing
+    // leaves no rule behind and a run that builds one is never briefly visible to git. Skipped
+    // when the caller named its own path: that one is theirs to place and to ignore.
+    if (!opts.ContainsKey("overlay"))
+    {
+        RepoLocator.EnsureOverlayIgnored(FsPath.From(workingRoot));
+    }
+
     // The model is dictated by the base: an overlay embedded with anything else produces vectors
     // that cannot be compared against it.
     var model = CodeIndex.Load(basePath, withVectors: false).Model;
