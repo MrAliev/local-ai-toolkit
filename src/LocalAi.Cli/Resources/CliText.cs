@@ -667,11 +667,29 @@ public static class CliText
     /// </summary>
     public static string AgentGateNeedsPayload => Catalogue.Get(nameof(AgentGateNeedsPayload));
 
+    public static string AgentWorktreeCreated(string path, string branch) =>
+        Catalogue.Format(nameof(AgentWorktreeCreated), path, branch);
+
+    public static string AgentWorktreeBranchElsewhere(string branch, string existing, string target) =>
+        Catalogue.Format(nameof(AgentWorktreeBranchElsewhere), branch, existing, target);
+
+    public static string AgentWorktreeBranchInMainCheckout(string branch, string checkout) =>
+        Catalogue.Format(nameof(AgentWorktreeBranchInMainCheckout), branch, checkout);
+
+    public static string AgentWorktreePathHoldsAnotherBranch(string path, string branch) =>
+        Catalogue.Format(nameof(AgentWorktreePathHoldsAnotherBranch), path, branch);
+
+    public static string AgentWorktreeRootUnknown(string repository) =>
+        Catalogue.Format(nameof(AgentWorktreeRootUnknown), repository);
+
+    public static string AgentWorktreeRootNotWritable(string directory, string reason) =>
+        Catalogue.Format(nameof(AgentWorktreeRootNotWritable), directory, reason);
+
     public static string AgentWorktreeOperationUnknown(string operation, string usage) =>
         Catalogue.Format(nameof(AgentWorktreeOperationUnknown), operation, usage);
 
-    public static string AgentWorktreeNameMissing(string usage) =>
-        Catalogue.Format(nameof(AgentWorktreeNameMissing), usage);
+    public static string AgentWorktreeBranchMissing(string usage) =>
+        Catalogue.Format(nameof(AgentWorktreeBranchMissing), usage);
 
     public static string AgentWorktreePathMissing(string usage) =>
         Catalogue.Format(nameof(AgentWorktreePathMissing), usage);
@@ -679,20 +697,14 @@ public static class CliText
     public static string AgentWorktreePayloadFieldMissing(string field) =>
         Catalogue.Format(nameof(AgentWorktreePayloadFieldMissing), field);
 
-    public static string AgentWorktreeNameNotUsable(string name) =>
-        Catalogue.Format(nameof(AgentWorktreeNameNotUsable), name);
+    public static string AgentWorktreeBranchNotUsable(string branch) =>
+        Catalogue.Format(nameof(AgentWorktreeBranchNotUsable), branch);
 
     public static string AgentWorktreePathOccupied(string path) =>
         Catalogue.Format(nameof(AgentWorktreePathOccupied), path);
 
     public static string AgentWorktreeGitRefused(string reason) =>
         Catalogue.Format(nameof(AgentWorktreeGitRefused), reason);
-
-    public static string AgentWorktreeIgnoreAdded(string rules, string path) =>
-        Catalogue.Format(nameof(AgentWorktreeIgnoreAdded), rules, path);
-
-    public static string AgentWorktreeIgnoreNotWritten(string rules, string path, string reason) =>
-        Catalogue.Format(nameof(AgentWorktreeIgnoreNotWritten), rules, path, reason);
 
     public static string AgentWorktreeNotAWorktree(string path) =>
         Catalogue.Format(nameof(AgentWorktreeNotAWorktree), path);
