@@ -366,7 +366,16 @@ public static class CodeSearchSyncCommand
                     // could not produce -- and then the whole solution is reopened as before.
                     var baseSemanticIndex = SemanticIndex.Load(
                         store.SemanticIndexPath(generation.Identity.Id));
-                    var plan = PlanScopedSemanticRebuild(
+                    // A save laid over the overlay of the commit it was made against, where that
+                    // commit has one; otherwise the whole worktree measured against the base
+                    // generation, which on a branch a hundred commits ahead means recomputing a
+                    // hundred files that are already written down beside it (#519).
+                    var layered = PlanLayeredSemanticRebuild(
+                        identity.WorkingRoot.Value,
+                        identity.HeadTree,
+                        semanticOverlayPath,
+                        baseSemanticIndex);
+                    var plan = layered?.Plan ?? PlanScopedSemanticRebuild(
                         identity.WorkingRoot.Value,
                         generation.Identity.DevTree);
                     void SemanticStep(IndexBuildStep step, int done, int total) =>
@@ -412,6 +421,14 @@ public static class CodeSearchSyncCommand
                         semanticBuild.AdapterStatuses,
                         identity.WorkingRoot.Value,
                         error);
+                    // What the narrow rebuild actually looked at: the documents it produced, and
+                    // the paths it was asked about, so a file that is gone is recognised as gone
+                    // rather than left behind by an index that no longer mentions it.
+                    var recomputed = plan is null
+                        ? []
+                        : semanticBuild.Index.Documents
+                            .Select(document => document.RelPath)
+                            .Concat(plan.ChangedPaths);
                     var semanticOverlay = plan is null
                         // The dirty paths this layer can see, not every dirty path: feeding it
                         // the corpus list would record a saved `.md` as a document this overlay
@@ -421,17 +438,27 @@ public static class CodeSearchSyncCommand
                             semanticBuild.Index,
                             RuntimeIndexLayout.GetDirtyPaths(identity.WorkingRoot.Value)
                                 .Where(SemanticCorpusPolicy.ChangesSemantics))
-                        // What the narrow rebuild actually looked at: the documents it produced,
-                        // and the changed paths, so a file that is gone is recognised as gone
-                        // rather than left behind by an index that no longer mentions it.
-                        : SemanticIndexOverlay.CreateScoped(
-                            baseSemanticIndex,
-                            semanticBuild.Index,
-                            semanticBuild.Index.Documents
-                                .Select(document => document.RelPath)
-                                .Concat(plan.ChangedPaths));
+                        : layered is null
+                            ? SemanticIndexOverlay.CreateScoped(
+                                baseSemanticIndex,
+                                semanticBuild.Index,
+                                recomputed)
+                            // Everything the save did not touch comes from the commit's own
+                            // overlay rather than from the base, which is what stops the branch's
+                            // other files being recomputed for a save that never reached them.
+                            : SemanticIndexOverlay.Layer(
+                                layered.Committed,
+                                baseSemanticIndex,
+                                semanticBuild.Index,
+                                recomputed);
                     semanticOverlay.Save(semanticOverlayPath);
-                    worktreeSemantics = semanticBuild.Index;
+                    // Only a rebuild that looked at the whole worktree can stand in for it. A
+                    // narrowed one holds the definitions of the projects it opened and no others,
+                    // and the corpus overlay below cuts every changed file by these -- so a file
+                    // outside the plan would be chunked by line window while the same file in the
+                    // base generation is chunked by symbol. Left null, it is materialised from the
+                    // overlay just written, which speaks for all of them.
+                    worktreeSemantics = plan is null ? semanticBuild.Index : null;
                     builtOverlay = true;
                 }
 
@@ -1266,6 +1293,81 @@ public static class CodeSearchSyncCommand
         };
 
     /// <summary>
+    /// A save laid over the overlay of the commit it was made against: what the save actually
+    /// touched, and the committed overlay whose records everything else comes from.
+    ///
+    /// This is the narrow case and the common one -- a file is saved, the commit under it was
+    /// indexed when it was made, and only the saved file has moved since. The alternative below
+    /// measures against the base generation instead, which on a branch a hundred commits ahead
+    /// means recomputing a hundred files that are already written down.
+    ///
+    /// Nothing at all when there is no committed overlay to layer on, when the save cannot be
+    /// judged from source, or when what it reaches is most of the tree anyway.
+    /// </summary>
+    internal static LayeredSemanticRebuild? PlanLayeredSemanticRebuild(
+        string workingRoot,
+        string headTree,
+        string semanticOverlayPath,
+        SemanticIndex baseIndex)
+    {
+        if (SemanticOverlayReuse.CommittedBeside(semanticOverlayPath) is not { } committedPath)
+        {
+            return null;
+        }
+
+        SemanticIndexOverlay committed;
+        try
+        {
+            committed = SemanticIndexOverlay.Load(committedPath);
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            // Written by an older build, or left half-written by one that died. Neither is a
+            // reason to refuse the sync; both are a reason to do the wide thing instead.
+            return null;
+        }
+
+        if (committed.DirtyHash is not null ||
+            !string.Equals(
+                committed.GenerationId,
+                baseIndex.GenerationId,
+                StringComparison.Ordinal) ||
+            !string.Equals(committed.BaseGitTree, baseIndex.GitTree, StringComparison.Ordinal) ||
+            !string.Equals(committed.GitTree, headTree, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        var saved = SemanticOverlayReuse.ChangedSince(
+            [committed.Changed, baseIndex],
+            workingRoot,
+            RuntimeIndexLayout.GetDirtyPaths(workingRoot)
+                .Where(SemanticCorpusPolicy.ChangesSemantics));
+        if (saved.Count == 0)
+        {
+            // The commit's own records, under the name this state is asked for by. Reached when
+            // something changed a file the semantic layer reads without changing what it reads in
+            // it -- a byte-order mark, a line ending, a file touched and saved unaltered.
+            return new LayeredSemanticRebuild(committed, new ScopedRebuildPlan([], false, []));
+        }
+
+        var graph = ProjectGraph.Load(workingRoot);
+        if (ScopedRebuild.Plan(
+                saved,
+                graph,
+                path => ReadWorkingCopy(workingRoot, path),
+                path => RuntimeIndexLayout.GetTextAt(workingRoot, headTree, path)) is not { } plan)
+        {
+            return null;
+        }
+
+        return ScopedRebuild.NarrowerThanTheSolution(plan, graph)
+            ? new LayeredSemanticRebuild(committed, plan)
+            : null;
+    }
+
+    /// <summary>
     /// How wide this worktree's semantic rebuild has to be, or nothing when it cannot be
     /// narrowed and the whole solution has to be reopened as it is today.
     /// </summary>
@@ -1813,3 +1915,12 @@ public static class CodeSearchSyncCommand
         string Ref,
         WorkingIndexIdentity Identity);
 }
+
+/// <summary>
+/// A narrow rebuild and the committed overlay it is laid over. The two travel together because
+/// neither is usable without the other: the plan says what to recompute, and the overlay is where
+/// everything else comes from.
+/// </summary>
+internal sealed record LayeredSemanticRebuild(
+    SemanticIndexOverlay Committed,
+    ScopedRebuildPlan Plan);

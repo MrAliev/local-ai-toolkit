@@ -136,6 +136,39 @@ public sealed class WhichProjectsAChangeCanReachTests : IDisposable
         Assert.Equal(["Leaf/Leaf.csproj"], graph.Projects);
     }
 
+    /// <summary>
+    /// The other direction, and it is not about correctness but about cost: asking Roslyn for a
+    /// project makes it open everything that project references, so this is what a narrow rebuild
+    /// will actually open. A plan that reaches most of the tree is cheaper to run as one solution.
+    /// </summary>
+    [Fact]
+    public void A_project_opens_everything_it_references()
+    {
+        Project("Leaf");
+        Project("Middle", ["../Leaf/Leaf.csproj"]);
+        Project("Top", ["../Middle/Middle.csproj"]);
+        Project("Unrelated");
+
+        var reached = ProjectGraph.Load(_root).Reaches(["Top/Top.csproj"]);
+
+        Assert.Equal(
+            ["Leaf/Leaf.csproj", "Middle/Middle.csproj", "Top/Top.csproj"],
+            reached.OrderBy(project => project, StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public void Projects_that_reference_each_other_do_not_loop()
+    {
+        Project("One", ["../Two/Two.csproj"]);
+        Project("Two", ["../One/One.csproj"]);
+
+        var reached = ProjectGraph.Load(_root).Reaches(["One/One.csproj"]);
+
+        Assert.Equal(
+            ["One/One.csproj", "Two/Two.csproj"],
+            reached.OrderBy(project => project, StringComparer.Ordinal));
+    }
+
     private void Project(string directory, IReadOnlyList<string>? references = null)
     {
         var full = Path.Combine(_root, directory);

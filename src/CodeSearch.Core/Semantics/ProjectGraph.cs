@@ -20,13 +20,16 @@ public sealed class ProjectGraph
 {
     private readonly IReadOnlyList<string> _projects;
     private readonly IReadOnlyDictionary<string, IReadOnlyList<string>> _referencedBy;
+    private readonly IReadOnlyDictionary<string, IReadOnlyList<string>> _references;
 
     private ProjectGraph(
         IReadOnlyList<string> projects,
-        IReadOnlyDictionary<string, IReadOnlyList<string>> referencedBy)
+        IReadOnlyDictionary<string, IReadOnlyList<string>> referencedBy,
+        IReadOnlyDictionary<string, IReadOnlyList<string>> references)
     {
         _projects = projects;
         _referencedBy = referencedBy;
+        _references = references;
     }
 
     /// <summary>
@@ -39,6 +42,7 @@ public sealed class ProjectGraph
         var root = Path.GetFullPath(repositoryRoot).TrimEnd(Path.DirectorySeparatorChar);
         var projects = new List<string>();
         var edges = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        var forward = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
 
         // The scanner the index itself uses, rather than a second walk of the tree. It honours
         // .gitignore, skips build output, and skips a worktree nested in the repository -- and
@@ -62,17 +66,26 @@ public sealed class ProjectGraph
                 }
 
                 dependents.Add(relative);
+                if (!forward.TryGetValue(relative, out var referencedProjects))
+                {
+                    referencedProjects = [];
+                    forward[relative] = referencedProjects;
+                }
+
+                referencedProjects.Add(referenced);
             }
         }
 
         projects.Sort(StringComparer.Ordinal);
-        return new ProjectGraph(
-            projects,
-            edges.ToDictionary(
-                pair => pair.Key,
-                pair => (IReadOnlyList<string>)pair.Value,
-                StringComparer.OrdinalIgnoreCase));
+        return new ProjectGraph(projects, Freeze(edges), Freeze(forward));
     }
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<string>> Freeze(
+        Dictionary<string, List<string>> edges) =>
+        edges.ToDictionary(
+            pair => pair.Key,
+            pair => (IReadOnlyList<string>)pair.Value,
+            StringComparer.OrdinalIgnoreCase);
 
     public IReadOnlyList<string> Projects => _projects;
 
@@ -113,6 +126,27 @@ public sealed class ProjectGraph
     public IReadOnlyCollection<string> Dependents(IEnumerable<string> projects)
     {
         ArgumentNullException.ThrowIfNull(projects);
+        return Closure(projects, _referencedBy);
+    }
+
+    /// <summary>
+    /// The given projects and everything they reference, transitively.
+    ///
+    /// Not a question about correctness but about cost: asking Roslyn for a project makes it open
+    /// that project's references too, so this is how many projects a narrow rebuild will really
+    /// open. Where that is most of the tree the solution is the cheaper route -- it restores once
+    /// rather than once per entry point, which was 104.9 s of the 296.9 s measured in #519.
+    /// </summary>
+    public IReadOnlyCollection<string> Reaches(IEnumerable<string> projects)
+    {
+        ArgumentNullException.ThrowIfNull(projects);
+        return Closure(projects, _references);
+    }
+
+    private static IReadOnlyCollection<string> Closure(
+        IEnumerable<string> projects,
+        IReadOnlyDictionary<string, IReadOnlyList<string>> edges)
+    {
         var reached = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var pending = new Queue<string>();
         foreach (var project in projects)
@@ -126,17 +160,16 @@ public sealed class ProjectGraph
 
         while (pending.Count > 0)
         {
-            var project = pending.Dequeue();
-            if (!_referencedBy.TryGetValue(project, out var dependents))
+            if (!edges.TryGetValue(pending.Dequeue(), out var next))
             {
                 continue;
             }
 
-            foreach (var dependent in dependents)
+            foreach (var project in next)
             {
-                if (reached.Add(dependent))
+                if (reached.Add(project))
                 {
-                    pending.Enqueue(dependent);
+                    pending.Enqueue(project);
                 }
             }
         }
