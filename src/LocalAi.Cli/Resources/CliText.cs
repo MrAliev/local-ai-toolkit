@@ -666,4 +666,40 @@ public static class CliText
     /// <c>TextSearchRefusal</c> for why it is English on every machine.
     /// </summary>
     public static string AgentGateNeedsPayload => Catalogue.Get(nameof(AgentGateNeedsPayload));
+
+    public static string AgentWorktreeOperationUnknown(string operation, string usage) =>
+        Catalogue.Format(nameof(AgentWorktreeOperationUnknown), operation, usage);
+
+    public static string AgentWorktreeNameMissing(string usage) =>
+        Catalogue.Format(nameof(AgentWorktreeNameMissing), usage);
+
+    public static string AgentWorktreePathMissing(string usage) =>
+        Catalogue.Format(nameof(AgentWorktreePathMissing), usage);
+
+    public static string AgentWorktreePayloadFieldMissing(string field) =>
+        Catalogue.Format(nameof(AgentWorktreePayloadFieldMissing), field);
+
+    public static string AgentWorktreeNameNotUsable(string name) =>
+        Catalogue.Format(nameof(AgentWorktreeNameNotUsable), name);
+
+    public static string AgentWorktreePathOccupied(string path) =>
+        Catalogue.Format(nameof(AgentWorktreePathOccupied), path);
+
+    public static string AgentWorktreeGitRefused(string reason) =>
+        Catalogue.Format(nameof(AgentWorktreeGitRefused), reason);
+
+    public static string AgentWorktreeIgnoreAdded(string rules, string path) =>
+        Catalogue.Format(nameof(AgentWorktreeIgnoreAdded), rules, path);
+
+    public static string AgentWorktreeIgnoreNotWritten(string rules, string path, string reason) =>
+        Catalogue.Format(nameof(AgentWorktreeIgnoreNotWritten), rules, path, reason);
+
+    public static string AgentWorktreeNotAWorktree(string path) =>
+        Catalogue.Format(nameof(AgentWorktreeNotAWorktree), path);
+
+    public static string AgentWorktreeHoldsWork(string path) =>
+        Catalogue.Format(nameof(AgentWorktreeHoldsWork), path);
+
+    public static string AgentWorktreeRemoved(string path) =>
+        Catalogue.Format(nameof(AgentWorktreeRemoved), path);
 }

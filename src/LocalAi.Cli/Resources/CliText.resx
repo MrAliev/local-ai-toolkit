@@ -773,4 +773,52 @@ for those.</value>
     <value>Merging {0} partial answers (level {1}).</value>
     <comment>Renamed from ProgressTriageMerging when the reducer gained its second caller: reading images one at a time ends in the same merge. Merges also happen mid-stream when a level overflows its budget, so this must not be read as "everything has been read" - with images the line before it says which image, which keeps that clear. level is the reduction level the prompt itself names.</comment>
   </data>
+  <data name="AgentWorktreeOperationUnknown" xml:space="preserve">
+    <value>localai agent worktree does not know the operation '{0}'. Usage: {1}</value>
+    <comment>Shaped after HookEventUnknown. No trailing full stop: the hole ends the line with a usage form somebody copies. create and remove are typed and stay English.</comment>
+  </data>
+  <data name="AgentWorktreeNameMissing" xml:space="preserve">
+    <value>localai agent worktree create needs a name, or a WorktreeCreate payload on stdin. Usage: {0}</value>
+    <comment>Reached only from a console with nothing on standard input. Waiting there is the mistake AgentGateNeedsPayload was written for, so this refuses instead. WorktreeCreate is the client's event name and stdin is a stream: both stay Latin.</comment>
+  </data>
+  <data name="AgentWorktreePathMissing" xml:space="preserve">
+    <value>localai agent worktree remove needs a path, or a WorktreeRemove payload on stdin. Usage: {0}</value>
+    <comment>The removal half of AgentWorktreeNameMissing, and separate for the same reason its operand is: a path is not a name.</comment>
+  </data>
+  <data name="AgentWorktreePayloadFieldMissing" xml:space="preserve">
+    <value>The hook payload carries no {0}, so there is nothing to act on.</value>
+    <comment>{0} is a JSON field name - name or path - and stays English in both, like core.hooksPath in HooksExcluded. Read in the client's error box by the person whose worktree did not appear.</comment>
+  </data>
+  <data name="AgentWorktreeNameNotUsable" xml:space="preserve">
+    <value>'{0}' is not a single directory name, so nothing was created under .worktrees.</value>
+    <comment>The name arrives from a client and becomes a directory under .worktrees, so .. or a separator would put the worktree anywhere on the disk. Says what a name must be rather than which character offended: the reader can see their own name.</comment>
+  </data>
+  <data name="AgentWorktreePathOccupied" xml:space="preserve">
+    <value>{0} already exists and is not a worktree of this repository, so nothing was created.</value>
+    <comment>Not the "already there" case, which is a success and prints the path. This is a directory git does not list, so creating in it would adopt somebody's files.</comment>
+  </data>
+  <data name="AgentWorktreeGitRefused" xml:space="preserve">
+    <value>git refused: {0}</value>
+    <comment>{0} is git's own message and is English on every machine. Claims nothing about what did or did not change: a removal can fail after deleting part of a tree, and "nothing changed" would be the lie the reader acts on.</comment>
+  </data>
+  <data name="AgentWorktreeIgnoreAdded" xml:space="preserve">
+    <value>Added {0} to {1}. These rules stay in the repository: .gitignore is committed, and removing LocalAi does not take them out.</value>
+    <comment>The consent line. Without it the command reports an edit to a file in the reader's own repository and never says it is permanent. {0} is the rule list, invariant and in the order written.</comment>
+  </data>
+  <data name="AgentWorktreeIgnoreNotWritten" xml:space="preserve">
+    <value>{0} were not added to {1} ({2}), so those paths will show up in git status. The worktree was created.</value>
+    <comment>The creation went ahead: refusing a worktree because a comment file could not be edited costs more than the untracked entries do. {2} is the framework's message. The last sentence is what stops this reading as a failed create.</comment>
+  </data>
+  <data name="AgentWorktreeNotAWorktree" xml:space="preserve">
+    <value>git does not list {0} as a worktree, so nothing was removed.</value>
+    <comment>Names the check that was actually made - git worktree list --porcelain, parsed by WorktreeInventory - rather than a cause inferred from it.</comment>
+  </data>
+  <data name="AgentWorktreeHoldsWork" xml:space="preserve">
+    <value>{0} still holds changes that are not committed, so it was not removed. Commit or discard them and run the removal again.</value>
+    <comment>Names a direction, not a flag. There is no --force on this command, and naming git's own would put a data-losing escape in a refusal a client shows automatically.</comment>
+  </data>
+  <data name="AgentWorktreeRemoved" xml:space="preserve">
+    <value>Removed the worktree {0}.</value>
+    <comment>Goes to standard error like every other sentence here, so removal's standard output stays empty whatever the client's contract for it turns out to be.</comment>
+  </data>
 </root>
