@@ -103,7 +103,129 @@ public sealed record SemanticIndexOverlay
     }
 
     /// <summary>
-    /// The overlay itself, once the affected paths are settled. Both constructors end here:
+    /// A save, laid over the overlay of the commit it was made against.
+    ///
+    /// A worktree's overlay says two things at once: what the branch committed since the base
+    /// generation, and what is saved but not committed. Saving a file moves only the second, so
+    /// the first is taken from the overlay that already holds it -- the `clean` overlay for the
+    /// same commit -- and only the saved files are recomputed. That is what the corpus layer has
+    /// done since #388, and why one saved file embedded one chunk while the semantic layer
+    /// reparsed the branch's other hundred (#519).
+    ///
+    /// <paramref name="committed"/> is the committed overlay and nothing else. Layering on
+    /// another dirty overlay would be layering on a state whose files are no longer on disk:
+    /// nothing could then say whether one of them changed a declaration, and if one had, every
+    /// record carried across would be stale in a way no later sync notices.
+    /// </summary>
+    /// <param name="recomputedPaths">
+    /// What the rebuild spoke for, including a file it found deleted -- which produces no document
+    /// and would otherwise go on being answered from the committed layer.
+    /// </param>
+    public static SemanticIndexOverlay Layer(
+        SemanticIndexOverlay committed,
+        SemanticIndex baseIndex,
+        SemanticIndex recomputedIndex,
+        IEnumerable<string> recomputedPaths)
+    {
+        ArgumentNullException.ThrowIfNull(committed);
+        ArgumentNullException.ThrowIfNull(baseIndex);
+        ArgumentNullException.ThrowIfNull(recomputedIndex);
+        ArgumentNullException.ThrowIfNull(recomputedPaths);
+        if (committed.DirtyHash is not null)
+        {
+            throw new InvalidDataException(
+                "A semantic overlay is layered on the overlay of its commit, not on another.");
+        }
+
+        if (!string.Equals(
+                committed.RepositoryId,
+                recomputedIndex.RepositoryId,
+                StringComparison.Ordinal) ||
+            !string.Equals(
+                committed.GenerationId,
+                recomputedIndex.GenerationId,
+                StringComparison.Ordinal) ||
+            !string.Equals(committed.GitTree, recomputedIndex.GitTree, StringComparison.Ordinal) ||
+            !string.Equals(committed.BaseGitTree, baseIndex.GitTree, StringComparison.Ordinal) ||
+            !string.Equals(
+                baseIndex.GenerationId,
+                recomputedIndex.GenerationId,
+                StringComparison.Ordinal))
+        {
+            throw new InvalidDataException(
+                "Semantic overlay layers do not describe the same tree.");
+        }
+
+        var replaced = recomputedPaths.Select(NormalizePath)
+            .Concat(recomputedIndex.Documents.Select(document => NormalizePath(document.RelPath)))
+            .ToHashSet(StringComparer.Ordinal);
+        var merged = Merge(committed.Changed, recomputedIndex, replaced);
+        var affected = replaced
+            .Concat(committed.DeletedDocuments.Select(NormalizePath))
+            .Concat(committed.Changed.Documents.Select(document => NormalizePath(document.RelPath)))
+            .ToHashSet(StringComparer.Ordinal);
+        return From(
+            baseIndex,
+            merged,
+            baseIndex.Documents.ToDictionary(
+                document => NormalizePath(document.RelPath), StringComparer.Ordinal),
+            merged.Documents.ToDictionary(
+                document => NormalizePath(document.RelPath), StringComparer.Ordinal),
+            affected);
+    }
+
+    /// <summary>
+    /// The committed layer with the recomputed files' records swapped in.
+    ///
+    /// Relationships are held against the symbol they were read from -- the indexer walks a
+    /// declaration and writes down what it implements or overrides -- so the committed layer's
+    /// relationships survive except where their source is declared in a file this rebuild looked
+    /// at again. Keeping those would keep an interface a save has just removed.
+    /// </summary>
+    private static SemanticIndex Merge(
+        SemanticIndex committed,
+        SemanticIndex recomputed,
+        HashSet<string> replaced)
+    {
+        var recomputedSources = committed.Occurrences
+            .Where(occurrence =>
+                occurrence.Roles.HasFlag(SemanticOccurrenceRoles.Definition) &&
+                replaced.Contains(NormalizePath(occurrence.DocumentPath)))
+            .Select(occurrence => occurrence.SymbolId)
+            .ToHashSet(StringComparer.Ordinal);
+        var symbols = committed.Symbols.ToDictionary(symbol => symbol.Id, StringComparer.Ordinal);
+        foreach (var symbol in recomputed.Symbols)
+        {
+            symbols[symbol.Id] = symbol;
+        }
+
+        return new SemanticIndex
+        {
+            RepositoryId = recomputed.RepositoryId,
+            GenerationId = recomputed.GenerationId,
+            GitTree = recomputed.GitTree,
+            DirtyHash = recomputed.DirtyHash,
+            BaseCommit = recomputed.BaseCommit,
+            IndexedAtUtc = recomputed.IndexedAtUtc,
+            Documents = committed.Documents
+                .Where(document => !replaced.Contains(NormalizePath(document.RelPath)))
+                .Concat(recomputed.Documents)
+                .ToList(),
+            Symbols = symbols.Values.ToList(),
+            Occurrences = committed.Occurrences
+                .Where(occurrence => !replaced.Contains(NormalizePath(occurrence.DocumentPath)))
+                .Concat(recomputed.Occurrences)
+                .ToList(),
+            Relationships = committed.Relationships
+                .Where(relationship => !recomputedSources.Contains(relationship.SourceSymbolId))
+                .Concat(recomputed.Relationships)
+                .Distinct()
+                .ToList(),
+        }.NormalizeForUse();
+    }
+
+    /// <summary>
+    /// The overlay itself, once the affected paths are settled. Every constructor ends here:
     /// they differ only in how that set is arrived at, and two copies of this would be two
     /// answers to what an overlay contains.
     /// </summary>
