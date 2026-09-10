@@ -5,7 +5,8 @@ namespace CodeSearch.Core.Semantics;
 /// </summary>
 public sealed record ScopedRebuildPlan(
     IReadOnlyList<string> Projects,
-    bool SurfaceChanged);
+    bool SurfaceChanged,
+    IReadOnlyList<string> ChangedPaths);
 
 /// <summary>
 /// How much of the tree a save has to reopen.
@@ -84,6 +85,7 @@ public static class ScopedRebuild
             (surfaceChanged ? graph.Dependents(projects) : projects.ToArray())
                 .OrderBy(project => project, StringComparer.Ordinal)
                 .ToArray(),
-            surfaceChanged);
+            surfaceChanged,
+            changedPaths);
     }
 }
