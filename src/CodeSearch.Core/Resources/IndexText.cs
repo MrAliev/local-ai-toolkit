@@ -171,6 +171,20 @@ public static class IndexText
     public static string BuildOverlayReuse(int reused, int toEmbed) =>
         Catalogue.Format(nameof(BuildOverlayReuse), reused, toEmbed);
 
+    /// <summary>
+    /// The semantic layer's answer to <see cref="BuildOverlayReuse"/>, and printed just before
+    /// it: this rebuild layered the save on the overlay of the commit it was made against.
+    /// </summary>
+    public static string SemanticOverlayLayered(int changed, int carried) =>
+        Catalogue.Format(nameof(SemanticOverlayLayered), changed, carried);
+
+    /// <summary>
+    /// The other route. Printed so that a reader can tell "it went wide" from "the line was not
+    /// reached", which the layered line's absence alone does not say.
+    /// </summary>
+    public static string SemanticOverlayFromBase(int files) =>
+        Catalogue.Format(nameof(SemanticOverlayFromBase), files);
+
     public static string BuildOverlaySaved(
         string overlayPath,
         int chunks,

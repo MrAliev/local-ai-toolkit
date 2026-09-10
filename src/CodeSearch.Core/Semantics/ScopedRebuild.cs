@@ -3,10 +3,18 @@ namespace CodeSearch.Core.Semantics;
 /// <summary>
 /// Which projects to reopen, and whether the edit could have changed how anything else binds.
 /// </summary>
+/// <param name="Projects">
+/// Everything the change reaches -- the answer to the question this type exists to ask.
+/// </param>
+/// <param name="EntryPoints">
+/// The subset worth naming to Roslyn, which opens a project's references along with it and
+/// restores once per name it is given. The two open the same set; only the restore count differs.
+/// </param>
 public sealed record ScopedRebuildPlan(
     IReadOnlyList<string> Projects,
     bool SurfaceChanged,
-    IReadOnlyList<string> ChangedPaths);
+    IReadOnlyList<string> ChangedPaths,
+    IReadOnlyList<string> EntryPoints);
 
 /// <summary>
 /// How much of the tree a save has to reopen.
@@ -24,6 +32,29 @@ public sealed record ScopedRebuildPlan(
 /// </summary>
 public static class ScopedRebuild
 {
+    /// <summary>
+    /// The share of a repository's projects beyond which the solution is the cheaper route.
+    /// Asking Roslyn for a project opens everything it references, and every entry point restores
+    /// separately: on the solution that reported #519, 373 projects opened that way took 123.5 s
+    /// after a 104.9 s restore, while all 414 opened through the solution took 40.9 s after one.
+    /// The two meet at about a quarter of that tree.
+    /// </summary>
+    private const int WideRebuildShare = 4;
+
+    /// <summary>
+    /// Whether running this plan really is cheaper than reopening the solution.
+    ///
+    /// A plan is narrow in what it has to recompute and not necessarily in what it has to open:
+    /// one project whose references reach an Aspire AppHost brings most of the tree with it. Where
+    /// it does, the solution wins -- it restores once instead of once per entry point.
+    /// </summary>
+    public static bool NarrowerThanTheSolution(ScopedRebuildPlan plan, ProjectGraph graph)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        ArgumentNullException.ThrowIfNull(graph);
+        return graph.Reaches(plan.Projects).Count * WideRebuildShare < graph.Projects.Count;
+    }
+
     /// <summary>
     /// A plan, or nothing at all when the change cannot be judged from source: a language whose
     /// declarations this cannot read, a file belonging to no project, or a file whose earlier
@@ -81,11 +112,13 @@ public static class ScopedRebuild
         }
 
         var projects = owners.Distinct(StringComparer.OrdinalIgnoreCase);
+        var reached = (surfaceChanged ? graph.Dependents(projects) : projects.ToArray())
+            .OrderBy(project => project, StringComparer.Ordinal)
+            .ToArray();
         return new ScopedRebuildPlan(
-            (surfaceChanged ? graph.Dependents(projects) : projects.ToArray())
-                .OrderBy(project => project, StringComparer.Ordinal)
-                .ToArray(),
+            reached,
             surfaceChanged,
-            changedPaths);
+            changedPaths,
+            graph.Roots(reached));
     }
 }
