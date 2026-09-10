@@ -154,6 +154,10 @@ public sealed class ManagedInstructionBlockTests
     // The failure was drift, and nothing in the block survived a lengthening session.
     [InlineData("the tenth question is routed like the first")]
     [InlineData("localai repo status --root")]
+    // A build that says nothing for a minute is indistinguishable from a hung machine, and a
+    // rule written as "put the figures in every reply" stops the moment the replies do. The
+    // figures have to arrive without a turn to carry them.
+    [InlineData("at least once a minute")]
     public void The_block_states_every_rule_the_installation_depends_on(string rule) =>
         // Whitespace-normalised: the block is wrapped to a column, so a required phrase can
         // fall across a line break without the requirement having changed at all.
