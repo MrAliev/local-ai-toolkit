@@ -778,9 +778,9 @@
     <value>Команде localai agent worktree неизвестна операция '{0}'. Usage: {1}</value>
     <comment>Shaped after HookEventUnknown. No trailing full stop: the hole ends the line with a usage form somebody copies. create and remove are typed and stay English.</comment>
   </data>
-  <data name="AgentWorktreeNameMissing" xml:space="preserve">
-    <value>Команде localai agent worktree create нужно имя или полезная нагрузка WorktreeCreate на stdin. Usage: {0}</value>
-    <comment>Reached only from a console with nothing on standard input. Waiting there is the mistake AgentGateNeedsPayload was written for, so this refuses instead. WorktreeCreate is the client's event name and stdin is a stream: both stay Latin.</comment>
+  <data name="AgentWorktreeBranchMissing" xml:space="preserve">
+    <value>Команде localai agent worktree create нужно имя ветки или полезная нагрузка WorktreeCreate на stdin. Usage: {0}</value>
+    <comment>Was AgentWorktreeNameMissing: the operand became the branch when the directory started being derived from it, and asking for a "name" would send the reader back to a one-word spelling that cannot carry a type prefix. Reached only from a console with nothing on standard input; waiting there is the mistake AgentGateNeedsPayload was written for. WorktreeCreate is the client's event name and stdin is a stream: both stay Latin.</comment>
   </data>
   <data name="AgentWorktreePathMissing" xml:space="preserve">
     <value>Команде localai agent worktree remove нужен путь или полезная нагрузка WorktreeRemove на stdin. Usage: {0}</value>
@@ -788,11 +788,11 @@
   </data>
   <data name="AgentWorktreePayloadFieldMissing" xml:space="preserve">
     <value>В полезной нагрузке хука нет поля {0} — действовать не над чем.</value>
-    <comment>{0} is a JSON field name - name or path - and stays English in both, like core.hooksPath in HooksExcluded. Read in the client's error box by the person whose worktree did not appear.</comment>
+    <comment>{0} is a JSON field name - name or worktree_path - and stays English in both, like core.hooksPath in HooksExcluded. Read in the client's error box by the person whose worktree did not appear.</comment>
   </data>
-  <data name="AgentWorktreeNameNotUsable" xml:space="preserve">
-    <value>'{0}' — не одно имя каталога, поэтому в .worktrees ничего не создано.</value>
-    <comment>The name arrives from a client and becomes a directory under .worktrees, so .. or a separator would put the worktree anywhere on the disk. Says what a name must be rather than which character offended: the reader can see their own name.</comment>
+  <data name="AgentWorktreeBranchNotUsable" xml:space="preserve">
+    <value>git не примет '{0}' как имя ветки, поэтому ничего не создано.</value>
+    <comment>Names the check that was actually made - git check-ref-format refs/heads/&lt;branch&gt;, the full-ref form rather than --branch, which first expands the previous-checkout syntax @{-1} on a string arriving from a client. The old wording said "not a single directory name", which stopped being the rule when a branch name gained the right to contain a slash.</comment>
   </data>
   <data name="AgentWorktreePathOccupied" xml:space="preserve">
     <value>Каталог {0} уже существует и не является worktree этого репозитория, поэтому ничего не создано.</value>
@@ -801,14 +801,6 @@
   <data name="AgentWorktreeGitRefused" xml:space="preserve">
     <value>git отказал: {0}</value>
     <comment>{0} is git's own message and is English on every machine. Claims nothing about what did or did not change: a removal can fail after deleting part of a tree, and "nothing changed" would be the lie the reader acts on.</comment>
-  </data>
-  <data name="AgentWorktreeIgnoreAdded" xml:space="preserve">
-    <value>В {1} добавлено: {0}. Эти правила останутся в репозитории: .gitignore коммитится, и удаление LocalAi их не убирает.</value>
-    <comment>The consent line. Without it the command reports an edit to a file in the reader's own repository and never says it is permanent. {0} is the rule list, invariant and in the order written.</comment>
-  </data>
-  <data name="AgentWorktreeIgnoreNotWritten" xml:space="preserve">
-    <value>{0} не добавлено в {1} ({2}), поэтому эти пути будут видны в git status. Worktree при этом создан.</value>
-    <comment>The creation went ahead: refusing a worktree because a comment file could not be edited costs more than the untracked entries do. {2} is the framework's message. The last sentence is what stops this reading as a failed create.</comment>
   </data>
   <data name="AgentWorktreeNotAWorktree" xml:space="preserve">
     <value>git не числит {0} среди worktree, поэтому ничего не удалено.</value>
@@ -821,5 +813,29 @@
   <data name="AgentWorktreeRemoved" xml:space="preserve">
     <value>Worktree {0} удалён.</value>
     <comment>Goes to standard error like every other sentence here, so removal's standard output stays empty whatever the client's contract for it turns out to be.</comment>
+  </data>
+  <data name="AgentWorktreeCreated" xml:space="preserve">
+    <value>Worktree {0} создан на ветке {1}.</value>
+    <comment>The branch is derived from what was typed rather than typed, so this is the only place it is named; without it a client's slug turns into a branch nobody chose and nobody saw. Standard error like every other sentence here, so standard output stays the one path the client's contract for WorktreeCreate reads.</comment>
+  </data>
+  <data name="AgentWorktreeBranchElsewhere" xml:space="preserve">
+    <value>У ветки {0} уже есть worktree: {1} — он и возвращён. Он лежит не там, где эта команда их держит; перенести: git worktree move "{1}" "{2}"</value>
+    <comment>Not a refusal: converging two clients on one worktree is what this command is for, so an existing worktree is the answer whatever directory it sits in - including one made by hand or left by an older layout. The route is named because nothing else will mention it; the paths are quoted because either can contain a space, and there is no full stop after a command somebody copies.</comment>
+  </data>
+  <data name="AgentWorktreeBranchInMainCheckout" xml:space="preserve">
+    <value>Ветка {0} выбрана в основном рабочем дереве {1}: git держит ветку не более чем в одном worktree, поэтому ничего не создано.</value>
+    <comment>The one case where an existing checkout must not be returned as the answer: handing a client the main checkout as its isolated worktree defeats the isolation it asked for. The cause is git's own documented refusal, so the sentence rests on a rule rather than on a guess. Names no repair: the reader can see which branch they asked for.</comment>
+  </data>
+  <data name="AgentWorktreePathHoldsAnotherBranch" xml:space="preserve">
+    <value>{0} — уже worktree ветки {1}, поэтому ничего не создано.</value>
+    <comment>Two branches can flatten to one directory name - feature/hooks and feature-hooks - and Windows compares paths without case, so fix/a and Fix/A do too. Without this the command would print the other branch's worktree and exit 0, and the work would land on the wrong branch. The branch named is the one git records for that path.</comment>
+  </data>
+  <data name="AgentWorktreeRootUnknown" xml:space="preserve">
+    <value>{0} находится в корне диска, поэтому рядом с ним негде держать worktree. Укажите каталог: git config localai.worktreeRoot &lt;directory&gt;</value>
+    <comment>The only case where the path cannot be derived. Refuses rather than falling back inside the working tree, which is the placement this layout exists to leave behind. The setting, the command and &lt;directory&gt; are typed and stay Latin; no trailing full stop, because the line ends in something somebody copies.</comment>
+  </data>
+  <data name="AgentWorktreeRootNotWritable" xml:space="preserve">
+    <value>Каталог {0} не удалось создать ({1}), поэтому ничего не создано.</value>
+    <comment>New because the target moved outside the repository: the parent is now a directory this command may be the first thing ever to write to, and it can be absent, read-only or on a volume that is not mounted. {1} is the framework's own message. Unguarded, this was an unhandled exception where every other failure here is a sentence.</comment>
   </data>
 </root>
