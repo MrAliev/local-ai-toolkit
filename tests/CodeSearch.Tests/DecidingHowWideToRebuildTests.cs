@@ -132,6 +132,52 @@ public sealed class DecidingHowWideToRebuildTests : IDisposable
         Assert.Null(plan);
     }
 
+    /// <summary>
+    /// Narrow is not free. Roslyn opens a requested project's references with it and restores
+    /// once per entry point, so a plan that ends up opening most of the tree costs more that way
+    /// than opening the solution -- 373 projects in 123.5 s after a 104.9 s restore, against 414
+    /// in 40.9 s after one, on the solution that reported #519.
+    /// </summary>
+    [Fact]
+    public void A_plan_that_opens_a_small_part_of_the_tree_is_narrower_than_the_solution()
+    {
+        for (var index = 0; index < 5; index++)
+        {
+            Project("Other" + index);
+        }
+
+        var graph = ProjectGraph.Load(_root);
+        var plan = ScopedRebuild.Plan(
+            ["Leaf/Thing.cs"],
+            graph,
+            _ => Source("return 1;"),
+            _ => Source("return 2;"));
+
+        Assert.NotNull(plan);
+        Assert.Single(graph.Reaches(plan.Projects));
+        Assert.True(ScopedRebuild.NarrowerThanTheSolution(plan, graph));
+    }
+
+    [Fact]
+    public void A_plan_that_opens_most_of_the_tree_is_not()
+    {
+        for (var index = 0; index < 5; index++)
+        {
+            Project("Other" + index);
+        }
+
+        var graph = ProjectGraph.Load(_root);
+        var plan = ScopedRebuild.Plan(
+            ["Top/Thing.cs"],
+            graph,
+            _ => Source("return 1;"),
+            _ => Source("return 2;"));
+
+        Assert.NotNull(plan);
+        Assert.Equal(3, graph.Reaches(plan.Projects).Count);
+        Assert.False(ScopedRebuild.NarrowerThanTheSolution(plan, graph));
+    }
+
     private static string Source(string body, string extra = "") =>
         "namespace Demo; public class Thing { public int Go() { " + body + " } " + extra + " }";
 
