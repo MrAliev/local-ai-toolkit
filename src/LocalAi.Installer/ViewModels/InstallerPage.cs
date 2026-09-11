@@ -176,10 +176,11 @@ public sealed record DependencySelection(string Id, string Title, bool IsRequire
                 Consequence);
 
     /// <summary>
-    /// Everything after the bold title, in one string. The markup used to join three Runs, which
-    /// concatenate in source order — the one thing a translation cannot keep.
+    /// The half a reader scans: the name, and whether this machine already has it.
+    /// <see cref="RequirementText"/> is the line underneath, because joined on here it ran the row
+    /// off the page — and the half that was cut was the one saying what skipping costs.
     /// </summary>
-    public string StateLine => " — " + StateText + " · " + RequirementText;
+    public string HeadLine => Title + " — " + StateText;
 
     public string ActionText => !IsInstallable
         ? InstallerCulture.Pick("Install manually", "Установить вручную")

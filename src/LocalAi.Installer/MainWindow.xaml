@@ -43,7 +43,7 @@
 
         <!-- The orientation pane: shows where the user is without any extra interaction. -->
         <DataTemplate x:Key="StepTemplate">
-            <TextBlock Text="{Binding Title}" Margin="0,0,0,6">
+            <TextBlock Text="{Binding Title}" Margin="0,0,0,6" TextWrapping="Wrap">
                 <TextBlock.Style>
                     <Style TargetType="TextBlock">
                         <Setter Property="Foreground" Value="{DynamicResource TextMuted}" />
@@ -161,7 +161,7 @@
                                                    FontWeight="SemiBold" Margin="0,0,12,0"
                                                    TextWrapping="Wrap" />
                                         <TextBlock Grid.Column="1" Text="{Binding StatusText}"
-                                                   Margin="0,0,12,0">
+                                                   Margin="0,0,12,0" TextWrapping="Wrap">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
                                                     <Setter Property="Foreground" Value="{DynamicResource Success}" />
@@ -179,7 +179,8 @@
                                                 </Style>
                                             </TextBlock.Style>
                                         </TextBlock>
-                                        <TextBlock Grid.Column="2" Text="{Binding Detail}" Style="{StaticResource Muted}" />
+                                        <TextBlock Grid.Column="2" Text="{Binding Detail}"
+                                                   Style="{StaticResource Muted}" TextWrapping="Wrap" />
                                     </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
@@ -230,20 +231,21 @@
                                                   Unchecked="OnDependencyConsentChanged"
                                                   VerticalAlignment="Top"
                                                   Margin="0,2,8,0" />
+                                        <!-- Two lines, not one long one. The name and the state are
+                                             what somebody scans; what skipping costs is what they
+                                             read when the scan stops, and joined onto the first
+                                             line it ran off the page. -->
                                         <StackPanel Grid.Column="1">
-                                            <!-- The title stays its own Run: it is bold, and it
-                                                 opens the line in both languages. What follows
-                                                 is assembled in the view model, where the order
-                                                 can change. -->
-                                            <TextBlock>
-                                                <Run Text="{Binding Title, Mode=OneWay}" FontWeight="SemiBold" />
-                                                <Run Text="{Binding StateLine, Mode=OneWay}" />
-                                            </TextBlock>
+                                            <TextBlock Text="{Binding HeadLine, Mode=OneWay}" TextWrapping="Wrap" />
+                                            <TextBlock Text="{Binding RequirementText, Mode=OneWay}"
+                                                       Style="{StaticResource Muted}" FontSize="11"
+                                                       TextWrapping="Wrap" Margin="0,2,0,0" />
                                             <TextBlock Text="{x:Static vm:PageLabels.NoAutomatedInstaller}"
-                                                       FontSize="11">
+                                                       FontSize="11" Margin="0,2,0,0">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock" BasedOn="{StaticResource Muted}">
                                                         <Setter Property="Visibility" Value="Collapsed" />
+                                                        <Setter Property="TextWrapping" Value="Wrap" />
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding IsInstallable}" Value="False">
                                                                 <Setter Property="Visibility" Value="Visible" />
@@ -358,7 +360,7 @@
                             <ItemsControl ItemsSource="{Binding Models.AutomaticSelection}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <TextBlock Text="{Binding}" FontSize="11" Margin="0,0,0,3" />
+                                        <TextBlock Text="{Binding}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,3" />
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
@@ -453,7 +455,7 @@
                                              to leave the client alone, where it would describe an
                                              effect that is not coming. -->
                                         <TextBlock Text="{Binding DataContext.Agents.WorktreePlacementHint, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
-                                                   Style="{StaticResource Muted}" Margin="0,8,0,0"
+                                                   Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,8,0,0"
                                                    Visibility="{Binding DataContext.Agents.ShowsWorktreePlacement, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay, Converter={StaticResource BoolToVisibility}}" />
                                         <!-- The gate sits under the combo it depends on, and only
                                              in the Claude Code row: it is a PreToolUse hook in
@@ -467,7 +469,7 @@
                                                       IsChecked="{Binding DataContext.Agents.RefusesTextSearch, RelativeSource={RelativeSource AncestorType=Window}, Mode=TwoWay}"
                                                       IsEnabled="{Binding DataContext.Agents.CanRefuseTextSearch, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}" />
                                             <TextBlock Text="{Binding DataContext.Agents.TextSearchHint, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
-                                                       Style="{StaticResource Muted}" Margin="24,4,0,0" />
+                                                       Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="24,4,0,0" />
                                         </StackPanel>
                                     </StackPanel>
                                 </DataTemplate>
