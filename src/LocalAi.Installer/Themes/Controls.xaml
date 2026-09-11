@@ -84,8 +84,16 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="CheckBox">
-                    <StackPanel Orientation="Horizontal" Background="Transparent">
-                        <Border x:Name="Box" Width="15" Height="15" CornerRadius="2"
+                    <!-- A Grid, not a horizontal StackPanel: that panel measures its children
+                         with infinite width, so nothing inside a checkbox could ever wrap. The
+                         cost is that the control now fills its container rather than hugging its
+                         label, which makes the whole row the click target. -->
+                    <Grid Background="Transparent">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border x:Name="Box" Grid.Column="0" Width="15" Height="15" CornerRadius="2"
                                 VerticalAlignment="Top" Margin="0,1,8,0"
                                 SnapsToDevicePixels="True"
                                 Background="{DynamicResource ControlFill}"
@@ -97,8 +105,9 @@
                                   StrokeThickness="1.6"
                                   Stroke="{DynamicResource WindowFill}" />
                         </Border>
-                        <ContentPresenter VerticalAlignment="Top" RecognizesAccessKey="True" />
-                    </StackPanel>
+                        <ContentPresenter Grid.Column="1" VerticalAlignment="Top"
+                                          RecognizesAccessKey="True" />
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsChecked" Value="True">
                             <Setter TargetName="Box" Property="Background"
@@ -131,8 +140,15 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="RadioButton">
-                    <StackPanel Orientation="Horizontal" Background="Transparent">
-                        <Grid Width="15" Height="15" VerticalAlignment="Top"
+                    <!-- Same shape as the checkbox above, and for the same reason: a rule on the
+                         memory page carries a sentence saying what it costs, and that sentence
+                         has to be allowed to wrap. -->
+                    <Grid Background="Transparent">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid Grid.Column="0" Width="15" Height="15" VerticalAlignment="Top"
                               Margin="0,1,8,0" SnapsToDevicePixels="True">
                             <Ellipse x:Name="Ring"
                                      Fill="{DynamicResource ControlFill}"
@@ -141,8 +157,9 @@
                             <Ellipse x:Name="Dot" Margin="4" Visibility="Collapsed"
                                      Fill="{DynamicResource AccentFill}" />
                         </Grid>
-                        <ContentPresenter VerticalAlignment="Top" RecognizesAccessKey="True" />
-                    </StackPanel>
+                        <ContentPresenter Grid.Column="1" VerticalAlignment="Top"
+                                          RecognizesAccessKey="True" />
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsChecked" Value="True">
                             <Setter TargetName="Ring" Property="Stroke"
