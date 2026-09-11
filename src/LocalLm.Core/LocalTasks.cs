@@ -631,10 +631,19 @@ public sealed class LocalTasks
         var result = await client.RoutedChatAsync(
             profile,
             requestBody,
-            "You are doing mechanical work for an engineer who will not read these files themselves. " +
-            "Answer strictly from the supplied content, quote exact identifiers and line content, and " +
-            "say explicitly when the files do not contain the answer rather than filling the gap. " +
-            AnswerLanguage.Instruction,
+            // Two modes, two instructions. One sentence served both, and it was written for the
+            // half with files in it: told to answer strictly from supplied content and to say
+            // when the files do not contain the answer, a model asked a file-less question
+            // refused it — correctly, by the only instruction it had. `files` is documented as
+            // "may be empty", so that was a mode the tool offered and its own prompt forbade.
+            files.Count == 0
+                ? "You are doing mechanical work for an engineer. Answer the question you are " +
+                    "asked, directly and in the shape it asks for, and say plainly when you do " +
+                    "not know rather than filling the gap. " + AnswerLanguage.Instruction
+                : "You are doing mechanical work for an engineer who will not read these files " +
+                    "themselves. Answer strictly from the supplied content, quote exact " +
+                    "identifiers and line content, and say explicitly when the files do not " +
+                    "contain the answer rather than filling the gap. " + AnswerLanguage.Instruction,
             null,
             new LocalWorkloadMetadata(
                 requestBody.Length,
