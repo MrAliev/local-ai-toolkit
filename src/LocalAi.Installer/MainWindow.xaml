@@ -323,27 +323,46 @@
                         <TextBlock Text="{Binding Residency.AdapterHint}"
                                    Style="{StaticResource WarningText}" Margin="0,0,0,8"
                                    Visibility="{Binding Residency.HasAdapterHint, Converter={StaticResource BoolToVisibility}}" />
-                        <RadioButton GroupName="Residency" IsChecked="{Binding Residency.IsRequireFullVram, Mode=TwoWay}" Margin="0,0,0,4">
-                            <TextBlock Text="{x:Static vm:PageLabels.RequireFullVram}" />
+                        <!-- The consequence sits inside the rule it belongs to. Bound to the rule
+                             being chosen it was invisible until clicked, so three rules could not
+                             be compared without clicking all three — and each click moved the
+                             page under the pointer. Inside, it is also aligned by the control's
+                             own template rather than by a margin measured against it. -->
+                        <RadioButton GroupName="Residency" Margin="0,0,0,10"
+                                     IsChecked="{Binding Residency.IsRequireFullVram, Mode=TwoWay}">
+                            <StackPanel>
+                                <TextBlock Text="{x:Static vm:PageLabels.RequireFullVram}" TextWrapping="Wrap" />
+                                <TextBlock Text="{x:Static vm:PageLabels.RequireFullVramHint}"
+                                           Style="{StaticResource Muted}" FontSize="11"
+                                           TextWrapping="Wrap" Margin="0,2,0,0" />
+                            </StackPanel>
                         </RadioButton>
-                        <TextBlock Text="{x:Static vm:PageLabels.RequireFullVramHint}"
-                                   Style="{StaticResource Muted}" FontSize="11" Margin="20,0,0,6"
-                                   Visibility="{Binding Residency.IsRequireFullVram, Converter={StaticResource BoolToVisibility}}" />
-                        <RadioButton GroupName="Residency" IsChecked="{Binding Residency.IsAllowPartialOffload, Mode=TwoWay}" Margin="0,0,0,4">
-                            <TextBlock Text="{x:Static vm:PageLabels.AllowPartialOffload}" />
+                        <RadioButton GroupName="Residency" Margin="0,0,0,10"
+                                     IsChecked="{Binding Residency.IsAllowPartialOffload, Mode=TwoWay}">
+                            <StackPanel>
+                                <TextBlock Text="{x:Static vm:PageLabels.AllowPartialOffload}" TextWrapping="Wrap" />
+                                <TextBlock Text="{x:Static vm:PageLabels.AllowPartialOffloadHint}"
+                                           Style="{StaticResource Muted}" FontSize="11"
+                                           TextWrapping="Wrap" Margin="0,2,0,0" />
+                            </StackPanel>
                         </RadioButton>
-                        <TextBlock Text="{x:Static vm:PageLabels.AllowPartialOffloadHint}"
-                                   Style="{StaticResource Muted}" FontSize="11" Margin="20,0,0,6"
-                                   Visibility="{Binding Residency.IsAllowPartialOffload, Converter={StaticResource BoolToVisibility}}" />
-                        <RadioButton GroupName="Residency" IsChecked="{Binding Residency.IsAllowCpu, Mode=TwoWay}" Margin="0,0,0,4">
-                            <TextBlock Text="{x:Static vm:PageLabels.AllowCpu}" />
+                        <RadioButton GroupName="Residency" Margin="0,0,0,10"
+                                     IsChecked="{Binding Residency.IsAllowCpu, Mode=TwoWay}">
+                            <StackPanel>
+                                <TextBlock Text="{x:Static vm:PageLabels.AllowCpu}" TextWrapping="Wrap" />
+                                <TextBlock Text="{x:Static vm:PageLabels.AllowCpuHint}"
+                                           Style="{StaticResource Muted}" FontSize="11"
+                                           TextWrapping="Wrap" Margin="0,2,0,0" />
+                            </StackPanel>
                         </RadioButton>
-                        <TextBlock Text="{x:Static vm:PageLabels.AllowCpuHint}"
-                                   Style="{StaticResource Muted}" FontSize="11" Margin="20,0,0,6"
-                                   Visibility="{Binding Residency.IsAllowCpu, Converter={StaticResource BoolToVisibility}}" />
-                        <TextBlock Text="{Binding Residency.Warning}" Margin="0,4,0,0"
-                                   Style="{StaticResource WarningText}"
-                                   Visibility="{Binding Residency.HasWarning, Converter={StaticResource BoolToVisibility}}" />
+                        <!-- The only thing on this page that appears, and the only one that
+                             should: it says the chosen rule can degrade an answer. -->
+                        <Border Background="{DynamicResource WarnFill}" BorderBrush="{DynamicResource WarnLine}"
+                                BorderThickness="1" CornerRadius="3" Padding="8,6" Margin="0,2,0,0"
+                                Visibility="{Binding Residency.HasWarning, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Text="{Binding Residency.Warning}"
+                                       Style="{StaticResource WarningText}" TextWrapping="Wrap" />
+                        </Border>
 
                         <TextBlock Text="{x:Static vm:PageLabels.LocalModels}" FontWeight="SemiBold" Margin="0,16,0,6" />
                         <!-- The anchor: it restates the rule inside the group the rule governs,
@@ -353,7 +372,7 @@
                                    Style="{StaticResource Muted}" FontSize="11" Margin="0,0,0,8" />
                         <RadioButton GroupName="ModelMode" Content="{x:Static vm:PageLabels.ChooseAutomatically}"
                                      IsChecked="{Binding Models.IsAutomatic, Mode=TwoWay}" Margin="0,0,0,4" />
-                        <StackPanel Margin="20,0,0,10"
+                        <StackPanel Margin="23,0,0,10"
                                     Visibility="{Binding Models.IsAutomatic, Converter={StaticResource BoolToVisibility}}">
                             <TextBlock Text="{Binding Models.AutomaticSummary}"
                                        Style="{StaticResource Muted}" FontSize="11" Margin="0,0,0,6" />
@@ -367,7 +386,7 @@
                         </StackPanel>
                         <RadioButton GroupName="ModelMode" Content="{x:Static vm:PageLabels.ChooseExactly}"
                                      IsChecked="{Binding Models.IsChooseExact, Mode=TwoWay}" Margin="0,0,0,4" />
-                        <StackPanel Margin="20,0,0,10"
+                        <StackPanel Margin="23,0,0,10"
                                     Visibility="{Binding Models.IsChooseExact, Converter={StaticResource BoolToVisibility}}">
                             <TextBlock Text="{x:Static vm:PageLabels.Model}" />
                             <!-- ItemTemplate, not DisplayMemberPath. The closed box draws
@@ -398,7 +417,7 @@
                         <RadioButton GroupName="ModelMode" Content="{x:Static vm:PageLabels.SkipModelSetup}"
                                      IsChecked="{Binding Models.IsSkip, Mode=TwoWay}" Margin="0,0,0,4" />
                         <TextBlock Text="{x:Static vm:PageLabels.SkipModelSetupHint}"
-                                   Style="{StaticResource Muted}" FontSize="11" Margin="20,0,0,0"
+                                   Style="{StaticResource Muted}" TextWrapping="Wrap" FontSize="11" Margin="23,0,0,0"
                                    Visibility="{Binding Models.IsSkip, Converter={StaticResource BoolToVisibility}}" />
                     </StackPanel>
 
