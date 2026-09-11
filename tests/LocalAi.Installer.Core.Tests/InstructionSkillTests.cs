@@ -84,38 +84,50 @@ public sealed class InstructionSkillTests
         Assert.Contains(phrase, Flat(ManagedInstructionBlock.SkillBody), StringComparison.Ordinal);
 
     /// <summary>
-    /// The section exists twice — the skill body and the Codex block — and an edit to one only
-    /// would ship two machines different rules.
+    /// The section reaches Codex, which is what matters — it no longer matters through which
+    /// half. There were two copies of it until the skill was written for Codex as well, and the
+    /// test existed because an edit to one of them would have shipped two machines different
+    /// rules. There is one copy now; this asks that a Codex session still sees it.
     /// </summary>
     [Fact]
-    public void The_second_copy_of_the_section_cannot_keep_the_old_text() =>
+    public void Codex_still_sees_the_section() =>
         Assert.Contains(
             "A dead MCP server is not the end of the local tools",
-            Flat(ManagedInstructionBlock.CodexBlock),
+            Flat(ManagedInstructionBlock.CodexBlock + ManagedInstructionBlock.SkillFile()),
             StringComparison.Ordinal);
 
     /// <summary>
-    /// Codex gets everything inline because it has no import mechanism, so it must not be told
-    /// to invoke something that does not exist there.
+    /// Codex reads the same skill Claude does, so the block points at it rather than repeating
+    /// it. This asserted the opposite while Codex had no skill to point at.
     /// </summary>
     [Fact]
-    public void The_codex_text_never_tells_it_to_invoke_a_skill()
+    public void The_codex_text_points_at_the_skill_the_way_the_core_does()
     {
         var codex = Flat(ManagedInstructionBlock.CodexBlock);
 
-        Assert.DoesNotContain("Invoke it before", codex, StringComparison.Ordinal);
-        Assert.DoesNotContain("the skill says how", codex, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("the skill describes", codex, StringComparison.OrdinalIgnoreCase);
+        // Inverted deliberately. This asserted the opposite while Codex had nowhere to defer to:
+        // everything a decision needed was inline, which is how that block reached 15398
+        // characters against a 15400 budget. Codex reads the same SKILL.md now — verified on
+        // this machine, `skill_search` is a stable feature — so pointing at it is correct and
+        // carrying a second copy is what would be wrong.
+        Assert.Contains("Use it before", codex, StringComparison.Ordinal);
+        Assert.Contains("the skill says how", codex, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
-    /// And carries the reference material anyway — that is the whole point of concatenating it.
+    /// And the reference material still reaches Codex — through the file it is now written to
+    /// rather than through the block. Same text, same bytes, one copy.
     /// </summary>
     [Theory]
     [InlineData("core.hooksPath")]
     [InlineData("quote the refusal verbatim")]
     public void The_codex_text_carries_both_halves(string phrase) =>
-        Assert.Contains(phrase, Flat(ManagedInstructionBlock.CodexBlock), StringComparison.Ordinal);
+        // The block plus the skill, which is what a Codex session reads. It used to be the block
+        // alone, because the block was the only half Codex had.
+        Assert.Contains(
+            phrase,
+            Flat(ManagedInstructionBlock.CodexBlock + ManagedInstructionBlock.SkillFile()),
+            StringComparison.Ordinal);
 
     /// <summary>
     /// The skill's description is what sits in context permanently, so it is the one piece of
@@ -194,7 +206,12 @@ public sealed class InstructionSkillTests
         // nothing changed between them — and it failed that way for the first time on an addition
         // of 120 characters against 242 of stated room.
         var core = WithoutCarriageReturns(ManagedInstructionBlock.Block);
-        var codex = WithoutCarriageReturns(ManagedInstructionBlock.CodexBlock);
+        // What the split buys, now that Codex reads the skill too: a session of either client
+        // loads the core plus the skill, and that is less than two copies of the core would be.
+        // The old comparison — core against the Codex block — stopped meaning anything when the
+        // Codex block became the core with one sentence changed.
+        var codex = WithoutCarriageReturns(
+            ManagedInstructionBlock.CodexBlock + ManagedInstructionBlock.SkillFile());
 
         Assert.InRange(core, 1_000, 7_700);
         Assert.True(
