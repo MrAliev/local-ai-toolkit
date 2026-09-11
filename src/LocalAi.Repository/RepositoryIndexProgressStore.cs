@@ -48,6 +48,24 @@ public sealed class RepositoryIndexProgressStore
             AtomicWrite.Irrecoverable.Retrying(ReplaceRetryBudget));
     }
 
+    /// <summary>
+    /// Takes the record away, for a run that decided not to be one. Absent reads as "no build",
+    /// which is the truth after a refusal; a record left in whatever phase it reached reads as a
+    /// build that stopped.
+    /// </summary>
+    public void Clear()
+    {
+        try
+        {
+            File.Delete(_path);
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException)
+        {
+            // A record nobody can delete is one the next build overwrites anyway.
+        }
+    }
+
     public RepositoryIndexProgress? Read()
     {
         if (!File.Exists(_path))
