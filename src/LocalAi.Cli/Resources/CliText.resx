@@ -462,6 +462,37 @@ Everything named above is under {2}.</value>
     <value>localai read-image needs a question: what to extract from the images. Usage: {0}</value>
     <comment>The question has no default in the task and does not gain one here: 'transcribe the error text' and 'list every row' produce different answers.</comment>
   </data>
+  <data name="RepoStatusIntervalWithoutSeconds" xml:space="preserve">
+    <value>--interval needs a number of seconds after it.</value>
+    <comment>--interval is an option name and stays as written.</comment>
+  </data>
+  <data name="RepoStatusIntervalWithoutFollow" xml:space="preserve">
+    <value>--interval paces --follow and does nothing without it.</value>
+    <comment>Both option names stay as written.</comment>
+  </data>
+  <data name="RepoStatusIntervalNotACadence" xml:space="preserve">
+    <value>--interval takes whole seconds above zero, not '{0}'.</value>
+    <comment>{0} is what the caller wrote; it is quoted, not translated.</comment>
+  </data>
+  <data name="RepoFollowNoBuild" xml:space="preserve">
+    <value>No index build is running for this repository.</value>
+  </data>
+  <data name="RepoFollowCompleted" xml:space="preserve">
+    <value>Index build finished: {0} chunks.</value>
+    <comment>{0} is a count and stays invariant.</comment>
+  </data>
+  <data name="RepoFollowFailed" xml:space="preserve">
+    <value>Index build failed for {0}.</value>
+    <comment>{0} is a path.</comment>
+  </data>
+  <data name="RepoFollowStopped" xml:space="preserve">
+    <value>Index build stopped in {0} without finishing: nothing recorded for {1}s.</value>
+    <comment>{0} is a phase token and stays English; {1} is a count of seconds and stays invariant.</comment>
+  </data>
+  <data name="RepoFollowProgress" xml:space="preserve">
+    <value>{0}: {1}/{2} chunks, {3}/s, about {4}s left.</value>
+    <comment>{0} is a phase token and stays English. {1} to {4} are figures quoted verbatim by agents and parsed by tests; they stay invariant.</comment>
+  </data>
   <data name="RepoStatusNotConfigured" xml:space="preserve">
     <value>NOT_CONFIGURED: {0} — offer CodeSearch, LocalLm, shared broker, mainline generations, branch overlays, hooks, Claude MCP and Codex MCP.</value>
     <comment>NOT_CONFIGURED: is a status token left of the first colon and stays English; documents and tests match on it. Six of the eight items after the em dash are prose, not names.</comment>
