@@ -21,5 +21,8 @@
          exercised against the computer those tests describe rather than a second sketch. -->
     <Compile Include="..\Shared\RemovalFixture.cs" Link="RemovalFixture.cs" />
     <Compile Include="..\Shared\TemporaryDirectory.cs" Link="TemporaryDirectory.cs" />
+    <!-- A page's text differs by language, and this machine's language is not the one a test
+         is about. The same pin every other suite that reads shipped text uses. -->
+    <Compile Include="..\Shared\TestCulture.cs" Link="TestCulture.cs" />
   </ItemGroup>
 </Project>

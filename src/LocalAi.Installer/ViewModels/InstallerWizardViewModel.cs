@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.IO;
 using System.Text;
 using System.Text.Json;
@@ -1826,11 +1826,12 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 InstallerCulture.Pick(
                     "Warning: no release has been verified, so LocalAi itself will not be " +
                     "installed and the client applications will be left unconfigured. {0} " +
-                    "Choose a release below and verify it before continuing.",
+                    "Choose a release below, or point the installer at a folder holding one, " +
+                    "and verify it before continuing.",
                     "Внимание: ни один релиз не проверен, поэтому сам LocalAi " +
                     "установлен не будет, а клиентские приложения останутся " +
-                    "ненастроенными. {0} Выберите релиз ниже и проверьте его, " +
-                    "прежде чем продолжать."),
+                    "ненастроенными. {0} Выберите релиз ниже или укажите папку с релизом " +
+                    "и проверьте его, прежде чем продолжать."),
                 remaining));
         }
 
@@ -2206,6 +2207,14 @@ public sealed class InstallerWizardViewModel : ObservableObject
                     exception is ReleaseResolutionException
                         ? exception.Message
                         : $"The release could not be checked: {exception.Message}");
+                // The box that installs from a folder lives on the page an update folds away,
+                // so a machine that cannot reach the feed had no route to it at all. A failed
+                // resolve is exactly the run that needs one: the page joins the rail and the
+                // reader walks through it, instead of being told where to look.
+                //
+                // Not RevealRelease(): that also arms the return to the confirm page, which is
+                // the button's business and would send Back to the wrong place from here.
+                releaseRevealed = true;
             }
             else
             {

@@ -164,8 +164,12 @@ public sealed class UpdatePathFoldsSettingsTests
     {
         var review = new InstallerWizardViewModel(mode).ReviewText;
 
+        // The folder is named beside the release now. Somebody reading this sentence has just
+        // learned that nothing will be installed, and on a machine that cannot reach GitHub the
+        // release half of it is the half that cannot help them.
         Assert.Contains(
-            "Choose a release below and verify it before continuing.",
+            "Choose a release below, or point the installer at a folder holding one, " +
+            "and verify it before continuing.",
             review,
             StringComparison.Ordinal);
         Assert.DoesNotContain("Go back to the LocalAi package step", review, StringComparison.Ordinal);

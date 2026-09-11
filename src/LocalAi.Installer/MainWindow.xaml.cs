@@ -59,6 +59,26 @@ public partial class MainWindow : Window, IReturnsToStart
         viewModel.RefreshNavigationState();
     }
 
+    /// <summary>
+    /// The folder, chosen rather than typed. Typing the path by hand was the only way to use
+    /// this box, and a release folder is somewhere a person navigates to, not something they
+    /// remember.
+    /// </summary>
+    private void OnBrowseForReleaseFolder(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog
+        {
+            Title = PageLabels.BrowseForFolderTitle,
+            InitialDirectory = viewModel.Package.SourceFolder,
+        };
+        if (dialog.ShowDialog(this) == true)
+        {
+            // Setting it invalidates whatever the last check resolved and resets the status
+            // line, which already says that "Проверить снова" is the next step.
+            viewModel.Package.SourceFolder = dialog.FolderName;
+        }
+    }
+
     private async void OnPackageCheckRelease(object sender, RoutedEventArgs e)
     {
         try
