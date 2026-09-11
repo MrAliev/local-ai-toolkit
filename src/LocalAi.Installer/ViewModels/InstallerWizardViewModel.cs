@@ -2497,12 +2497,34 @@ public sealed class InstallerWizardViewModel : ObservableObject
             CreateFeed(),
             processRunner,
             new SystemFileSystemProbe());
+        var planned = new List<ModelProvisioningProgress>();
         var modelProgress = new Progress<ModelProvisioningProgress>(step =>
         {
             downloadFinished = true;
+            if (step.Phase == ModelProvisioningPhase.Planned)
+            {
+                // Said once, when the last of them has arrived: the plan is one fact about the
+                // run, not six, and it is the first thing worth reading in the log.
+                planned.Add(step);
+                if (planned.Count == step.Total)
+                {
+                    AppendLog(
+                        report,
+                        "Models: " +
+                        string.Join(
+                            ", ",
+                            planned.Select(model =>
+                                $"{model.Model} at {model.ContextTokens} tokens")) +
+                        ". Anything already installed is left alone; the rest is downloaded now.");
+                }
+
+                return;
+            }
+
             // 90 to 95: the package is in, the models are the tail of the run. The count is
             // what makes a long wait legible — "3 of 6" is a queue, a frozen bar is a fault.
             var share = step.Total <= 0 ? 0 : 5 * step.Completed / step.Total;
+            var said = ModelStepWording.ForTheRail(step);
             SetProgress(
                 90 + share,
                 step.Total > 0
@@ -2512,14 +2534,12 @@ public sealed class InstallerWizardViewModel : ObservableObject
                             "Локальные модели: {0} из {1} — {2}"),
                         step.Completed,
                         step.Total,
-                        step.Message)
-                    : step.Message);
-            if (step.IsMilestone)
+                        said)
+                    : said);
+            // The rail moves with every report; the log keeps the ones worth reading afterwards.
+            if (ModelStepWording.LogLine(step) is { } line)
             {
-                // The rail moves with every report; the log keeps the ones worth reading
-                // afterwards. It does not scroll, so a hundred byte counts per model would
-                // push everything else out of sight.
-                AppendLog(report, step.Message);
+                AppendLog(report, line);
             }
         });
         var selection = models.BuildProvisioningSelection();
@@ -2725,6 +2745,14 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 "one from a release whose manifest carries the model list.");
             hasRunError = true;
             return;
+        }
+
+        // Printed whether or not a batch ran. A model the planner left out used to reach the log
+        // only when nothing at all was installed, so on a run where five of six models went in,
+        // the sixth vanished without a line.
+        foreach (var excluded in models.Excluded)
+        {
+            AppendLog(report, excluded);
         }
 
         foreach (var model in batch.Models)
