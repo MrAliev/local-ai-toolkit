@@ -139,22 +139,46 @@ public sealed class UninstallPlanner
             retained.Order(StringComparer.OrdinalIgnoreCase).ToArray());
     }
 
+    /// <summary>
+    /// Whether this removal takes the text-search gate out of the client's settings.
+    ///
+    /// One predicate rather than the same condition written twice: the plan that removes the
+    /// entry and the notice that explains what is left on the event have to agree, and they are
+    /// in different methods. They already disagreed once -- the notice stayed behind the client
+    /// row while the removal moved -- and a reader whose tool calls were still refused would
+    /// have been told nothing about why.
+    /// </summary>
+    private static bool GateGoes(RemovalSelection selection) =>
+        selection.Includes(RemovalItem.ClaudeIntegration) ||
+        selection.Includes(RemovalItem.Binaries);
+
     private IReadOnlyList<AgentConfigurationPlan> PlanAgentConfigurations(
         RemovalSelection selection)
     {
         var plans = new List<AgentConfigurationPlan>();
+        var claude = new ClaudeConfigurationAdapter(
+            homeDirectory,
+            layout.LauncherDirectory,
+            timeProvider);
         if (selection.Includes(RemovalItem.ClaudeIntegration))
         {
-            var claude = new ClaudeConfigurationAdapter(
-                homeDirectory,
-                layout.LauncherDirectory,
-                timeProvider);
             plans.Add(claude.PreviewRemoval());
-            // Its own plan, applied and failed on its own. `settings.json` is a file the person
-            // edits by hand and `.claude.json` is not, so the two fail for different reasons and
-            // one failing must not take the other's removal with it (#423). The command is not
-            // consulted on this path — an entry is recognised as ours by its signature, so a
-            // launcher directory standing in for an installation directory here is harmless.
+        }
+
+        // The gate goes with the binaries as well as with the client, and that is the difference
+        // this condition exists for. It is a command line pointing at the launcher, so a removal
+        // that takes the binaries and keeps the client integration — which is exactly what the
+        // reinstall-friendly preset asks for — leaves the client running a refusal attached to a
+        // program that no longer exists, before every tool call. The preset's reasoning holds for
+        // the MCP registration, which the installation that follows rewrites, and not for this.
+        //
+        // Its own plan, applied and failed on its own. `settings.json` is a file the person edits
+        // by hand and `.claude.json` is not, so the two fail for different reasons and one
+        // failing must not take the other's removal with it (#423). The command is not consulted
+        // on this path — an entry is recognised as ours by its signature, so a launcher directory
+        // standing in for an installation directory here is harmless.
+        if (GateGoes(selection))
+        {
             plans.Add(claude.PreviewGate(register: false));
         }
 
@@ -425,8 +449,7 @@ public sealed class UninstallPlanner
                     "машиной, и текущий запуск тоже пишет туда свою.")),
         };
 
-        if (selection.Includes(RemovalItem.ClaudeIntegration) &&
-            OtherPreToolUseHooks() is { } others)
+        if (GateGoes(selection) && OtherPreToolUseHooks() is { } others)
         {
             notices.Add(new(
                 InstallerCulture.Pick(

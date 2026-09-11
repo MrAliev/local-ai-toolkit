@@ -53,7 +53,10 @@ public sealed class RemovalTextsSpeakRussianTests : IDisposable
         InstallerCulture.Current = InstallerLanguage.English;
 
         Assert.Equal("Binaries, launcher, version pointer", RemovalMatrix.Title(RemovalItem.Binaries));
-        Assert.Equal("Removing these is the uninstall.", RemovalMatrix.Note(RemovalItem.Binaries));
+        Assert.Equal(
+            "Removing these is the uninstall. The hook that refuses text searches points at " +
+            "the launcher, so it goes with them.",
+            RemovalMatrix.Note(RemovalItem.Binaries));
         Assert.Equal("Full uninstall", RemovalMatrix.Title(RemovalPreset.FullUninstall));
         Assert.Equal(
             "The binaries go; the indexes and settings a reinstall would honour stay.",

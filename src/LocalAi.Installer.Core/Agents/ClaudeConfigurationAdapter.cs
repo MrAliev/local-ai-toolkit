@@ -133,7 +133,7 @@ public sealed class ClaudeConfigurationAdapter(
     /// and reported as separate steps, so two plans under one name would be two lines nobody
     /// could tell apart — and would break every lookup that expects one plan per client.
     /// </summary>
-    private const string GateName = "Claude text-search gate";
+    public const string GateName = "Claude text-search gate";
 
     /// <summary>
     /// Whether the gate is registered on this machine right now.

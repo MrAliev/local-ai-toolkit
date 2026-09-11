@@ -185,8 +185,10 @@ public static class RemovalMatrix
         item switch
         {
             RemovalItem.Binaries => InstallerCulture.Pick(
-                "Removing these is the uninstall.",
-                "Их удаление и есть деинсталляция."),
+                "Removing these is the uninstall. The hook that refuses text searches points " +
+                "at the launcher, so it goes with them.",
+                "Их удаление и есть деинсталляция. Хук, который отклоняет текстовый поиск, " +
+                "указывает на launcher, поэтому уходит вместе с ними."),
             RemovalItem.RepositoryIndexes => InstallerCulture.Pick(
                 "Hours of embedding to rebuild; keeping them makes a reinstall pick the " +
                 "repositories back up at once.",
@@ -203,12 +205,17 @@ public static class RemovalMatrix
                 "Всё в корне рантайма, чего этот установщик не распознаёт, " +
                 "перечислено по путям."),
             // The absolute "untouched" is earned rather than hopeful: removal is a text splice
-            // and `Removing_the_registration_undoes_adding_it` pins the result byte for byte.
+            // and `Preview_preserves_unrelated_json_bytes_outside_managed_servers` pins the
+            // result for .claude.json byte for byte. The gate left this sentence when it
+            // stopped depending on this row alone: it now goes with the binaries too, and a
+            // row that listed it among its own contents would promise that unticking the row
+            // keeps it.
             RemovalItem.ClaudeIntegration => InstallerCulture.Pick(
-                "Server registrations, the managed block and the hook that refuses text " +
-                "searches; your own text is untouched.",
-                "Регистрации серверов, управляемый блок и хук, который отклоняет текстовый " +
-                "поиск; ваш собственный текст не трогается."),
+                "Server registrations and the managed block; your own text is untouched. The " +
+                "hook that refuses text searches goes with this row or with the binaries.",
+                "Регистрации серверов и управляемый блок; ваш собственный текст не трогается. " +
+                "Хук, который отклоняет текстовый поиск, уходит с этой строкой или с " +
+                "бинарными файлами."),
             RemovalItem.CodexIntegration => InstallerCulture.Pick(
                 "Server registrations, their tool sub-tables, and the managed block.",
                 "Регистрации серверов, их подтаблицы инструментов и " +

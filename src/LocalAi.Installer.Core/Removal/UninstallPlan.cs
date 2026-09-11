@@ -140,6 +140,39 @@ public sealed record UninstallPlan(
                 }
             }
 
+            // The gate, which the loop above cannot reach. AgentPlansFor looks plans up by
+            // the client's name, and this one is deliberately named apart from it so that a
+            // stray comma in settings.json cannot take the MCP registration down with it — so
+            // the file it rewrites was named in no preview, on any preset, while the finish
+            // report named it afterwards. The page's whole contract is that what it does not
+            // name, the run does not touch.
+            //
+            // Its own heading rather than the client's: on a run where the Claude row is
+            // unticked — which is what the reinstall-friendly preset does, and where the gate
+            // still goes with the binaries — a "Claude integration:" heading would be a second
+            // untruth in place of the first.
+            if (AgentConfigurations.FirstOrDefault(plan =>
+                    string.Equals(
+                        plan.AgentName,
+                        ClaudeConfigurationAdapter.GateName,
+                        StringComparison.Ordinal) &&
+                    plan.HasChanges) is { } gate)
+            {
+                text.AppendLine(InstallerCulture.Pick(
+                    "Text search in Claude Code:",
+                    "Текстовый поиск в Claude Code:"));
+                foreach (var file in gate.Files)
+                {
+                    // "remove LocalAi's line from", not the loop's bare "rewrite": the file
+                    // stays, and a removal that reads as a deletion is the one thing this line
+                    // must not say about somebody's own settings.
+                    text.AppendLine(
+                        "  " + InstallerCulture.Pick(
+                            "remove LocalAi's line from ",
+                            "убрать строку LocalAi из ") + file.Path);
+                }
+            }
+
             if (!HasWork)
             {
                 text.AppendLine(InstallerCulture.Pick(
