@@ -160,16 +160,27 @@ internal sealed class AdaptiveEmbeddingBatchPolicy
     private readonly object _gate = new();
     private readonly string _model;
     private readonly EmbeddingBatchProfileStore? _store;
+    private readonly int _ceiling;
     private int _stableItems;
     private int _currentItems;
     private int _consecutiveFullSuccesses;
 
-    public AdaptiveEmbeddingBatchPolicy(string model, EmbeddingBatchProfileStore? store)
+    /// <param name="maximumItems">
+    /// What this machine allows, which may be less than what the product does: a card whose
+    /// runner drops the largest batch otherwise has the policy re-prove that on every build.
+    /// Null keeps <see cref="MaximumItems"/>. A value between the steps is rounded down to one,
+    /// because every size the policy visits is a power of two.
+    /// </param>
+    public AdaptiveEmbeddingBatchPolicy(
+        string model,
+        EmbeddingBatchProfileStore? store,
+        int? maximumItems = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(model);
         _model = model;
         _store = store;
-        _stableItems = store?.Read(model) ?? MinimumItems;
+        _ceiling = maximumItems is { } requested ? Normalize(requested) : MaximumItems;
+        _stableItems = Math.Min(store?.Read(model) ?? MinimumItems, _ceiling);
         _currentItems = _stableItems;
     }
 
@@ -206,7 +217,7 @@ internal sealed class AdaptiveEmbeddingBatchPolicy
                 _store?.TryWrite(_model, _stableItems);
             }
 
-            if (_currentItems == MaximumItems)
+            if (_currentItems >= _ceiling)
             {
                 return null;
             }
