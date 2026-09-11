@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json.Serialization;
 using LocalAi.Cli.Resources;
 using LocalAi.Contracts;
@@ -14,7 +15,13 @@ public sealed record RepositoryStatus(
 /// What <c>repo status</c> was asked about: a path, and whether it is a directory inside the
 /// repository that Git has to resolve, or the common directory itself.
 /// </summary>
-public sealed record RepoStatusTarget(string? Path, bool ResolveThroughGit);
+/// <param name="Follow">Whether to keep reading the build's progress instead of answering once.</param>
+/// <param name="Interval">How often to report while following.</param>
+public sealed record RepoStatusTarget(
+    string? Path,
+    bool ResolveThroughGit,
+    bool Follow = false,
+    TimeSpan? Interval = null);
 
 /// <summary>
 /// What <c>repo status --json</c> tells a program: which repository this is about, and the
@@ -79,10 +86,42 @@ public static class RepoCommand
         refusal = null;
         string? path = null;
         var resolveThroughGit = true;
+        var follow = false;
+        TimeSpan? interval = null;
 
         for (var index = 0; index < arguments.Count; index++)
         {
             var argument = arguments[index];
+            if (argument == "--follow")
+            {
+                follow = true;
+                continue;
+            }
+
+            if (argument == "--interval")
+            {
+                if (index + 1 >= arguments.Count)
+                {
+                    refusal = new CommandRefusal(
+                        "interval_value_missing",
+                        CliText.RepoStatusIntervalWithoutSeconds);
+                    return false;
+                }
+
+                var value = arguments[++index];
+                if (!int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture,
+                        out var seconds) || seconds <= 0)
+                {
+                    refusal = new CommandRefusal(
+                        "interval_not_a_cadence",
+                        CliText.RepoStatusIntervalNotACadence(value));
+                    return false;
+                }
+
+                interval = TimeSpan.FromSeconds(seconds);
+                continue;
+            }
+
             if (argument == "--root")
             {
                 if (index + 1 >= arguments.Count)
@@ -126,9 +165,29 @@ public static class RepoCommand
             resolveThroughGit = false;
         }
 
-        target = new RepoStatusTarget(path, resolveThroughGit);
+        if (interval is not null && !follow)
+        {
+            // An interval paces a run of reports and there is no run, so the request was
+            // misunderstood rather than partly honourable.
+            refusal = new CommandRefusal(
+                "interval_without_follow",
+                CliText.RepoStatusIntervalWithoutFollow);
+            return false;
+        }
+
+        target = new RepoStatusTarget(
+            path,
+            resolveThroughGit,
+            follow,
+            follow ? interval ?? DefaultFollowInterval : null);
         return true;
     }
+
+    /// <summary>
+    /// A minute, because that is the cadence the installed instruction block requires a build's
+    /// figures to reach the reader at.
+    /// </summary>
+    public static readonly TimeSpan DefaultFollowInterval = TimeSpan.FromSeconds(60);
 
     public static RepositoryStatus Status(
         string commonDirectory,

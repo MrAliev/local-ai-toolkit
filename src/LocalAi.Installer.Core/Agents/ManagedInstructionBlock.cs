@@ -320,9 +320,9 @@ public static class ManagedInstructionBlock
         say what has started the moment it starts, then put its newest lines in every reply
         until it ends — the console's own, `index_status`, or the `Sync:` line search answers
         carry — and never filter that progress away. Its figures reach the person at least
-        once a minute, whether or not the conversation has anything to say: arm something that
-        emits them rather than undertaking to remember. What emits them says so when the build
-        fails as well as when it finishes.
+        once a minute, whether or not the conversation has anything to say: arm `repo status
+        --follow` rather than undertaking to remember. It emits a line per minute and ends on
+        its own, saying so when the build fails as well as when it finishes.
         """;
 
     /// <summary>The part read once a decision is taken, which Claude loads on demand.</summary>
@@ -386,6 +386,24 @@ public static class ManagedInstructionBlock
         tree, so editing, switching branch or committing while it runs makes the result
         unusable: LocalAi discards it rather than storing something that would answer wrongly,
         and the minutes it spent are gone.
+
+        ### Reporting a build that is already running
+
+        A build starts in one process and is watched from another, so what reports it is a
+        command rather than a promise to check back:
+
+        ```
+        localai-launcher.exe run localai repo status --root <repository> --follow
+        ```
+
+        One line a minute — phase, chunks done against the total, chunks per second, seconds
+        left — and it ends on its own: exit 0 when the build finishes or when none is running,
+        and a non-zero exit with a line saying why when it fails or when its progress record
+        stops moving. Nothing is left waiting on a build that went away. `--interval <seconds>`
+        changes the cadence; it means nothing without `--follow` and is refused there.
+
+        Arm it rather than remembering to poll: a rule that rides on replies stops when the
+        replies do.
 
         ### Connecting a repository
 

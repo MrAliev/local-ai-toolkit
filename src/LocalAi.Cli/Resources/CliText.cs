@@ -639,6 +639,35 @@ public static class CliText
     public static string RepoStatusNotConfigured(string commonDirectory) =>
         Catalogue.Format(nameof(RepoStatusNotConfigured), commonDirectory);
 
+    public static string RepoStatusIntervalWithoutSeconds =>
+        Catalogue.Get(nameof(RepoStatusIntervalWithoutSeconds));
+
+    public static string RepoStatusIntervalWithoutFollow =>
+        Catalogue.Get(nameof(RepoStatusIntervalWithoutFollow));
+
+    public static string RepoStatusIntervalNotACadence(string value) =>
+        Catalogue.Format(nameof(RepoStatusIntervalNotACadence), value);
+
+    public static string RepoFollowNoBuild => Catalogue.Get(nameof(RepoFollowNoBuild));
+
+    public static string RepoFollowCompleted(string chunks) =>
+        Catalogue.Format(nameof(RepoFollowCompleted), chunks);
+
+    public static string RepoFollowFailed(string workingRoot) =>
+        Catalogue.Format(nameof(RepoFollowFailed), workingRoot);
+
+    public static string RepoFollowStopped(string phase, string seconds) =>
+        Catalogue.Format(nameof(RepoFollowStopped), phase, seconds);
+
+    public static string RepoFollowProgress(
+        string phase,
+        string done,
+        string total,
+        string perSecond,
+        string etaSeconds) =>
+        Catalogue.Format(
+            nameof(RepoFollowProgress), phase, done, total, perSecond, etaSeconds);
+
     public static string SemanticCommandFailed(string operation, string reason) =>
         Catalogue.Format(nameof(SemanticCommandFailed), operation, reason);
 

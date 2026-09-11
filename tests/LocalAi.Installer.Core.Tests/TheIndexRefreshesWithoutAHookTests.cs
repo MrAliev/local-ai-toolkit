@@ -40,6 +40,26 @@ public sealed class TheIndexRefreshesWithoutAHookTests
             Flat(ManagedInstructionBlock.SkillBody),
             StringComparison.Ordinal);
 
+    /// <summary>
+    /// The core requires a build's figures to reach the reader once a minute and told the agent
+    /// to "arm something that emits them" — with nothing to arm: `repo status` was a single shot.
+    /// A rule nothing can perform is worse than no rule.
+    /// </summary>
+    [Fact]
+    public void The_core_names_the_command_that_emits_the_figures() =>
+        Assert.Contains(
+            "arm `repo status --follow`",
+            Flat(ManagedInstructionBlock.Block),
+            StringComparison.Ordinal);
+
+    /// <summary>And the skill says how to call it, and what its exits mean.</summary>
+    [Theory]
+    [InlineData("localai repo status --root <repository> --follow")]
+    [InlineData("--interval <seconds>")]
+    [InlineData("exit 0 when the build finishes or when none is running")]
+    public void The_skill_says_how_to_arm_it(string phrase) =>
+        Assert.Contains(phrase, Flat(ManagedInstructionBlock.SkillBody), StringComparison.Ordinal);
+
     /// <summary>Still offered to whoever wants them — removed from the default, not the product.</summary>
     [Fact]
     public void Hooks_remain_documented_as_a_deliberate_choice() =>

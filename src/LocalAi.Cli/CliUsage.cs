@@ -14,7 +14,8 @@ internal static class CliUsage
         "localai hook <" + HookEvents + "> [--root dir]";
     public const string HookEvents = "post-commit|post-checkout|post-merge|post-rewrite";
     public const string RepoStatus =
-        "localai repo status [--root dir | git-common-dir] [--json]";
+        "localai repo status [--root dir | git-common-dir] [--json] " +
+        "[--follow [--interval seconds]]";
     public const string Prune = "localai prune [--dry-run]";
     // Beside repo status because the noun already means "one repository, found by --root", and
     // the object here is that repository's finished branches. Deliberately not part of `localai

@@ -115,6 +115,39 @@ static string PrimarySource(IReadOnlyList<string> sources, string whenEmpty) =>
         _ => $"{Path.GetFullPath(sources[0])} (+{sources.Count - 1} more)",
     };
 
+/// <summary>
+/// Reports a build's progress until it ends, one line per interval.
+///
+/// The decision about each reading is <see cref="RepoFollowCommand.Step"/>; this is the waiting
+/// around it. "Last change" is the record's own <c>UpdatedAtUtc</c> rather than a wall clock of
+/// our own, so a loop that starts mid-build inherits the build's history instead of resetting it.
+/// </summary>
+static async Task<int> FollowIndexBuildAsync(RepositoryStatus status, TimeSpan interval)
+{
+    var store = new LocalAi.Repository.RepositoryIndexProgressStore(FsPath.From(Path.Combine(
+        Path.GetFullPath(ModelResidencyPolicyStore.DefaultRuntimeRoot),
+        "repositories",
+        status.Identity.Id)));
+    while (true)
+    {
+        var progress = store.Read();
+        var step = RepoFollowCommand.Step(
+            progress,
+            progress is null
+                ? TimeSpan.Zero
+                : DateTimeOffset.UtcNow - progress.UpdatedAtUtc,
+            RepoFollowCommand.DefaultStaleAfter);
+        Console.WriteLine(step.Line);
+        Console.Out.Flush();
+        if (step.ExitCode is { } code)
+        {
+            return code;
+        }
+
+        await Task.Delay(interval);
+    }
+}
+
 // `exit` defaults to 2, which is what a wrong command line has always been. It is passed only
 // where the command line was right and the machine refused — a file named with `--in` that could
 // not be opened, which exits 66 the way `--out` exits 73 when it cannot write.
@@ -446,7 +479,17 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
         Console.WriteLine(machineReadable
             ? MachineOutput.Answer("repo status", RepoCommand.MachineStatus(status))
             : status.Message);
-        return 0;
+        if (!target.Follow)
+        {
+            return 0;
+        }
+
+        // Unbuffered, one line per report: the caller is watching this stream while it runs, and
+        // a line held in a buffer is the quiet minute the instruction block forbids.
+        Console.Out.Flush();
+        return await FollowIndexBuildAsync(
+            status,
+            target.Interval ?? RepoCommand.DefaultFollowInterval);
     }
 
     if (args is ["doctor", ..])
