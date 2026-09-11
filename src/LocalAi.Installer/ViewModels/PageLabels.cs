@@ -166,9 +166,22 @@ public static class PageLabels
         "ничего не пишется.");
 
     // --- Confirm ------------------------------------------------------------------------
+    /// <summary>
+    /// Names both routes. It said only "release", and somebody whose machine cannot reach
+    /// GitHub is not looking for a release — they are looking for a folder, and the box that
+    /// takes one lives behind this button.
+    /// </summary>
     public static string ChooseARelease => InstallerCulture.Pick(
-        "Choose a release…",
-        "Выбрать релиз…");
+        "Choose a release or folder…",
+        "Выбрать релиз или папку…");
+
+    public static string BrowseForFolder => InstallerCulture.Pick(
+        "Browse…",
+        "Обзор…");
+
+    public static string BrowseForFolderTitle => InstallerCulture.Pick(
+        "The folder holding release-manifest.json, release-manifest.sig and localai-package.zip",
+        "Папка с release-manifest.json, release-manifest.sig и localai-package.zip");
 
     public static string ChangeSettings => InstallerCulture.Pick(
         "Change settings…",
