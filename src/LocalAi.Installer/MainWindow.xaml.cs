@@ -67,6 +67,34 @@ public partial class MainWindow : Window, IReturnsToStart
         ((TextBox)sender).ScrollToEnd();
 
     /// <summary>
+    /// The folder, not the file: Explorer is where somebody attaches a log from, and a run that
+    /// failed twice has two of them.
+    /// </summary>
+    private void OnOpenReportFolder(object sender, RoutedEventArgs e)
+    {
+        if (viewModel.Finish.ReportPath is not { Length: > 0 } path)
+        {
+            return;
+        }
+
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "explorer.exe",
+                Arguments = "/select,\"" + path + "\"",
+                UseShellExecute = false,
+            });
+        }
+        catch (Exception exception) when (
+            exception is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            // The path is on screen beside the button; a shell that will not start is not a
+            // reason to take the page down.
+        }
+    }
+
+    /// <summary>
     /// The folder, chosen rather than typed. Typing the path by hand was the only way to use
     /// this box, and a release folder is somewhere a person navigates to, not something they
     /// remember.
