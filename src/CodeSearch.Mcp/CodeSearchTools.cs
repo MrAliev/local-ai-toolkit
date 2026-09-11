@@ -368,7 +368,16 @@ public static class CodeSearchTools
     {
         try
         {
-            await sessions.CloseAsync(RepoLocator.ResolveWorkingRoot(root).Value, path);
+            var workingRoot = RepoLocator.ResolveWorkingRoot(root).Value;
+            // Closing what was never open stays successful — idempotent close is the design.
+            // Saying "closed" was not: on an installation where opening is refused, nothing can
+            // ever have been open, and the sentence claimed an effect for every caller alike.
+            if (!sessions.IsOpen(workingRoot, path))
+            {
+                return CodeSearchText.LspNoLiveDocument(path);
+            }
+
+            await sessions.CloseAsync(workingRoot, path);
             return CodeSearchText.LspDocumentClosed(path);
         }
         catch (Exception exception)

@@ -47,6 +47,9 @@ public static class CodeSearchText
     public static string LspDocumentClosed(string path) =>
         Catalogue.Format(nameof(LspDocumentClosed), path);
 
+    public static string LspNoLiveDocument(string path) =>
+        Catalogue.Format(nameof(LspNoLiveDocument), path);
+
     /// <summary>
     /// The line above a result list. The third hole is the model, or the token that says
     /// nothing was embedded — a model named after a search that never used one reports a
