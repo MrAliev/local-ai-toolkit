@@ -499,6 +499,106 @@ public sealed class UninstallPlannerTests : IDisposable
     }
 
     /// <summary>
+    /// The gate is a command line pointing at the launcher. Every preset that removes the
+    /// binaries therefore leaves it pointing at a program that no longer exists, and the client
+    /// goes on running it before every tool call -- which reads as LocalAi still being installed
+    /// and refusing to work.
+    ///
+    /// The reinstall-friendly preset is the one this is about: it keeps ClaudeIntegration, on the
+    /// grounds that the installation which follows rewrites it. True of the MCP registration,
+    /// which a reinstall does rewrite; false of the window in between, where the hook is a
+    /// refusal attached to a deleted launcher.
+    /// </summary>
+    [Theory]
+    [InlineData(RemovalPreset.FullUninstall)]
+    [InlineData(RemovalPreset.DisconnectClients)]
+    [InlineData(RemovalPreset.ReinstallFriendly)]
+    public async Task Every_preset_takes_the_gate_out(RemovalPreset preset)
+    {
+        await WriteSettingsAsync("{}");
+
+        var plan = await Plan(RemovalSelection.FromPreset(preset));
+
+        Assert.Contains(
+            plan.AgentConfigurations,
+            configuration => configuration.Files.Any(file =>
+                file.Path.EndsWith("settings.json", StringComparison.Ordinal)));
+    }
+
+    /// <summary>
+    /// Whatever the page will rewrite, the page names — and the gate's file was named nowhere.
+    ///
+    /// `PreviewText` renders agent plans by looking them up under "Claude" and "Codex", and the
+    /// gate's plan is deliberately named apart from both so that a stray comma in settings.json
+    /// cannot take the MCP registration down with it. The lookup was never taught about the
+    /// third name, so `~/.claude/settings.json` appeared in no preview on any preset, and turned
+    /// up only afterwards in the finish report.
+    ///
+    /// Latent until now. It stopped being latent when the gate started going with the binaries:
+    /// on the reinstall-friendly preset the Claude row is unticked, so nothing on the page
+    /// mentions Claude at all, and the run rewrites a file in the person's home directory that
+    /// the confirmation never showed them.
+    /// </summary>
+    [Theory]
+    [InlineData(RemovalPreset.FullUninstall)]
+    [InlineData(RemovalPreset.ReinstallFriendly)]
+    public async Task The_page_names_the_settings_file_it_will_rewrite(RemovalPreset preset)
+    {
+        await WriteSettingsAsync("{}");
+
+        var plan = await Plan(RemovalSelection.FromPreset(preset));
+
+        Assert.Contains(
+            Path.Combine(machine.Home, ".claude", "settings.json"),
+            plan.PreviewText,
+            StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The notice about entries LocalAi did not write follows the gate's removal wherever it
+    /// goes. Its whole job is to answer the question the person asks next -- "my tool calls are
+    /// still being refused, did the uninstall work?" -- and that question arrives whenever ours
+    /// stopped being there, including on the preset that keeps the client registration.
+    /// </summary>
+    [Fact]
+    public async Task Somebody_elses_hooks_are_named_whenever_ours_is_taken_out()
+    {
+        await WriteSettingsAsync("""
+            {
+              "hooks": {
+                "PreToolUse": [
+                  { "matcher": "Bash", "hooks": [ { "type": "command", "command": "audit --log" } ] }
+                ]
+              }
+            }
+            """);
+
+        var plan = await Plan(RemovalSelection.FromPreset(RemovalPreset.ReinstallFriendly));
+
+        Assert.Contains(
+            plan.Retained,
+            entry => entry.Title.Contains("PreToolUse", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// And a selection that removes nothing touches nothing. The rule is "the gate goes with the
+    /// binaries or with the client", not "the gate goes whenever this command runs": a person
+    /// clearing indexes has not asked for their tool calls to change behaviour.
+    /// </summary>
+    [Fact]
+    public async Task A_selection_that_removes_neither_leaves_the_gate_alone()
+    {
+        await WriteSettingsAsync("{}");
+
+        var plan = await Plan(RemovalSelection.Nothing().With(RemovalItem.RepositoryIndexes, true));
+
+        Assert.DoesNotContain(
+            plan.AgentConfigurations,
+            configuration => configuration.Files.Any(file =>
+                file.Path.EndsWith("settings.json", StringComparison.Ordinal)));
+    }
+
+    /// <summary>
     /// Writes a Claude settings file carrying our gate on top of whatever the caller supplies,
     /// which is how every one of these arrives on a real machine.
     /// </summary>

@@ -101,6 +101,46 @@ public sealed class UninstallWizardViewModelTests : IDisposable
     }
 
     /// <summary>
+    /// The notice lists what this preset keeps, and the gate stopped being one of those things:
+    /// it points at the launcher, which the same preset deletes. Left as it was, the page would
+    /// tell the reader their Claude setup is untouched while the run takes an entry out of the
+    /// settings file in their home directory.
+    /// </summary>
+    [Fact]
+    public async Task A_reinstall_says_the_gate_goes_even_though_claude_is_kept()
+    {
+        var wizard = await Wizard(
+            preset: RemovalPreset.ReinstallFriendly,
+            offersInstallAfterwards: true);
+
+        Assert.True(await wizard.MoveNextAsync(TestContext.Current.CancellationToken));
+
+        Assert.Contains(
+            "hook that refuses text searches",
+            wizard.KeepNotice,
+            StringComparison.Ordinal);
+        Assert.Contains("asks about it again", wizard.KeepNotice, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// And when nothing follows, the same fact without the promise: no installation is coming
+    /// to ask about it again, so the sentence must not imply one.
+    /// </summary>
+    [Fact]
+    public async Task Picking_the_preset_by_hand_is_told_the_gate_goes_too()
+    {
+        var wizard = await Wizard(preset: RemovalPreset.ReinstallFriendly);
+
+        Assert.True(await wizard.MoveNextAsync(TestContext.Current.CancellationToken));
+
+        Assert.Contains(
+            "hook that refuses text searches",
+            wizard.KeepNotice,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("follows", wizard.KeepNotice, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// A row ticked by hand outranks the preset that filled it in, and the sentence has to
     /// stop rather than describe a run that is not happening.
     /// </summary>

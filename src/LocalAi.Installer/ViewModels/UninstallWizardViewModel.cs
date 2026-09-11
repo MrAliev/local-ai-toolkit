@@ -579,6 +579,13 @@ public sealed class UninstallWizardViewModel : ObservableObject
         var keepsCodex = !selection.Includes(RemovalItem.CodexIntegration);
         var keepsHooks = !selection.Includes(RemovalItem.GitHooks);
 
+        // The one thing on this page that is kept by the Claude row and taken by another. The
+        // gate is a command line pointing at the launcher, so the row that deletes the binaries
+        // takes it whatever the Claude row says — and without this clause the notice tells the
+        // reader their Claude setup is untouched while the run edits a file in their home
+        // directory. The preview box names the file; this names the reason.
+        var gateGoesAnyway = keepsClaude && selection.Includes(RemovalItem.Binaries);
+
         if (OffersInstallAfterwards)
         {
             // Silent the moment one of them is ticked: the override was deliberate, and the
@@ -589,7 +596,19 @@ public sealed class UninstallWizardViewModel : ObservableObject
                     "left exactly as they are — the installation that follows this removal " +
                     "rewrites all three.",
                     "Регистрации Claude и Codex и диспетчеры хуков Git остаются ровно " +
-                    "как есть — установка, которая пойдёт следом, перепишет все три.")
+                    "как есть — установка, которая пойдёт следом, перепишет все три.") +
+                  (gateGoesAnyway
+                      // "asks about it again" rather than "puts it back": the installation
+                      // seeds that checkbox by reading the machine, and by then the entry is
+                      // gone — so a promise to restore it would be one this run cannot keep.
+                      ? InstallerCulture.Pick(
+                          " The hook that refuses text searches is not one of them: it points " +
+                          "at the launcher, and the installation that follows asks about it " +
+                          "again.",
+                          " Хук, который отклоняет текстовый поиск, — не из их числа: он " +
+                          "указывает на launcher, и установка, которая пойдёт следом, спросит " +
+                          "о нём заново.")
+                      : string.Empty)
                 : string.Empty;
         }
 
@@ -600,7 +619,16 @@ public sealed class UninstallWizardViewModel : ObservableObject
                 "their rows.",
                 "Регистрации Claude и Codex остаются ровно как есть: этот набор не " +
                 "отключает ни одного клиента. Чтобы удалить и их, вернитесь назад " +
-                "и отметьте их строки.")
+                "и отметьте их строки.") +
+              (gateGoesAnyway
+                  // Nothing follows this run, so the sentence states the fact and promises
+                  // nothing about what comes after it.
+                  ? InstallerCulture.Pick(
+                      " The hook that refuses text searches still goes: it points at the " +
+                      "launcher, which this run removes.",
+                      " Хук, который отклоняет текстовый поиск, всё равно уходит: он " +
+                      "указывает на launcher, который этот запуск удаляет.")
+                  : string.Empty)
             : string.Empty;
     }
 
