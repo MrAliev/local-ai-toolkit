@@ -213,7 +213,7 @@ public sealed class InstructionSkillTests
         var codex = WithoutCarriageReturns(
             ManagedInstructionBlock.CodexBlock + ManagedInstructionBlock.SkillFile());
 
-        Assert.InRange(core, 1_000, 7_700);
+        Assert.InRange(core, 1_000, 7_300);
         Assert.True(
             core * 2 < codex,
             $"the core is {core} characters against the Codex block's {codex}, so it is no " +
