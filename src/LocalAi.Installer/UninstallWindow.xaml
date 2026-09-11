@@ -37,7 +37,7 @@
         </Style>
 
         <DataTemplate x:Key="StepTemplate">
-            <TextBlock Text="{Binding Title}" Margin="0,0,0,6">
+            <TextBlock Text="{Binding Title}" Margin="0,0,0,6" TextWrapping="Wrap">
                 <TextBlock.Style>
                     <Style TargetType="TextBlock">
                         <Setter Property="Foreground" Value="{DynamicResource TextMuted}" />
@@ -121,8 +121,10 @@
                                                  IsChecked="{Binding IsSelected, Mode=OneWay}"
                                                  Checked="OnPresetChecked">
                                         <StackPanel>
-                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
-                                            <TextBlock Text="{Binding Description}" Style="{StaticResource Muted}" />
+                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold"
+                                                       TextWrapping="Wrap" />
+                                            <TextBlock Text="{Binding Description}"
+                                                       Style="{StaticResource Muted}" TextWrapping="Wrap" />
                                         </StackPanel>
                                     </RadioButton>
                                 </DataTemplate>
@@ -141,12 +143,22 @@
                                         <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}"
                                                   VerticalAlignment="Top" Margin="0,2,8,0" />
                                         <StackPanel Grid.Column="1">
-                                            <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
-                                                <TextBlock Text="{Binding DecisionText}" Style="{StaticResource Muted}"
+                                            <!-- A Grid, not a horizontal StackPanel: that panel
+                                                 measures its children with infinite width, so
+                                                 neither of these could wrap however they asked. -->
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{Binding Title}"
+                                                           FontWeight="SemiBold" TextWrapping="Wrap" />
+                                                <TextBlock Grid.Column="1" Text="{Binding DecisionText}"
+                                                           Style="{StaticResource Muted}" TextWrapping="Wrap"
                                                            FontStyle="Italic" Margin="8,0,0,0" />
-                                            </StackPanel>
-                                            <TextBlock Text="{Binding Note}" Style="{StaticResource Muted}" />
+                                            </Grid>
+                                            <TextBlock Text="{Binding Note}"
+                                                       Style="{StaticResource Muted}" TextWrapping="Wrap" />
                                         </StackPanel>
                                     </Grid>
                                 </DataTemplate>
@@ -166,9 +178,11 @@
                                         <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}"
                                                   IsEnabled="{Binding CanChoose}"
                                                   VerticalAlignment="Top" Margin="0,2,8,0" />
-                                        <TextBlock Grid.Column="1" Text="{Binding CommonDirectory}" />
+                                        <TextBlock Grid.Column="1" Text="{Binding CommonDirectory}"
+                                                   TextWrapping="Wrap" />
                                         <TextBlock Grid.Column="2" Text="{Binding StateText}"
-                                                   Style="{StaticResource Muted}" Margin="8,0,0,0" />
+                                                   Style="{StaticResource Muted}" TextWrapping="Wrap"
+                                                   Margin="8,0,0,0" />
                                     </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
@@ -180,7 +194,8 @@
                                 CornerRadius="3" Padding="8,6" Margin="0,10,0,0">
                             <StackPanel>
                                 <CheckBox IsChecked="{Binding RemoveSigningKeys}">
-                                    <TextBlock Text="{Binding SigningKeysTitle}" FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding SigningKeysTitle}" FontWeight="SemiBold"
+                                               TextWrapping="Wrap" />
                                 </CheckBox>
                                 <TextBlock Text="{Binding SigningKeysWarning}" Foreground="{DynamicResource WarnText}"
                                            Margin="0,4,0,0" />

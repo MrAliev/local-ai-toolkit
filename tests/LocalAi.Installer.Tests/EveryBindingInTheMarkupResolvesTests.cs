@@ -104,6 +104,21 @@ public sealed class EveryBindingInTheMarkupResolvesTests
         Assert.Empty(missing);
     }
 
+    /// <summary>
+    /// The prerequisites rows, resolved against the record they are handed. Their head line is
+    /// assembled in the view model rather than out of &lt;Run&gt;s, so a rename there takes the
+    /// name of a component off the page and nothing else says so.
+    /// </summary>
+    [Fact]
+    public void Every_binding_path_from_a_prerequisite_row_resolves_to_a_real_member()
+    {
+        var missing = DependencyRowBindings()
+            .Where(path => Property(typeof(DependencySelection), path) is null)
+            .ToList();
+
+        Assert.Empty(missing);
+    }
+
     private static PropertyInfo? Property(Type type, string name) =>
         type.GetProperty(name, BindingFlags.Public | BindingFlags.Instance);
 
@@ -127,7 +142,10 @@ public sealed class EveryBindingInTheMarkupResolvesTests
     private static string[] RowBindings() =>
         ["Heading", "Agent", "Choice", "HasTextSearchGate", "DisplayName", "DetectionText"];
 
-    private static string Source() => File.ReadAllText(Path.Combine(Project(), Markup));
+    private static string[] DependencyRowBindings() =>
+        ["Id", "IsConsented", "IsInstallable", "HeadLine", "RequirementText"];
+
+    private static string Source() => InstallerMarkup.Read(Markup);
 
     /// <summary>
     /// The window plus everything the application merges in, which is where a key it uses may
@@ -136,24 +154,11 @@ public sealed class EveryBindingInTheMarkupResolvesTests
     private static IEnumerable<string> Dictionaries()
     {
         yield return Source();
-        yield return File.ReadAllText(Path.Combine(Project(), "App.xaml"));
-        var themes = Path.Combine(Project(), "Themes");
+        yield return InstallerMarkup.Read("App.xaml");
+        var themes = Path.Combine(InstallerMarkup.Directory, "Themes");
         foreach (var dictionary in Directory.EnumerateFiles(themes, "*.xaml"))
         {
             yield return File.ReadAllText(dictionary);
         }
-    }
-
-    private static string Project()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null &&
-               !File.Exists(Path.Combine(directory.FullName, "LocalAi.slnx")))
-        {
-            directory = directory.Parent;
-        }
-
-        Assert.NotNull(directory);
-        return Path.Combine(directory!.FullName, "src", "LocalAi.Installer");
     }
 }
