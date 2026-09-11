@@ -247,6 +247,14 @@
   <data name="PolicyResidencyUnknown" xml:space="preserve">
     <value>Неизвестное правило резидентности: '{0}'.</value>
   </data>
+  <data name="PolicyMaxEmbeddingBatch" xml:space="preserve">
+    <value>максимальная партия эмбеддингов: {0}</value>
+    <comment>{0} is a count and stays invariant.</comment>
+  </data>
+  <data name="PolicyMaxEmbeddingBatchInvalid" xml:space="preserve">
+    <value>--max-embedding-batch принимает степень двойки от {1} до {2}, а не «{0}».</value>
+    <comment>The option name stays as written. {0} is what the caller typed, quoted; {1} and {2} are bounds and stay invariant.</comment>
+  </data>
   <data name="PolicyRestartNote" xml:space="preserve">
     <value>note: уже запущенный брокер сохраняет прежнюю политику до перезапуска.</value>
   </data>
@@ -275,6 +283,7 @@
     <value>Usage: localai policy show
        localai policy set --residency &lt;RequireFullVram|AllowPartialOffload|AllowCpu&gt;
        localai policy set --idle-model-keep-alive-seconds &lt;non-negative integer&gt;
+       localai policy set --max-embedding-batch &lt;4..256, a power of two&gt;
        localai policy set --update-check &lt;on|off&gt;
        localai policy set --update-check-interval-hours &lt;{0}..{1}&gt;
        localai policy set --language &lt;en|ru|system&gt;
@@ -286,6 +295,9 @@
                        без пригодного адаптера; намного медленнее.
   Удержание модели     Сколько секунд держать загруженной простаивающую модель.
                        Ноль выгружает её сразу; по умолчанию — 10.
+  Размер партии        Самая большая партия, до которой сборка может
+                       вырасти на этой машине. По умолчанию 256; снизьте,
+                       если runner теряет запрос такого размера.
   Обновления           Может ли эта установка спрашивать у GitHub, есть ли
                        релиз новее. По умолчанию выключена; ничего никогда не
                        скачивается и не устанавливается без вашего запроса.

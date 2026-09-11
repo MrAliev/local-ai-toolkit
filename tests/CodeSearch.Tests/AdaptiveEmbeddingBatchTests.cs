@@ -47,6 +47,59 @@ public sealed class AdaptiveEmbeddingBatchTests : IDisposable
         Assert.Equal(256, policy.CurrentItems);
     }
 
+    /// <summary>
+    /// A card where the largest batch does not work is not a card the policy should keep
+    /// re-proving. Without a ceiling it climbs to 256, the runner drops the request, it steps
+    /// back to 128, three successes later it tries 256 again — twice per build on the machine
+    /// this was written for, each costing a failed request and a recovery.
+    ///
+    /// The ceiling stops the growth; it does not lower what already works, and it is a property
+    /// of the machine rather than of the product, which is why 256 stays the absolute maximum.
+    /// </summary>
+    [Fact]
+    public void Growth_stops_at_the_ceiling_this_machine_was_given()
+    {
+        var policy = new AdaptiveEmbeddingBatchPolicy(
+            "test-embedding-model",
+            store: null,
+            maximumItems: 128);
+
+        foreach (var expected in new[] { 4, 8, 16, 32, 64 })
+        {
+            Assert.Equal(expected, policy.CurrentItems);
+            Assert.Null(policy.RecordSuccess(expected));
+            Assert.Null(policy.RecordSuccess(expected));
+            Assert.NotNull(policy.RecordSuccess(expected));
+        }
+
+        Assert.Equal(128, policy.CurrentItems);
+        for (var attempt = 0; attempt < 6; attempt++)
+        {
+            Assert.Null(policy.RecordSuccess(128));
+        }
+
+        Assert.Equal(128, policy.CurrentItems);
+    }
+
+    /// <summary>
+    /// A ceiling nobody set is the product's own, so a machine that never chose one behaves
+    /// exactly as it did.
+    /// </summary>
+    [Fact]
+    public void A_machine_with_no_ceiling_keeps_the_products_own()
+    {
+        var policy = new AdaptiveEmbeddingBatchPolicy("test-embedding-model", store: null);
+
+        foreach (var expected in new[] { 4, 8, 16, 32, 64, 128 })
+        {
+            policy.RecordSuccess(expected);
+            policy.RecordSuccess(expected);
+            policy.RecordSuccess(expected);
+        }
+
+        Assert.Equal(AdaptiveEmbeddingBatchPolicy.MaximumItems, policy.CurrentItems);
+    }
+
     [Fact]
     public async Task The_proved_size_is_saved_and_the_next_build_starts_there()
     {

@@ -48,6 +48,8 @@ public static class PolicyCommand
             ["set", "--residency", var value, ..] => Set(store, value, output, error),
             ["set", "--idle-model-keep-alive-seconds", var value, ..] =>
                 SetIdleModelKeepAlive(store, value, output, error),
+            ["set", "--max-embedding-batch", var value, ..] =>
+                SetMaxEmbeddingBatch(store, value, output, error),
             ["set", "--update-check", var value, ..] =>
                 SetUpdateCheck(updates, value, output, error),
             ["set", "--update-check-interval-hours", var value, ..] =>
@@ -232,6 +234,44 @@ public static class PolicyCommand
         output.WriteLine(CliText.PolicyRestartNote);
         return 0;
     }
+
+    /// <summary>
+    /// The largest embedding batch this machine will let a build grow to.
+    ///
+    /// Refused outside the sizes the adaptive policy actually visits — powers of two from 4 to
+    /// 256 — because a ceiling it can never sit exactly on is a request that was misunderstood,
+    /// and rounding one silently is how a person comes to believe they set something they did not.
+    /// </summary>
+    private static int SetMaxEmbeddingBatch(
+        ModelResidencyPolicyStore store,
+        string value,
+        TextWriter output,
+        TextWriter error)
+    {
+        if (!int.TryParse(value, out var items) ||
+            items < MinimumEmbeddingBatch ||
+            items > BrokerPolicyDefaults.MaxEmbeddingBatchItems ||
+            (items & (items - 1)) != 0)
+        {
+            error.WriteLine(CliText.PolicyMaxEmbeddingBatchInvalid(
+                value,
+                MinimumEmbeddingBatch,
+                BrokerPolicyDefaults.MaxEmbeddingBatchItems));
+            return Usage(error);
+        }
+
+        store.Write(store.Read() with { MaxEmbeddingBatchItems = items });
+        output.WriteLine(CliText.PolicyMaxEmbeddingBatch(items));
+        output.WriteLine(CliText.PolicyRestartNote);
+        return 0;
+    }
+
+    /// <summary>
+    /// The smallest batch the adaptive policy ever uses, and therefore the smallest ceiling that
+    /// means anything. Named here rather than reached for across the assembly boundary: the
+    /// policy itself lives in CodeSearch.Core, which this command does not reference.
+    /// </summary>
+    private const int MinimumEmbeddingBatch = 4;
 
     private static int Set(
         ModelResidencyPolicyStore store,
