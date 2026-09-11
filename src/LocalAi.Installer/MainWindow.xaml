@@ -34,6 +34,66 @@
             <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
 
+        <!-- The mark beside a row, for every list in this window that has states. Declared once:
+             two copies would be two vocabularies the day one of them gained a state.
+
+             The turning arc needs a RotateTransform the row owns, so that stays on the element —
+             a Freezable in a Setter is shared by every row that uses the style. WPF hands a
+             template's transform over frozen and the animation system replaces it with a mutable
+             copy; that is measured rather than assumed. -->
+        <Style x:Key="RowMark" TargetType="Path">
+            <Setter Property="Width" Value="11" />
+            <Setter Property="Height" Value="11" />
+            <Setter Property="Stretch" Value="None" />
+            <Setter Property="StrokeThickness" Value="1.6" />
+            <Setter Property="VerticalAlignment" Value="Top" />
+            <Setter Property="Data" Value="{StaticResource MarkNone}" />
+            <Setter Property="Stroke" Value="{DynamicResource TextDisabled}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Mark}" Value="{x:Static vm:RunMark.None}">
+                    <Setter Property="Data" Value="{StaticResource MarkNone}" />
+                    <Setter Property="Stroke" Value="{DynamicResource TextDisabled}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Mark}" Value="{x:Static vm:RunMark.Busy}">
+                    <Setter Property="Data" Value="{StaticResource MarkBusy}" />
+                    <Setter Property="Stroke" Value="{DynamicResource Accent}" />
+                    <DataTrigger.EnterActions>
+                        <BeginStoryboard x:Name="Spin">
+                            <Storyboard>
+                                <DoubleAnimation
+                                    Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                    From="0" To="360" Duration="0:0:1.1"
+                                    RepeatBehavior="Forever" />
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </DataTrigger.EnterActions>
+                    <DataTrigger.ExitActions>
+                        <StopStoryboard BeginStoryboardName="Spin" />
+                    </DataTrigger.ExitActions>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Mark}" Value="{x:Static vm:RunMark.Done}">
+                    <Setter Property="Data" Value="{StaticResource MarkTick}" />
+                    <Setter Property="Stroke" Value="{DynamicResource Success}" />
+                    <DataTrigger.EnterActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                 From="0" To="1" Duration="0:0:0.15" />
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </DataTrigger.EnterActions>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Mark}" Value="{x:Static vm:RunMark.Warned}">
+                    <Setter Property="Data" Value="{StaticResource MarkWarn}" />
+                    <Setter Property="Stroke" Value="{DynamicResource WarnText}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Mark}" Value="{x:Static vm:RunMark.Failed}">
+                    <Setter Property="Data" Value="{StaticResource MarkFail}" />
+                    <Setter Property="Stroke" Value="{DynamicResource ErrText}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
         <Style x:Key="NavButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
             <Setter Property="MinWidth" Value="96" />
             <Setter Property="Padding" Value="12,0" />
@@ -582,69 +642,12 @@
                                                 <ColumnDefinition Width="Auto" SharedSizeGroup="ModelTag" />
                                                 <ColumnDefinition Width="*" />
                                             </Grid.ColumnDefinitions>
-                                            <!-- One Path, redrawn by state. Five overlaid ones
-                                                 would each need their own visibility rule, and a
-                                                 rule missed leaves two marks on one row. -->
-                                            <Path Grid.Column="0" Width="11" Height="11"
-                                                  Margin="0,3,10,0" VerticalAlignment="Top"
-                                                  Stretch="None" StrokeThickness="1.6"
+                                            <Path Grid.Column="0" Style="{StaticResource RowMark}"
+                                                  Margin="0,3,10,0"
                                                   RenderTransformOrigin="0.5,0.5">
                                                 <Path.RenderTransform>
                                                     <RotateTransform />
                                                 </Path.RenderTransform>
-                                                <Path.Style>
-                                                    <Style TargetType="Path">
-                                                        <Setter Property="Data" Value="{StaticResource MarkNone}" />
-                                                        <Setter Property="Stroke" Value="{DynamicResource TextDisabled}" />
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding State}" Value="{x:Static vm:ModelRunState.Waiting}">
-                                                                <Setter Property="Data" Value="{StaticResource MarkNone}" />
-                                                                <Setter Property="Stroke" Value="{DynamicResource TextDisabled}" />
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding State}" Value="{x:Static vm:ModelRunState.Working}">
-                                                                <Setter Property="Data" Value="{StaticResource MarkBusy}" />
-                                                                <Setter Property="Stroke" Value="{DynamicResource Accent}" />
-                                                                <DataTrigger.EnterActions>
-                                                                    <BeginStoryboard x:Name="Spin">
-                                                                        <Storyboard>
-                                                                            <DoubleAnimation
-                                                                                Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
-                                                                                From="0" To="360" Duration="0:0:1.1"
-                                                                                RepeatBehavior="Forever" />
-                                                                        </Storyboard>
-                                                                    </BeginStoryboard>
-                                                                </DataTrigger.EnterActions>
-                                                                <DataTrigger.ExitActions>
-                                                                    <StopStoryboard BeginStoryboardName="Spin" />
-                                                                </DataTrigger.ExitActions>
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding State}" Value="{x:Static vm:ModelRunState.Ready}">
-                                                                <Setter Property="Data" Value="{StaticResource MarkTick}" />
-                                                                <Setter Property="Stroke" Value="{DynamicResource Success}" />
-                                                                <DataTrigger.EnterActions>
-                                                                    <BeginStoryboard>
-                                                                        <Storyboard>
-                                                                            <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                                                             From="0" To="1" Duration="0:0:0.15" />
-                                                                        </Storyboard>
-                                                                    </BeginStoryboard>
-                                                                </DataTrigger.EnterActions>
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding State}" Value="{x:Static vm:ModelRunState.Rejected}">
-                                                                <Setter Property="Data" Value="{StaticResource MarkWarn}" />
-                                                                <Setter Property="Stroke" Value="{DynamicResource WarnText}" />
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding State}" Value="{x:Static vm:ModelRunState.Failed}">
-                                                                <Setter Property="Data" Value="{StaticResource MarkFail}" />
-                                                                <Setter Property="Stroke" Value="{DynamicResource ErrText}" />
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding State}" Value="{x:Static vm:ModelRunState.NotReached}">
-                                                                <Setter Property="Data" Value="{StaticResource MarkNone}" />
-                                                                <Setter Property="Stroke" Value="{DynamicResource TextDisabled}" />
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </Path.Style>
                                             </Path>
                                             <TextBlock Grid.Column="1" Text="{Binding Tag}"
                                                        FontFamily="Consolas" FontSize="12"
@@ -677,14 +680,68 @@
                                 </Style.Triggers>
                             </Style>
                         </StackPanel.Style>
-                        <TextBox Text="{Binding FinishSummary, Mode=OneWay}"
-                                 IsReadOnly="True" TextWrapping="Wrap" Height="110"
-                                 VerticalScrollBarVisibility="Auto" Background="{DynamicResource Surface}" />
-                        <TextBlock Text="{x:Static vm:PageLabels.Log}" Margin="0,12,0,4" FontWeight="SemiBold" />
-                        <TextBox Text="{Binding Finish.Progress, Mode=OneWay}"
-                                 IsReadOnly="True" TextWrapping="Wrap" Height="180"
-                                 TextChanged="OnLogTextChanged"
-                                 VerticalScrollBarVisibility="Auto" Background="{DynamicResource Surface}" />
+                        <!-- A row per thing the run touched. This was four counters in a scroll
+                             box, and on the ordinary run — where the machine already has every
+                             prerequisite — they read "0. 0. 0. 0." beside a package that had
+                             either installed or not, and said nothing about which. -->
+                        <ItemsControl ItemsSource="{Binding Finish.Results}" Grid.IsSharedSizeScope="True">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="ResultName" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Path Grid.Column="0" Style="{StaticResource RowMark}"
+                                              Margin="0,3,10,0" RenderTransformOrigin="0.5,0.5">
+                                            <Path.RenderTransform>
+                                                <RotateTransform />
+                                            </Path.RenderTransform>
+                                        </Path>
+                                        <TextBlock Grid.Column="1" Text="{Binding Title}"
+                                                   FontWeight="SemiBold" Margin="0,0,12,0"
+                                                   TextWrapping="Wrap" />
+                                        <TextBlock Grid.Column="2" Text="{Binding Detail}"
+                                                   Style="{StaticResource Muted}" TextWrapping="Wrap" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- The one question somebody has here, and it was a log line under
+                             eighty others in a box that did not scroll to it. -->
+                        <TextBlock Text="{x:Static vm:PageLabels.WhatToDoNext}" FontWeight="SemiBold"
+                                   Margin="0,14,0,4"
+                                   Visibility="{Binding Finish.HasNextSteps, Converter={StaticResource BoolToVisibility}}" />
+                        <TextBlock Text="{Binding Finish.NextSteps}" TextWrapping="Wrap"
+                                   Visibility="{Binding Finish.HasNextSteps, Converter={StaticResource BoolToVisibility}}" />
+
+                        <Grid Margin="0,14,0,0"
+                              Visibility="{Binding Finish.HasReportPath, Converter={StaticResource BoolToVisibility}}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <!-- A read-only box rather than a label: the path is the thing somebody
+                                 copies when they are asked for the log. -->
+                            <TextBox Grid.Column="0" Text="{Binding Finish.ReportPath, Mode=OneWay}"
+                                     IsReadOnly="True" BorderThickness="0" Background="Transparent"
+                                     Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" />
+                            <Button Grid.Column="1" Content="{x:Static vm:PageLabels.OpenReportFolder}"
+                                    Padding="12,4" Margin="8,0,0,0" Click="OnOpenReportFolder" />
+                        </Grid>
+
+                        <!-- A run that went wrong opens its log; a run that went right folds it.
+                             Nothing that failed is hidden either way, because every failure is
+                             also a row above. -->
+                        <Expander Header="{x:Static vm:PageLabels.Log}" Margin="0,14,0,0"
+                                  IsExpanded="{Binding HasRunError, Mode=OneWay}">
+                            <TextBox Text="{Binding Finish.Progress, Mode=OneWay}"
+                                     IsReadOnly="True" TextWrapping="Wrap" Height="180" Margin="0,6,0,0"
+                                     TextChanged="OnLogTextChanged"
+                                     VerticalScrollBarVisibility="Auto" Background="{DynamicResource Surface}" />
+                        </Expander>
                         <!-- Only after a failed or cancelled run with reversible effects:
                              rollback is a recovery, not an uninstaller for a good run. -->
                         <Button Content="{x:Static vm:PageLabels.RollBackChanges}"

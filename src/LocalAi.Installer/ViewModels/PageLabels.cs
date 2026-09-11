@@ -284,4 +284,59 @@ public static class PageLabels
     public static string ModelNotReached => InstallerCulture.Pick(
         "not reached — model setup stopped before this one",
         "не дошло — настройка моделей остановилась раньше");
+
+    public static string ResultPackage => InstallerCulture.Pick(
+        "LocalAi package",
+        "Пакет LocalAi");
+
+    public static string ResultPrerequisites => InstallerCulture.Pick(
+        "Prerequisites",
+        "Необходимые компоненты");
+
+    public static string ResultClients => InstallerCulture.Pick(
+        "Client applications",
+        "Клиентские приложения");
+
+    public static string ResultPath => "PATH";
+
+    public static string ResultNotAttempted => InstallerCulture.Pick(
+        "not attempted",
+        "не выполнялось");
+
+    public static string ResultLeftUnchanged => InstallerCulture.Pick(
+        "left unchanged",
+        "не менялись");
+
+    /// <summary>
+    /// Said instead of counting to zero four times, which is what this page did on the ordinary
+    /// run — the one where the machine already has everything.
+    /// </summary>
+    public static string ResultNothingSelected => InstallerCulture.Pick(
+        "nothing was selected",
+        "ничего не выбрано");
+
+    public static string ResultInstalledCount => InstallerCulture.Pick(
+        "installed {0} of {1}",
+        "установлено {0} из {1}");
+
+    public static string ResultInstalledAndFailed => InstallerCulture.Pick(
+        "installed {0} of {1}, failed {2}",
+        "установлено {0} из {1}, не удалось {2}");
+
+    public static string ResultModelsReady => InstallerCulture.Pick(
+        "{0} of {1} ready",
+        "готовы {0} из {1}");
+
+    public static string WhatToDoNext => InstallerCulture.Pick(
+        "What to do next",
+        "Что делать дальше");
+
+    /// <summary><c>{0}</c> is a list of client names.</summary>
+    public static string RestartClients => InstallerCulture.Pick(
+        "Restart {0} so the new setup is picked up.",
+        "Перезапустите {0}, чтобы новая настройка заработала.");
+
+    public static string OpenReportFolder => InstallerCulture.Pick(
+        "Open folder",
+        "Открыть папку");
 }
