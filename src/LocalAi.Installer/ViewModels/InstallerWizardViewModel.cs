@@ -891,6 +891,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             if (!EnableDependencyActions)
             {
                 AppendLog(report, "Dry run completed. Nothing was installed.");
+                AppendLog(report, RunResults.Tally(requested, successfulActions, skippedActions, failedActions));
                 finish.Progress = report.ToString().Trim();
                 // The same rows as a real run, all of them saying nothing was attempted — which
                 // is what a dry run did.
@@ -1014,7 +1015,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             AppendLog(report, "Finalising.");
             // The tally goes to the log, where a tally belongs; the page gets a row per
             // thing the run touched.
-            AppendLog(report, BuildFinishSummary(
+            AppendLog(report, RunResults.Tally(
                 requested,
                 successfulActions,
                 skippedActions,
@@ -1044,12 +1045,11 @@ public sealed class InstallerWizardViewModel : ObservableObject
             hasRunError = true;
             isComplete = false;
             SetProgress(progress, InstallerCulture.Pick("Cancelled", "Отменено"));
-            AppendLog(report, BuildFinishSummary(
+            AppendLog(report, RunResults.Tally(
                 requested,
                 successfulActions,
                 skippedActions,
-                failedActions,
-                InstallerCulture.Pick("Cancelled by the user.", "Отменено пользователем.")));
+                failedActions));
             BuildFinishResults(requested, successfulActions, failedActions);
             finish.Progress = report.ToString().Trim();
             CurrentPage = InstallerPage.Finish;
@@ -1063,12 +1063,11 @@ public sealed class InstallerWizardViewModel : ObservableObject
             hasRunError = true;
             isComplete = false;
             SetProgress(100, InstallerCulture.Pick("Failed", "Ошибка"));
-            AppendLog(report, BuildFinishSummary(
+            AppendLog(report, RunResults.Tally(
                 requested,
                 successfulActions,
                 skippedActions,
-                failedActions,
-                exception.Message));
+                failedActions));
             BuildFinishResults(requested, successfulActions, failedActions);
             finish.Progress = report.ToString().Trim();
             SetRunLog(report.ToString(), false);
@@ -1997,41 +1996,6 @@ public sealed class InstallerWizardViewModel : ObservableObject
         finish.NextSteps = RunResults.NextSteps(configuredAgents);
     }
 
-    private string BuildFinishSummary(
-        int requestedActions,
-        int successfulActions,
-        int skippedActions,
-        int failedActions,
-        string? fatalMessage = null)
-    {
-        var summary = new StringBuilder();
-        // The package is the point of the whole run, so it is reported first and by name.
-        // The counters below cover prerequisites only, and on their own they read as "0, 0,
-        // 0, 0" even when the package failed.
-        summary.AppendLine(string.Format(
-            InstallerCulture.Pick("LocalAi package: {0}.", "Пакет LocalAi: {0}."),
-            packageOutcome ?? InstallerCulture.Pick("not attempted", "не выполнялось")));
-        summary.AppendLine();
-        summary.AppendLine(string.Format(
-            InstallerCulture.Pick("Prerequisites requested: {0}.", "Запрошено компонентов: {0}."),
-            requestedActions));
-        summary.AppendLine(string.Format(
-            InstallerCulture.Pick("Installed: {0}.", "Установлено: {0}."),
-            successfulActions));
-        summary.AppendLine(string.Format(
-            InstallerCulture.Pick("Skipped: {0}.", "Пропущено: {0}."),
-            skippedActions));
-        summary.AppendLine(string.Format(
-            InstallerCulture.Pick("Failed: {0}.", "Не удалось: {0}."),
-            failedActions));
-        if (!string.IsNullOrWhiteSpace(fatalMessage))
-        {
-            summary.AppendLine(fatalMessage);
-        }
-
-        return summary.ToString().Trim();
-    }
-
     private async Task RefreshEnvironmentDiagnosticsAsync(CancellationToken cancellationToken)
     {
         diagnose.IsChecking = true;
@@ -2383,18 +2347,22 @@ public sealed class InstallerWizardViewModel : ObservableObject
         try
         {
             var registration = new UninstallRegistration(InstallationLayout.CreateDefault());
-            var entry = registration.Register(
+            registration.Register(
                 version,
                 Environment.ProcessPath ??
                     throw new InvalidOperationException(
                         "The running installer has no path to copy."));
+            // Read back, not recalled: the line used to be composed from the values just handed
+            // to the registry, so it agreed with itself whatever the registry did.
+            var written = registration.Read();
             AppendLog(
                 report,
-                $"Apps & features: listed as \"{entry.DisplayName}\" {entry.DisplayVersion}. " +
-                $"Removal runs {registration.UninstallerPath}.");
+                RunResults.AppsAndFeatures(written, registration.UninstallerPath));
             JournalComplete(
                 step,
-                "Registered under HKCU; removed again by the uninstaller.",
+                written is null
+                    ? "Written under HKCU and not found when read back."
+                    : "Registered under HKCU; removed again by the uninstaller.",
                 isReversible: false);
         }
         catch (Exception exception) when (

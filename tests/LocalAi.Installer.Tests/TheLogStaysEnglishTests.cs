@@ -1,5 +1,6 @@
 using LocalAi.Installer.Core;
 using LocalAi.Installer.Core.Models;
+using LocalAi.Installer.Core.Removal;
 using LocalAi.Installer.ViewModels;
 
 namespace LocalAi.Installer.Tests;
@@ -105,6 +106,64 @@ public sealed class TheLogStaysEnglishTests : IDisposable
     [InlineData(ModelProvisioningPhase.Planned)]
     public void A_verdict_is_not_the_log_s_to_write(ModelProvisioningPhase phase) =>
         Assert.Null(ModelStepWording.LogLine(Step(phase)));
+
+    /// <summary>
+    /// The tally moved into the log when the finish page grew rows, and it went on picking the
+    /// window's language: the log a Russian machine wrote ended in six Russian lines under
+    /// "Finalising." — the very mixing the model steps had just been fixed for.
+    /// </summary>
+    [Fact]
+    public void The_tally_is_english_whatever_the_window_speaks()
+    {
+        InstallerCulture.Current = InstallerLanguage.Russian;
+
+        Assert.DoesNotMatch("[а-яА-ЯёЁ]", RunResults.Tally(2, 1, 0, 1));
+    }
+
+    /// <summary>
+    /// And it says only what the log does not already have. The package was reported twice —
+    /// once in English where it was installed, once in Russian here.
+    /// </summary>
+    [Fact]
+    public void The_tally_does_not_repeat_the_package_line()
+    {
+        var tally = RunResults.Tally(2, 1, 0, 1);
+
+        Assert.DoesNotContain("package", tally, StringComparison.OrdinalIgnoreCase);
+        foreach (var figure in new[] { "2", "1", "0" })
+        {
+            Assert.Contains(figure, tally, StringComparison.Ordinal);
+        }
+    }
+
+    /// <summary>
+    /// The log said «listed as "Local AI Toolkit" 0.2.1-RC16» on a machine where that entry is
+    /// not in the registry. The line was written from what the installer had just tried to write,
+    /// not from what is there — so it could only ever agree with itself.
+    /// </summary>
+    [Fact]
+    public void The_apps_and_features_line_reports_what_was_read_back()
+    {
+        var line = RunResults.AppsAndFeatures(
+            new UninstallEntry("Local AI Toolkit", "0.2.1-RC16", "MrAliev", "run", "here", 0),
+            @"C:\LocalAi\bin\uninstall\LocalAi.Installer.exe");
+
+        Assert.Contains("Local AI Toolkit", line, StringComparison.Ordinal);
+        Assert.Contains("0.2.1-RC16", line, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void An_entry_that_is_not_there_when_read_back_says_so()
+    {
+        var line = RunResults.AppsAndFeatures(
+            null,
+            @"C:\LocalAi\bin\uninstall\LocalAi.Installer.exe");
+
+        Assert.DoesNotContain("listed as", line, StringComparison.Ordinal);
+        Assert.Contains("not there", line, StringComparison.OrdinalIgnoreCase);
+        // Still installed and still removable, which is the part somebody needs to know.
+        Assert.Contains("Remove", line, StringComparison.Ordinal);
+    }
 
     private static ModelProvisioningProgress Step(
         ModelProvisioningPhase phase,
