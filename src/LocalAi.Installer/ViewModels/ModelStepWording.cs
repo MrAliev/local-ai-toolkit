@@ -5,20 +5,25 @@ using LocalAi.Installer.Core.Models;
 namespace LocalAi.Installer.ViewModels;
 
 /// <summary>
-/// One step of model setup, put into words — twice, because it has two readers.
+/// One step of model setup, put into words — for three readers, not one.
 ///
 /// The window speaks whatever was chosen on the start screen; the run log is written beside an
-/// English journal and is English. The installer core used to compose the sentence itself and
-/// pick the language by the process, so a Russian window wrote «gpt-oss:20b: проверяется,
-/// помещается ли в видеопамять» into a log that reads "No prerequisites were selected." two
-/// lines above.
+/// English journal and is English; and the model's own row already shows its tag in a column, so
+/// there the phrase stands alone. The installer core used to compose the sentence itself and pick
+/// the language by the process, which is how «gpt-oss:20b: проверяется, помещается ли в
+/// видеопамять» ended up under "No prerequisites were selected."
 /// </summary>
 public static class ModelStepWording
 {
     public static string ForTheRail(ModelProvisioningProgress step) =>
-        Fill(step, InstallerCulture.Pick(English(step), Russian(step)));
+        step.Model + ": " + ForARow(step);
 
-    public static string ForTheLog(ModelProvisioningProgress step) => Fill(step, English(step));
+    public static string ForTheLog(ModelProvisioningProgress step) =>
+        step.Model + ": " + Fill(step, English(step));
+
+    /// <summary>The phrase alone: the row names the model in a column of its own.</summary>
+    public static string ForARow(ModelProvisioningProgress step) =>
+        Fill(step, InstallerCulture.Pick(English(step), Russian(step)));
 
     /// <summary>
     /// What of a step is worth keeping, or nothing. The log does not scroll, so a hundred byte
@@ -33,14 +38,13 @@ public static class ModelStepWording
             : null;
 
     /// <summary>
-    /// <c>{0}</c> is the model, <c>{1}</c> is either the downloaded size or a status token, and
-    /// <c>{2}</c> is the total size. A template that uses none of them simply ignores them.
+    /// <c>{0}</c> is either the downloaded size or a status token and <c>{1}</c> is the total
+    /// size. A template that uses neither simply ignores them.
     /// </summary>
     private static string Fill(ModelProvisioningProgress step, string template) =>
         string.Format(
             CultureInfo.InvariantCulture,
             template,
-            step.Model,
             step.Phase == ModelProvisioningPhase.Other
                 ? step.OllamaStatus ?? string.Empty
                 : Gigabytes(step.CompletedBytes),
@@ -48,30 +52,30 @@ public static class ModelStepWording
 
     private static string English(ModelProvisioningProgress step) => step.Phase switch
     {
-        ModelProvisioningPhase.Planned => "{0}: waiting",
-        ModelProvisioningPhase.Downloading when step.TotalBytes > 0 => "{0}: {1} of {2} GB",
-        ModelProvisioningPhase.Downloading => "{0}: downloading",
-        ModelProvisioningPhase.Verifying => "{0}: checking the download",
-        ModelProvisioningPhase.Storing => "{0}: adding to Ollama",
-        ModelProvisioningPhase.Other => "{0}: Ollama reports {1}",
-        ModelProvisioningPhase.Checking => "{0}: checking it fits in video memory",
-        ModelProvisioningPhase.Accepted => "{0}: ready",
-        ModelProvisioningPhase.Rejected => "{0}: does not fit, so it is not used",
-        _ => "{0}",
+        ModelProvisioningPhase.Planned => "waiting",
+        ModelProvisioningPhase.Downloading when step.TotalBytes > 0 => "{0} of {1} GB downloaded",
+        ModelProvisioningPhase.Downloading => "downloading",
+        ModelProvisioningPhase.Verifying => "checking the download",
+        ModelProvisioningPhase.Storing => "adding to Ollama",
+        ModelProvisioningPhase.Other => "Ollama reports {0}",
+        ModelProvisioningPhase.Checking => "checking it fits in video memory",
+        ModelProvisioningPhase.Accepted => "ready",
+        ModelProvisioningPhase.Rejected => "does not fit, so it is not used",
+        _ => string.Empty,
     };
 
     private static string Russian(ModelProvisioningProgress step) => step.Phase switch
     {
-        ModelProvisioningPhase.Planned => "{0}: ожидает",
-        ModelProvisioningPhase.Downloading when step.TotalBytes > 0 => "{0}: {1} из {2} ГБ",
-        ModelProvisioningPhase.Downloading => "{0}: скачивается",
-        ModelProvisioningPhase.Verifying => "{0}: проверяется скачанное",
-        ModelProvisioningPhase.Storing => "{0}: добавляется в Ollama",
-        ModelProvisioningPhase.Other => "{0}: Ollama сообщает {1}",
-        ModelProvisioningPhase.Checking => "{0}: проверяется, помещается ли в видеопамять",
-        ModelProvisioningPhase.Accepted => "{0}: готова",
-        ModelProvisioningPhase.Rejected => "{0}: не помещается, поэтому не используется",
-        _ => "{0}",
+        ModelProvisioningPhase.Planned => "ожидает",
+        ModelProvisioningPhase.Downloading when step.TotalBytes > 0 => "скачано {0} из {1} ГБ",
+        ModelProvisioningPhase.Downloading => "скачивается",
+        ModelProvisioningPhase.Verifying => "проверяется скачанное",
+        ModelProvisioningPhase.Storing => "добавляется в Ollama",
+        ModelProvisioningPhase.Other => "Ollama сообщает {0}",
+        ModelProvisioningPhase.Checking => "проверяется, помещается ли в видеопамять",
+        ModelProvisioningPhase.Accepted => "готова",
+        ModelProvisioningPhase.Rejected => "не помещается, поэтому не используется",
+        _ => string.Empty,
     };
 
     /// <summary>

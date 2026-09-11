@@ -562,10 +562,106 @@
                             </Style>
                         </StackPanel.Style>
                         <TextBlock Text="{Binding ProgressText}" TextWrapping="Wrap" Margin="0,0,0,8" />
-                        <ProgressBar Value="{Binding Progress, Mode=OneWay}" Maximum="100" Height="16" />
+                        <ProgressBar Value="{Binding Progress, Mode=OneWay}" Maximum="100" Height="8" />
+
+                        <!-- A row per model, because six of them take tens of minutes and one
+                             sentence for all of it never said which one the run was on. Hidden
+                             entirely when there are none: a heading over no rows is a question
+                             about an absence. -->
+                        <TextBlock Text="{x:Static vm:PageLabels.LocalModels}" FontWeight="SemiBold"
+                                   Margin="0,16,0,6"
+                                   Visibility="{Binding HasModelRuns, Converter={StaticResource BoolToVisibility}}" />
+                        <ScrollViewer MaxHeight="180" VerticalScrollBarVisibility="Auto"
+                                      Visibility="{Binding HasModelRuns, Converter={StaticResource BoolToVisibility}}">
+                            <ItemsControl ItemsSource="{Binding ModelRuns}" Grid.IsSharedSizeScope="True">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,0,0,6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" SharedSizeGroup="ModelTag" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <!-- One Path, redrawn by state. Five overlaid ones
+                                                 would each need their own visibility rule, and a
+                                                 rule missed leaves two marks on one row. -->
+                                            <Path Grid.Column="0" Width="11" Height="11"
+                                                  Margin="0,3,10,0" VerticalAlignment="Top"
+                                                  Stretch="None" StrokeThickness="1.6"
+                                                  RenderTransformOrigin="0.5,0.5">
+                                                <Path.RenderTransform>
+                                                    <RotateTransform />
+                                                </Path.RenderTransform>
+                                                <Path.Style>
+                                                    <Style TargetType="Path">
+                                                        <Setter Property="Data" Value="{StaticResource MarkNone}" />
+                                                        <Setter Property="Stroke" Value="{DynamicResource TextDisabled}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding State}" Value="{x:Static vm:ModelRunState.Waiting}">
+                                                                <Setter Property="Data" Value="{StaticResource MarkNone}" />
+                                                                <Setter Property="Stroke" Value="{DynamicResource TextDisabled}" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding State}" Value="{x:Static vm:ModelRunState.Working}">
+                                                                <Setter Property="Data" Value="{StaticResource MarkBusy}" />
+                                                                <Setter Property="Stroke" Value="{DynamicResource Accent}" />
+                                                                <DataTrigger.EnterActions>
+                                                                    <BeginStoryboard x:Name="Spin">
+                                                                        <Storyboard>
+                                                                            <DoubleAnimation
+                                                                                Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                                                From="0" To="360" Duration="0:0:1.1"
+                                                                                RepeatBehavior="Forever" />
+                                                                        </Storyboard>
+                                                                    </BeginStoryboard>
+                                                                </DataTrigger.EnterActions>
+                                                                <DataTrigger.ExitActions>
+                                                                    <StopStoryboard BeginStoryboardName="Spin" />
+                                                                </DataTrigger.ExitActions>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding State}" Value="{x:Static vm:ModelRunState.Ready}">
+                                                                <Setter Property="Data" Value="{StaticResource MarkTick}" />
+                                                                <Setter Property="Stroke" Value="{DynamicResource Success}" />
+                                                                <DataTrigger.EnterActions>
+                                                                    <BeginStoryboard>
+                                                                        <Storyboard>
+                                                                            <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                                             From="0" To="1" Duration="0:0:0.15" />
+                                                                        </Storyboard>
+                                                                    </BeginStoryboard>
+                                                                </DataTrigger.EnterActions>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding State}" Value="{x:Static vm:ModelRunState.Rejected}">
+                                                                <Setter Property="Data" Value="{StaticResource MarkWarn}" />
+                                                                <Setter Property="Stroke" Value="{DynamicResource WarnText}" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding State}" Value="{x:Static vm:ModelRunState.Failed}">
+                                                                <Setter Property="Data" Value="{StaticResource MarkFail}" />
+                                                                <Setter Property="Stroke" Value="{DynamicResource ErrText}" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding State}" Value="{x:Static vm:ModelRunState.NotReached}">
+                                                                <Setter Property="Data" Value="{StaticResource MarkNone}" />
+                                                                <Setter Property="Stroke" Value="{DynamicResource TextDisabled}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Path.Style>
+                                            </Path>
+                                            <TextBlock Grid.Column="1" Text="{Binding Tag}"
+                                                       FontFamily="Consolas" FontSize="12"
+                                                       Margin="0,0,12,0" TextWrapping="NoWrap" />
+                                            <TextBlock Grid.Column="2" Text="{Binding Detail}"
+                                                       FontSize="12" Style="{StaticResource Muted}"
+                                                       TextWrapping="Wrap" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+
                         <TextBlock Text="{x:Static vm:PageLabels.Log}" Margin="0,14,0,4" FontWeight="SemiBold" />
                         <TextBox Text="{Binding Finish.Progress, Mode=OneWay}"
-                                 IsReadOnly="True" TextWrapping="Wrap" Height="200"
+                                 IsReadOnly="True" TextWrapping="Wrap" Height="120"
+                                 TextChanged="OnLogTextChanged"
                                  VerticalScrollBarVisibility="Auto" Background="{DynamicResource Surface}" />
                     </StackPanel>
 
@@ -587,6 +683,7 @@
                         <TextBlock Text="{x:Static vm:PageLabels.Log}" Margin="0,12,0,4" FontWeight="SemiBold" />
                         <TextBox Text="{Binding Finish.Progress, Mode=OneWay}"
                                  IsReadOnly="True" TextWrapping="Wrap" Height="180"
+                                 TextChanged="OnLogTextChanged"
                                  VerticalScrollBarVisibility="Auto" Background="{DynamicResource Surface}" />
                         <!-- Only after a failed or cancelled run with reversible effects:
                              rollback is a recovery, not an uninstaller for a good run. -->
