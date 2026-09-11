@@ -279,8 +279,20 @@
                         <TextBlock Text="{x:Static vm:PageLabels.InstallFromFolder}" Margin="0,4,0,0" />
                         <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,2,0,4"
                                    Text="{x:Static vm:PageLabels.FolderHint}" />
-                        <TextBox Text="{Binding Package.SourceFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                 Width="480" Height="24" HorizontalAlignment="Left" Margin="0,0,0,8" />
+                        <!-- Stretched rather than Width="480": a fixed width for a path is a clip
+                             waiting for a deeper directory. The picker is here because typing the
+                             path by hand was the only way to use this box. -->
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox Grid.Column="0" Height="24"
+                                     Text="{Binding Package.SourceFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            <Button Grid.Column="1" Content="{x:Static vm:PageLabels.BrowseForFolder}"
+                                    MinWidth="96" Padding="12,0" Height="24" Margin="8,0,0,0"
+                                    Click="OnBrowseForReleaseFolder" />
+                        </Grid>
                         <Button Content="{x:Static vm:PageLabels.CheckAgain}" MinWidth="140" Padding="12,0" Height="26" HorizontalAlignment="Left"
                                 IsEnabled="{Binding Package.CanCheck}"
                                 Click="OnPackageCheckRelease" />
