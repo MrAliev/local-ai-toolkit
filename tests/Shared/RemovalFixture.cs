@@ -81,16 +81,23 @@ internal sealed class RemovalFixture : IDisposable
         (workingDirectory, _) => Task.FromResult(
             hooksPaths.GetValueOrDefault(Path.GetFullPath(workingDirectory)));
 
+    /// <param name="readUserPath">
+    /// The account's PATH this plan should read. Defaulted to nothing rather than to the real
+    /// one: a test that read the machine's would answer differently on a developer's machine
+    /// than on a clean one, which is why the registry sub-key above is pointed away too.
+    /// </param>
     public Task<UninstallPlan> PlanAsync(
         RemovalSelection selection,
         CancellationToken cancellationToken,
         string? registrySubKey = null,
-        bool installationFollows = false) =>
+        bool installationFollows = false,
+        Func<string?>? readUserPath = null) =>
         new UninstallPlanner(
                 Layout,
                 Home,
                 HooksPathReader,
-                registrySubKey: registrySubKey ?? UnusedRegistrySubKey)
+                registrySubKey: registrySubKey ?? UnusedRegistrySubKey,
+                readUserPath: readUserPath ?? (() => null))
             .PlanAsync(selection, cancellationToken, installationFollows);
 
     /// <summary>
