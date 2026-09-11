@@ -377,6 +377,31 @@
                                        Fill="{TemplateBinding Foreground}" />
                         </Grid>
                     </Border>
+                    <ControlTemplate.Triggers>
+                        <!-- A bar with nothing to measure still has to move, and the motion lives
+                             here: WPF animates a glow rectangle its own template declares, and
+                             this one replaces that template. A pulse rather than a sweep — a
+                             travelling block needs the track's width, which this template has no
+                             way to reach, and a fixed one reads as a gap on the 280-wide bar the
+                             system check uses and as a crawl on a full-width one. -->
+                        <Trigger Property="IsIndeterminate" Value="True">
+                            <Setter TargetName="PART_Indicator" Property="HorizontalAlignment"
+                                    Value="Stretch" />
+                            <Trigger.EnterActions>
+                                <BeginStoryboard x:Name="Waiting">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="PART_Indicator"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         From="1.0" To="0.30" Duration="0:0:0.9"
+                                                         AutoReverse="True" RepeatBehavior="Forever" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <StopStoryboard BeginStoryboardName="Waiting" />
+                            </Trigger.ExitActions>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
