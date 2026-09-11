@@ -144,6 +144,11 @@ public static class CodeSearchSyncCommand
                         .IndexPath(currentBase.GenerationId));
             if (changedFiles > fileLimit)
             {
+                // Planning wrote a record before the count was known. Nothing ran, so nothing is
+                // owed a progress line: left behind, it reads to every later caller as a build
+                // that stopped part-way, and the installed instructions tell an agent to relay
+                // that as a build needing to be started again.
+                progressStore.Clear();
                 return new CodeSearchSyncResult(
                     requested.RepositoryId,
                     string.Empty,
