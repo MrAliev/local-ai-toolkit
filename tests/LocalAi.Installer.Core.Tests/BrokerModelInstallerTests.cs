@@ -87,33 +87,103 @@ public sealed class BrokerModelInstallerTests : IDisposable
     [Fact]
     public async Task Each_model_is_reported_before_the_wait_it_causes()
     {
-        var runner = new RecordingProcessRunner(
-            Success(Status(["model-b"], [], "signed-7")),
-            Success(Pull("model-a", "signed-7")),
-            Success(Preflight("model-a", 2048, 80, 80, true)),
-            Success(Preflight("model-b", 4096, 90, 90, true)));
-        var installer = Installer(runner, Launcher());
-        var steps = new List<ModelProvisioningProgress>();
-
-        await installer.InstallAsync(
-            [
-                Request("a", "model-a", 2048, "signed-7"),
-                Request("b", "model-b", 4096, "signed-7"),
-            ],
-            new ImmediateProgress<ModelProvisioningProgress>(steps.Add),
-            TestContext.Current.CancellationToken);
+        var steps = await Steps(
+            new RecordingProcessRunner(
+                Success(Status(["model-b"], [], "signed-7")),
+                Success(Pull("model-a", "signed-7")),
+                Success(Preflight("model-a", 2048, 80, 80, true)),
+                Success(Preflight("model-b", 4096, 90, 90, true))),
+            Request("a", "model-a", 2048, "signed-7"),
+            Request("b", "model-b", 4096, "signed-7"));
 
         // A synchronous test observer makes order and content deterministic without depending
         // on the xUnit synchronization context draining Progress<T> callbacks.
-        Assert.Equal(2, steps.Count);
-        // Missing and present are different waits and say so.
-        Assert.Contains("model-a", steps[0].Message, StringComparison.Ordinal);
-        Assert.Contains("downloading", steps[0].Message, StringComparison.Ordinal);
-        Assert.Equal(0, steps[0].Completed);
-        Assert.Contains("model-b", steps[1].Message, StringComparison.Ordinal);
-        Assert.Contains("video memory", steps[1].Message, StringComparison.Ordinal);
-        Assert.Equal(1, steps[1].Completed);
+        var work = Working(steps);
+        // Missing and present are different waits and say so: one has to be fetched first.
+        Assert.Equal(
+            [
+                (ModelProvisioningPhase.Downloading, "model-a"),
+                (ModelProvisioningPhase.Checking, "model-a"),
+                (ModelProvisioningPhase.Accepted, "model-a"),
+                (ModelProvisioningPhase.Checking, "model-b"),
+                (ModelProvisioningPhase.Accepted, "model-b"),
+            ],
+            work.Select(step => (step.Phase, step.Model)));
+        Assert.Equal(0, work[0].Completed);
+        Assert.Equal(1, work[^1].Completed - 1);
         Assert.All(steps, step => Assert.Equal(2, step.Total));
+    }
+
+    /// <summary>
+    /// Every row appears at once, before the first download starts. Filling the list as each
+    /// model is reached would hide the length of the queue at the only moment it matters — the
+    /// beginning — and the plan is known here because it comes from the signed manifest.
+    /// </summary>
+    [Fact]
+    public async Task Every_model_is_announced_before_the_first_one_starts()
+    {
+        var steps = await Steps(
+            new RecordingProcessRunner(
+                Success(Status(["model-a", "model-b"], [], "signed-7")),
+                Success(Preflight("model-a", 2048, 80, 80, true)),
+                Success(Preflight("model-b", 4096, 90, 90, true))),
+            Request("a", "model-a", 2048, "signed-7"),
+            Request("b", "model-b", 4096, "signed-7"));
+
+        var planned = steps
+            .TakeWhile(step => step.Phase == ModelProvisioningPhase.Planned)
+            .ToList();
+
+        Assert.Equal(["model-a", "model-b"], planned.Select(step => step.Model));
+        Assert.Equal([2048, 4096], planned.Select(step => step.ContextTokens));
+        Assert.DoesNotContain(
+            steps.Skip(planned.Count),
+            step => step.Phase == ModelProvisioningPhase.Planned);
+    }
+
+    /// <summary>
+    /// One model's verdict is reported when that model is finished, not when the batch is. Six
+    /// models turning green together says nothing about which one the run is on.
+    /// </summary>
+    [Fact]
+    public async Task A_model_is_reported_finished_before_the_next_one_begins()
+    {
+        var steps = await Steps(
+            new RecordingProcessRunner(
+                Success(Status(["model-a", "model-b"], [], "signed-7")),
+                Success(Preflight("model-a", 2048, 80, 80, true)),
+                Success(Preflight("model-b", 4096, 90, 90, true))),
+            Request("a", "model-a", 2048, "signed-7"),
+            Request("b", "model-b", 4096, "signed-7"));
+
+        var work = Working(steps);
+        var accepted = work.FindIndex(step => step.Phase == ModelProvisioningPhase.Accepted);
+        var second = work.FindIndex(step => step.Model == "model-b");
+
+        Assert.True(accepted >= 0 && accepted < second);
+    }
+
+    /// <summary>
+    /// A refusal names the model it refused. It used to reach the window only in the batch
+    /// result, after every other model had run.
+    /// </summary>
+    [Fact]
+    public async Task A_model_that_does_not_fit_is_reported_refused()
+    {
+        var steps = await Steps(
+            new RecordingProcessRunner(
+                Success(Status(["model-a"], [], "signed-7")),
+                new ProcessResult(
+                    3,
+                    Refusal("model-a", 2048, "signed-7"),
+                    string.Empty,
+                    false,
+                    false)),
+            Request("a", "model-a", 2048, "signed-7"));
+
+        Assert.Contains(
+            steps,
+            step => step.Phase == ModelProvisioningPhase.Rejected && step.Model == "model-a");
     }
 
     [Fact]
@@ -1023,6 +1093,32 @@ public sealed class BrokerModelInstallerTests : IDisposable
             fullyResident,
             VerifiedUtc));
 
+    private static string Refusal(string model, int context, string catalogVersion) =>
+        Json(new ModelPreflightCommandRejected(
+            1, "preflight", false, model, context, catalogVersion, "residency_rejected"));
+
+    /// <summary>
+    /// Runs a batch against a synchronous observer, which makes order and content deterministic
+    /// without depending on the xUnit synchronization context draining <c>Progress&lt;T&gt;</c>.
+    /// </summary>
+    private async Task<List<ModelProvisioningProgress>> Steps(
+        RecordingProcessRunner runner,
+        params BrokerModelInstallRequest[] requests)
+    {
+        var steps = new List<ModelProvisioningProgress>();
+        using var installer = Installer(runner, Launcher());
+        await installer.InstallAsync(
+            requests,
+            new ImmediateProgress<ModelProvisioningProgress>(steps.Add),
+            TestContext.Current.CancellationToken);
+        return steps;
+    }
+
+    /// <summary>Everything after the announcement, which is the run itself.</summary>
+    private static List<ModelProvisioningProgress> Working(
+        IEnumerable<ModelProvisioningProgress> steps) =>
+        [.. steps.Where(step => step.Phase != ModelProvisioningPhase.Planned)];
+
     private static string Json<T>(T value) =>
         JsonSerializer.Serialize(value, LocalAiJson.Strict) + Environment.NewLine;
 
@@ -1116,72 +1212,67 @@ public sealed class BrokerModelInstallerTests : IDisposable
     /// The rail's whole job is to move. A model download is minutes to hours, and until now the
     /// window showed one motionless line for all of it — the figures existed in the child process
     /// and stopped at its standard error.
+    ///
+    /// Bytes, not a sentence about bytes. Rounding them to «4,7 из 12,8 ГБ» is the window's
+    /// business: it knows which language it is speaking, and the run log beside it does not speak
+    /// that one.
     /// </summary>
     [Fact]
     public async Task The_rail_is_given_the_figures_while_the_download_runs()
     {
-        var runner = new RecordingProcessRunner(
-            Success(Status([], [], "signed-7")),
-            new ProcessResult(
-                0,
-                Pull("model-a", "signed-7"),
-                """
-                {"schemaVersion":1,"operation":"pull","model":"model-a","phase":"downloading","completedBytes":5046586573,"totalBytes":13743895347}
-                {"schemaVersion":1,"operation":"pull","model":"model-a","phase":"verifying"}
-                """,
-                false,
-                false),
-            Success(Preflight("model-a", 2048, 80, 80, true)));
-        var reported = new List<ModelProvisioningProgress>();
-        var installer = Installer(runner, Launcher());
+        var steps = await Steps(
+            new RecordingProcessRunner(
+                Success(Status([], [], "signed-7")),
+                new ProcessResult(
+                    0,
+                    Pull("model-a", "signed-7"),
+                    """
+                    {"schemaVersion":1,"operation":"pull","model":"model-a","phase":"downloading","completedBytes":5046586573,"totalBytes":13743895347}
+                    {"schemaVersion":1,"operation":"pull","model":"model-a","phase":"verifying"}
+                    """,
+                    false,
+                    false),
+                Success(Preflight("model-a", 2048, 80, 80, true))),
+            Request("a", "model-a", 2048, "signed-7"));
 
-        await installer.InstallAsync(
-            [Request("a", "model-a", 2048, "signed-7")],
-            new ImmediateProgress<ModelProvisioningProgress>(reported.Add),
-            TestContext.Current.CancellationToken);
-
-        Assert.Contains(reported, step => step.Message.Contains("4.7", StringComparison.Ordinal) &&
-                                          step.Message.Contains("12.8", StringComparison.Ordinal));
-        Assert.Contains(reported, step => step.Message.Contains("model-a", StringComparison.Ordinal));
+        var figures = Assert.Single(
+            steps,
+            step => step.Phase == ModelProvisioningPhase.Downloading && step.TotalBytes > 0);
+        Assert.Equal("model-a", figures.Model);
+        Assert.Equal(5046586573, figures.CompletedBytes);
+        Assert.Equal(13743895347, figures.TotalBytes);
+        Assert.Contains(steps, step => step.Phase == ModelProvisioningPhase.Verifying);
     }
 
     /// <summary>
-    /// The run log does not scroll, so a hundred byte counts per model would push everything worth
-    /// reading out of sight. The rail takes every report; the log keeps the milestones.
+    /// The child names its own phases and this carries them through as phases. It used to turn
+    /// each one into a finished sentence here, in whatever language the installer process had
+    /// chosen — which put Russian into a log written beside an English journal, and made a
+    /// reviewer's wording change a parser break.
     /// </summary>
     [Fact]
-    public async Task The_byte_counts_are_not_milestones_and_the_phases_are()
+    public async Task The_child_s_phases_arrive_as_phases_rather_than_prose()
     {
-        var runner = new RecordingProcessRunner(
-            Success(Status([], [], "signed-7")),
-            new ProcessResult(
-                0,
-                Pull("model-a", "signed-7"),
-                """
-                {"schemaVersion":1,"operation":"pull","model":"model-a","phase":"downloading","completedBytes":1,"totalBytes":2}
-                {"schemaVersion":1,"operation":"pull","model":"model-a","phase":"downloading","completedBytes":2,"totalBytes":2}
-                """,
-                false,
-                false),
-            Success(Preflight("model-a", 2048, 80, 80, true)));
-        var reported = new List<ModelProvisioningProgress>();
-        var installer = Installer(runner, Launcher());
+        var steps = await Steps(
+            new RecordingProcessRunner(
+                Success(Status([], [], "signed-7")),
+                new ProcessResult(
+                    0,
+                    Pull("model-a", "signed-7"),
+                    """
+                    {"schemaVersion":1,"operation":"pull","model":"model-a","phase":"downloading","completedBytes":1,"totalBytes":2}
+                    {"schemaVersion":1,"operation":"pull","model":"model-a","phase":"storing"}
+                    {"schemaVersion":1,"operation":"pull","model":"model-a","phase":"other","status":"pulling manifest"}
+                    """,
+                    false,
+                    false),
+                Success(Preflight("model-a", 2048, 80, 80, true))),
+            Request("a", "model-a", 2048, "signed-7"));
 
-        await installer.InstallAsync(
-            [Request("a", "model-a", 2048, "signed-7")],
-            new ImmediateProgress<ModelProvisioningProgress>(reported.Add),
-            TestContext.Current.CancellationToken);
-
-        var figures = reported
-            .Where(step => step.Message.Contains(" of ", StringComparison.Ordinal) ||
-                           step.Message.Contains(" из ", StringComparison.Ordinal))
-            .ToArray();
-
-        // Asserted before the rest: without it the check below passes over an empty set, and
-        // a test that is green because nothing happened is worse than no test.
-        Assert.Equal(2, figures.Length);
-        Assert.All(figures, step => Assert.False(step.IsMilestone));
-        Assert.Contains(reported, step => step.IsMilestone);
+        Assert.Contains(steps, step => step.Phase == ModelProvisioningPhase.Storing);
+        var other = Assert.Single(steps, step => step.Phase == ModelProvisioningPhase.Other);
+        // Shown as it arrived. A status token from Ollama is not the installer's to translate.
+        Assert.Equal("pulling manifest", other.OllamaStatus);
     }
 
     private static ProcessResult Success(string stdout) =>

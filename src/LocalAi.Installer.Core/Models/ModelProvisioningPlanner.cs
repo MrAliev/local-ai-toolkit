@@ -25,25 +25,47 @@ public sealed record ModelProvisioningPlan(
     IReadOnlyList<string> Excluded);
 
 /// <summary>
-/// One step of model setup, as it happens.
+/// Where one model has got to. <see cref="Other"/> is the child's own word for a line Ollama
+/// emitted that it could not classify, and the token it carried travels in
+/// <see cref="ModelProvisioningProgress.OllamaStatus"/>.
+/// </summary>
+public enum ModelProvisioningPhase
+{
+    Planned,
+    Downloading,
+    Verifying,
+    Storing,
+    Other,
+    Checking,
+    Accepted,
+    Rejected,
+}
+
+/// <summary>
+/// One step of model setup, as facts.
 ///
 /// Preflighting six models loads each one into video memory in turn and takes minutes, and it
 /// used to report nothing at all until the whole batch was over. A progress bar that says
 /// "downloading 208 of 208 MB" for two minutes while a model is quietly being loaded is not a
 /// slow installation, it is an installation that looks hung — and the only button on offer is
 /// Cancel.
+///
+/// The wording belongs to whoever shows it. This record used to carry a finished sentence,
+/// picked here by the process language: the window speaks whatever the start screen chose, the
+/// run log is English beside an English journal, and one sentence could only ever serve one of
+/// them — which is how «проверяется, помещается ли в видеопамять» ended up under "No
+/// prerequisites were selected."
 /// </summary>
-/// <summary>
-/// <paramref name="IsMilestone"/> separates the two readers this record has. The rail
-/// shows every report, because its whole job is to move; the run log keeps only
-/// milestones, because it does not scroll and a hundred byte counts per model would push
-/// everything worth reading out of sight.
-/// </summary>
+/// <param name="OllamaStatus">A status token from Ollama, quoted as it arrived, never translated.</param>
 public sealed record ModelProvisioningProgress(
-    string Message,
+    string Model,
+    int ContextTokens,
+    ModelProvisioningPhase Phase,
     int Completed,
     int Total,
-    bool IsMilestone = false);
+    long CompletedBytes = 0,
+    long TotalBytes = 0,
+    string? OllamaStatus = null);
 
 /// <summary>
 /// Turns a model choice into requests the broker installer will actually accept.

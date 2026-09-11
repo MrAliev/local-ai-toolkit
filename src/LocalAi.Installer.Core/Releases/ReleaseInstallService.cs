@@ -213,33 +213,14 @@ public sealed class ReleaseInstallService(
             package.Manifest.Models,
             gpu,
             selection);
-        foreach (var excluded in plan.Excluded)
-        {
-            // A milestone: said once, about a decision, and the run log is where somebody
-            // looks for it afterwards.
-            progress?.Report(new ModelProvisioningProgress(
-                excluded,
-                0,
-                plan.Requests.Count,
-                IsMilestone: true));
-        }
-
         if (plan.Requests.Count == 0)
         {
             return new(plan.Excluded, null);
         }
 
-        progress?.Report(new ModelProvisioningProgress(
-            "Models: " +
-            string.Join(
-                ", ",
-                plan.Requests.Select(request =>
-                    $"{request.Action.Model} at {request.Action.ContextSize} tokens")) +
-            ". Anything already installed is left alone; the rest is downloaded now.",
-            0,
-            plan.Requests.Count,
-            IsMilestone: true));
-
+        // What the planner decided and what it left out both travel in the report this returns.
+        // They used to be pushed through the progress channel as finished English sentences —
+        // which is a different thing from a step of the run, and the channel now carries steps.
         using var lease = InstallationLayoutLease.Acquire(InstallationLayout.CreateDefault());
         using var modelInstaller = new BrokerModelInstaller(
             processRunner,

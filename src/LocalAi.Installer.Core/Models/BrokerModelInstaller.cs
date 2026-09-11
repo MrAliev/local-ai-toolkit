@@ -430,29 +430,25 @@ public sealed class BrokerModelInstaller : IDisposable
         var installed = status.InstalledModels.ToHashSet(StringComparer.Ordinal);
         var results = new List<BrokerModelInstallResult>(snapshot.Length);
 
+        // Every model announced before the first one starts. The plan comes from the signed
+        // manifest and is known here, so filling a list as each model is reached would hide the
+        // length of the queue at the only moment it matters.
+        foreach (var request in snapshot)
+        {
+            Report(request.Action, ModelProvisioningPhase.Planned, 0);
+        }
+
         foreach (var request in snapshot)
         {
             var action = request.Action;
             var pullAttempted = false;
             var pullCompleted = false;
-            // Reported before the work, not after: the wait is what needs explaining.
-            progress?.Report(new ModelProvisioningProgress(
-                string.Format(
-                    installed.Contains(action.Model)
-                        ? InstallerCulture.Pick(
-                            "{0}: checking it fits in video memory",
-                            "{0}: проверяется, помещается ли в видеопамять")
-                        : InstallerCulture.Pick(
-                            "{0}: downloading",
-                            "{0}: скачивается"),
-                    action.Model),
-                results.Count,
-                snapshot.Length,
-                IsMilestone: true));
             try
             {
                 if (!installed.Contains(action.Model))
                 {
+                    // Reported before the work, not after: the wait is what needs explaining.
+                    Report(action, ModelProvisioningPhase.Downloading, results.Count);
                     pullAttempted = true;
                     // Asked for in its machine form, so what lands on standard error is
                     // parseable rather than prose: the installer and the console can be
@@ -471,7 +467,7 @@ public sealed class BrokerModelInstaller : IDisposable
                         onProgressLine: line => ReportPullLine(
                             progress,
                             line,
-                            action.Model,
+                            action,
                             results.Count,
                             snapshot.Length));
                     EnsureExitSuccess(pull, "pull", mayChangeExternalState: true);
@@ -485,6 +481,7 @@ public sealed class BrokerModelInstaller : IDisposable
                     installed.Add(action.Model);
                 }
 
+                Report(action, ModelProvisioningPhase.Checking, results.Count);
                 var preflight = await RunAsync(
                     [
                         "run", "localai", "model", "preflight",
@@ -507,6 +504,9 @@ public sealed class BrokerModelInstaller : IDisposable
                         action.ContextSize,
                         trust.CatalogVersion);
                     results.Add(Rejected(request, pullAttempted, pullCompleted));
+                    // Per model, as it happens. Reported only in the batch result, six verdicts
+                    // arrived together and none of them said which model the run was on.
+                    Report(action, ModelProvisioningPhase.Rejected, results.Count);
                     continue;
                 }
 
@@ -525,6 +525,7 @@ public sealed class BrokerModelInstaller : IDisposable
                 if (proof.SizeBytes <= 0 || !IsResidencyAcceptable(proof))
                 {
                     results.Add(Rejected(request, pullAttempted, pullCompleted));
+                    Report(action, ModelProvisioningPhase.Rejected, results.Count);
                     continue;
                 }
 
@@ -538,6 +539,7 @@ public sealed class BrokerModelInstaller : IDisposable
                     false,
                     [],
                     "accepted"));
+                Report(action, ModelProvisioningPhase.Accepted, results.Count);
             }
             catch (CommandFailure failure)
             {
@@ -560,6 +562,14 @@ public sealed class BrokerModelInstaller : IDisposable
         }
 
         return Batch(results, BrokerModelBatchStopReason.None, false, "none");
+
+        void Report(ModelInstallAction action, ModelProvisioningPhase phase, int completed) =>
+            progress?.Report(new ModelProvisioningProgress(
+                action.Model,
+                action.ContextSize,
+                phase,
+                completed,
+                snapshot.Length));
     }
 
     public void Dispose()
@@ -698,19 +708,17 @@ public sealed class BrokerModelInstaller : IDisposable
     }
 
     /// <summary>
-    /// One line of the child's progress, turned into the installer's own sentence.
+    /// One line of the child's progress, carried through as the phase it names.
     ///
-    /// Composed here rather than shown as the child wrote it: the installer and the
-    /// console pick their language separately, so streaming the child's prose would put
-    /// English into a Russian window whenever the two disagree — and would make a
-    /// reviewer's wording change a parser break.
-    ///
-    /// None of these are milestones. They move the rail and stay out of the log.
+    /// It used to be turned into a finished sentence here, in the language this process happens
+    /// to be running in — which put Russian into a log written in English, and made a reviewer's
+    /// wording change a parser break. The phase and the figures are facts; the sentence is the
+    /// window's to write, in the language it is speaking.
     /// </summary>
     private static void ReportPullLine(
         IProgress<ModelProvisioningProgress>? progress,
         string line,
-        string model,
+        ModelInstallAction action,
         int completed,
         int total)
     {
@@ -736,45 +744,29 @@ public sealed class BrokerModelInstaller : IDisposable
             return;
         }
 
-        var message = phase switch
+        var step = phase switch
         {
             "downloading" when parsed is { CompletedBytes: { } done, TotalBytes: { } size } =>
-                string.Format(
-                    InstallerCulture.Pick("{0}: {1} of {2} GB", "{0}: {1} из {2} ГБ"),
-                    model,
-                    Gigabytes(done),
-                    Gigabytes(size)),
-            "verifying" => string.Format(
-                InstallerCulture.Pick(
-                    "{0}: checking the download",
-                    "{0}: проверяется скачанное"),
-                model),
-            "storing" => string.Format(
-                InstallerCulture.Pick(
-                    "{0}: adding to Ollama",
-                    "{0}: добавляется в Ollama"),
-                model),
-            "other" when parsed.Status is { Length: > 0 } status => string.Format(
-                InstallerCulture.Pick(
-                    "{0}: Ollama reports {1}",
-                    "{0}: Ollama сообщает {1}"),
-                model,
-                status),
+                Step(ModelProvisioningPhase.Downloading, done, size),
+            "verifying" => Step(ModelProvisioningPhase.Verifying),
+            "storing" => Step(ModelProvisioningPhase.Storing),
+            "other" when parsed.Status is { Length: > 0 } status =>
+                Step(ModelProvisioningPhase.Other, status: status),
             _ => null,
         };
 
-        if (message is not null)
+        if (step is not null)
         {
-            progress.Report(new ModelProvisioningProgress(message, completed, total));
+            progress.Report(step);
         }
-    }
 
-    /// <summary>
-    /// Gibibytes to one decimal, invariant — the same figure the console prints, so the
-    /// window and a terminal beside it do not disagree about the size of one download.
-    /// </summary>
-    private static string Gigabytes(long bytes) =>
-        (bytes / (1024d * 1024 * 1024)).ToString("F1", CultureInfo.InvariantCulture);
+        ModelProvisioningProgress Step(
+            ModelProvisioningPhase named,
+            long done = 0,
+            long size = 0,
+            string? status = null) =>
+            new(action.Model, action.ContextSize, named, completed, total, done, size, status);
+    }
 
     private sealed record ModelPullProgressLine(
         [property: JsonPropertyName("phase")] string? Phase,
