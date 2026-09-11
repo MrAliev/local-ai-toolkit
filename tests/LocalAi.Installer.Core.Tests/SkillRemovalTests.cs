@@ -21,7 +21,7 @@ public sealed class SkillRemovalTests : IDisposable
 
     private readonly DateTimeOffset now = new(2026, 9, 1, 10, 0, 0, TimeSpan.Zero);
 
-    private string SkillPath => Path.Combine(home, ManagedInstructionBlock.SkillRelativePath);
+    private string SkillPath => Path.Combine(home, ManagedInstructionBlock.ClaudeSkillRelativePath);
 
     [Fact]
     public void Disconnecting_plans_the_skill_for_deletion_when_it_is_ours()

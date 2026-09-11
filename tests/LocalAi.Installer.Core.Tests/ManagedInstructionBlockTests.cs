@@ -385,7 +385,7 @@ public sealed class ManagedInstructionBlockTests
         // Codex carries the long form and the core carries a short one, which is not a saving:
         // Claude has the gate refusing the call, and Codex has no such mechanism, so there the
         // sentence is the whole of the enforcement and names the readers.
-        const int budget = 15_400;
+        const int budget = 8_000;
 
         var measured = ManagedInstructionBlock.CodexBlock.Length
             - ManagedInstructionBlock.CodexBlock.Count(character => character == (char)13);

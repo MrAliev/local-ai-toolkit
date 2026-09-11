@@ -602,6 +602,31 @@ public sealed class UninstallPlannerTests : IDisposable
     /// Writes a Claude settings file carrying our gate on top of whatever the caller supplies,
     /// which is how every one of these arrives on a real machine.
     /// </summary>
+    /// <summary>
+    /// The page a person consents to says what will happen to each file, and the skill is the
+    /// one entry that is deleted rather than edited. Every agent file read "rewrite", including
+    /// that one — the most destructive line on the page describing itself as the least.
+    ///
+    /// Latent while the skill was Claude's alone; it stopped being latent when Codex got one
+    /// too, because there are two such files now and the page calls neither of them what it is.
+    /// </summary>
+    [Fact]
+    public async Task A_deleted_file_is_called_removed_rather_than_rewritten()
+    {
+        var skill = Path.Combine(machine.Home, ManagedInstructionBlock.CodexSkillRelativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(skill)!);
+        await File.WriteAllTextAsync(
+            skill,
+            ManagedInstructionBlock.SkillFile(),
+            new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
+            TestContext.Current.CancellationToken);
+
+        var plan = await Plan(RemovalSelection.FromPreset(RemovalPreset.FullUninstall));
+
+        Assert.Contains("remove " + skill, plan.PreviewText, StringComparison.Ordinal);
+        Assert.DoesNotContain("rewrite " + skill, plan.PreviewText, StringComparison.Ordinal);
+    }
+
     private async Task WriteSettingsAsync(string existing)
     {
         var settings = Path.Combine(machine.Home, ".claude", "settings.json");

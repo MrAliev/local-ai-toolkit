@@ -31,6 +31,14 @@ public sealed class CodexConfigurationAdapter(
         if (choice is AgentIntegrationChoice.InstructionsOnly or AgentIntegrationChoice.McpAndInstructions)
         {
             AddInstructions(files, Path.Combine(homeDirectory, ".codex", "AGENTS.md"));
+            // In the same plan as the block, for the reason the Claude adapter gives: a plan is
+            // applied or rolled back whole, and the state worth preventing is an AGENTS.md
+            // pointing at a skill whose write failed.
+            SkillFilePlan.Add(
+                files,
+                Path.Combine(homeDirectory, ManagedInstructionBlock.CodexSkillRelativePath),
+                ReadExisting,
+                timeProvider.GetUtcNow());
         }
 
         return new("Codex", files, BuildPreview(files));
@@ -67,6 +75,11 @@ public sealed class CodexConfigurationAdapter(
         }
 
         RemoveInstructions(files, Path.Combine(homeDirectory, ".codex", "AGENTS.md"));
+        SkillFilePlan.Remove(
+            files,
+            Path.Combine(homeDirectory, ManagedInstructionBlock.CodexSkillRelativePath),
+            ReadExisting,
+            timeProvider.GetUtcNow());
         return new("Codex", files, BuildPreview(files));
     }
 

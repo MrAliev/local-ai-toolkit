@@ -111,8 +111,14 @@ public sealed record UninstallPlan(
 
                 foreach (var file in agents.SelectMany(plan => plan.Files))
                 {
+                    // A deletion said as a deletion. The skill file is removed rather than
+                    // edited, and calling that "rewrite" understates the only line on this page
+                    // that takes a whole file out of somebody's home directory.
                     text.AppendLine(
-                        "  " + InstallerCulture.Pick("rewrite", "переписать") + " " + file.Path);
+                        "  " + (file.Deletes
+                            ? InstallerCulture.Pick("remove", "удалить")
+                            : InstallerCulture.Pick("rewrite", "переписать")) +
+                        " " + file.Path);
                 }
 
                 foreach (var hook in hooks)

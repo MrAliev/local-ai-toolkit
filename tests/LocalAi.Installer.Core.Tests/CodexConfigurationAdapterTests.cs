@@ -31,23 +31,30 @@ public sealed class CodexConfigurationAdapterTests : IDisposable
     }
 
     /// <summary>
-    /// Codex has no import mechanism and no skills, so it gets both halves inline — and must
-    /// not be told to invoke something that does not exist on its side.
+    /// Codex is handed a pointer and the file it points at, in one plan.
+    ///
+    /// This asserted the opposite — everything inline, never a pointer — because Codex had no
+    /// skills when it was written. It does: `skill_search` is a stable feature of the installed
+    /// version, and `~/.codex/skills/` already holds one. Keeping the material inline cost the
+    /// always-loaded block twice its necessary size, which is why nothing new could be said to
+    /// Codex at all.
     /// </summary>
     [Fact]
-    public void Codex_gets_the_reference_material_inline_rather_than_a_pointer_to_a_skill()
+    public void Codex_gets_a_pointer_to_the_skill_and_the_skill_itself()
     {
         Directory.CreateDirectory(home);
 
-        var after = SinglePreview(Path.Combine(".codex", "AGENTS.md"),
-            Adapter().Preview(AgentIntegrationChoice.InstructionsOnly)).AfterText;
+        var plan = Adapter().Preview(AgentIntegrationChoice.InstructionsOnly);
+        var after = SinglePreview(Path.Combine(".codex", "AGENTS.md"), plan).AfterText;
         var flat = string.Join(" ", after.Split(
             (char[]?)null,
             StringSplitOptions.RemoveEmptyEntries));
 
-        Assert.Contains("core.hooksPath", flat, StringComparison.Ordinal);
+        Assert.Contains("Use it before", flat, StringComparison.Ordinal);
         Assert.Contains("quote the refusal verbatim", flat, StringComparison.Ordinal);
-        Assert.DoesNotContain("Invoke it before", flat, StringComparison.Ordinal);
+        Assert.Contains(
+            plan.Files,
+            file => file.Path.EndsWith("SKILL.md", StringComparison.Ordinal));
     }
 
     [Fact]
