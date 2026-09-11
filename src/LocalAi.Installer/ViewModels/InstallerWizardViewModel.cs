@@ -639,6 +639,31 @@ public sealed class InstallerWizardViewModel : ObservableObject
         }
 
         agents.ApplyHookState(gate, worktree, adapter.SettingsPath);
+        agents.UseConfigurationPreview((agent, choice) => PreviewFiles(agent, choice));
+    }
+
+    /// <summary>
+    /// The paths a choice would write, taken from the adapter that writes them so the review
+    /// page and the run cannot disagree. Null where the machine could not be read: the page
+    /// then names nothing rather than reporting an empty plan it never obtained.
+    /// </summary>
+    private static IReadOnlyList<string>? PreviewFiles(string agent, AgentChoice choice)
+    {
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var binRoot = InstallationLayout.CreateDefault().BinRoot;
+        try
+        {
+            var plan = string.Equals(agent, "claude", StringComparison.OrdinalIgnoreCase)
+                ? new ClaudeConfigurationAdapter(home, binRoot).Preview(choice.ToCore())
+                : new CodexConfigurationAdapter(home, binRoot).Preview(choice.ToCore());
+            return [.. plan.Files.Select(file => file.Path)];
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException or ArgumentException or
+                InvalidOperationException)
+        {
+            return null;
+        }
     }
 
     /// <summary>
