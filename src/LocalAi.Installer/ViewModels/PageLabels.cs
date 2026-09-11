@@ -250,4 +250,38 @@ public static class PageLabels
         "Перейти к установке");
 
     public static string Uninstall => InstallerCulture.Pick("Uninstall", "Удалить");
+
+    public static string ModelWaiting => InstallerCulture.Pick("waiting", "ожидает");
+
+    /// <summary>
+    /// Which of the two it was is the difference between a run that spent twenty minutes on this
+    /// model and one that spent none.
+    /// </summary>
+    public static string ModelReadyDownloaded => InstallerCulture.Pick(
+        "ready — downloaded",
+        "готова — скачана");
+
+    public static string ModelReadyAlreadyHere => InstallerCulture.Pick(
+        "ready — already on this computer",
+        "готова — уже есть на этом компьютере");
+
+    public static string ModelDoesNotFit => InstallerCulture.Pick(
+        "does not fit, so it is not used.",
+        "не помещается, поэтому не используется.");
+
+    /// <summary>
+    /// <c>{0}</c> is a list of «model / context», which are identifiers and stay as they are.
+    /// </summary>
+    public static string ModelSmallerOptions => InstallerCulture.Pick(
+        "Smaller options that fit: {0}",
+        "Помещаются варианты меньше: {0}");
+
+    /// <summary><c>{0}</c> is a status token from the run, never translated.</summary>
+    public static string ModelFailed => InstallerCulture.Pick(
+        "failed ({0})",
+        "не удалось ({0})");
+
+    public static string ModelNotReached => InstallerCulture.Pick(
+        "not reached — model setup stopped before this one",
+        "не дошло — настройка моделей остановилась раньше");
 }

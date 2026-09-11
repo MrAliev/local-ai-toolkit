@@ -14,6 +14,17 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
+    <!-- One vocabulary of marks for the pages that show a list of things with states. Drawn as
+         geometry rather than typed as a character: a font that lacks the glyph draws a box, and
+         a stroke follows the palette's brushes the way text does not. -->
+    <StreamGeometry x:Key="MarkTick">M 0 4 L 3 7 L 9 0</StreamGeometry>
+    <StreamGeometry x:Key="MarkWarn">M 5 0 L 10 9 L 0 9 Z</StreamGeometry>
+    <StreamGeometry x:Key="MarkFail">M 0 0 L 9 9 M 9 0 L 0 9</StreamGeometry>
+    <StreamGeometry x:Key="MarkNone">M 0 4.5 L 9 4.5</StreamGeometry>
+    <!-- Three quarters of a circle: a full one has no visible beginning, so it can turn without
+         looking as though it is. -->
+    <StreamGeometry x:Key="MarkBusy">M 5.5 0 A 5.5 5.5 0 1 1 0 5.5</StreamGeometry>
+
     <!-- A ring rather than the stock dotted rectangle, which is black and disappears on dark. -->
     <Style x:Key="FocusRingVisual">
         <Setter Property="Control.Template">

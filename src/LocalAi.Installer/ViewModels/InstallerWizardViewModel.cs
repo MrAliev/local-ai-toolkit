@@ -33,6 +33,15 @@ public sealed class InstallerWizardViewModel : ObservableObject
     public StartChoice Mode { get; }
 
     /// <summary>
+    /// One row per model, in the order the signed manifest planned them. Empty until a run
+    /// reaches the models, and empty for good on a run that was told to skip them — a heading
+    /// over no rows is a question about an absence.
+    /// </summary>
+    public ObservableCollection<ModelRunRow> ModelRuns { get; } = [];
+
+    public bool HasModelRuns => ModelRuns.Count > 0;
+
+    /// <summary>
     /// The pages this run actually visits.
     ///
     /// An update re-asked four questions it had the answers to — prerequisites that are
@@ -2501,6 +2510,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         var modelProgress = new Progress<ModelProvisioningProgress>(step =>
         {
             downloadFinished = true;
+            ApplyModelStep(step);
             if (step.Phase == ModelProvisioningPhase.Planned)
             {
                 // Said once, when the last of them has arrived: the plan is one fact about the
@@ -2711,6 +2721,44 @@ public sealed class InstallerWizardViewModel : ObservableObject
     }
 
     /// <summary>
+    /// One step of a model run, onto the row it names. <see cref="ModelProvisioningPhase.Planned"/>
+    /// is what creates the rows: the plan comes from the signed manifest and arrives in full
+    /// before the first download starts, so the queue's length is visible when it matters.
+    /// </summary>
+    public void ApplyModelStep(ModelProvisioningProgress step)
+    {
+        ArgumentNullException.ThrowIfNull(step);
+        if (step.Phase == ModelProvisioningPhase.Planned)
+        {
+            ModelRuns.Add(new ModelRunRow(step.Model, step.ContextTokens));
+            OnPropertyChanged(nameof(HasModelRuns));
+            return;
+        }
+
+        Row(step.Model)?.Apply(step);
+    }
+
+    /// <summary>
+    /// Closes every row the run never answered for. A batch stops at the first failure, so the
+    /// models after it are neither done nor running, and they would otherwise sit spinning on a
+    /// page that has finished.
+    /// </summary>
+    public void SettleModelRuns()
+    {
+        foreach (var row in ModelRuns)
+        {
+            if (row.State is ModelRunState.Waiting or ModelRunState.Working)
+            {
+                row.NeverReached();
+            }
+        }
+    }
+
+    private ModelRunRow? Row(string model) =>
+        ModelRuns.FirstOrDefault(row =>
+            string.Equals(row.Tag, model, StringComparison.Ordinal));
+
+    /// <summary>
     /// A model that was asked for and did not arrive has to be visible here. The broker
     /// answers per model, and a refusal carries the smaller context sizes that would have
     /// fitted, so both are printed rather than collapsed into "models: failed".
@@ -2754,6 +2802,17 @@ public sealed class InstallerWizardViewModel : ObservableObject
         {
             AppendLog(report, excluded);
         }
+
+        foreach (var model in batch.Models)
+        {
+            Row(model.Model)?.Settled(
+                model.Outcome,
+                model.PullCompleted,
+                model.FallbackSuggestions,
+                model.Code);
+        }
+
+        SettleModelRuns();
 
         foreach (var model in batch.Models)
         {
