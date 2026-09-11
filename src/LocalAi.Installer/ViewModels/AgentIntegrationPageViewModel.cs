@@ -58,10 +58,64 @@ public sealed class AgentIntegrationPageViewModel : ObservableObject
     /// </summary>
     public bool CanContinue => true;
 
-    public string ReviewText =>
-        InstallerCulture.Pick("Clients: ", "Клиенты: ") + string.Join(
-            "; ",
-            Agents.Select(agent => $"{agent.DisplayName} — {agent.Choice.Title()}"));
+    /// <summary>
+    /// The files a choice would write, asked of the adapters that write them rather than listed
+    /// here a second time. Null until the wizard has seeded it; a null result means the machine
+    /// could not be read, which is not the same answer as "nothing to write".
+    /// </summary>
+    private Func<string, AgentChoice, IReadOnlyList<string>?>? previewFiles;
+
+    public void UseConfigurationPreview(
+        Func<string, AgentChoice, IReadOnlyList<string>?> preview)
+    {
+        previewFiles = preview ?? throw new ArgumentNullException(nameof(preview));
+        OnPropertyChanged(nameof(ReviewText));
+    }
+
+    /// <summary>
+    /// Every path this run would write, under the client and the choice that earns it. The page
+    /// used to name none of them: a person agreed to six files in their own home directory on
+    /// the strength of a choice title.
+    /// </summary>
+    public string ReviewText
+    {
+        get
+        {
+            var lines = new List<string> { InstallerCulture.Pick("Clients:", "Клиенты:") };
+            foreach (var agent in Agents)
+            {
+                lines.Add($"  {agent.DisplayName} — {agent.Choice.Title()}");
+                lines.AddRange(FileLines(agent));
+            }
+
+            return string.Join(Environment.NewLine, lines);
+        }
+    }
+
+    /// <summary>
+    /// A preview holds only what would change, so an up-to-date client yields none — and silence
+    /// there would read as "left alone", which is the one thing a full integration must not be
+    /// mistaken for. A page nobody seeded claims nothing either way.
+    /// </summary>
+    private IEnumerable<string> FileLines(AgentOption agent)
+    {
+        if (previewFiles is null || agent.Choice == AgentChoice.NoChange)
+        {
+            return [];
+        }
+
+        if (previewFiles(agent.Agent, agent.Choice) is not { } files)
+        {
+            return [];
+        }
+
+        return files.Count == 0
+            ? [InstallerCulture.Pick(
+                "    already as this version writes it, nothing to write",
+                "    уже в том виде, который пишет эта версия, писать нечего")]
+            : files.Select(file =>
+                InstallerCulture.Pick("    write ", "    записать ") + file);
+    }
 
     /// <summary>
     /// Whether the text-search gate can be offered at all: its refusal text sends the reader to
