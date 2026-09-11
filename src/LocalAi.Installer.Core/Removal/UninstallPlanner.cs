@@ -25,6 +25,7 @@ public sealed class UninstallPlanner
     private readonly Func<string, CancellationToken, Task<string?>> readHooksPath;
     private readonly TimeProvider timeProvider;
     private readonly string? registrySubKey;
+    private readonly Func<string?> readUserPath;
 
     /// <summary>
     /// <paramref name="registrySubKey"/> names the Apps &amp; features entry to look for.
@@ -35,7 +36,8 @@ public sealed class UninstallPlanner
         string homeDirectory,
         Func<string, CancellationToken, Task<string?>>? readHooksPath = null,
         TimeProvider? timeProvider = null,
-        string? registrySubKey = null)
+        string? registrySubKey = null,
+        Func<string?>? readUserPath = null)
     {
         ArgumentNullException.ThrowIfNull(layout);
         ArgumentException.ThrowIfNullOrWhiteSpace(homeDirectory);
@@ -44,6 +46,9 @@ public sealed class UninstallPlanner
         this.readHooksPath = readHooksPath ?? ReadHooksPathWithGit;
         this.timeProvider = timeProvider ?? TimeProvider.System;
         this.registrySubKey = registrySubKey;
+        // Injected so a test never reads the machine's own PATH, for the reason the
+        // registry sub-key is injected: a test that touches it changes the developer's.
+        this.readUserPath = readUserPath ?? LauncherPathRegistration.Current;
     }
 
     /// <summary>
@@ -68,7 +73,8 @@ public sealed class UninstallPlanner
             PlanAgentConfigurations(selection),
             hooks,
             Retained(selection, hooks, installationFollows),
-            PlansAppsAndFeaturesRemoval(selection, installationFollows));
+            PlansAppsAndFeaturesRemoval(selection, installationFollows),
+            PlansLauncherPathRemoval(selection, installationFollows));
     }
 
     /// <summary>
@@ -84,6 +90,22 @@ public sealed class UninstallPlanner
     /// half has by then written, leaving an entry pointing at nothing and no way to uninstall.
     /// The entry is also still true throughout: this run ends with LocalAi installed.
     /// </summary>
+    /// <summary>
+    /// Whether this account's PATH still names the launcher. It goes with the binaries, and not
+    /// at all when an installation follows: taking it off only to put it back would leave a
+    /// window where a console started in between finds nothing.
+    /// </summary>
+    private bool PlansLauncherPathRemoval(
+        RemovalSelection selection,
+        bool installationFollows) =>
+        !installationFollows &&
+        selection.Includes(RemovalItem.Binaries) &&
+        OperatingSystem.IsWindows() &&
+        LauncherPathRegistration.Contains(readUserPath(), LauncherDirectory);
+
+    /// <summary>Where the launcher lives, which is the entry this plan is about.</summary>
+    public string LauncherDirectory => Path.Combine(layout.BinRoot, "launcher");
+
     private bool PlansAppsAndFeaturesRemoval(
         RemovalSelection selection,
         bool installationFollows) =>
