@@ -9,9 +9,9 @@ namespace LocalAi.Cli;
 public sealed record FollowStep(string Line, int? ExitCode);
 
 /// <summary>
-/// `repo status --follow`, which reads the progress a build writes on every batch and reports
-/// it on a cadence. The decision is separated from the waiting so a test can ask what each
-/// reading means without asking how fast this machine is.
+/// `repo status --follow`, which reads the progress a build writes and reports it on a cadence.
+/// The decision is separated from the waiting so a test can ask what each reading means without
+/// asking how fast this machine is.
 /// </summary>
 public static class RepoFollowCommand
 {
@@ -31,10 +31,16 @@ public static class RepoFollowCommand
     /// </summary>
     public const int BuildDidNotFinish = 75;
 
+    /// <param name="chunksSeen">
+    /// The most chunks this loop has watched go by. The terminal record is written by the
+    /// step-reporting path, which zeroes the chunk counters on purpose, so it is the only
+    /// honest figure a finished build has.
+    /// </param>
     public static FollowStep Step(
         RepositoryIndexProgress? progress,
         TimeSpan sinceLastChange,
-        TimeSpan staleAfter)
+        TimeSpan staleAfter,
+        int chunksSeen = 0)
     {
         if (progress is null)
         {
@@ -43,7 +49,11 @@ public static class RepoFollowCommand
 
         if (progress.Phase == RepositoryIndexProgressPhase.Completed)
         {
-            return new(CliText.RepoFollowCompleted(Counted(progress.ProcessedChunks)), 0);
+            return new(
+                chunksSeen > 0
+                    ? CliText.RepoFollowCompleted(Counted(chunksSeen))
+                    : CliText.RepoFollowCompletedPlain,
+                0);
         }
 
         if (progress.Phase == RepositoryIndexProgressPhase.Failed)
@@ -60,16 +70,36 @@ public static class RepoFollowCommand
                 BuildDidNotFinish);
         }
 
-        return new(
-            CliText.RepoFollowProgress(
-                progress.Phase.ToString(),
+        return new(Working(progress), null);
+    }
+
+    /// <summary>
+    /// Figures where the phase counts them, words where it does not — the rule the skill already
+    /// states to a reader, and <see cref="RepositoryIndexProgressPhaseExtensions.CountsChunks"/>
+    /// is what decides it. Outside embedding the chunk counters are the frozen tally of the last
+    /// phase that had one, or zero before any of them ran, and printing those is how a build that
+    /// has barely started reads as one that stalled.
+    /// </summary>
+    private static string Working(RepositoryIndexProgress progress)
+    {
+        var phase = progress.Phase.ToString();
+        if (progress.Phase.CountsChunks() && progress.TotalChunks > 0)
+        {
+            return CliText.RepoFollowProgress(
+                phase,
                 Counted(progress.ProcessedChunks),
                 Counted(progress.TotalChunks),
                 progress.ChunksPerSecond.ToString("0.#", CultureInfo.InvariantCulture),
                 progress.EstimatedRemaining is { } left
                     ? Counted((int)left.TotalSeconds)
-                    : "?"),
-            null);
+                    : "?");
+        }
+
+        var step = progress.Step?.ToString() ?? phase;
+        return progress.StepTotal > 0
+            ? CliText.RepoFollowStepProgress(
+                phase, step, Counted(progress.StepDone), Counted(progress.StepTotal))
+            : CliText.RepoFollowWorking(phase, step);
     }
 
     /// <summary>

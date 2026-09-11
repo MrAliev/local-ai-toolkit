@@ -653,6 +653,19 @@ public static class CliText
     public static string RepoFollowCompleted(string chunks) =>
         Catalogue.Format(nameof(RepoFollowCompleted), chunks);
 
+    public static string RepoFollowCompletedPlain =>
+        Catalogue.Get(nameof(RepoFollowCompletedPlain));
+
+    public static string RepoFollowWorking(string phase, string step) =>
+        Catalogue.Format(nameof(RepoFollowWorking), phase, step);
+
+    public static string RepoFollowStepProgress(
+        string phase,
+        string step,
+        string done,
+        string total) =>
+        Catalogue.Format(nameof(RepoFollowStepProgress), phase, step, done, total);
+
     public static string RepoFollowFailed(string workingRoot) =>
         Catalogue.Format(nameof(RepoFollowFailed), workingRoot);
 
