@@ -94,14 +94,87 @@ public sealed class McpRootParameterTests
         Assert.Equal(
             "lsp_open_document failed: Live language-server integration is disabled.",
             opened);
-        // Closing a document that was never opened is not an error anywhere else either.
-        Assert.Equal("LSP document closed: src/Program.cs.", closed);
+        // Closing a document that was never opened is still not an error — idempotent close is
+        // the design and stays. What changed is the sentence: it used to answer "LSP document
+        // closed", claiming an effect that cannot have happened on an installation where opening
+        // one is refused, which is the whole of what a caller reads.
+        Assert.Equal("No live LSP document for src/Program.cs.", closed);
     }
 
     /// <summary>
     /// A session manager configured the way a default installation is: language servers are
     /// off, so asking for one says so rather than starting anything.
     /// </summary>
+    /// <summary>
+    /// And a document that really was open still closes, and still says so. The point of the
+    /// change is that the two cases stopped reading identically, not that the sentence moved.
+    /// </summary>
+    [Fact]
+    public async Task Closing_a_document_that_was_open_says_it_closed()
+    {
+        var root = Path.Combine(
+            Path.GetTempPath(),
+            "codesearch-lsp-close-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            await using var sessions = new LanguageServerSessionManager(
+                (_, _) => new SilentClient());
+            await sessions.OpenOrUpdateAsync(
+                root,
+                "Program.cs",
+                "csharp",
+                1,
+                "class P { }",
+                TestContext.Current.CancellationToken);
+
+            var closed = await CodeSearchTools.LspCloseDocument(sessions, "Program.cs", root);
+
+            Assert.Equal($"LSP document closed: Program.cs.", closed);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    /// <summary>A language server that accepts everything and answers nothing.</summary>
+    private sealed class SilentClient : ILanguageServerClient
+    {
+        private static readonly Task<IReadOnlyList<LspLocation>> None =
+            Task.FromResult<IReadOnlyList<LspLocation>>([]);
+
+        public Task InitializeAsync(string workspaceRoot, CancellationToken cancellationToken) =>
+            Task.CompletedTask;
+
+        public Task DidOpenAsync(LspTextDocument document, CancellationToken cancellationToken) =>
+            Task.CompletedTask;
+
+        public Task DidChangeAsync(LspTextDocument document, CancellationToken cancellationToken) =>
+            Task.CompletedTask;
+
+        public Task DidCloseAsync(Uri documentUri, CancellationToken cancellationToken) =>
+            Task.CompletedTask;
+
+        public Task<IReadOnlyList<LspLocation>> GoToDefinitionAsync(
+            Uri documentUri, int line, int utf16Column, CancellationToken cancellationToken) =>
+            None;
+
+        public Task<IReadOnlyList<LspLocation>> FindReferencesAsync(
+            Uri documentUri,
+            int line,
+            int utf16Column,
+            bool includeDefinition,
+            CancellationToken cancellationToken) =>
+            None;
+
+        public Task<IReadOnlyList<LspLocation>> FindImplementationsAsync(
+            Uri documentUri, int line, int utf16Column, CancellationToken cancellationToken) =>
+            None;
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+
     private sealed class DisabledSessions : IDisposable
     {
         public LanguageServerSessionManager Manager { get; } = new((_, _) =>
