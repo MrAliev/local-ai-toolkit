@@ -387,18 +387,39 @@ public sealed class UninstallPlanner
     /// exists to explain an effect, and refusing an uninstall over an unreadable settings file
     /// would strand every other removal in the plan.
     /// </summary>
-    private (int Count, string Path)? OtherPreToolUseHooks()
+    private (int Count, string Path)? OtherPreToolUseHooks() =>
+        OtherHooksOn(ClaudeHook.Gate);
+
+    /// <summary>
+    /// The same question for the pair that decides where a worktree goes. Asked of both events
+    /// and answered once: they produce one confusion — a worktree turning up somewhere
+    /// unexpected — so two notices would be two readings of one sentence.
+    /// </summary>
+    private (int Count, string Path)? OtherWorktreeHooks()
+    {
+        var create = OtherHooksOn(ClaudeHook.WorktreeCreate);
+        var remove = OtherHooksOn(ClaudeHook.WorktreeRemove);
+        return (create, remove) switch
+        {
+            (null, null) => null,
+            ({ } one, null) => one,
+            (null, { } other) => other,
+            ({ } one, { } other) => (one.Count + other.Count, one.Path),
+        };
+    }
+
+    private (int Count, string Path)? OtherHooksOn(ClaudeHook hook)
     {
         var path = System.IO.Path.Combine(homeDirectory, ".claude", "settings.json");
         try
         {
             var text = File.Exists(path) ? File.ReadAllText(path) : string.Empty;
-            if (!ClaudeHookRegistration.IsRegistered(text))
+            if (!ClaudeHookRegistration.IsRegistered(text, hook))
             {
                 return null;
             }
 
-            var others = ClaudeHookRegistration.OtherEntries(text);
+            var others = ClaudeHookRegistration.OtherEntries(text, hook);
             return others > 0 ? (others, path) : null;
         }
         catch (Exception exception) when (
@@ -448,6 +469,25 @@ public sealed class UninstallPlanner
                     " остаётся: это запись о том, что установки сделали с этой " +
                     "машиной, и текущий запуск тоже пишет туда свою.")),
         };
+
+        if (GateGoes(selection) && OtherWorktreeHooks() is { } worktreeOthers)
+        {
+            notices.Add(new(
+                InstallerCulture.Pick(
+                    "Other hooks on WorktreeCreate and WorktreeRemove",
+                    "Другие хуки на WorktreeCreate и WorktreeRemove"),
+                string.Format(
+                    InstallerCulture.Pick(
+                        "Entries on those events LocalAi did not write: {0}. They stay in {1} " +
+                        "exactly as they are. If worktrees still appear somewhere unexpected " +
+                        "after this, one of them is the reason and not a removal that failed.",
+                        "Записей на этих событиях, которые LocalAi не создавал: {0}. Они " +
+                        "остаются в {1} ровно как есть. Если после удаления worktree всё ещё " +
+                        "появляются в неожиданном месте, причина — одна из них, а не " +
+                        "несработавшее удаление."),
+                    worktreeOthers.Count,
+                    worktreeOthers.Path)));
+        }
 
         if (GateGoes(selection) && OtherPreToolUseHooks() is { } others)
         {
