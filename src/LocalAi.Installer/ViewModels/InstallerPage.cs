@@ -1,6 +1,7 @@
 using LocalAi.Installer.Core;
 using System.Globalization;
 using LocalAi.Contracts;
+using LocalAi.Installer.Core.Models;
 using LocalAi.Installer.Core.Planning;
 
 namespace LocalAi.Installer.ViewModels;
@@ -207,6 +208,105 @@ public sealed record AgentChoiceOption(AgentChoice Choice)
 }
 
 public sealed record RecommendedModel(string Id, string Purpose, string Detail);
+
+/// <summary>
+/// Where one model's row is. <see cref="NotReached"/> is not a synonym for a failure: a batch
+/// stops at the first one, so every model after it gets no result at all — a state the run
+/// produced from the start and nothing could show.
+/// </summary>
+public enum ModelRunState
+{
+    Waiting,
+    Working,
+    Ready,
+    Rejected,
+    Failed,
+    NotReached,
+}
+
+/// <summary>
+/// One model on the install page. Six of them take tens of minutes, and the page used to show a
+/// single sentence for all of it: which model the run was on, which were done and which were
+/// never tried were in the log afterwards and nowhere while it mattered.
+/// </summary>
+public sealed class ModelRunRow(string tag, int contextTokens) : ObservableObject
+{
+    private ModelRunState state = ModelRunState.Waiting;
+    private string detail = PageLabels.ModelWaiting;
+
+    public string Tag { get; } = tag;
+
+    public int ContextTokens { get; } = contextTokens;
+
+    public ModelRunState State
+    {
+        get => state;
+        private set => SetProperty(ref state, value);
+    }
+
+    /// <summary>The tag has a column of its own, so this never repeats it.</summary>
+    public string Detail
+    {
+        get => detail;
+        private set => SetProperty(ref detail, value);
+    }
+
+    public void Apply(ModelProvisioningProgress step)
+    {
+        State = step.Phase == ModelProvisioningPhase.Planned
+            ? ModelRunState.Waiting
+            : ModelRunState.Working;
+        Detail = ModelStepWording.ForARow(step);
+    }
+
+    /// <summary>
+    /// The verdict, taken apart rather than passed whole: the batch result's constructor is the
+    /// installer core's own, and a row that can only be exercised through a real run is a row
+    /// whose states are decided by whichever ones a machine happened to produce.
+    /// </summary>
+    public void Settled(
+        BrokerModelInstallOutcome outcome,
+        bool downloaded,
+        IReadOnlyList<ModelFallbackSuggestion> smaller,
+        string code)
+    {
+        ArgumentNullException.ThrowIfNull(smaller);
+        switch (outcome)
+        {
+            case BrokerModelInstallOutcome.Accepted:
+                State = ModelRunState.Ready;
+                Detail = downloaded
+                    ? PageLabels.ModelReadyDownloaded
+                    : PageLabels.ModelReadyAlreadyHere;
+                break;
+            case BrokerModelInstallOutcome.RejectedResidency:
+                State = ModelRunState.Rejected;
+                Detail = smaller.Count == 0
+                    ? PageLabels.ModelDoesNotFit
+                    : PageLabels.ModelDoesNotFit + " " + string.Format(
+                        CultureInfo.InvariantCulture,
+                        PageLabels.ModelSmallerOptions,
+                        string.Join(
+                            ", ",
+                            smaller.Select(choice =>
+                                $"{choice.Model} / {choice.ContextTokens}")));
+                break;
+            default:
+                State = ModelRunState.Failed;
+                Detail = string.Format(
+                    CultureInfo.InvariantCulture,
+                    PageLabels.ModelFailed,
+                    code);
+                break;
+        }
+    }
+
+    public void NeverReached()
+    {
+        State = ModelRunState.NotReached;
+        Detail = PageLabels.ModelNotReached;
+    }
+}
 
 public sealed record AgentOption(string Agent, AgentChoice Choice)
 {
