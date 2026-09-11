@@ -5,13 +5,11 @@ using LocalAi.Installer.Core.Planning;
 namespace LocalAi.Installer.Core.Tests;
 
 /// <summary>
-/// Disconnecting a client has always meant "leave nothing of ours behind". The instructions
-/// used to be one block inside a file the user owns, so removal was a text edit. The skill is a
-/// whole file this installer creates, and a plan that can only ever write leaves it there —
-/// pointing at a launcher the uninstall just removed.
+/// Disconnecting a client means "leave nothing of ours behind", and a plan that can only ever
+/// write would leave the skill pointing at a launcher the uninstall just removed.
 ///
-/// An edited file is a different matter: destroying somebody's edit is worse than leaving a
-/// file they can be told about.
+/// What is ours is the managed block, not the file: <see cref="TheSkillFileKeepsWhatIsNotOursTests"/>
+/// covers the file somebody wrote in.
 /// </summary>
 public sealed class SkillRemovalTests : IDisposable
 {
@@ -53,10 +51,16 @@ public sealed class SkillRemovalTests : IDisposable
         Assert.False(File.Exists(SkillPath));
     }
 
+    /// <summary>
+    /// A file at that path carrying none of our markers was not written by us — somebody's own
+    /// skill that happens to share the name. Nothing of ours is in it, so nothing is planned.
+    /// This asserted that an edited skill of ours was left whole, which is no longer how an
+    /// edit is honoured: the block comes out and the writing around it stays.
+    /// </summary>
     [Fact]
-    public void An_edited_skill_is_left_alone()
+    public void A_skill_that_is_not_ours_is_left_alone()
     {
-        WriteSkill(ManagedInstructionBlock.SkillFile() + "\nMy own note.\n");
+        WriteSkill("---\nname: notes\n---\n\nSomebody else's skill.\n");
 
         var plan = Adapter().PreviewRemoval();
 

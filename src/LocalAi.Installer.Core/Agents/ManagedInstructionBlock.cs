@@ -71,15 +71,33 @@ public static class ManagedInstructionBlock
     public static readonly string CodexSkillRelativePath =
         Path.Combine(".codex", "skills", SkillName, "SKILL.md");
 
-    /// <summary>
-    /// The skill file as written. The frontmatter carries only a description: the command
-    /// name comes from the directory, so a `name` field would set nothing but a display
-    /// label.
-    /// </summary>
-    public static string SkillFile() =>
+    /// <summary>The frontmatter, which is outside the managed block and survives an uninstall.</summary>
+    public static string SkillFrontmatter =>
         ("---" + "\n" + "name: " + SkillName + "\n" +
-            "description: " + SkillDescription + "\n" + "---" +
-            "\n\n" + SkillBodyText + "\n").ReplaceLineEndings();
+            "description: " + SkillDescription + "\n" + "---" + "\n\n").ReplaceLineEndings();
+
+    /// <summary>The body between markers, so a reader's own additions are never read as ours.</summary>
+    public static string SkillBlock() => BuildBlock(SkillBodyText);
+
+    /// <summary>The whole file as a first install writes it.</summary>
+    public static string SkillFile() =>
+        (SkillFrontmatter + SkillBlock() + "\n").ReplaceLineEndings();
+
+    /// <summary>
+    /// Whether what is left after the block comes out is only the frontmatter — in which case
+    /// the file held nothing but ours and goes, rather than staying as a skill with no body.
+    /// </summary>
+    public static bool IsFrontmatterOnly(string content)
+    {
+        var text = (content ?? string.Empty).TrimStart();
+        if (!text.StartsWith("---", StringComparison.Ordinal))
+        {
+            return text.Length == 0;
+        }
+
+        var close = text.IndexOf("\n---", 3, StringComparison.Ordinal);
+        return close >= 0 && text[(close + 4)..].Trim().Length == 0;
+    }
 
     public static ManagedInstructionBlockResult Upsert(string? content) =>
         Upsert(content, Block);
