@@ -953,22 +953,7 @@ public static class CodeSearchTools
             return CodeSearchText.CliUnavailable(executable);
         }
 
-        var start = new ProcessStartInfo(executable)
-        {
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            // This toolkit's own CLI, which states UTF-8 for its output through
-            // ConsoleOutputText before it prints anything.
-            StandardOutputEncoding = ChildProcessText.Utf8,
-            StandardErrorEncoding = ChildProcessText.Utf8,
-        };
-        start.ArgumentList.Add("sync");
-        start.ArgumentList.Add("--root");
-        start.ArgumentList.Add(resolvedRoot);
-        start.ArgumentList.Add(SyncRefusal.LimitFlag);
-        start.ArgumentList.Add(InlineRefreshFileLimit.ToString(CultureInfo.InvariantCulture));
+        var start = SyncStartInfo(executable, resolvedRoot, InlineRefreshFileLimit);
         var (exitCode, output, error) = await RunProcessToCompletionAsync(
             start,
             cancellationToken);
@@ -1003,6 +988,12 @@ public static class CodeSearchTools
     {
         using var process = Process.Start(start)
             ?? throw new InvalidOperationException($"Could not start '{start.FileName}'.");
+        if (start.RedirectStandardInput)
+        {
+            // End of file rather than a wait, for the child and for everything it starts.
+            process.StandardInput.Close();
+        }
+
         var stdout = process.StandardOutput.ReadToEndAsync(CancellationToken.None);
         var stderr = process.StandardError.ReadToEndAsync(CancellationToken.None);
         try
@@ -1044,6 +1035,38 @@ public static class CodeSearchTools
     /// launcher is not there — a build running out of its own output directory — the local
     /// executable is the only honest answer.
     /// </summary>
+
+    /// <summary>
+    /// How the bounded sync is asked for. Separate so a test can read the streams it hands over:
+    /// every process this one starts in turn inherits them, git included.
+    /// </summary>
+    internal static ProcessStartInfo SyncStartInfo(string executable, string root, int fileLimit)
+    {
+        var start = new ProcessStartInfo(executable)
+        {
+            // Redirected, and closed as soon as the process exists. Inherited, this is whatever
+            // the caller had — under an MCP server the client's JSON-RPC pipe, which never
+            // closes and never delivers, so any descendant that reads standard input waits for
+            // ever. Observed: a `git archive` under this sync stopped dead for thirty-one
+            // minutes while holding the repository's sync gate.
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            // This toolkit's own CLI, which states UTF-8 for its output through
+            // ConsoleOutputText before it prints anything.
+            StandardOutputEncoding = ChildProcessText.Utf8,
+            StandardErrorEncoding = ChildProcessText.Utf8,
+        };
+        start.ArgumentList.Add("sync");
+        start.ArgumentList.Add("--root");
+        start.ArgumentList.Add(root);
+        start.ArgumentList.Add(SyncRefusal.LimitFlag);
+        start.ArgumentList.Add(fileLimit.ToString(CultureInfo.InvariantCulture));
+        return start;
+    }
+
     internal static string IndexCommand(string root)
     {
         var launcher = Path.Combine(
