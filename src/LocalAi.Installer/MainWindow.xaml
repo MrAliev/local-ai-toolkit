@@ -143,18 +143,22 @@
                                        Style="{StaticResource Muted}" Margin="0,0,0,10" />
                             <ProgressBar IsIndeterminate="True" Height="4" Width="280" HorizontalAlignment="Left" />
                         </StackPanel>
+                        <!-- A shared size scope, because this reads as a table and was not one:
+                             each row had its own Grid, so Auto sized every row on its own and
+                             «Свободное место на диске» pushed its OK right of the eight above. -->
                         <ItemsControl ItemsSource="{Binding Diagnose.Checks}"
+                                      Grid.IsSharedSizeScope="True"
                                       Visibility="{Binding Diagnose.HasResults, Converter={StaticResource BoolToVisibility}}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Grid Margin="0,0,0,8">
                                         <Grid.ColumnDefinitions>
-                                            <!-- Auto with a floor rather than fixed: "Установлено"
-                                                 and "Не найдено" do not fit the 80 that held
-                                                 "Found", and a status clipped to "Установл" is
-                                                 worse than a column that grows. -->
-                                            <ColumnDefinition Width="Auto" MinWidth="150" />
-                                            <ColumnDefinition Width="Auto" MinWidth="80" />
+                                            <!-- The floors no longer align anything — the scope
+                                                 does that — so they are only what a run of short
+                                                 labels falls back to, and can be smaller than the
+                                                 longest label in either language. -->
+                                            <ColumnDefinition Width="Auto" MinWidth="120" SharedSizeGroup="CheckName" />
+                                            <ColumnDefinition Width="Auto" MinWidth="60" SharedSizeGroup="CheckStatus" />
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" Text="{Binding Name}"
