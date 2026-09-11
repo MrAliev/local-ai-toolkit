@@ -1035,7 +1035,7 @@ public static class CodeSearchTools
     /// launcher is not there — a build running out of its own output directory — the local
     /// executable is the only honest answer.
     /// </summary>
-    private static string IndexCommand(string root)
+    internal static string IndexCommand(string root)
     {
         var launcher = Path.Combine(
             AppContext.BaseDirectory,
@@ -1043,9 +1043,12 @@ public static class CodeSearchTools
             "..",
             "launcher",
             "localai-launcher.exe");
+        // Escapes rather than a raw string literal: a single-line raw literal may not begin or
+        // end with a quote, so the four-quote form silently dropped the outer pair and printed a
+        // line that started at the drive letter and never closed the repository path.
         return File.Exists(launcher)
-            ? $""""{Path.GetFullPath(launcher)}" run localai sync --root "{root}""""
-            : $""""{Path.Combine(AppContext.BaseDirectory, "localai.exe")}" sync --root "{root}"""";
+            ? $"\"{Path.GetFullPath(launcher)}\" run localai sync --root \"{root}\""
+            : $"\"{Path.Combine(AppContext.BaseDirectory, "localai.exe")}\" sync --root \"{root}\"";
     }
 
     /// <summary>
