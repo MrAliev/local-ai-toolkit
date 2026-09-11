@@ -192,6 +192,17 @@ public sealed record DependencySelection(string Id, string Title, bool IsRequire
 public sealed record AgentChoiceOption(AgentChoice Choice)
 {
     public string Title => Choice.Title();
+
+    /// <summary>
+    /// A record prints its own members, and a control that falls back to <c>ToString</c> then
+    /// shows `AgentChoiceOption { Choice = McpAndInstructions, Title = … }` on the page where a
+    /// person chooses what happens to their clients — which is what it did, because the closed
+    /// combo box draws a template <c>DisplayMemberPath</c> never reaches.
+    ///
+    /// The template is the fix and lives in the XAML. This is the floor under it: a binding that
+    /// breaks again degrades to the right words rather than to a type dump.
+    /// </summary>
+    public override string ToString() => Title;
 }
 
 public sealed record RecommendedModel(string Id, string Purpose, string Detail);
