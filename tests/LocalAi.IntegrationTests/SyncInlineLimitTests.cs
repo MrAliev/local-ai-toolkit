@@ -1,4 +1,6 @@
 using LocalAi.Cli;
+using LocalAi.Contracts;
+using LocalAi.Repository;
 using System.Diagnostics;
 
 namespace LocalAi.IntegrationTests;
@@ -46,6 +48,35 @@ public sealed class SyncInlineLimitTests : IDisposable
             Directory.Exists(Path.Combine(_runtimeRoot, "repositories")) &&
             Directory.EnumerateFiles(_runtimeRoot, "*.cidx", SearchOption.AllDirectories).Any(),
             "a refused run must not leave an index behind");
+    }
+
+    /// <summary>
+    /// A refusal leaves nothing behind that reads as a build.
+    ///
+    /// Planning writes a progress record before the file count is known, and the refusal that
+    /// follows used to return without touching it. Every later reader then found a record stuck
+    /// in Planning and reported it the way a record stuck anywhere is reported — as a build that
+    /// stopped part-way and will not resume. `index_status` said so on this machine, and the
+    /// installed instructions tell an agent to relay exactly that, so a refusal working as
+    /// designed made the agent tell the user a build had died.
+    /// </summary>
+    [Fact]
+    public async Task A_refused_run_leaves_no_progress_record_behind()
+    {
+        Repository();
+
+        var result = await CodeSearchSyncCommand.ExecuteAsync(
+            _root,
+            TextWriter.Null,
+            cancellationToken: TestContext.Current.CancellationToken,
+            runtimeRoot: _runtimeRoot,
+            refuseInlineOverFiles: 0);
+
+        Assert.NotNull(result.RefusedFiles);
+        var progress = new RepositoryIndexProgressStore(
+                FsPath.From(Path.Combine(_runtimeRoot, "repositories", result.RepositoryId)))
+            .Read();
+        Assert.Null(progress);
     }
 
     /// <summary>
