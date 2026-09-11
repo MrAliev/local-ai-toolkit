@@ -324,68 +324,14 @@ public sealed class ManagedInstructionBlockTests
     }
 
     /// <summary>
-    /// Codex gets both halves inline — it has no import mechanism — so its block is honestly
-    /// larger, and until now it was measured by nothing at all: both this test and the
-    /// no-repetition one took <see cref="ManagedInstructionBlock.Block"/> alone. It had been
-    /// past the number this project chose for itself, unnoticed, in a file read on every session.
+    /// Measured apart from the core's, because the two texts are not the same string.
     /// </summary>
     [Fact]
     public void The_codex_block_stays_within_its_own_budget()
     {
-        // Larger on purpose, and chosen rather than drifted into: the split saved characters for
-        // Claude and spent them here.
-        //
-        // Raised from 13_000 once, on purpose. The MCP-down section stopped covering one tool
-        // and started covering five, and a command line for read_image or triage_log is what
-        // stands between a dead MCP server and a screenshot sent to the cloud at ~1.5K tokens
-        // instead of ~0.2K. The block was eight characters under the old limit, so this was not
-        // drift: it was one change that argued for its length, after the section had already
-        // been cut to the shortest form that keeps every rule in it. The next one argues the
-        // same way, or prunes.
-        //
-        // Raised from 13_600 once more, and by the same rule. A sync now writes its phase and
-        // figures onto every answer it would change, so the paragraph that used to send an
-        // agent to index_status and tell it to check back had to say what arrives unasked
-        // instead - including that a `Sync:` line can name a build nothing will resume, which
-        // an agent reading figures alone would report as a live one. The refusal section gained
-        // one clause for the same reason: its first way forward is to start a build, and that
-        // is the one command a running build refuses. Both were cut to their shortest form
-        // that keeps the rule before this number moved.
-        //
-        // Raised from 14_000 a third time, and this one paid for a precondition the block had
-        // been missing rather than for new material. "Indexing is reported while it runs" was
-        // already here, and an agent that waited out an hour-long sync could not have obeyed
-        // it: there was no reply to report into until the build was over. So the paragraph now
-        // says a build is started and not waited on, names the two channels that carry its
-        // figures across a process boundary, and states the breach as something visible - a
-        // reply that lands with the build already finished and nothing said while it ran. The
-        // rest of the paragraph was rewritten rather than extended, and the sentences it
-        // replaced are gone.
-        //
-        // Raised from 14_600 a fourth time, and this one widened a rule rather than adding a
-        // new one. The previous raise said a build is started and not waited on; an MCP tool
-        // call over a large input outlasts a reply exactly as a build does, and says nothing
-        // at all while it runs — LocalRunObserver records that an MCP server passes no
-        // observer, so a triage of a 40 MB log is minutes of silence where `localai triage`
-        // narrates. So the reporting paragraph's subject is a run rather than a build, the
-        // routing section says which surface a large input goes to, and the command-line
-        // section says which stream carries the progress a reply relays. The sentence the
-        // widening contradicted — that everything except a build answers into the reply that
-        // asked for it — is gone rather than qualified.
-        //
-        // Raised from 15_200 a fifth time, and this one closed a gap between what the block says
-        // and what the gate refuses. The logs section routed by size and never said that reading
-        // the log yourself is the breach — the code section names grep and says so, the logs
-        // section named no reader at all, and an `awk` over a 32 MB server log was outside every
-        // sentence here. So the paragraph now states the prohibition and its bound in one place:
-        // a log does not enter the reply whatever reads it, and a bounded look at the end of a
-        // running one is not that. The gate refuses the same thing, so the written rule and the
-        // enforced rule are one rule rather than two.
-        //
-        // Codex carries the long form and the core carries a short one, which is not a saving:
-        // Claude has the gate refusing the call, and Codex has no such mechanism, so there the
-        // sentence is the whole of the enforcement and names the readers.
-        const int budget = 8_000;
+        // Larger than the core's: Codex carries the long form of the log-reader sentence,
+        // because Claude has a `PreToolUse` gate refusing those calls and Codex has none.
+        const int budget = 7_400;
 
         var measured = ManagedInstructionBlock.CodexBlock.Length
             - ManagedInstructionBlock.CodexBlock.Count(character => character == (char)13);
@@ -431,12 +377,10 @@ public sealed class ManagedInstructionBlockTests
     [Fact]
     public void The_block_stays_within_its_budget()
     {
-        const int budget = 10_000;
+        const int budget = 7_300;
 
-        // Counted with line endings normalised to one character, so the number is the same on
-        // every platform. Measured raw, a block written with CRLF is ~180 characters longer
-        // than the same block with LF — more than the headroom, so the test would pass on one
-        // machine and fail on another with nothing changed between them.
+        // Carriage returns are not counted, so the number is the same whether the file was
+        // checked out with LF or CRLF.
         var measured = ManagedInstructionBlock.Block.Length
             - ManagedInstructionBlock.Block.Count(character => character == (char)13);
 
