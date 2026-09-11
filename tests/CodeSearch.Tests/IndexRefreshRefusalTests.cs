@@ -30,6 +30,25 @@ public sealed class IndexRefreshRefusalTests
     }
 
     /// <summary>
+    /// The command is printed to be pasted into a console, and an installation path has spaces
+    /// in it on most machines. It was built in a raw string literal delimited by four quotes,
+    /// which swallowed the outer pair: the line began at the drive letter and ended without
+    /// closing the repository path, so pasting it ran nothing.
+    /// </summary>
+    [Fact]
+    public void The_printed_command_is_quoted_so_it_can_be_pasted()
+    {
+        var command = CodeSearchTools.IndexCommand(Root);
+
+        Assert.StartsWith("\"", command, StringComparison.Ordinal);
+        Assert.EndsWith("\"", command, StringComparison.Ordinal);
+        // Two pairs: the executable and the repository. An odd count is an unbalanced line
+        // whichever end it is missing from.
+        Assert.Equal(0, command.Count(character => character == '"') % 2);
+        Assert.Contains("\"" + Root + "\"", command, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// A run that did the work reads as it always did. Getting this wrong turns every
     /// successful refresh into a refusal notice.
     /// </summary>
