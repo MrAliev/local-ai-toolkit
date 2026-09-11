@@ -78,6 +78,10 @@
     <value>(путь:строка:колонка, счёт с единицы)</value>
     <comment>Printed beside the heading so the output carries its own contract rather than depending on a tool description read elsewhere.</comment>
   </data>
+  <data name="LspNoLiveDocument" xml:space="preserve">
+    <value>Живого LSP-документа для {0} нет.</value>
+    <comment>{0} is a repository-relative path and is never translated. Success, not a failure: closing what was never open is allowed, and this says what happened instead of claiming a close.</comment>
+  </data>
   <data name="LspDocumentClosed" xml:space="preserve">
     <value>Документ LSP закрыт: {0}.</value>
   </data>
