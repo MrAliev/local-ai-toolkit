@@ -25,6 +25,21 @@ public sealed class FollowingTheIndexBuildTests
             EstimatedRemaining: TimeSpan.FromMinutes(2),
             UpdatedAtUtc: DateTimeOffset.UnixEpoch);
 
+    /// <summary>A build before embedding: a phase and a step, and no chunk counters yet.</summary>
+    private static RepositoryIndexProgress Starting(
+        RepositoryIndexProgressPhase phase,
+        IndexBuildStep step) =>
+        new(
+            "repo-id",
+            phase,
+            @"R:\Repo",
+            ProcessedChunks: 0,
+            TotalChunks: 0,
+            ChunksPerSecond: 0,
+            EstimatedRemaining: null,
+            UpdatedAtUtc: DateTimeOffset.UnixEpoch,
+            Step: step);
+
     [Fact]
     public void Follow_is_off_unless_it_is_asked_for()
     {
@@ -72,6 +87,84 @@ public sealed class FollowingTheIndexBuildTests
         Assert.Null(step.ExitCode);
         Assert.Contains("120", step.Line, StringComparison.Ordinal);
         Assert.Contains("400", step.Line, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Only embedding counts chunks. Outside it the counters are the frozen tally of the last
+    /// phase that had one, or zero before any of them ran — and the first line a reader ever saw
+    /// was `SemanticBase: чанков 0/0, 0/с, осталось примерно ? с`, which says nothing and looks
+    /// like a stall. `CountsChunks` is the codebase's own name for this distinction and this
+    /// reads it rather than guessing from the numbers.
+    /// </summary>
+    [Fact]
+    public void A_phase_that_counts_no_chunks_is_said_in_words()
+    {
+        var step = RepoFollowCommand.Step(
+            Starting(RepositoryIndexProgressPhase.Planning, IndexBuildStep.ReadingRepository),
+            TimeSpan.Zero,
+            StaleAfter);
+
+        Assert.Null(step.ExitCode);
+        Assert.DoesNotContain("0/0", step.Line, StringComparison.Ordinal);
+        Assert.DoesNotContain("0/", step.Line, StringComparison.Ordinal);
+        Assert.Contains("ReadingRepository", step.Line, StringComparison.Ordinal);
+    }
+
+    /// <summary>A step that does carry a figure of its own reports it rather than saying nothing.</summary>
+    [Fact]
+    public void A_step_with_a_count_of_its_own_reports_it()
+    {
+        var step = RepoFollowCommand.Step(
+            Starting(
+                RepositoryIndexProgressPhase.SemanticBase,
+                IndexBuildStep.AnalysingProjects) with { StepDone = 3, StepTotal = 17 },
+            TimeSpan.Zero,
+            StaleAfter);
+
+        Assert.Contains("3", step.Line, StringComparison.Ordinal);
+        Assert.Contains("17", step.Line, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The terminal record is written by the step-reporting path, which zeroes the chunk
+    /// counters on purpose — so a finished build reported from it said "чанков — 0" after
+    /// embedding 8803. The count the loop watched go by is the only honest one it holds.
+    /// </summary>
+    [Fact]
+    public void A_finished_build_reports_what_the_loop_watched()
+    {
+        var step = RepoFollowCommand.Step(
+            Building(RepositoryIndexProgressPhase.Completed) with
+            {
+                ProcessedChunks = 0,
+                TotalChunks = 0,
+            },
+            TimeSpan.Zero,
+            StaleAfter,
+            chunksSeen: 8803);
+
+        Assert.Equal(0, step.ExitCode);
+        Assert.Contains("8803", step.Line, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// And a loop armed after the build was already over watched nothing, so it claims no
+    /// figure rather than reporting zero as one.
+    /// </summary>
+    [Fact]
+    public void A_finished_build_nobody_watched_claims_no_figure()
+    {
+        var step = RepoFollowCommand.Step(
+            Building(RepositoryIndexProgressPhase.Completed) with
+            {
+                ProcessedChunks = 0,
+                TotalChunks = 0,
+            },
+            TimeSpan.Zero,
+            StaleAfter);
+
+        Assert.Equal(0, step.ExitCode);
+        Assert.DoesNotContain("0", step.Line, StringComparison.Ordinal);
     }
 
     /// <summary>

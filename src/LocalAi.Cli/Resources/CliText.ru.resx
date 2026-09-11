@@ -478,6 +478,18 @@
   <data name="RepoFollowNoBuild" xml:space="preserve">
     <value>Для этого репозитория сборка индекса не выполняется.</value>
   </data>
+  <data name="RepoFollowCompletedPlain" xml:space="preserve">
+    <value>Сборка индекса завершена.</value>
+    <comment>For a build this run did not watch, so it holds no chunk count of its own.</comment>
+  </data>
+  <data name="RepoFollowWorking" xml:space="preserve">
+    <value>{0}: {1}.</value>
+    <comment>{0} is a phase token and {1} a step token; both stay English. The phase counts no chunks, so no figures are printed rather than zeroes.</comment>
+  </data>
+  <data name="RepoFollowStepProgress" xml:space="preserve">
+    <value>{0}: {1} {2}/{3}.</value>
+    <comment>{0} phase token, {1} step token, both English. {2} and {3} are the step's own count and stay invariant.</comment>
+  </data>
   <data name="RepoFollowCompleted" xml:space="preserve">
     <value>Сборка индекса завершена: чанков — {0}.</value>
     <comment>{0} is a count and stays invariant.</comment>
