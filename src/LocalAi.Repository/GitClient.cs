@@ -94,6 +94,9 @@ public sealed class GitClient
         var start = new ProcessStartInfo("git")
         {
             WorkingDirectory = Path.GetFullPath(workingDirectory),
+            // Git gets a stream of ours, closed at once. Inherited, under an MCP server or
+            // a Git hook, it is a pipe that never closes and never delivers.
+            RedirectStandardInput = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
