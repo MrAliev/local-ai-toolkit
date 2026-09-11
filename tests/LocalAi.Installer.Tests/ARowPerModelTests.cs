@@ -139,25 +139,52 @@ public sealed class ARowPerModelTests
     }
 
     /// <summary>
-    /// Every state has a mark. A state added without one draws nothing at all, which reads as a
-    /// row that has stopped rather than as a row in a state nobody drew.
+    /// Every mark has something to draw. One added without a geometry draws nothing at all, which
+    /// reads as a row that has stopped rather than as a row in a state nobody drew.
     /// </summary>
     [Fact]
-    public void Every_state_has_something_to_draw()
+    public void Every_mark_has_something_to_draw()
     {
         XNamespace presentation = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
         var drawn = XDocument.Parse(InstallerMarkup.Read("MainWindow.xaml"))
             .Descendants(presentation + "DataTrigger")
-            .Where(trigger => trigger.Attribute("Binding")?.Value == "{Binding State}")
+            .Where(trigger => trigger.Attribute("Binding")?.Value == "{Binding Mark}")
             .Select(trigger => trigger.Attribute("Value")?.Value ?? string.Empty)
             .ToHashSet(StringComparer.Ordinal);
 
         Assert.All(
-            Enum.GetValues<ModelRunState>(),
-            state => Assert.Contains(
-                $"{{x:Static vm:ModelRunState.{state}}}",
+            Enum.GetValues<RunMark>(),
+            mark => Assert.Contains(
+                $"{{x:Static vm:RunMark.{mark}}}",
                 drawn,
                 StringComparer.Ordinal));
+    }
+
+    /// <summary>
+    /// The states a reader has to tell apart at a glance get different marks. Waiting and
+    /// not-reached deliberately share one — both are a row nothing happened to, and the
+    /// difference between them is what the detail says.
+    /// </summary>
+    [Fact]
+    public void The_states_that_must_look_different_do()
+    {
+        var wizard = new InstallerWizardViewModel();
+        wizard.ApplyModelStep(Step("model-a", ModelProvisioningPhase.Planned));
+        var row = wizard.ModelRuns[0];
+
+        var waiting = row.Mark;
+        row.Apply(Step("model-a", ModelProvisioningPhase.Downloading));
+        var working = row.Mark;
+        row.Settled(BrokerModelInstallOutcome.Accepted, true, [], "accepted");
+        var ready = row.Mark;
+        row.Settled(BrokerModelInstallOutcome.RejectedResidency, false, [], "residency_rejected");
+        var rejected = row.Mark;
+        row.Settled(BrokerModelInstallOutcome.Failed, false, [], "process_failure");
+        var failed = row.Mark;
+
+        Assert.Equal(5, new[] { waiting, working, ready, rejected, failed }.Distinct().Count());
+        row.NeverReached();
+        Assert.Equal(waiting, row.Mark);
     }
 
     private static ModelProvisioningProgress Step(

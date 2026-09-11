@@ -185,6 +185,13 @@ public sealed class InstallerWizardViewModel : ObservableObject
     private bool isRunning;
     private bool isComplete;
     private bool hasRunError;
+
+    /// <summary>The clients this run actually wrote to, which is what has to be restarted.</summary>
+    private readonly List<string> configuredAgents = [];
+
+    private RunMark pathMark = RunMark.None;
+
+    private string? pathDetail;
     private bool wasCancelled;
     private bool hasInitialized;
     private int progress;
@@ -460,8 +467,6 @@ public sealed class InstallerWizardViewModel : ObservableObject
     public string ProgressText => progressText;
 
     public string? RunLog => runLogMessage;
-
-    public string? FinishSummary => finish.Summary;
 
     /// <summary>
     /// Whether the last run left reversible effects a rollback could take back. False for a
@@ -865,6 +870,13 @@ public sealed class InstallerWizardViewModel : ObservableObject
         isRunning = true;
         isComplete = false;
         hasRunError = false;
+        // A second attempt after a failure reports on itself, not on the one before it.
+        configuredAgents.Clear();
+        ModelRuns.Clear();
+        OnPropertyChanged(nameof(HasModelRuns));
+        finish.Results.Clear();
+        pathMark = RunMark.None;
+        pathDetail = null;
         CurrentPage = InstallerPage.Progress;
         RefreshAll();
 
@@ -878,10 +890,11 @@ public sealed class InstallerWizardViewModel : ObservableObject
         {
             if (!EnableDependencyActions)
             {
+                AppendLog(report, "Dry run completed. Nothing was installed.");
                 finish.Progress = report.ToString().Trim();
-                finish.Summary = InstallerCulture.Pick(
-                    "Dry run completed. Nothing was installed.",
-                    "Пробный прогон завершён. Ничего не установлено.");
+                // The same rows as a real run, all of them saying nothing was attempted — which
+                // is what a dry run did.
+                BuildFinishResults(requested, successfulActions, failedActions);
                 SetProgress(100, InstallerCulture.Pick("Completed", "Завершено"));
                 isComplete = true;
                 CurrentPage = InstallerPage.Finish;
@@ -999,11 +1012,14 @@ public sealed class InstallerWizardViewModel : ObservableObject
 
             SetProgress(95, InstallerCulture.Pick("Finalising...", "Завершаю…"));
             AppendLog(report, "Finalising.");
-            finish.Summary = BuildFinishSummary(
+            // The tally goes to the log, where a tally belongs; the page gets a row per
+            // thing the run touched.
+            AppendLog(report, BuildFinishSummary(
                 requested,
                 successfulActions,
                 skippedActions,
-                failedActions);
+                failedActions));
+            BuildFinishResults(requested, successfulActions, failedActions);
             SetProgress(
                 100,
                 hasRunError
@@ -1028,12 +1044,13 @@ public sealed class InstallerWizardViewModel : ObservableObject
             hasRunError = true;
             isComplete = false;
             SetProgress(progress, InstallerCulture.Pick("Cancelled", "Отменено"));
-            finish.Summary = BuildFinishSummary(
+            AppendLog(report, BuildFinishSummary(
                 requested,
                 successfulActions,
                 skippedActions,
                 failedActions,
-                InstallerCulture.Pick("Cancelled by the user.", "Отменено пользователем."));
+                InstallerCulture.Pick("Cancelled by the user.", "Отменено пользователем.")));
+            BuildFinishResults(requested, successfulActions, failedActions);
             finish.Progress = report.ToString().Trim();
             CurrentPage = InstallerPage.Finish;
             return false;
@@ -1046,12 +1063,13 @@ public sealed class InstallerWizardViewModel : ObservableObject
             hasRunError = true;
             isComplete = false;
             SetProgress(100, InstallerCulture.Pick("Failed", "Ошибка"));
-            finish.Summary = BuildFinishSummary(
+            AppendLog(report, BuildFinishSummary(
                 requested,
                 successfulActions,
                 skippedActions,
                 failedActions,
-                exception.Message);
+                exception.Message));
+            BuildFinishResults(requested, successfulActions, failedActions);
             finish.Progress = report.ToString().Trim();
             SetRunLog(report.ToString(), false);
             CurrentPage = InstallerPage.Finish;
@@ -1090,9 +1108,9 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 directory,
                 $"install-{DateTime.Now:yyyyMMdd-HHmmss}.log");
             File.WriteAllText(path, report.ToString());
-            finish.Summary = string.IsNullOrWhiteSpace(finish.Summary)
-                ? string.Format(SavedTo, path)
-                : finish.Summary + Environment.NewLine + string.Format(SavedTo, path);
+            // Its own field. Appended to the summary it was the last line of a box 110 high, and
+            // the screenshot that started this work has it clipped mid-path.
+            finish.ReportPath = path;
         }
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException or
@@ -1484,6 +1502,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
                     isReversible: true,
                     new InstallerRunUndoData(
                         Files: plan.Files.Select(BuildAgentFileUndo).ToArray()));
+                configuredAgents.Add(agent.DisplayName);
                 AppendLog(
                     report,
                     $"{plan.AgentName}: {agent.Choice.EnglishTitle()} applied to " +
@@ -1894,7 +1913,6 @@ public sealed class InstallerWizardViewModel : ObservableObject
         OnPropertyChanged(nameof(IsComplete));
         OnPropertyChanged(nameof(HasRunError));
         OnPropertyChanged(nameof(ReviewText));
-        OnPropertyChanged(nameof(FinishSummary));
         OnPropertyChanged(nameof(CanRollback));
         OnPropertyChanged(nameof(HasInterruptedRun));
         OnPropertyChanged(nameof(InterruptedRunNotice));
@@ -1956,6 +1974,28 @@ public sealed class InstallerWizardViewModel : ObservableObject
             "шла другая установка или деинсталляция"),
         _ => status.ToString(),
     };
+
+    /// <summary>
+    /// What the page a run ends on opens with. Every row is a thing the run touched, marked with
+    /// the same vocabulary the model rows use, and the one on the end answers the only question
+    /// somebody has there.
+    /// </summary>
+    private void BuildFinishResults(int requested, int installed, int failed)
+    {
+        finish.Results.Clear();
+        finish.Results.Add(RunResults.Package(packageOutcome, packageInstalled));
+        finish.Results.Add(RunResults.Prerequisites(requested, installed, failed));
+        finish.Results.Add(RunResults.Models(ModelRuns));
+        finish.Results.Add(RunResults.Clients(configuredAgents));
+        if (pathMark != RunMark.None || pathDetail is not null)
+        {
+            finish.Results.Add(RunResults.PathEntry(
+                pathMark,
+                pathDetail ?? PageLabels.ResultNotAttempted));
+        }
+
+        finish.NextSteps = RunResults.NextSteps(configuredAgents);
+    }
 
     private string BuildFinishSummary(
         int requestedActions,
@@ -2424,6 +2464,12 @@ public sealed class InstallerWizardViewModel : ObservableObject
         try
         {
             var added = LauncherPathRegistration.Register(directory);
+            pathMark = RunMark.Done;
+            pathDetail = added
+                ? InstallerCulture.Pick(
+                    "added for this account",
+                    "добавлен для этой учётной записи")
+                : InstallerCulture.Pick("already there", "уже был прописан");
             AppendLog(
                 report,
                 added
@@ -2440,6 +2486,10 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 InstallationLayoutException)
         {
             JournalFail(step, exception.Message);
+            pathMark = RunMark.Failed;
+            pathDetail = InstallerCulture.Pick(
+                "could not be updated",
+                "не удалось изменить");
             AppendLog(
                 report,
                 $"PATH: could not be updated ({exception.Message}). LocalAi is installed and the " +

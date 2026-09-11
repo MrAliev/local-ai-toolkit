@@ -210,6 +210,23 @@ public sealed record AgentChoiceOption(AgentChoice Choice)
 public sealed record RecommendedModel(string Id, string Purpose, string Detail);
 
 /// <summary>
+/// The mark beside a row, shared by every list in this window that shows states. One vocabulary,
+/// so a tick means the same thing on the install page and on the one after it — and so the
+/// markup that draws them exists once.
+/// </summary>
+public enum RunMark
+{
+    None,
+    Busy,
+    Done,
+    Warned,
+    Failed,
+}
+
+/// <summary>One line of what a run did, on the page it ends on.</summary>
+public sealed record RunResultRow(RunMark Mark, string Title, string Detail);
+
+/// <summary>
 /// Where one model's row is. <see cref="NotReached"/> is not a synonym for a failure: a batch
 /// stops at the first one, so every model after it gets no result at all — a state the run
 /// produced from the start and nothing could show.
@@ -241,8 +258,25 @@ public sealed class ModelRunRow(string tag, int contextTokens) : ObservableObjec
     public ModelRunState State
     {
         get => state;
-        private set => SetProperty(ref state, value);
+        private set
+        {
+            SetProperty(ref state, value);
+            OnPropertyChanged(nameof(Mark));
+        }
     }
+
+    /// <summary>
+    /// Waiting and never-reached share a mark: both are a row nothing has happened to, and the
+    /// difference between them is what <see cref="Detail"/> is for.
+    /// </summary>
+    public RunMark Mark => State switch
+    {
+        ModelRunState.Working => RunMark.Busy,
+        ModelRunState.Ready => RunMark.Done,
+        ModelRunState.Rejected => RunMark.Warned,
+        ModelRunState.Failed => RunMark.Failed,
+        _ => RunMark.None,
+    };
 
     /// <summary>The tag has a column of its own, so this never repeats it.</summary>
     public string Detail
