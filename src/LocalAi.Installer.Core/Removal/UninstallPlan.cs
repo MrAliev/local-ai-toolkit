@@ -53,13 +53,15 @@ public sealed record UninstallPlan(
     IReadOnlyList<AgentConfigurationPlan> AgentConfigurations,
     IReadOnlyList<HookRemovalEntry> Hooks,
     IReadOnlyList<RetainedNotice> Retained,
-    bool RemovesAppsAndFeaturesEntry = false)
+    bool RemovesAppsAndFeaturesEntry = false,
+    bool RemovesLauncherFromPath = false)
 {
     public bool HasWork =>
         Paths.Count > 0 ||
         AgentConfigurations.Any(plan => plan.HasChanges) ||
         Hooks.Any(hook => hook.HasWork) ||
-        RemovesAppsAndFeaturesEntry;
+        RemovesAppsAndFeaturesEntry ||
+        RemovesLauncherFromPath;
 
     /// <summary>
     /// Whether the runtime root would be left with nothing in it.
@@ -85,7 +87,9 @@ public sealed record UninstallPlan(
                 var agents = AgentPlansFor(item);
                 var hooks = item == RemovalItem.GitHooks ? Hooks : [];
                 var registration = item == RemovalItem.Binaries && RemovesAppsAndFeaturesEntry;
-                if (paths.Length == 0 && agents.Length == 0 && hooks.Count == 0 && !registration)
+                var launcherPath = item == RemovalItem.Binaries && RemovesLauncherFromPath;
+                if (paths.Length == 0 && agents.Length == 0 && hooks.Count == 0 &&
+                    !registration && !launcherPath)
                 {
                     continue;
                 }
@@ -96,6 +100,13 @@ public sealed record UninstallPlan(
                     text.AppendLine(
                         "  " + InstallerCulture.Pick("remove", "удалить") + " " +
                         path.Path + (path.IsDirectory ? "\\" : string.Empty));
+                }
+
+                if (item == RemovalItem.Binaries && RemovesLauncherFromPath)
+                {
+                    text.AppendLine(InstallerCulture.Pick(
+                        "  take the launcher off this account's PATH",
+                        "  убрать launcher из PATH этой учётной записи"));
                 }
 
                 if (registration)

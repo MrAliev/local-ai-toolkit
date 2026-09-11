@@ -16,6 +16,9 @@ public enum InstallerRunEffectKind
     /// <summary>Writing the Apps &amp; features entry and the copy of the installer it points at.</summary>
     UninstallRegistration,
 
+    /// <summary>Putting the launcher's directory on this account's PATH.</summary>
+    LauncherPath,
+
     /// <summary>Asking the running tools, and the broker in particular, to finish and exit.</summary>
     ProcessStop,
 

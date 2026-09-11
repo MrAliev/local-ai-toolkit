@@ -1793,6 +1793,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         // Printed on every run, including one that leaves the client alone: on an update the
         // clients page is folded away, so this is the only place the effect is stated.
         builder.AppendLine(agents.WorktreeReviewText);
+        builder.AppendLine(LauncherPathReviewLine());
         builder.AppendLine(UpdateCheckReviewLine());
         if (residency.HasWarning)
         {
@@ -2352,6 +2353,83 @@ public sealed class InstallerWizardViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// What the review page says about the PATH, which is an effect on the account rather than
+    /// inside the runtime root and therefore one a person agrees to before it happens.
+    ///
+    /// It says nothing when the entry is already there: a line about a change that is not going
+    /// to be made is the same defect as a missing line about one that is.
+    /// </summary>
+    private string LauncherPathReviewLine()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return string.Empty;
+        }
+
+        var directory = Path.Combine(InstallationLayout.CreateDefault().BinRoot, "launcher");
+        return LauncherPathRegistration.Contains(LauncherPathRegistration.Current(), directory)
+            ? string.Format(
+                InstallerCulture.Pick(
+                    "PATH: {0} is already there; nothing will be changed.",
+                    "PATH: {0} уже добавлен; ничего не изменится."),
+                directory)
+            : string.Format(
+                InstallerCulture.Pick(
+                    "PATH: {0} will be added for this account, so the commands the instructions " +
+                    "give can be typed. A console already open keeps the path it started with.",
+                    "PATH: {0} будет добавлен для этой учётной записи, чтобы команды из " +
+                    "инструкций можно было набирать. Уже открытая консоль сохраняет тот путь, " +
+                    "с которым запускалась."),
+                directory);
+    }
+
+    /// <summary>
+    /// Puts the launcher where a command line can find it.
+    ///
+    /// Every command the installed instructions offer begins `localai-launcher.exe`, and none of
+    /// them ran before this: the launcher lives under LOCALAPPDATA and was on nobody's PATH. The
+    /// half of the toolkit those commands reach is the documented way through a dead MCP server,
+    /// so it was the fallback that did not work.
+    /// </summary>
+    private void RegisterLauncherPath(StringBuilder report)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var directory = Path.Combine(
+            InstallationLayout.CreateDefault().BinRoot,
+            "launcher");
+        var step = JournalBegin(InstallerRunEffectKind.LauncherPath, "PATH entry for " + directory);
+        try
+        {
+            var added = LauncherPathRegistration.Register(directory);
+            AppendLog(
+                report,
+                added
+                    ? $"PATH: {directory} added for this account. A console already open keeps " +
+                        "the path it started with; a new one finds localai-launcher.exe."
+                    : $"PATH: {directory} was already there, nothing changed.");
+            JournalComplete(
+                step,
+                added ? "Added to the user PATH." : "Already present; nothing written.",
+                isReversible: true);
+        }
+        catch (Exception exception) when (
+            exception is System.Security.SecurityException or InvalidOperationException or
+                InstallationLayoutException)
+        {
+            JournalFail(step, exception.Message);
+            AppendLog(
+                report,
+                $"PATH: could not be updated ({exception.Message}). LocalAi is installed and the " +
+                "MCP tools work; the command line needs the launcher's full path until this is " +
+                "fixed by hand.");
+        }
+    }
+
     private async Task InstallPackageAsync(
         StringBuilder report,
         CancellationToken cancellationToken)
@@ -2528,6 +2606,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             // The release version, not the version directory: Apps & features shows this
             // to a person, and "467ed5f0f9bf" is a commit id rather than a version (#255).
             RegisterUninstallEntry(report, resolved.Manifest.ReleaseVersion);
+            RegisterLauncherPath(report);
         }
 
         ReportModelOutcome(report, result.Models, selection);

@@ -109,6 +109,9 @@ public sealed class UninstallRunner(
         progress?.Report(new(90, InstallerCulture.Pick(
             "Finishing the removal…",
             "Завершаю удаление…")));
+        // Before the entry and the uninstaller's own copy, which is the last thing that happens:
+        // the PATH entry names a directory the binaries have already left.
+        RemoveLauncherPath(plan, journal, failures);
         var (unregistered, deferred) = RemoveRegistration(plan, journal, failures);
         RemoveDirectoriesLeftEmptyByTheSweep(plan, removed);
         return new UninstallOutcome(
@@ -128,6 +131,39 @@ public sealed class UninstallRunner(
     /// was already gone is not a failure; a copy that cannot be deleted while it runs is
     /// scheduled for the next restart and reported as such.
     /// </summary>
+    /// <summary>
+    /// Takes the launcher's directory off this account's PATH. An entry somebody removed by hand
+    /// is not a failure, and a PATH that cannot be written is reported rather than thrown: the
+    /// binaries are already gone by then, and an entry pointing at nothing is untidy rather than
+    /// harmful.
+    /// </summary>
+    private void RemoveLauncherPath(
+        UninstallPlan plan,
+        InstallerRunJournal journal,
+        List<UninstallFailure> failures)
+    {
+        if (!plan.RemovesLauncherFromPath || !OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var directory = Path.Combine(layout.BinRoot, "launcher");
+        var step = journal.BeginStep(
+            InstallerRunEffectKind.LauncherPath,
+            "Take " + directory + " off the user PATH");
+        try
+        {
+            LauncherPathRegistration.Unregister(directory);
+            journal.CompleteStep(step, "Removed from the user PATH.", isReversible: false);
+        }
+        catch (Exception exception) when (
+            exception is System.Security.SecurityException or InvalidOperationException)
+        {
+            journal.FailStep(step, exception.Message);
+            failures.Add(new UninstallFailure(directory, exception.Message));
+        }
+    }
+
     private (bool Unregistered, bool Deferred) RemoveRegistration(
         UninstallPlan plan,
         InstallerRunJournal journal,
