@@ -667,6 +667,68 @@ public static class CliText
     /// </summary>
     public static string AgentGateNeedsPayload => Catalogue.Get(nameof(AgentGateNeedsPayload));
 
+    public static string RepoPruneRemoved(string branch, string mainline, string head, string worktree) =>
+        Catalogue.Format(nameof(RepoPruneRemoved), branch, mainline, head, worktree);
+
+    public static string RepoPruneRemovedNoWorktree(string branch, string mainline, string head) =>
+        Catalogue.Format(nameof(RepoPruneRemovedNoWorktree), branch, mainline, head);
+
+    public static string RepoPruneWouldRemove(string branch, string mainline, string worktree) =>
+        Catalogue.Format(nameof(RepoPruneWouldRemove), branch, mainline, worktree);
+
+    public static string RepoPruneWouldRemoveNoWorktree(string branch, string mainline) =>
+        Catalogue.Format(nameof(RepoPruneWouldRemoveNoWorktree), branch, mainline);
+
+    public static string RepoPruneKeptCurrent(string branch) =>
+        Catalogue.Format(nameof(RepoPruneKeptCurrent), branch);
+
+    public static string RepoPruneKeptNoCommits(string branch) =>
+        Catalogue.Format(nameof(RepoPruneKeptNoCommits), branch);
+
+    public static string RepoPruneKeptUnmerged(string branch, string commits, string mainline) =>
+        Catalogue.Format(nameof(RepoPruneKeptUnmerged), branch, commits, mainline);
+
+    public static string RepoPruneKeptDirty(string branch, string worktree) =>
+        Catalogue.Format(nameof(RepoPruneKeptDirty), branch, worktree);
+
+    public static string RepoPruneKeptLocked(string branch, string worktree) =>
+        Catalogue.Format(nameof(RepoPruneKeptLocked), branch, worktree);
+
+    public static string RepoPruneKeptWorktreeUnreadable(string branch, string worktree, string reason) =>
+        Catalogue.Format(nameof(RepoPruneKeptWorktreeUnreadable), branch, worktree, reason);
+
+    public static string RepoPruneKeptUnanswerable(string branch, string mainline, string reason) =>
+        Catalogue.Format(nameof(RepoPruneKeptUnanswerable), branch, mainline, reason);
+
+    public static string RepoPruneWorktreeRefused(string branch, string worktree, string reason) =>
+        Catalogue.Format(nameof(RepoPruneWorktreeRefused), branch, worktree, reason);
+
+    public static string RepoPruneBranchRefused(string branch, string reason) =>
+        Catalogue.Format(nameof(RepoPruneBranchRefused), branch, reason);
+
+    public static string RepoPruneSummary(int branches, int worktrees) =>
+        Catalogue.Format(nameof(RepoPruneSummary), branches, worktrees);
+
+    public static string RepoPruneWouldSummary(int branches, int worktrees) =>
+        Catalogue.Format(nameof(RepoPruneWouldSummary), branches, worktrees);
+
+    public static string RepoPruneNothing(string mainline) =>
+        Catalogue.Format(nameof(RepoPruneNothing), mainline);
+
+    public static string RepoPruneMainlineMissing(string candidates) =>
+        Catalogue.Format(nameof(RepoPruneMainlineMissing), candidates);
+
+    public static string RepoPruneUnknownArgument(string argument, string usage) =>
+        Catalogue.Format(nameof(RepoPruneUnknownArgument), argument, usage);
+
+    public static string RepoPruneDryRun => Catalogue.Get(nameof(RepoPruneDryRun));
+
+    public static string RepoPruneAutomationOffer => Catalogue.Get(nameof(RepoPruneAutomationOffer));
+
+    public static string RepoPruneRootWithoutDirectory => Catalogue.Get(nameof(RepoPruneRootWithoutDirectory));
+
+    public static string RepoPruneUsage => Catalogue.Get(nameof(RepoPruneUsage));
+
     public static string AgentWorktreeCreated(string path, string branch) =>
         Catalogue.Format(nameof(AgentWorktreeCreated), path, branch);
 

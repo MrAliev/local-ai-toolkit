@@ -838,4 +838,113 @@
     <value>Каталог {0} не удалось создать ({1}), поэтому ничего не создано.</value>
     <comment>New because the target moved outside the repository: the parent is now a directory this command may be the first thing ever to write to, and it can be absent, read-only or on a volume that is not mounted. {1} is the framework's own message. Unguarded, this was an unhandled exception where every other failure here is a sentence.</comment>
   </data>
+  <data name="RepoPruneRemoved" xml:space="preserve">
+    <value>Всё, что было на ветке {0}, уже есть в {1}: ветка удалена (была {2}), удалён и её worktree {3}.</value>
+    <comment>(was {2}) echoes git's own "Deleted branch x (was e3e3319)" deliberately: the short sha is the only handle left for recovering work from a branch that is no longer named. The reason comes before the effect because this line is read amid git's own pull output, where nothing else says why a directory vanished.</comment>
+  </data>
+  <data name="RepoPruneRemovedNoWorktree" xml:space="preserve">
+    <value>Всё, что было на ветке {0}, уже есть в {1}: ветка удалена (была {2}); worktree у неё не было.</value>
+    <comment>The same line for a branch nobody checked out separately. Says so rather than omitting the clause: silence there reads as a worktree that was missed.</comment>
+  </data>
+  <data name="RepoPruneWouldRemove" xml:space="preserve">
+    <value>Всё, что было на ветке {0}, уже есть в {1}: ветка и её worktree {2} были бы удалены.</value>
+    <comment>Separate from RepoPruneRemoved and sharing no verb with it, for the reason PruneWouldReclaim was split from PruneReclaimed: one word in the middle of a long report is not enough to separate a preview from a deletion, and here the deletion is a branch. No sha: that is a recovery handle for something that happened.</comment>
+  </data>
+  <data name="RepoPruneWouldRemoveNoWorktree" xml:space="preserve">
+    <value>Всё, что было на ветке {0}, уже есть в {1}: ветка была бы удалена; worktree у неё нет.</value>
+    <comment>The rehearsal of RepoPruneRemovedNoWorktree.</comment>
+  </data>
+  <data name="RepoPruneKeptCurrent" xml:space="preserve">
+    <value>Ветка {0} оставлена: на ней находится сама эта команда.</value>
+    <comment>Compared by branch name rather than by path: the command may be run from a worktree, and the branch checked out there is the one it must not delete.</comment>
+  </data>
+  <data name="RepoPruneKeptNoCommits" xml:space="preserve">
+    <value>Ветка {0} оставлена: на ней нет ни одного своего коммита.</value>
+    <comment>A branch created a moment ago sits exactly on the mainline, so the containment check says "merging it would change nothing" about it too. Without this it would be the first thing the command deleted.</comment>
+  </data>
+  <data name="RepoPruneKeptUnmerged" xml:space="preserve">
+    <value>Ветка {0} оставлена: своих коммитов, которых нет в {2}: {1}.</value>
+    <comment>The ordinary case, and the count is what makes it checkable by hand. Reached when merging the branch would change the mainline's tree.</comment>
+  </data>
+  <data name="RepoPruneKeptDirty" xml:space="preserve">
+    <value>Ветка {0} оставлена: в её worktree {1} остались незакоммиченные изменения.</value>
+    <comment>The tail is AgentWorktreeHoldsWork's, word for word, so one machine cannot describe the same worktree two ways. Names no flag, because there is none.</comment>
+  </data>
+  <data name="RepoPruneKeptLocked" xml:space="preserve">
+    <value>Ветка {0} оставлена: её worktree {1} заблокирован.</value>
+    <comment>git worktree lock is how a person says "leave this one alone", and this command is one of the things they were saying it to.</comment>
+  </data>
+  <data name="RepoPruneKeptWorktreeUnreadable" xml:space="preserve">
+    <value>Ветка {0} оставлена: состояние её worktree {1} прочитать не удалось ({2}).</value>
+    <comment>Covers the case PruneCommand.IsGone exists for: a worktree on an unmounted volume or a disconnected share reads exactly like one deleted by hand, and taking that as deleted would drop a branch whose work nobody looked at.</comment>
+  </data>
+  <data name="RepoPruneKeptUnanswerable" xml:space="preserve">
+    <value>Ветка {0} оставлена: установить, есть ли она уже в {1}, не удалось ({2}).</value>
+    <comment>Reached when git merge-tree exits non-zero — a conflict, a ref it will not merge, or a git too old for --write-tree, whose message ({2}) says which. Says it could not be established rather than that the branch is unmerged: this command must not report a comparison it did not make.</comment>
+  </data>
+  <data name="RepoPruneWorktreeRefused" xml:space="preserve">
+    <value>Worktree {1} ветки {0} удалить не удалось ({2}), поэтому ветка оставлена.</value>
+    <comment>git refuses to delete a branch held by a worktree, so the order is forced: the worktree first. A branch kept because its worktree survived is the honest outcome, not a failure to report separately.</comment>
+  </data>
+  <data name="RepoPruneBranchRefused" xml:space="preserve">
+    <value>Worktree ветки {0} удалён, а сама ветка — нет ({1}).</value>
+    <comment>The half-done state, and the only line that reports it. Printed on the hook face too: a tree left half-cleaned must be visible on the pull that did it.</comment>
+  </data>
+  <data name="RepoPruneSummary" xml:space="preserve">
+    <value>Удалено веток {0}, worktree {1}.</value>
+    <comment>Counts rather than a list: the lines above already named each one.</comment>
+  </data>
+  <data name="RepoPruneWouldSummary" xml:space="preserve">
+    <value>Ничего не удалено. Запуск без --dry-run удалил бы веток {0}, worktree {1}.</value>
+    <comment>Opens by saying nothing happened, because a summary of deletions is the line most likely to be read on its own.</comment>
+  </data>
+  <data name="RepoPruneNothing" xml:space="preserve">
+    <value>Ничего не удалено: ни одна ветка здесь не вошла целиком в {0}.</value>
+    <comment>True when no branch qualified and true when the mainline is the only branch there is, so one key covers both. A count of branches examined would read as "of the 0 branch(es)" on the common case.</comment>
+  </data>
+  <data name="RepoPruneMainlineMissing" xml:space="preserve">
+    <value>Ничего не удалено: в этом репозитории нет локальной основной ветки, с которой сравнивать. Ни одной из них здесь нет: {0}</value>
+    <comment>Not MainlineMissing, whose sentence ends "before indexing" — the wrong reason on this command. {0} is the refs actually tried, starting with the manifest's own DevRef.</comment>
+  </data>
+  <data name="RepoPruneUnknownArgument" xml:space="preserve">
+    <value>Команда localai repo prune не понимает '{0}'. Ничего не удалено. Usage: {1}</value>
+    <comment>Shaped after PruneUnknownArgument: like localai prune, an argument this command silently ignored would delete, so the refusal says what did not happen as well as what was not understood.</comment>
+  </data>
+  <data name="RepoPruneDryRun" xml:space="preserve">
+    <value>--dry-run: ничего не удалено; ветки и worktree ниже — то, что удалил бы запуск без этой опции.</value>
+    <comment>First line, not last, for the reason PruneDryRun is: a notice at the end of a report of deletions is read after them.</comment>
+  </data>
+  <data name="RepoPruneAutomationOffer" xml:space="preserve">
+    <value>Чтобы это происходило после каждого pull, приносящего работу в основную ветку: git config localai.pruneMerged true</value>
+    <comment>Printed only after a hand run that removed something and only while localai.pruneMerged is unset — the moment the reader has just seen what the setting would do. The setting is off until a repository asks for it: an installed hook was invited to keep an index in sync, not to delete branches. No trailing full stop: the line ends in a command somebody copies.</comment>
+  </data>
+  <data name="RepoPruneRootWithoutDirectory" xml:space="preserve">
+    <value>Команде localai repo prune нужен каталог после --root.</value>
+    <comment>Shaped after the same refusal on repo status.</comment>
+  </data>
+  <data name="RepoPruneUsage" xml:space="preserve">
+    <value>Usage: localai repo prune [--root dir] [--dry-run]
+
+  Удаляет то, что остаётся в этом репозитории после смердженного pull
+  request: локальную ветку, каждый коммит которой уже есть в основной
+  ветке, и worktree, в котором эта ветка была выбрана. Если что-то было
+  удалено, дальше применяются границы хранения индекса этого репозитория —
+  ровно так же, как это делает localai sync в конце каждой синхронизации.
+
+  Ветка удаляется, только если верно всё сразу: это не основная ветка и не
+  та, на которой работает сама команда; на ней есть хотя бы один свой
+  коммит; слияние её с основной веткой ничего бы не изменило; а её
+  worktree, если он есть, не заблокирован и не содержит ни изменений, ни
+  неотслеживаемых файлов. Все остальные ветки перечисляются с причиной,
+  по которой они оставлены.
+
+  Ничего из этого не обращается к сети, и ни одна ветка не удаляется ни на
+  каком remote.
+
+  --root dir   Репозиторий, с которым работать. По умолчанию — текущий каталог.
+  --dry-run    Показать, что было бы удалено, и не удалять ничего.
+
+Чтобы worktree остался при любой ветке: git worktree lock &lt;path&gt;</value>
+    <comment>Printed on --help and nowhere else. Multi-line on purpose: the conditions under which a branch is deleted are what a person needs before they run this once, and a one-line usage cannot carry them.</comment>
+  </data>
 </root>

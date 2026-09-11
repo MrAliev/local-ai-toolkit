@@ -16,6 +16,11 @@ internal static class CliUsage
     public const string RepoStatus =
         "localai repo status [--root dir | git-common-dir] [--json]";
     public const string Prune = "localai prune [--dry-run]";
+    // Beside repo status because the noun already means "one repository, found by --root", and
+    // the object here is that repository's finished branches. Deliberately not part of `localai
+    // prune`: that command's usage says everything it removes is under the runtime root, and a
+    // branch is not.
+    public const string RepoPrune = "localai repo prune [--root dir] [--dry-run]";
     public const string Doctor = "localai doctor [--root dir] [--json]";
     public const string Telemetry = "localai telemetry";
     public const string Ask =
@@ -73,7 +78,7 @@ internal static class CliUsage
     public const string Text =
         "Usage: localai native <operation> [--request file] | " +
         ModelStatus + " | " + ModelPull + " | " + ModelPreflight + " | " +
-        RepoStatus + " | " +
+        RepoStatus + " | " + RepoPrune + " | " +
         "localai policy <show|set> [options] | " +
         "localai update [--wait] [--force] | " +
         "localai semantic <operation> [options] | localai bootstrap --dry-run | " +
