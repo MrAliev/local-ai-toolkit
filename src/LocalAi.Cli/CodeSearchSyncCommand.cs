@@ -98,6 +98,12 @@ public static class CodeSearchSyncCommand
         var requested = RuntimeIndexLayout.Inspect(workingRoot, runtimeRoot);
         var batchProfiles = new EmbeddingBatchProfileStore(
             runtimeRoot ?? RuntimeIndexLayout.DefaultRuntimeRoot);
+        // What this machine allows, read beside the profile it keeps: the profile is what
+        // was proved here, the ceiling is what may be attempted here at all.
+        var maxBatchItems = new ModelResidencyPolicyStore(
+                runtimeRoot ?? RuntimeIndexLayout.DefaultRuntimeRoot)
+            .Read()
+            .MaxEmbeddingBatchItems;
         // The gate comes before the first write of any shared state — progress included.
         // Everything below (progress, manifest, generation directories, checkpoints, the
         // current pointer, prune) is single-writer while the lease is held, which is what
@@ -300,6 +306,7 @@ public static class CodeSearchSyncCommand
                         total),
                     Touch,
                     batchProfiles,
+                    maxBatchItems,
                     runtimeRoot,
                     requireSemantics,
                     error,
@@ -511,7 +518,8 @@ public static class CodeSearchSyncCommand
                             identity.WorkingRoot.Value,
                             progress),
                         definitions,
-                        batchProfiles: batchProfiles);
+                        batchProfiles: batchProfiles,
+                        maxEmbeddingBatchItems: maxBatchItems);
                     await builder.BuildOverlayAsync(
                         identity.WorkingRoot.Value,
                         store.IndexPath(generation.Identity.Id),
@@ -883,6 +891,7 @@ public static class CodeSearchSyncCommand
         Action<RepositoryIndexProgressPhase, IndexBuildStep, int, int> step,
         Action touch,
         EmbeddingBatchProfileStore batchProfiles,
+        int maxBatchItems,
         string? runtimeRoot,
         bool requireSemantics,
         TextWriter error,
@@ -980,7 +989,8 @@ public static class CodeSearchSyncCommand
                 // it runs first: a file the adapters covered is cut on its definitions instead
                 // of on a line window, and a file they did not is cut exactly as before.
                 SymbolDefinitionCatalog.FromSemanticIndex(semanticIndex.Index),
-                batchProfiles: batchProfiles);
+                batchProfiles: batchProfiles,
+                maxEmbeddingBatchItems: maxBatchItems);
             await builder.BuildAsync(
                 snapshot.Root,
                 workIndex,

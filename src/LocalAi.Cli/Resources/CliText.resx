@@ -247,6 +247,14 @@
   <data name="PolicyResidencyUnknown" xml:space="preserve">
     <value>Unknown residency policy '{0}'.</value>
   </data>
+  <data name="PolicyMaxEmbeddingBatch" xml:space="preserve">
+    <value>max embedding batch: {0}</value>
+    <comment>{0} is a count and stays invariant.</comment>
+  </data>
+  <data name="PolicyMaxEmbeddingBatchInvalid" xml:space="preserve">
+    <value>--max-embedding-batch takes a power of two between {1} and {2}, not '{0}'.</value>
+    <comment>The option name stays as written. {0} is what the caller typed, quoted; {1} and {2} are bounds and stay invariant.</comment>
+  </data>
   <data name="PolicyRestartNote" xml:space="preserve">
     <value>note: a broker that is already running keeps the previous policy until it is restarted.</value>
   </data>
@@ -275,6 +283,7 @@
     <value>Usage: localai policy show
        localai policy set --residency &lt;RequireFullVram|AllowPartialOffload|AllowCpu&gt;
        localai policy set --idle-model-keep-alive-seconds &lt;non-negative integer&gt;
+       localai policy set --max-embedding-batch &lt;4..256, a power of two&gt;
        localai policy set --update-check &lt;on|off&gt;
        localai policy set --update-check-interval-hours &lt;{0}..{1}&gt;
        localai policy set --language &lt;en|ru|system&gt;
@@ -286,6 +295,9 @@
                        usable adapter; substantially slower.
   Idle keep-alive      Seconds to keep an idle model loaded. Zero unloads it
                        immediately; 10 by default.
+  Max embedding batch  The largest batch a build may grow to on this machine. 256
+                       by default; lower it where the runner drops a request that
+                       size, so the build stops re-proving it.
   Update check         Whether this installation may ask GitHub if a newer
                        release exists. Off by default; nothing is ever
                        downloaded or installed without you asking.

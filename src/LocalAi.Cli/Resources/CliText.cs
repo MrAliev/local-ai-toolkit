@@ -639,6 +639,12 @@ public static class CliText
     public static string RepoStatusNotConfigured(string commonDirectory) =>
         Catalogue.Format(nameof(RepoStatusNotConfigured), commonDirectory);
 
+    public static string PolicyMaxEmbeddingBatch(int items) =>
+        Catalogue.Format(nameof(PolicyMaxEmbeddingBatch), items);
+
+    public static string PolicyMaxEmbeddingBatchInvalid(string value, int minimum, int maximum) =>
+        Catalogue.Format(nameof(PolicyMaxEmbeddingBatchInvalid), value, minimum, maximum);
+
     public static string RepoStatusIntervalWithoutSeconds =>
         Catalogue.Get(nameof(RepoStatusIntervalWithoutSeconds));
 

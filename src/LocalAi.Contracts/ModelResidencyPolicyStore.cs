@@ -33,19 +33,30 @@ public static class BrokerPolicyDefaults
     /// idle sweep runs only when nothing is queued at all.
     /// </summary>
     public const int IdleModelKeepAliveSeconds = 10;
+
+    /// <summary>
+    /// The largest embedding batch a machine will let the adaptive policy grow to.
+    ///
+    /// 256 is the product's own maximum, and this is how a card whose runner drops a
+    /// request that size stops having it re-proved on every build: the policy climbs, the
+    /// runner goes away, it steps back, and three successes later it climbs again.
+    /// </summary>
+    public const int MaxEmbeddingBatchItems = 256;
 }
 
 public sealed record BrokerPolicy(
     int SchemaVersion,
     ModelResidencyPolicy ModelResidency,
-    int IdleModelKeepAliveSeconds = BrokerPolicyDefaults.IdleModelKeepAliveSeconds)
+    int IdleModelKeepAliveSeconds = BrokerPolicyDefaults.IdleModelKeepAliveSeconds,
+    int MaxEmbeddingBatchItems = BrokerPolicyDefaults.MaxEmbeddingBatchItems)
 {
     public const string FileName = "policy.json";
 
     public static BrokerPolicy Default { get; } = new(
         1,
         ModelResidencyPolicy.RequireFullVram,
-        BrokerPolicyDefaults.IdleModelKeepAliveSeconds);
+        BrokerPolicyDefaults.IdleModelKeepAliveSeconds,
+        BrokerPolicyDefaults.MaxEmbeddingBatchItems);
 }
 
 /// <summary>

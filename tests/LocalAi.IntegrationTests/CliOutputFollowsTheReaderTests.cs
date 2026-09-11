@@ -1,4 +1,5 @@
 using LocalAi.Cli;
+using LocalAi.Contracts;
 using LocalAi.Tests.Shared;
 
 namespace LocalAi.IntegrationTests;
@@ -115,7 +116,7 @@ public sealed class CliOutputFollowsTheReaderTests : IDisposable
             captions++;
         }
 
-        Assert.Equal(6, captions);
+        Assert.Equal(7, captions);
     }
 
     /// <summary>
@@ -123,6 +124,50 @@ public sealed class CliOutputFollowsTheReaderTests : IDisposable
     /// characters. A Russian caption may be nineteen; it may not be twenty.
     /// </summary>
     private const int DescriptionColumn = 23;
+
+    /// <summary>
+    /// A card whose runner drops the largest batch otherwise has the adaptive policy re-prove
+    /// that on every build: it climbs to 256, the request is dropped, it steps back to 128, and
+    /// three successes later it climbs again. The ceiling is a property of the machine, so it is
+    /// stored where the machine's other answers are.
+    /// </summary>
+    [Fact]
+    public void A_batch_ceiling_is_stored_for_this_machine()
+    {
+        Assert.Equal(0, Run("set", "--max-embedding-batch", "128"));
+
+        Assert.Equal(
+            128,
+            new ModelResidencyPolicyStore(root).Read().MaxEmbeddingBatchItems);
+        Assert.Contains("128", output.ToString(), StringComparison.Ordinal);
+    }
+
+    [Theory]
+    // Not a number, and not a size: the policy visits powers of two between 4 and 256, and a
+    // ceiling outside that range is a request that was misunderstood rather than one to round.
+    [InlineData("many")]
+    [InlineData("0")]
+    [InlineData("-8")]
+    [InlineData("512")]
+    public void A_ceiling_outside_what_the_policy_can_reach_is_refused(string value)
+    {
+        Assert.Equal(2, Run("set", "--max-embedding-batch", value));
+
+        Assert.Equal(
+            BrokerPolicyDefaults.MaxEmbeddingBatchItems,
+            new ModelResidencyPolicyStore(root).Read().MaxEmbeddingBatchItems);
+    }
+
+    /// <summary>The option is typed, so it is named in the usage whatever the language.</summary>
+    [Fact]
+    public void The_ceiling_option_is_named_in_the_usage()
+    {
+        using var reading = TestCulture.Reading("ru");
+
+        Assert.Equal(2, Run("nonsense"));
+
+        Assert.Contains("--max-embedding-batch", error.ToString(), StringComparison.Ordinal);
+    }
 
     private int Run(params string[] args) =>
         PolicyCommand.Execute(args, root, output, error);

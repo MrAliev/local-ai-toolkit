@@ -47,7 +47,8 @@ public sealed class IndexBuilder(
     Action<IndexBuildProgress>? progress = null,
     SymbolDefinitionCatalog? definitions = null,
     Func<TimeSpan, CancellationToken, Task>? backendWait = null,
-    EmbeddingBatchProfileStore? batchProfiles = null)
+    EmbeddingBatchProfileStore? batchProfiles = null,
+    int? maxEmbeddingBatchItems = null)
 {
     /// <summary>
     /// How the build waits for a backend that has gone, in the shape <c>OllamaTransport</c>
@@ -127,7 +128,10 @@ public sealed class IndexBuilder(
     private const int InitialBatchChars = 48_000;
     private const int MinimumBatchChars = 8_000;
     private const int MaximumBatchChars = 400_000;
-    private readonly AdaptiveEmbeddingBatchPolicy _batchPolicy = new(embedder.Model, batchProfiles);
+    private readonly AdaptiveEmbeddingBatchPolicy _batchPolicy = new(
+        embedder.Model,
+        batchProfiles,
+        maxEmbeddingBatchItems);
 
     /// <summary>
     /// The character size is measured, not configured, because the right one differs by an order
