@@ -356,10 +356,24 @@
                         <StackPanel Margin="20,0,0,10"
                                     Visibility="{Binding Models.IsChooseExact, Converter={StaticResource BoolToVisibility}}">
                             <TextBlock Text="{x:Static vm:PageLabels.Model}" />
+                            <!-- ItemTemplate, not DisplayMemberPath. The closed box draws
+                                 SelectionBoxItemTemplate, which ComboBox computes from
+                                 ItemTemplate and never from DisplayMemberPath: with the path
+                                 alone the ContentPresenter fell back to ToString(), and
+                                 ModelCatalogEntry is a positional record, so the box showed
+                                 `ModelCatalogEntry { Tag = …, … }`. A tag is an identifier,
+                                 hence Consolas, as the rail already sets for the version. -->
                             <ComboBox ItemsSource="{Binding Models.CatalogModels}"
                                       SelectedItem="{Binding Models.SelectedModel, Mode=TwoWay}"
-                                      DisplayMemberPath="Tag"
-                                      MaxWidth="320" HorizontalAlignment="Left" Height="24" Margin="0,4,0,8" />
+                                      MinWidth="240" HorizontalAlignment="Left" Height="24"
+                                      Margin="0,4,0,8">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Tag}" FontFamily="Consolas"
+                                                   TextWrapping="NoWrap" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
                             <TextBlock Text="{x:Static vm:PageLabels.ContextSize}" />
                             <ComboBox ItemsSource="{Binding Models.AvailableContexts}"
                                       SelectedItem="{Binding Models.SelectedContext, Mode=TwoWay}"
@@ -395,13 +409,30 @@
                                              order, which is the one thing a translation cannot keep. -->
                                         <TextBlock Text="{Binding Heading, Mode=OneWay}"
                                                    FontWeight="SemiBold" TextWrapping="Wrap" />
-                                        <ComboBox MinWidth="380" Height="24" HorizontalAlignment="Left" Margin="0,4,0,0"
+                                        <!-- The page where a person decides what happens to their
+                                             clients showed `AgentChoiceOption { Choice = …, Title
+                                             = … }`: DisplayMemberPath does not reach the closed
+                                             box, which draws SelectionBoxItemTemplate, and that
+                                             comes from ItemTemplate alone.
+
+                                             Stretch rather than MinWidth="380": «Зарегистрировать
+                                             MCP-серверы и установить инструкции» does not fit 380
+                                             minus the chrome, and a width that fits English and
+                                             not Russian is the defect this page is full of. -->
+                                        <ComboBox Height="24" HorizontalAlignment="Stretch" Margin="0,4,0,0"
                                                   Tag="{Binding Agent}"
                                                   ItemsSource="{Binding DataContext.Agents.ChoiceOptions, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                  DisplayMemberPath="Title"
                                                   SelectedValuePath="Choice"
                                                   SelectedValue="{Binding Choice, Mode=OneWay}"
-                                                  SelectionChanged="OnAgentChoiceChanged" />
+                                                  SelectionChanged="OnAgentChoiceChanged">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Title}"
+                                                               TextWrapping="NoWrap"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
                                         <!-- Stated, not asked. Where a worktree goes is not a
                                              machine-wide question: the client has no setting for
                                              it, so the hook is the only way to move it, and which
