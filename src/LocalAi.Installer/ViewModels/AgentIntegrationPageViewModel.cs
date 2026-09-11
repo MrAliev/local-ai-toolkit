@@ -23,6 +23,7 @@ public sealed class AgentIntegrationPageViewModel : ObservableObject
 
     /// <summary>What the machine has right now, read rather than remembered.</summary>
     private bool gateOnDisk;
+    private bool worktreeOnDisk;
 
     private bool refusesTextSearch;
 
@@ -107,7 +108,7 @@ public sealed class AgentIntegrationPageViewModel : ObservableObject
     /// Where the entry goes, for the review line to name. Empty until the wizard has read the
     /// machine.
     /// </summary>
-    public string GateSettingsPath { get; private set; } = string.Empty;
+    public string SettingsPath { get; private set; } = string.Empty;
 
     /// <summary>
     /// Whether the run has anything to write for the gate: only when the answer differs from what
@@ -156,7 +157,79 @@ public sealed class AgentIntegrationPageViewModel : ObservableObject
                 "запуск это меняет). Строка LocalAi убирается из {0}; всё остальное в этом " +
                 "файле остаётся."),
         },
-        GateSettingsPath);
+        SettingsPath);
+
+    /// <summary>
+    /// Whether this run sets Claude Code to put worktrees beside the repository.
+    ///
+    /// Not a question the person is asked, and that is the decision. The client has no setting
+    /// for where a worktree goes — a `WorktreeCreate` hook is the only way to change it — while
+    /// *which* folder they land in is answered per repository by `git config
+    /// localai.worktreeRoot`. A checkbox here would ask a machine-wide question that has a
+    /// better per-repository answer, so this rides on the client being configured at all.
+    ///
+    /// Claude Code's row alone, like the gate: the entries live in that client's settings.
+    /// </summary>
+    public bool RegistersWorktrees =>
+        Agents.Any(agent =>
+            string.Equals(agent.Agent, "claude", StringComparison.Ordinal) &&
+            agent.Choice is not AgentChoice.NoChange);
+
+    /// <summary>
+    /// The sentence under the combo, shown only while the run would actually do it. Left visible
+    /// on a row set to "leave unchanged", it would describe an effect that is not coming.
+    /// </summary>
+    public bool ShowsWorktreePlacement => RegistersWorktrees;
+
+    public string WorktreePlacementHint => PageLabels.WorktreePlacementHint;
+
+    /// <summary>
+    /// Whether the run has anything to write for the worktree pair: only when it differs from
+    /// what is on disk, for the reason <see cref="GateChanges"/> gives.
+    /// </summary>
+    public bool WorktreeChanges => RegistersWorktrees != worktreeOnDisk;
+
+    /// <summary>
+    /// Whether anything in <c>settings.json</c> changes at all. One question rather than two,
+    /// because the file is written once: both effects share a plan, and a run that opens the
+    /// file for one of them writes both.
+    /// </summary>
+    public bool SettingsChanges => GateChanges || WorktreeChanges;
+
+    /// <summary>
+    /// What the review page says about worktree placement, in the four shapes
+    /// <see cref="GateReviewText"/> is in and for the same reason: naming an effect and naming a
+    /// reversal are not one sentence with an optional clause.
+    ///
+    /// The last of them does not name where the client would put them instead. That path is the
+    /// client's, it has already changed once, and an invented example is the kind of thing that
+    /// gets implemented.
+    /// </summary>
+    public string WorktreeReviewText => string.Format(
+        (RegistersWorktrees, worktreeOnDisk) switch
+        {
+            (true, true) => InstallerCulture.Pick(
+                "Worktrees in Claude Code: created in a worktrees folder beside the repository " +
+                "instead of inside it. Recorded in {0}.",
+                "Worktree в Claude Code: создаются в папке worktrees рядом с репозиторием, а не " +
+                "внутри него. Записано в {0}."),
+            (true, false) => InstallerCulture.Pick(
+                "Worktrees in Claude Code: created in a worktrees folder beside the repository " +
+                "instead of inside it. The two lines go into {0}.",
+                "Worktree в Claude Code: создаются в папке worktrees рядом с репозиторием, а не " +
+                "внутри него. Две строки добавляются в {0}."),
+            (false, true) => InstallerCulture.Pick(
+                "Worktrees in Claude Code: created in a worktrees folder beside the repository, " +
+                "as {0} already says. Nothing is written to it.",
+                "Worktree в Claude Code: создаются в папке worktrees рядом с репозиторием — так " +
+                "уже записано в {0}. В него ничего не пишется."),
+            (false, false) => InstallerCulture.Pick(
+                "Worktrees in Claude Code: left where Claude Code puts them. Nothing is written " +
+                "to {0}.",
+                "Worktree в Claude Code: остаются там, куда их кладёт Claude Code. В {0} ничего " +
+                "не записывается."),
+        },
+        SettingsPath);
 
     /// <summary>
     /// Seeds the box from the machine, in the shape the residency and update-check settings are
@@ -169,12 +242,13 @@ public sealed class AgentIntegrationPageViewModel : ObservableObject
     /// from being overwritten by a second seed, and there is no second seed: it was a branch no
     /// entry point reached and no test covered, promising a protection nothing needed.
     /// </summary>
-    public void ApplyGateRegistration(bool registered, string settingsPath)
+    public void ApplyHookState(bool gateRegistered, bool worktreeRegistered, string settingsPath)
     {
-        gateOnDisk = registered;
-        GateSettingsPath = settingsPath ?? string.Empty;
-        refusesTextSearch = registered;
-        OnPropertyChanged(nameof(GateSettingsPath));
+        gateOnDisk = gateRegistered;
+        worktreeOnDisk = worktreeRegistered;
+        SettingsPath = settingsPath ?? string.Empty;
+        refusesTextSearch = gateRegistered;
+        OnPropertyChanged(nameof(SettingsPath));
         NotifyGate();
     }
 
@@ -243,5 +317,10 @@ public sealed class AgentIntegrationPageViewModel : ObservableObject
         OnPropertyChanged(nameof(GateChanges));
         OnPropertyChanged(nameof(GateReviewText));
         OnPropertyChanged(nameof(TextSearchHint));
+        OnPropertyChanged(nameof(RegistersWorktrees));
+        OnPropertyChanged(nameof(ShowsWorktreePlacement));
+        OnPropertyChanged(nameof(WorktreeChanges));
+        OnPropertyChanged(nameof(SettingsChanges));
+        OnPropertyChanged(nameof(WorktreeReviewText));
     }
 }

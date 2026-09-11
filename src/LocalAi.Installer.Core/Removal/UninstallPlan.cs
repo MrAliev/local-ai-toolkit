@@ -154,22 +154,37 @@ public sealed record UninstallPlan(
             if (AgentConfigurations.FirstOrDefault(plan =>
                     string.Equals(
                         plan.AgentName,
-                        ClaudeConfigurationAdapter.GateName,
+                        ClaudeConfigurationAdapter.HooksName,
                         StringComparison.Ordinal) &&
-                    plan.HasChanges) is { } gate)
+                    plan.HasChanges) is { } settingsPlan)
             {
                 text.AppendLine(InstallerCulture.Pick(
-                    "Text search in Claude Code:",
-                    "Текстовый поиск в Claude Code:"));
-                foreach (var file in gate.Files)
+                    "Claude Code hooks:",
+                    "Хуки Claude Code:"));
+                foreach (var file in settingsPlan.Files)
                 {
-                    // "remove LocalAi's line from", not the loop's bare "rewrite": the file
-                    // stays, and a removal that reads as a deletion is the one thing this line
-                    // must not say about somebody's own settings.
-                    text.AppendLine(
-                        "  " + InstallerCulture.Pick(
-                            "remove LocalAi's line from ",
-                            "убрать строку LocalAi из ") + file.Path);
+                    // A line per effect rather than per file. Both effects live in one document,
+                    // so a per-file loop would print one line for two removals — and a heading
+                    // promising two while one happens is the kind of lie this page exists to
+                    // prevent. "remove … from", not the loop's bare "rewrite": the file stays,
+                    // and a removal that reads as a deletion is the one thing this must not say
+                    // about somebody's own settings.
+                    if (Leaves(file, ClaudeHook.Gate))
+                    {
+                        text.AppendLine(
+                            "  " + InstallerCulture.Pick(
+                                "remove the text-search refusal from ",
+                                "убрать отклонение текстового поиска из ") + file.Path);
+                    }
+
+                    if (Leaves(file, ClaudeHook.WorktreeCreate) ||
+                        Leaves(file, ClaudeHook.WorktreeRemove))
+                    {
+                        text.AppendLine(
+                            "  " + InstallerCulture.Pick(
+                                "remove worktree placement from ",
+                                "убрать размещение worktree из ") + file.Path);
+                    }
                 }
             }
 
@@ -199,6 +214,27 @@ public sealed record UninstallPlan(
             }
 
             return text.ToString();
+        }
+    }
+
+    /// <summary>
+    /// Whether this file plan takes one hook out: ours is in the document now and not in the one
+    /// the run would write.
+    ///
+    /// Asked of the planned text rather than of a flag, so the page cannot claim a removal the
+    /// splice did not make. A document neither side can parse answers no — the plan that would
+    /// rewrite it fails loudly on its own, and a preview line is not the place to report that.
+    /// </summary>
+    private static bool Leaves(AgentConfigurationFilePlan file, ClaudeHook hook)
+    {
+        try
+        {
+            return ClaudeHookRegistration.IsRegistered(file.BeforeText, hook) &&
+                !ClaudeHookRegistration.IsRegistered(file.AfterText, hook);
+        }
+        catch (InvalidOperationException)
+        {
+            return false;
         }
     }
 

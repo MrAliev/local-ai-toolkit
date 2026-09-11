@@ -100,7 +100,7 @@ public sealed class UninstallPlannerTests : IDisposable
         // apart from the client that carries it, because the file it edits is one the person
         // edits by hand and the client's is not (#423).
         Assert.Equal(
-            ["Claude", "Claude text-search gate", "Codex"],
+            ["Claude", "Claude Code hooks", "Codex"],
             plan.AgentConfigurations.Select(agent => agent.AgentName));
     }
 

@@ -624,10 +624,12 @@ public sealed class InstallerWizardViewModel : ObservableObject
         var adapter = new ClaudeConfigurationAdapter(
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
             InstallationLayout.CreateDefault().BinRoot);
-        var registered = false;
+        var gate = false;
+        var worktree = false;
         try
         {
-            registered = adapter.IsGateRegistered();
+            gate = adapter.IsGateRegistered();
+            worktree = adapter.IsWorktreeRegistered();
         }
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException or ArgumentException)
@@ -636,7 +638,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             // path is still seeded, so the review line names it rather than an empty string.
         }
 
-        agents.ApplyGateRegistration(registered, adapter.GateSettingsPath);
+        agents.ApplyHookState(gate, worktree, adapter.SettingsPath);
     }
 
     /// <summary>
@@ -1289,27 +1291,28 @@ public sealed class InstallerWizardViewModel : ObservableObject
         CancellationToken cancellationToken)
     {
         await ApplyClientIntegrationAsync(report, cancellationToken);
-        await ApplyTextSearchGateAsync(report, cancellationToken);
+        await ApplyClaudeHooksAsync(report, cancellationToken);
     }
 
     /// <summary>
-    /// The text-search gate, applied as its own step with its own plan and its own failure.
+    /// The hooks this product writes into Claude Code's settings, applied as one step with one
+    /// plan and its own failure.
     ///
     /// That separation is the point rather than tidiness. <c>settings.json</c> is a file the
     /// person edits by hand, so a misplaced comma in it is an ordinary event — and inside the
     /// loop above, that comma would cost the MCP registrations, which are the expensive half of
     /// the installation. Here it costs only the gate, and the line above still reads true (#423).
     /// </summary>
-    private async Task ApplyTextSearchGateAsync(
+    private async Task ApplyClaudeHooksAsync(
         StringBuilder report,
         CancellationToken cancellationToken)
     {
-        if (!agents.GateChanges)
+        if (!agents.SettingsChanges)
         {
             // Includes the case the consent turns on: an unticked box over a machine with
             // nothing registered must not open the file at all, because an empty `hooks: {}` is
             // an effect nobody agreed to and it would reformat their document on the way in.
-            AppendLog(report, "Text-search gate: left as it was.");
+            AppendLog(report, "Claude Code hooks: left as they were.");
             return;
         }
 
@@ -1317,23 +1320,24 @@ public sealed class InstallerWizardViewModel : ObservableObject
         {
             AppendLog(
                 report,
-                "Text-search gate: skipped, because the LocalAi package was not installed and " +
-                "this run did not get far enough to change it.");
+                "Claude Code hooks: skipped, because the LocalAi package was not installed " +
+                "and this run did not get far enough to change it.");
             hasRunError = true;
             return;
         }
 
         var registering = agents.RefusesTextSearch;
+        var placingWorktrees = agents.RegistersWorktrees;
         string? step = null;
         try
         {
             var adapter = new ClaudeConfigurationAdapter(
                 Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
                 InstallationLayout.CreateDefault().BinRoot);
-            var plan = adapter.PreviewGate(registering);
+            var plan = adapter.PreviewSettings(registering, placingWorktrees);
             if (!plan.HasChanges)
             {
-                AppendLog(report, "Text-search gate: already as requested, nothing to change.");
+                AppendLog(report, "Claude Code hooks: already as requested, nothing to change.");
                 return;
             }
 
@@ -1347,21 +1351,36 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 isReversible: true,
                 new InstallerRunUndoData(
                     Files: plan.Files.Select(BuildAgentFileUndo).ToArray()));
+            // Built from the effects that actually moved rather than from a fixed sentence
+            // naming both: this step writes one file for two independent changes, and a line
+            // claiming a registration that did not happen is worse than a line that is terse.
+            var effects = new List<string>();
+            if (agents.GateChanges)
+            {
+                effects.Add(registering
+                    ? "text-search refusal registered"
+                    : "text-search refusal removed");
+            }
+
+            if (agents.WorktreeChanges)
+            {
+                effects.Add(placingWorktrees
+                    ? "worktree placement registered"
+                    : "worktree placement removed");
+            }
+
             AppendLog(
                 report,
-                registering
-                    ? "Text-search gate: registered in " +
-                      string.Join(", ", plan.Files.Select(file => file.Path)) +
-                      ". Restart Claude Code to pick it up."
-                    : "Text-search gate: removed from " +
-                      string.Join(", ", plan.Files.Select(file => file.Path)) + ".");
+                "Claude Code hooks: " + string.Join("; ", effects) + " — in " +
+                string.Join(", ", plan.Files.Select(file => file.Path)) +
+                ". Restart Claude Code to pick this up.");
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
             JournalFail(step, exception.Message);
             AppendLog(
                 report,
-                $"Text-search gate: not changed — {exception.Message} " +
+                $"Claude Code hooks: not changed — {exception.Message} " +
                 "The rest of the installation is unaffected.");
             hasRunError = true;
         }
@@ -1746,6 +1765,9 @@ public sealed class InstallerWizardViewModel : ObservableObject
         builder.AppendLine(residency.ReviewText + StoredResidencyNote());
         builder.AppendLine(agents.ReviewText);
         builder.AppendLine(agents.GateReviewText);
+        // Printed on every run, including one that leaves the client alone: on an update the
+        // clients page is folded away, so this is the only place the effect is stated.
+        builder.AppendLine(agents.WorktreeReviewText);
         builder.AppendLine(UpdateCheckReviewLine());
         if (residency.HasWarning)
         {

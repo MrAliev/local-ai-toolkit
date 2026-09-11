@@ -124,6 +124,21 @@ public static class PageLabels
         "Refuse text searches in Claude Code, including the ones you type",
         "Отклонять текстовый поиск в Claude Code, включая набранный вами");
 
+    /// <summary>
+    /// Under the combo rather than beside a checkbox: this is an effect of configuring the
+    /// client, not a question. It names what changes and where the choice actually lives — the
+    /// folder is per repository, and a machine-wide box could not answer that.
+    /// </summary>
+    public static string WorktreePlacementHint => InstallerCulture.Pick(
+        "A worktree this client opens is created in a worktrees folder beside the repository " +
+        "instead of inside it, where anything that walks the tree — indexing included — would " +
+        "read it as part of the repository. Two lines in settings.json do that, and " +
+        "git config localai.worktreeRoot moves the folder.",
+        "Worktree, который открывает этот клиент, создаётся в папке worktrees рядом с " +
+        "репозиторием, а не внутри него, где всё, что обходит дерево, — включая индексацию — " +
+        "считало бы его частью репозитория. Это делают две строки в settings.json; папку " +
+        "переносит git config localai.worktreeRoot.");
+
     public static string RefuseTextSearchHint => InstallerCulture.Pick(
         "grep, rg, findstr, Select-String and Claude Code's own Grep and Glob are turned down " +
         "before they run, with a message naming the codesearch tools that answer the same " +
