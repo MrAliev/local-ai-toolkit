@@ -597,6 +597,16 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
             Console.IsInputRedirected);
     }
 
+    if (args is ["repo", "prune", .. var pruneArguments])
+    {
+        // Before `repo status` below, which matches ["repo", ..]: a longer pattern first, or
+        // this never runs.
+        return RepoPruneCommand.Execute(
+            pruneArguments,
+            CommandStreams.Standard,
+            ModelResidencyPolicyStore.DefaultRuntimeRoot);
+    }
+
     if (args is ["hook", .. var hookArguments])
     {
         // Git hooks are the only caller of this command, so its failures are read from a hook
@@ -618,6 +628,19 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
                 hookName,
                 LocalAi.Cli.CliUsage.HookEvents));
             return 2;
+        }
+
+        if (hookName == "post-merge")
+        {
+            // Before the sync, and in the same invocation. The sync reads `git worktree list` to
+            // decide what to build overlays for, so a worktree removed first is never given one
+            // it is about to lose — on a pull that changes the generation that is every worktree,
+            // which is minutes of embedding rather than milliseconds. Silent unless it removed
+            // something, and it cannot fail the hook.
+            RepoPruneCommand.OnPostMerge(
+                root,
+                ModelResidencyPolicyStore.DefaultRuntimeRoot,
+                Console.Error);
         }
 
         var result = await CodeSearchSyncCommand.ExecuteAsync(root, Console.Error);
