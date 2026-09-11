@@ -51,7 +51,8 @@ public static class ManagedInstructionBlock
         "refuse. Use when connecting a repository to LocalAi or checking whether it is " +
         "connected, when search_code refuses an overlay or reports STALE, when an index " +
         "needs refreshing or the Git hooks are not keeping it current, when the codesearch " +
-        "or locallm MCP server is unreachable, or when a residency policy, a VRAM " +
+        "or locallm MCP server is unreachable, when a branch needs a working tree of its " +
+        "own, or when a residency policy, a VRAM " +
         "shortfall or a LocalLm report line needs interpreting.";
 
     /// <summary>Where the skill lives, relative to the user's home directory.</summary>
@@ -367,6 +368,21 @@ public static class ManagedInstructionBlock
         `repo status` answers CONFIGURED as soon as a repository is connected, including while
         its first generation is still being built, which is why `index_status` is the question
         that decides whether an answer can be trusted.
+
+        ### A branch worked in its own tree
+
+        A checkout inside the repository is walked by everything that reads the tree, indexing
+        included, so a worktree goes beside it — in a `worktrees` folder next to the repository,
+        one per branch. Ask by name and take the path printed on standard output:
+
+        ```
+        localai-launcher.exe run localai agent worktree create <branch> [--root <repository>]
+        localai-launcher.exe run localai agent worktree remove <path>
+        ```
+
+        An existing tree for that branch is returned rather than duplicated; a branch checked out
+        in the main tree is refused, and so is removing a tree holding uncommitted work. Finished
+        branches and their trees go together with `localai repo prune`.
 
         ### Where the hooks actually live
 

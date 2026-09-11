@@ -90,31 +90,53 @@ public sealed class ClaudeConfigurationAdapter(
     /// What the person chose. False with nothing of ours on disk plans nothing at all — an empty
     /// `hooks: {}` written into somebody's settings is an effect nobody consented to.
     /// </param>
-    public AgentConfigurationPlan PreviewGate(bool register)
+    public AgentConfigurationPlan PreviewGate(bool register) =>
+        PreviewSettings(register, IsWorktreeRegistered());
+
+    /// <summary>
+    /// Everything this product writes into <c>settings.json</c>, as one plan.
+    ///
+    /// One rather than two, and that is forced rather than chosen. A plan is applied against the
+    /// hash of the file it was built from, and an uninstall applies every plan the planner built
+    /// without re-planning between them — so a second plan over the same file fails, every time,
+    /// with "the file changed concurrently". The gate and the worktree pair therefore share a
+    /// before-image and a single splice.
+    ///
+    /// Still apart from the client's own plan, which is the isolation #423 is about: that one
+    /// separates <c>settings.json</c> — a file the person edits by hand, where a stray comma is
+    /// an ordinary event — from <c>.claude.json</c>, so a failure in the cheap one cannot take
+    /// the MCP registration with it.
+    ///
+    /// Removal is the same call with the flag false, because "take it out" and "do not put it in"
+    /// are the same instruction to this file. Each effect is removed before it is considered for
+    /// writing, which is what makes re-registration at a new launcher path idempotent.
+    /// </summary>
+    /// <param name="gate">
+    /// What the person chose about the text-search refusal. False with nothing of ours on disk
+    /// plans nothing at all — an empty `hooks: {}` written into somebody's settings is an effect
+    /// nobody consented to.
+    /// </param>
+    /// <param name="worktree">
+    /// Whether this client should put worktrees beside the repository. Not a question the person
+    /// is asked: it rides on the client being configured at all, because the client has no
+    /// setting of its own for the location and `git config localai.worktreeRoot` is what moves
+    /// the folder.
+    /// </param>
+    public AgentConfigurationPlan PreviewSettings(bool gate, bool worktree)
     {
         var files = new List<AgentConfigurationFilePlan>();
-        var path = GateSettingsPath;
+        var path = SettingsPath;
         var before = ReadExisting(path);
-        var text = AgentConfigurationFileOperations.DecodeUtf8(before);
-        string after;
-        if (register)
-        {
-            // Allowed to throw: the person asked for this, and a settings file that cannot be
-            // read is something they have to be told about rather than something to work around.
-            after = ClaudeHookRegistration.Add(text, GateCommand);
-        }
-        else
-        {
-            // Allowed to throw, exactly as registering is. The swallow that used to be here
-            // reasoned that a file this cannot read holds no entry of ours — which is false: a
-            // trailing comma is enough to refuse the whole document, and the entry may well be
-            // in it. An uninstall then planned nothing, said nothing, and left the hook behind
-            // pointing at the launcher it had just deleted, while the removal screen promised
-            // the hook was going. Throwing is what `PreviewRemoval` already does for the
-            // neighbouring `.claude.json`, so the two files a removal touches fail alike rather
-            // than one of them reporting a success it did not have.
-            after = ClaudeHookRegistration.Remove(text);
-        }
+
+        // Allowed to throw, in both directions. The swallow that used to be here reasoned that a
+        // file this cannot read holds no entry of ours — which is false: a trailing comma is
+        // enough to refuse the whole document, and the entry may well be in it. An uninstall then
+        // planned nothing, said nothing, and left the hook behind pointing at the launcher it had
+        // just deleted, while the removal screen promised the hook was going.
+        var after = AgentConfigurationFileOperations.DecodeUtf8(before);
+        after = Splice(after, ClaudeHook.Gate, gate, GateCommand);
+        after = Splice(after, ClaudeHook.WorktreeCreate, worktree, WorktreeCreateCommand);
+        after = Splice(after, ClaudeHook.WorktreeRemove, worktree, WorktreeRemoveCommand);
 
         if (!before.SequenceEqual(Encoding.UTF8.GetBytes(after)))
         {
@@ -125,7 +147,19 @@ public sealed class ClaudeConfigurationAdapter(
                 timeProvider.GetUtcNow()));
         }
 
-        return new(GateName, files, BuildPreview(files));
+        return new(HooksName, files, BuildPreview(files));
+    }
+
+    /// <summary>
+    /// Takes our entry for one hook out, and puts it back when it is wanted. Removing first is
+    /// what makes this idempotent across launcher paths: the command carries the path, so an
+    /// entry written by an install at another directory is ours by signature and is replaced
+    /// rather than joined by a second.
+    /// </summary>
+    private static string Splice(string text, ClaudeHook hook, bool wanted, string command)
+    {
+        var without = ClaudeHookRegistration.Remove(text, hook);
+        return wanted ? ClaudeHookRegistration.Add(without, hook, command) : without;
     }
 
     /// <summary>
@@ -133,7 +167,7 @@ public sealed class ClaudeConfigurationAdapter(
     /// and reported as separate steps, so two plans under one name would be two lines nobody
     /// could tell apart — and would break every lookup that expects one plan per client.
     /// </summary>
-    public const string GateName = "Claude text-search gate";
+    public const string HooksName = "Claude Code hooks";
 
     /// <summary>
     /// Whether the gate is registered on this machine right now.
@@ -150,7 +184,7 @@ public sealed class ClaudeConfigurationAdapter(
             // install wrote at another directory is still ours, and is still what the run will
             // take out.
             return ClaudeHookRegistration.IsRegistered(
-                AgentConfigurationFileOperations.DecodeUtf8(ReadExisting(GateSettingsPath)));
+                AgentConfigurationFileOperations.DecodeUtf8(ReadExisting(SettingsPath)));
         }
         catch (InvalidOperationException)
         {
@@ -158,18 +192,52 @@ public sealed class ClaudeConfigurationAdapter(
         }
     }
 
-    public string GateSettingsPath => Path.Combine(homeDirectory, ".claude", "settings.json");
+    /// <summary>
+    /// Whether this client is set to put worktrees beside the repository.
+    ///
+    /// True only when both events carry ours. Half a registration is worse than none: a client
+    /// that creates worktrees beside the repository and removes none leaves one behind at every
+    /// session exit, so a run that finds one of the two puts the other back rather than
+    /// reporting the job done.
+    /// </summary>
+    public bool IsWorktreeRegistered()
+    {
+        try
+        {
+            var text = AgentConfigurationFileOperations.DecodeUtf8(ReadExisting(SettingsPath));
+            return ClaudeHookRegistration.IsRegistered(text, ClaudeHook.WorktreeCreate) &&
+                ClaudeHookRegistration.IsRegistered(text, ClaudeHook.WorktreeRemove);
+        }
+        catch (InvalidOperationException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>The file every hook in this class is written into.</summary>
+    public string SettingsPath => Path.Combine(homeDirectory, ".claude", "settings.json");
 
     /// <summary>
     /// Quoted whole, in the shape `CodeSearchTools.IndexCommand` already prints: a hook command is
     /// one command line rather than an executable and a list, and the installation path has
     /// spaces in it on most machines.
     /// </summary>
-    private string GateCommand =>
+    private string GateCommand => Launcher + " run localai agent gate";
+
+    /// <summary>
+    /// No operand: with standard input redirected and nothing on the command line, the command
+    /// reads the client's payload — the branch from `name`, the repository from `cwd`.
+    /// </summary>
+    private string WorktreeCreateCommand => Launcher + " run localai agent worktree create";
+
+    /// <summary>The same, reading `worktree_path` from the removal payload.</summary>
+    private string WorktreeRemoveCommand => Launcher + " run localai agent worktree remove";
+
+    private string Launcher =>
         "\"" + Path.Combine(
             Path.GetFullPath(installationDirectory),
             "launcher",
-            "localai-launcher.exe") + "\" run localai agent gate";
+            "localai-launcher.exe") + "\"";
 
     public Task ApplyAsync(AgentConfigurationPlan plan, CancellationToken cancellationToken) =>
         AgentConfigurationFileOperations.ApplyAsync(plan, readBack, cancellationToken);

@@ -185,10 +185,10 @@ public static class RemovalMatrix
         item switch
         {
             RemovalItem.Binaries => InstallerCulture.Pick(
-                "Removing these is the uninstall. The hook that refuses text searches points " +
-                "at the launcher, so it goes with them.",
-                "Их удаление и есть деинсталляция. Хук, который отклоняет текстовый поиск, " +
-                "указывает на launcher, поэтому уходит вместе с ними."),
+                "Removing these is the uninstall. The hooks LocalAi wrote into Claude Code " +
+                "point at the launcher, so they go with them.",
+                "Их удаление и есть деинсталляция. Хуки, которые LocalAi записал в Claude Code, " +
+                "указывают на launcher, поэтому уходят вместе с ними."),
             RemovalItem.RepositoryIndexes => InstallerCulture.Pick(
                 "Hours of embedding to rebuild; keeping them makes a reinstall pick the " +
                 "repositories back up at once.",
@@ -212,9 +212,9 @@ public static class RemovalMatrix
             // keeps it.
             RemovalItem.ClaudeIntegration => InstallerCulture.Pick(
                 "Server registrations and the managed block; your own text is untouched. The " +
-                "hook that refuses text searches goes with this row or with the binaries.",
+                "hooks LocalAi wrote into settings.json go with this row or with the binaries.",
                 "Регистрации серверов и управляемый блок; ваш собственный текст не трогается. " +
-                "Хук, который отклоняет текстовый поиск, уходит с этой строкой или с " +
+                "Хуки, которые LocalAi записал в settings.json, уходят с этой строкой или с " +
                 "бинарными файлами."),
             RemovalItem.CodexIntegration => InstallerCulture.Pick(
                 "Server registrations, their tool sub-tables, and the managed block.",
