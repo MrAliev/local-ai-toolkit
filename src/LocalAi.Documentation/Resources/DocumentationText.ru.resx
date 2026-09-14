@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <data name="CommitMessages" xml:space="preserve"><value>Сообщения коммитов</value></data>
+  <data name="Examples" xml:space="preserve"><value>Примеры кода</value></data>
+  <data name="Facts" xml:space="preserve"><value>Подтверждённые факты</value></data>
+  <data name="HistoryLimit" xml:space="preserve"><value>Доступная история не объясняет это решение.</value></data>
+  <data name="Overview" xml:space="preserve"><value>Обзор</value></data>
+  <data name="Relationships" xml:space="preserve"><value>Связи</value></data>
+  <data name="ReviewNotice" xml:space="preserve"><value>Автоматические проверки проверяют ссылки и синтаксис. Перед применением пакета прочитайте текст и перевод, чтобы проверить правильность смысла.</value></data>
+  <data name="Snapshot" xml:space="preserve"><value>Снимок</value></data>
+  <data name="Source" xml:space="preserve"><value>Исходный код</value></data>
+  <data name="Why" xml:space="preserve"><value>Почему устроено так</value></data>
+</root>

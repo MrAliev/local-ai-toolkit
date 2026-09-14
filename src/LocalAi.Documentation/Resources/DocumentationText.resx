@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <data name="CommitMessages" xml:space="preserve"><value>Commit messages</value></data>
+  <data name="Examples" xml:space="preserve"><value>Code examples</value></data>
+  <data name="Facts" xml:space="preserve"><value>Verified facts</value></data>
+  <data name="HistoryLimit" xml:space="preserve"><value>Available history does not explain this decision.</value></data>
+  <data name="Overview" xml:space="preserve"><value>Overview</value></data>
+  <data name="Relationships" xml:space="preserve"><value>Relationships</value></data>
+  <data name="ReviewNotice" xml:space="preserve"><value>Automated checks validate references and syntax. Before applying this package, review the prose and its translation for meaning.</value></data>
+  <data name="Snapshot" xml:space="preserve"><value>Snapshot</value></data>
+  <data name="Source" xml:space="preserve"><value>Source</value></data>
+  <data name="Why" xml:space="preserve"><value>Why it is this way</value></data>
+</root>
