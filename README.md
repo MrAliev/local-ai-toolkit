@@ -535,9 +535,10 @@ lai localai translate --in docs\notes.md --from Russian --to English --markdown 
 
 `read_image` and `localai read-image` also accept one PDF, up to 256 MiB.
 Pass its path without other files and without `--together`. Pages are rendered
-and sent to the model one at a time, then their answers are merged. The console
-reports the current page and total; the final notice names the file and the
-number of pages read. PDFs have no eight-page limit.
+and sent to the model one at a time. In OCR mode, each page's reading is returned
+in full, in source order, under a numbered page heading. Other modes merge the
+page answers. The console reports the current page and total; the final notice
+names the file and the number of pages read. PDFs have no eight-page limit.
 
 Pages are rendered at up to 150 DPI, with at most 4 million pixels per page.
 Encrypted or malformed PDFs report an error with the file path; password input
