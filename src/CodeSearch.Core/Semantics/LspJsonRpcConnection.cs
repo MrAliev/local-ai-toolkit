@@ -59,9 +59,6 @@ public sealed class LspJsonRpcConnection : IAsyncDisposable
 
         try
         {
-            await WriteMessageAsync(
-                new { jsonrpc = "2.0", id, method, @params = parameters },
-                cancellationToken);
             using var timeoutSource = new CancellationTokenSource(timeout);
             using var linked = CancellationTokenSource.CreateLinkedTokenSource(
                 cancellationToken,
@@ -69,6 +66,9 @@ public sealed class LspJsonRpcConnection : IAsyncDisposable
                 timeoutSource.Token);
             try
             {
+                await WriteMessageAsync(
+                    new { jsonrpc = "2.0", id, method, @params = parameters },
+                    linked.Token);
                 return await completion.Task.WaitAsync(linked.Token);
             }
             catch (OperationCanceledException) when (
