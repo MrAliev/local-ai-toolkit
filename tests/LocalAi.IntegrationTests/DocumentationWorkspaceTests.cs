@@ -8,6 +8,45 @@ namespace LocalAi.IntegrationTests;
 
 public sealed class DocumentationWorkspaceTests
 {
+    private const string MultilineSource = "public class A\n{\n    public int Value => 42;\n}\n";
+
+    [Theory]
+    [InlineData("\n", "\r\n")]
+    [InlineData("\r\n", "\n")]
+    [InlineData("\r\n", "\r\n")]
+    public void Clean_line_ending_variants_preserve_documentation_inputs(string checkoutEnding, string indexedEnding)
+    {
+        using var baseline = new DocumentationRepositoryFixture(source: MultilineSource);
+        var expected = Assert.Single(DocumentationWorkspace.Capture(baseline.Root, baseline.Runtime,
+            cancellationToken: TestContext.Current.CancellationToken).Units);
+        var source = MultilineSource.Replace("\n", checkoutEnding, StringComparison.Ordinal);
+        using var repo = new DocumentationRepositoryFixture(source: source,
+            indexedSource: MultilineSource.Replace("\n", indexedEnding, StringComparison.Ordinal));
+        Assert.Null(RuntimeIndexLayout.Inspect(repo.Root, repo.Runtime).SemanticDirtyHash);
+
+        var actual = Assert.Single(DocumentationWorkspace.Capture(repo.Root, repo.Runtime,
+            cancellationToken: TestContext.Current.CancellationToken).Units);
+
+        Assert.Equal(expected.SourceHash, actual.SourceHash);
+        Assert.Equal(expected.ReferencesHash, actual.ReferencesHash);
+        Assert.Equal("A", actual.Content.SymbolId);
+        Assert.Equal(source, File.ReadAllText(Path.Combine(repo.Root, "src", "Types.cs")));
+    }
+
+    [Fact]
+    public void Line_ending_tolerance_does_not_accept_a_different_source_body()
+    {
+        using var repo = new DocumentationRepositoryFixture(
+            source: MultilineSource.Replace("42", "43", StringComparison.Ordinal),
+            indexedSource: MultilineSource.Replace("\n", "\r\n", StringComparison.Ordinal));
+        Assert.Null(RuntimeIndexLayout.Inspect(repo.Root, repo.Runtime).SemanticDirtyHash);
+
+        var error = Assert.Throws<DocumentationValidationException>(() => DocumentationWorkspace.Capture(
+            repo.Root, repo.Runtime, cancellationToken: TestContext.Current.CancellationToken));
+
+        Assert.Contains("index_outdated", error.Errors);
+    }
+
     [Fact]
     public void Capture_uses_the_current_index_and_real_scoped_commit_history()
     {
@@ -59,17 +98,18 @@ internal sealed class DocumentationRepositoryFixture : IDisposable
     internal string Root { get; }
     internal string Runtime { get; }
     internal WorkingIndexIdentity Identity { get; }
-    internal DocumentationRepositoryFixture(bool publish = true)
+    internal DocumentationRepositoryFixture(bool publish = true, string source = "public class A {}", string? indexedSource = null)
     {
         Root = Temp.Combine("repository"); Runtime = Temp.Combine("runtime");
         Directory.CreateDirectory(Path.Combine(Root, "src"));
-        File.WriteAllText(Path.Combine(Root, "src", "Types.cs"), "public class A {}");
+        File.WriteAllText(Path.Combine(Root, "src", "Types.cs"), source);
         Git("init", "-b", "main"); Git("config", "user.name", "Fixture"); Git("config", "user.email", "fixture@example.invalid");
+        Git("config", "core.autocrlf", "true"); Git("config", "core.safecrlf", "false");
         Git("add", "."); Git("-c", "core.hooksPath=", "commit", "-m", "initial public API");
         Identity = RuntimeIndexLayout.Inspect(Root, Runtime);
         if (!publish) return;
         var generation = new GenerationIdentity(Identity.RepositoryId, Identity.HeadCommit, Identity.HeadTree, "fixture", 2, 1, 1, 1, 1, SemanticIndex.CurrentVersion);
-        var index = DocumentationInputsTests.Index("public class A {}") with
+        var index = DocumentationInputsTests.Index(indexedSource ?? source) with
         { RepositoryId = Identity.RepositoryId, GenerationId = generation.Id, GitTree = Identity.HeadTree, BaseCommit = Identity.HeadCommit };
         var semantic = Temp.Combine("semantic.sidx"); index.Save(semantic);
         var corpus = Temp.Combine("base.cidx"); File.WriteAllText(corpus, "unused corpus fixture");
