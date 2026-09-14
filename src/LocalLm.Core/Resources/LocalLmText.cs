@@ -64,6 +64,7 @@ public static class LocalLmText
     public static string PdfTooLarge(string path, long limitMiB) => Format(nameof(PdfTooLarge), path, limitMiB);
     public static string PdfUnreadable(string path, string reason) => Format(nameof(PdfUnreadable), path, reason);
     public static string PdfPagesRead(string filename, int count) => Format(nameof(PdfPagesRead), filename, count);
+    public static string PdfPageHeading(int page, int count) => Format(nameof(PdfPageHeading), page, count);
 
     /// <summary>
     /// The counted form's detail, and separate from <see cref="ImagesRead"/> on purpose: one look

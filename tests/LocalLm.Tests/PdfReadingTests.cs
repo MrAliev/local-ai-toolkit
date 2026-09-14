@@ -1,4 +1,5 @@
 using LocalAi.Contracts;
+using System.Globalization;
 using LocalLm.Core;
 using SkiaSharp;
 
@@ -9,6 +10,64 @@ public sealed class PdfReadingTests : IDisposable
     private readonly string root = Path.Combine(Path.GetTempPath(), "localai-pdf-tests-" + Guid.NewGuid().ToString("N"));
 
     public PdfReadingTests() => Directory.CreateDirectory(root);
+
+    [Fact]
+    public async Task Ocr_preserves_both_pages_when_a_text_only_merge_would_invent_a_third()
+    {
+        var client = new RecordingClient
+        {
+            Answer = (number, hasImage) => hasImage
+                ? number == 1 ? "LocalAi RC18 PDF test\nMarker ALPHA-7319\nRepeated line\nRepeated line"
+                    : "Second page\nMarker BETA-4826"
+                : "PDF page 3:\nThird page\nMarker CUBE-4826"
+        };
+
+        var result = await new LocalTasks(client).ReadImageAsync([Pdf(2)], "Transcribe the text",
+            LocalTaskProfile.Ocr, null, false, TestContext.Current.CancellationToken);
+
+        Assert.Equal("PDF page 1 of 2\n\nLocalAi RC18 PDF test\nMarker ALPHA-7319\nRepeated line\nRepeated line\n\n" +
+            "PDF page 2 of 2\n\nSecond page\nMarker BETA-4826", result.Answer);
+        Assert.Equal(2, client.Calls.Count);
+        Assert.All(client.Calls, call => Assert.Single(call.Images));
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(100)]
+    public async Task Ocr_keeps_all_page_readings_even_beyond_the_merge_budget(int count)
+    {
+        var client = new RecordingClient { LongAnswers = true };
+        var observer = new Observer();
+
+        var result = await new LocalTasks(client, observer).ReadImageAsync([Pdf(count)], "Transcribe the text",
+            LocalTaskProfile.Ocr, null, false, TestContext.Current.CancellationToken);
+
+        Assert.Equal(count, client.Calls.Count);
+        Assert.All(client.Calls, call => Assert.Single(call.Images));
+        for (var page = 1; page <= count; page++)
+            Assert.Contains($"PDF page {page} of {count}\n\nreply {page}" + new string('x', 4000), result.Answer, StringComparison.Ordinal);
+        Assert.Equal(TimeSpan.FromSeconds(count), result.Receipt.QueueDuration);
+        Assert.Equal(TimeSpan.FromSeconds(2 * count), result.Receipt.ExecutionDuration);
+        Assert.Equal(Enumerable.Range(1, count).Select(page => new ReadingPdfPage(page, count)), observer.Steps.OfType<ReadingPdfPage>());
+        Assert.Empty(observer.Steps.OfType<MergingPartials>());
+    }
+
+    [Theory]
+    [InlineData("en", "PDF page 1 of 1")]
+    [InlineData("ru", "Страница PDF 1 из 1")]
+    public async Task Ocr_localizes_page_headings_without_translating_the_reading(string language, string heading)
+    {
+        var previous = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(language);
+            var client = new RecordingClient { Answer = (_, _) => "Исходный текст / original text" };
+            var result = await new LocalTasks(client).ReadImageAsync([Pdf(1)], "Transcribe the text",
+                LocalTaskProfile.Ocr, null, false, TestContext.Current.CancellationToken);
+            Assert.Equal(heading + "\n\nИсходный текст / original text", result.Answer);
+        }
+        finally { CultureInfo.CurrentUICulture = previous; }
+    }
 
     [Theory]
     [InlineData(1)]
@@ -90,15 +149,17 @@ public sealed class PdfReadingTests : IDisposable
         Assert.Equal(TimeSpan.FromSeconds(2 * client.Calls.Count), result.Receipt.ExecutionDuration);
     }
 
-    [Fact]
-    public async Task Cancellation_stops_before_the_next_page_and_releases_the_pdf()
+    [Theory]
+    [InlineData(LocalTaskProfile.VisualAnalysis)]
+    [InlineData(LocalTaskProfile.Ocr)]
+    public async Task Cancellation_stops_before_the_next_page_and_releases_the_pdf(LocalTaskProfile profile)
     {
         var path = Pdf(3);
         using var cancelled = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
         var client = new RecordingClient { AfterImage = cancelled.Cancel };
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            new LocalTasks(client).ReadImageAsync([path], "Read the page", null, cancelled.Token));
+            new LocalTasks(client).ReadImageAsync([path], "Read the page", profile, null, false, cancelled.Token));
 
         Assert.Single(client.Calls);
         using var released = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
@@ -200,6 +261,7 @@ public sealed class PdfReadingTests : IDisposable
         public List<Call> Calls { get; } = [];
         public Action? AfterImage { get; init; }
         public bool LongAnswers { get; init; }
+        public Func<int, bool, string>? Answer { get; init; }
 
         public Task<LocalJobResult<string>> RoutedChatAsync(LocalTaskProfile profile, string prompt, string? system,
             IReadOnlyList<string>? imagesBase64, LocalWorkloadMetadata workload, LocalWorkflowHint? workflow,
@@ -207,7 +269,8 @@ public sealed class PdfReadingTests : IDisposable
         {
             Calls.Add(new Call(prompt, imagesBase64?.ToArray() ?? [], workload.TotalImagePixels));
             if (imagesBase64 is { Count: > 0 }) AfterImage?.Invoke();
-            return Task.FromResult(new LocalJobResult<string>($"reply {Calls.Count}" + (LongAnswers ? new string('x', 4000) : ""),
+            return Task.FromResult(new LocalJobResult<string>(Answer?.Invoke(Calls.Count, imagesBase64 is { Count: > 0 }) ??
+                $"reply {Calls.Count}" + (LongAnswers ? new string('x', 4000) : ""),
                 new LocalUsageReceipt(Guid.NewGuid(), "local-lm", "chat", "qwen3.5:9b", TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(2),
                     prompt.Length, prompt.Length / 4, null, null, null,
                     new LocalRoutingReceipt(profile, "qwen3.5:9b", requestedContextTokens, WasCold: false, UsedFallback: false,
