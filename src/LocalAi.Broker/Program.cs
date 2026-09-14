@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using LocalAi.Broker;
 using LocalAi.Contracts;
 
@@ -53,7 +53,7 @@ internal static class BrokerProgram
         try
         {
             var queue = new DurableQueue(runtimeRoot);
-            var catalog = ModelRoutingCatalog.LoadEmbedded();
+            var catalog = ModelRoutingCatalog.Load(runtimeRoot);
             using var transport = new OllamaTransport(
                 ollamaUri,
                 disableThinking: catalog.DisablesThinking);

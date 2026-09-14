@@ -8,6 +8,37 @@ namespace LocalLm.Tests;
 
 public sealed class LocalTasksTests
 {
+    [Fact]
+    public async Task Triage_uses_the_configured_route_and_the_same_catalog_identity_as_the_broker()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "localai-triage-catalog-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var store = new ModelRoutingCatalogStore(root);
+            var document = ModelRoutingCatalogResource.LoadDocument();
+            document = document with
+            {
+                Routes = document.Routes.Select(route => route.Profile == LocalTaskProfile.LogTriage
+                    ? route with { Candidates = ["qwen3.5:9b"], Fallbacks = ["qwen3.5:9b"] }
+                    : route).ToArray(),
+            };
+            Directory.CreateDirectory(Path.GetDirectoryName(store.FilePath)!);
+            File.WriteAllText(store.FilePath, System.Text.Json.JsonSerializer.Serialize(document, LocalAiJson.Strict));
+            var client = new FakeLocalModelClient { CatalogVersion = store.Read().CatalogVersion };
+            var tasks = new LocalTasks(client, new LogTriagePolicyStore(root), modelCatalog: store);
+
+            await tasks.TriageLogAsync(null, "error CS1000", null, null, TestContext.Current.CancellationToken);
+
+            Assert.Equal("qwen3.5:9b", Assert.Single(client.Calls).ModelOverride);
+            Assert.NotEmpty(client.PreflightCatalogVersions);
+            Assert.All(client.PreflightCatalogVersions, version => Assert.Equal(client.CatalogVersion, version));
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+        }
+    }
+
     /// <summary>
     /// A model answers in the language of the material it was given, so a Russian reader asking
     /// about an English build log got English back — their own machine's language never entered
@@ -617,6 +648,10 @@ public sealed class LocalTasksTests
 
     private sealed class FakeLocalModelClient : ILocalModelClient
     {
+        public string CatalogVersion { get; init; } = "1";
+
+        public List<string> PreflightCatalogVersions { get; } = [];
+
         public string Answer { get; init; } = "answer";
 
         public ModelExecutionOutcome? BrokerFailureOutcome { get; init; }
@@ -744,7 +779,7 @@ public sealed class LocalTasksTests
                     [],
                     [],
                     [],
-                    "1",
+                    CatalogVersion,
                     [],
                     [],
                     []),
@@ -757,6 +792,7 @@ public sealed class LocalTasksTests
             CancellationToken cancellationToken = default)
         {
             Preflights.Add(new ModelContextRef(model, contextTokens));
+            PreflightCatalogVersions.Add(catalogVersion);
             if (contextTokens > MaximumPreflightContextTokens)
             {
                 throw new BrokerJobFailedException(

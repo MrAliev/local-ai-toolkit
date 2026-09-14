@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -89,6 +89,7 @@ public static class DoctorCommand
             CheckLauncher(root),
             CheckBroker(root),
             CheckQueue(root),
+            CheckModelCatalog(root),
         };
         checks.AddRange(CheckPolicies(root));
         if (!string.IsNullOrWhiteSpace(repositoryRoot))
@@ -101,6 +102,32 @@ public static class DoctorCommand
         }
 
         return new DoctorReport(checks);
+    }
+
+    private static DoctorCheck CheckModelCatalog(string root)
+    {
+        var store = new ModelRoutingCatalogStore(root);
+        try
+        {
+            var snapshot = store.ReadWithSource();
+            return new DoctorCheck(
+                "model-catalog",
+                DoctorStatus.Ok,
+                snapshot.SourcePath is { } path
+                    ? CliText.ModelCatalogConfigured(path, snapshot.Document.CatalogVersion)
+                    : CliText.ModelCatalogEmbedded(snapshot.Document.CatalogVersion),
+                Facts(("path", store.FilePath),
+                    ("catalogVersion", snapshot.Document.CatalogVersion),
+                    ("fileUsed", snapshot.SourcePath is not null)));
+        }
+        catch (InvalidDataException failure)
+        {
+            return new DoctorCheck(
+                "model-catalog",
+                DoctorStatus.Failed,
+                CliText.ModelCatalogUnreadable(store.FilePath, failure.InnerException?.Message ?? failure.Message),
+                Facts(("path", store.FilePath), ("fileUsed", false)));
+        }
     }
 
     private static DoctorCheck CheckInstalledVersion(string root)
