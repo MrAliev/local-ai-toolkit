@@ -5,6 +5,7 @@
     <ApplicationIcon>..\..\assets\localai.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../LocalAi.Documentation/LocalAi.Documentation.csproj" />
     <ProjectReference Include="..\CodeSearch.Core\CodeSearch.Core.csproj" />
     <ProjectReference Include="..\LocalAi.Repository\LocalAi.Repository.csproj" />
     <ProjectReference Include="..\LocalAi.Contracts\LocalAi.Contracts.csproj" />

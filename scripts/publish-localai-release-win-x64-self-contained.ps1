@@ -218,6 +218,7 @@ $artifactMap = [ordered]@{
     # selects win-x64; copy one shared pair beside both consumers in the version directory.
     "pdfium.dll"          = "LocalAi.Cli/pdfium.dll"
     "libSkiaSharp.dll"    = "LocalAi.Cli/libSkiaSharp.dll"
+    "libHarfBuzzSharp.dll" = "LocalAi.Cli/libHarfBuzzSharp.dll"
 }
 foreach ($entry in $artifactMap.GetEnumerator()) {
     $source = Join-Path $ResolvedPublishRoot $entry.Value
@@ -230,6 +231,7 @@ foreach ($entry in $artifactMap.GetEnumerator()) {
 
 $pdfNotices = Join-Path $Root "THIRD-PARTY-NOTICES-PDF.txt"
 Copy-Item -LiteralPath $pdfNotices -Destination (Join-Path $artifacts "THIRD-PARTY-NOTICES-PDF.txt")
+Copy-Item -LiteralPath (Join-Path $Root "THIRD-PARTY-NOTICES-DOCUMENTATION.txt") -Destination (Join-Path $artifacts "THIRD-PARTY-NOTICES-DOCUMENTATION.txt")
 
 $package = Join-Path $release "localai-package.zip"
 dotnet run --project $SignerProject `
