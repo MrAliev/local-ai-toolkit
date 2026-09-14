@@ -335,7 +335,29 @@ public sealed class LocalTasks
         // because "image 1 of 1" is a counter that never counts.
         var inOneCall = together || frameCount == 1;
 
-        if (inOneCall)
+        if (isPdf && profile == LocalTaskProfile.Ocr)
+        {
+            // OCR is a transcription: a generative text-only merge can omit real pages or
+            // invent new ones (#575). Keep each page's reading intact and let the PDF's own
+            // page count determine its heading. Only one encoded page is held at a time.
+            var transcript = new StringBuilder();
+            LocalUsageReceipt? receipt = null;
+            for (var index = 0; index < frameCount; index++)
+            {
+                ct.ThrowIfCancellationRequested();
+                observer?.Report(new ReadingPdfPage(index + 1, frameCount));
+                var one = await AskAsync(question, [await EncodeAsync(index, ct)],
+                    pixels[index], index, frameCount);
+                ct.ThrowIfCancellationRequested();
+                if (index != 0) transcript.Append("\n\n");
+                transcript.Append(LocalLmText.PdfPageHeading(index + 1, frameCount))
+                    .Append("\n\n").Append(one.Value);
+                receipt = one.Receipt;
+            }
+            result = new LocalJobResult<string>(transcript.ToString(),
+                receipt ?? throw new InvalidOperationException(LocalLmText.LogTriageNoReceipt));
+        }
+        else if (inOneCall)
         {
             if (isPdf) observer?.Report(new ReadingPdfPage(1, 1));
             var batch = new List<string>(frameCount);
