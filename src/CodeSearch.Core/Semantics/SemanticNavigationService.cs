@@ -242,6 +242,9 @@ public sealed class SemanticNavigationService
     /// neither contains the other, and the caller gets the same degradation notice rather
     /// than a coin flip. Only declarations count: resolving a position to a reference that
     /// merely happens to share the line would answer about a different symbol entirely.
+    /// The chunk can start before its identifier: C# attributes belong to the declaration's
+    /// enclosing range. Its first line therefore counts too, without treating every line of
+    /// a body as a request for the enclosing member or overriding an exact attribute reference.
     /// </remarks>
     private static SemanticOccurrence? SoleDeclarationOn(
         List<SemanticOccurrence> occurrences,
@@ -251,7 +254,7 @@ public sealed class SemanticNavigationService
         foreach (var occurrence in occurrences)
         {
             if (occurrence.Roles.HasFlag(SemanticOccurrenceRoles.Definition) &&
-                occurrence.Range.StartLine == line &&
+                (occurrence.Range.StartLine == line || occurrence.EnclosingRange?.StartLine == line) &&
                 !declarations.Any(existing => string.Equals(
                     existing.SymbolId,
                     occurrence.SymbolId,
