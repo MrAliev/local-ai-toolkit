@@ -91,6 +91,63 @@ public sealed class WhatChangedSinceTheIndexWasBuiltTests : IDisposable
         Assert.Null(RuntimeIndexLayout.GetTextAt(_root, _baseTree, "Fresh.cs"));
     }
 
+    [Theory]
+    [InlineData("TokenService.cs", "edit")]
+    [InlineData("TokenService.cs", "add")]
+    [InlineData("TokenService.cs", "delete")]
+    [InlineData("SecretStore.cs", "edit")]
+    [InlineData("Credentials.cs", "edit")]
+    public void Tracked_source_changes_invalidate_both_indexes_despite_sensitive_names(
+        string name,
+        string change)
+    {
+        if (change != "add")
+        {
+            Write(name, "public class Service { public int Value => 1; }");
+            Git("add", name);
+            Git("commit", "-m", "tracked source");
+            _baseTree = Git("rev-parse", "HEAD^{tree}").Trim();
+            Assert.Contains(name, FileScanner.Enumerate(_root));
+        }
+
+        if (change == "delete")
+        {
+            File.Delete(Path.Combine(_root, name));
+        }
+        else
+        {
+            Write(name, "public class Service { public int Value => 2; }");
+            if (change == "add")
+            {
+                Git("add", name);
+            }
+            Assert.Contains(name, FileScanner.Enumerate(_root));
+        }
+
+        Assert.Equal([name], RuntimeIndexLayout.GetDirtyPaths(_root));
+        Assert.Equal([name], RuntimeIndexLayout.GetPathsChangedSince(_root, _baseTree));
+        var identity = RuntimeIndexLayout.Inspect(_root, Path.Combine(_root, "runtime"));
+        Assert.NotNull(identity.DirtyHash);
+        Assert.NotNull(identity.SemanticDirtyHash);
+
+        Git("add", "-A");
+        Git("commit", "-m", "changed source");
+        Assert.Empty(RuntimeIndexLayout.GetDirtyPaths(_root));
+        Assert.Equal([name], RuntimeIndexLayout.GetPathsChangedSince(_root, _baseTree));
+    }
+
+    [Fact]
+    public void Untracked_sensitive_files_remain_outside_the_dirty_corpus()
+    {
+        Write("credentials.json", "{\"fixture\":true}");
+        Write("TokenService.cs", "public class TokenService { }");
+        Write(".gitignore", "Ignored.cs");
+        Write("Ignored.cs", "public class Ignored { }");
+
+        Assert.Empty(RuntimeIndexLayout.GetDirtyPaths(_root));
+        Assert.Empty(RuntimeIndexLayout.GetPathsChangedSince(_root, _baseTree)!);
+    }
+
     private void Write(string relative, string content) =>
         File.WriteAllText(Path.Combine(_root, relative), content + Environment.NewLine);
 
@@ -109,9 +166,11 @@ public sealed class WhatChangedSinceTheIndexWasBuiltTests : IDisposable
         }
 
         using var process = Process.Start(start)!;
-        var output = process.StandardOutput.ReadToEnd();
+        var output = process.StandardOutput.ReadToEndAsync();
+        var error = process.StandardError.ReadToEndAsync();
         process.WaitForExit();
-        return output;
+        Assert.True(process.ExitCode == 0, error.GetAwaiter().GetResult());
+        return output.GetAwaiter().GetResult();
     }
 
     public void Dispose()
