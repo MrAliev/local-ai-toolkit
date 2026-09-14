@@ -8,6 +8,7 @@
     <PackageReference Include="xunit.v3" Version="4.0.0" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\src\LocalAi.Documentation\LocalAi.Documentation.csproj" />
     <ProjectReference Include="..\..\src\LocalAi.Cli\LocalAi.Cli.csproj" />
     <ProjectReference Include="..\..\src\LocalAi.Repository\LocalAi.Repository.csproj" />
   </ItemGroup>

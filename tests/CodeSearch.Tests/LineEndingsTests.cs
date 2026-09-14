@@ -21,11 +21,11 @@ namespace CodeSearch.Tests;
 public sealed class LineEndingsTests
 {
     /// <summary>
-    /// Every binary this repository tracks: eight images, the installer's icon, and the release
-    /// signing key. Named rather than detected, so a source file that becomes unreadable to git is
+    /// Every binary this repository tracks: images, the installer's icon, the release signing
+    /// key and bundled TrueType fonts. Named rather than detected, so a source file that becomes unreadable to git is
     /// a failure here rather than a new entry in a heuristic.
     /// </summary>
-    private static readonly string[] BinaryExtensions = [".png", ".ico", ".der"];
+    private static readonly string[] BinaryExtensions = [".png", ".ico", ".der", ".ttf"];
 
     [Fact]
     public void Git_stores_every_source_and_document_as_text()

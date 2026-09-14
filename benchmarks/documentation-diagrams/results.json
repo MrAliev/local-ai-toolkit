@@ -1,0 +1,418 @@
+[
+  {
+    "Diagram": 1,
+    "Model": "qwen3.5:9b",
+    "Passed": true,
+    "Failures": [],
+    "ExecutionDuration": "00:00:16.4509230",
+    "QueueDuration": "00:00:02.2352037",
+    "Svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"700\" viewBox=\"0 0 1200 700\">\n  <rect width=\"1200\" height=\"700\" fill=\"white\"/>\n  \n  <!-- Node n0 -->\n  <g data-symbol-id=\"n0\">\n    <rect x=\"50\" y=\"350\" width=\"280\" height=\"40\" rx=\"10\" ry=\"10\" stroke=\"black\" stroke-width=\"2\" fill=\"white\"/>\n    <text x=\"70\" y=\"377\" font-family=\"sans-serif\" font-size=\"16\" text-anchor=\"middle\">LocalTasks.ReadImageAsync</text>\n  </g>\n\n  <!-- Node n1 -->\n  <g data-symbol-id=\"n1\">\n    <rect x=\"580\" y=\"230\" width=\"280\" height=\"40\" rx=\"10\" ry=\"10\" stroke=\"black\" stroke-width=\"2\" fill=\"white\"/>\n    <text x=\"620\" y=\"257\" font-family=\"sans-serif\" font-size=\"16\" text-anchor=\"middle\">PdfPageReader.OpenAsync</text>\n  </g>\n\n  <!-- Node n2 -->\n  <g data-symbol-id=\"n2\">\n    <rect x=\"580\" y=\"430\" width=\"340\" height=\"40\" rx=\"10\" ry=\"10\" stroke=\"black\" stroke-width=\"2\" fill=\"white\"/>\n    <text x=\"650\" y=\"457\" font-family=\"sans-serif\" font-size=\"14\" text-anchor=\"middle\">ILocalModelClient.RoutedChatAsync</text>\n  </g>\n\n  <!-- Node n3 -->\n  <g data-symbol-id=\"n3\">\n    <rect x=\"980\" y=\"350\" width=\"160\" height=\"40\" rx=\"10\" ry=\"10\" stroke=\"black\" stroke-width=\"2\" fill=\"white\"/>\n    <text x=\"1058\" y=\"377\" font-family=\"sans-serif\" font-size=\"16\" text-anchor=\"middle\">HierarchicalReducer</text>\n  </g>\n\n  <!-- Edge n0 -> n1 -->\n  <path data-from=\"n0\" data-to=\"n1\" d=\"M 330 370 L 580 290\" fill=\"none\" stroke=\"black\" stroke-width=\"2\"/>\n  <polygon data-from=\"n0\" data-to=\"n1\" points=\"600,280 580,290 600,300\" fill=\"black\" transform=\"translate(20, -5)\"/>\n\n  <!-- Edge n0 -> n2 -->\n  <path data-from=\"n0\" data-to=\"n2\" d=\"M 330 370 L 580 470\" fill=\"none\" stroke=\"black\" stroke-width=\"2\"/>\n  <polygon data-from=\"n0\" data-to=\"n2\" points=\"600,470 580,460 600,450\" fill=\"black\" transform=\"translate(20, -5)\"/>\n\n  <!-- Edge n0 -> n3 -->\n  <path data-from=\"n0\" data-to=\"n3\" d=\"M 330 370 L 1080 390\" fill=\"none\" stroke=\"black\" stroke-width=\"2\"/>\n  <polygon data-from=\"n0\" data-to=\"n3\" points=\"1090,390 1080,370 1090,350\" fill=\"black\" transform=\"translate(20, -5)\"/>\n</svg>"
+  },
+  {
+    "Diagram": 1,
+    "Model": "gpt-oss:20b",
+    "Passed": true,
+    "Failures": [],
+    "ExecutionDuration": "00:00:25.4823468",
+    "QueueDuration": "00:00:02.2318141",
+    "Svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"700\" viewBox=\"0 0 1200 700\">\n  <!-- White background -->\n  <rect width=\"1200\" height=\"700\" fill=\"white\"/>\n  <!-- Edges -->\n  <g>\n    <line x1=\"200\" y1=\"350\" x2=\"790\" y2=\"200\" stroke=\"black\" stroke-width=\"2\" data-from=\"n0\" data-to=\"n1\"/>\n    <polygon points=\"800,200 790,195 790,205\" fill=\"black\" data-from=\"n0\" data-to=\"n1\"/>\n    <line x1=\"200\" y1=\"350\" x2=\"790\" y2=\"350\" stroke=\"black\" stroke-width=\"2\" data-from=\"n0\" data-to=\"n2\"/>\n    <polygon points=\"800,350 790,345 790,355\" fill=\"black\" data-from=\"n0\" data-to=\"n2\"/>\n    <line x1=\"200\" y1=\"350\" x2=\"790\" y2=\"500\" stroke=\"black\" stroke-width=\"2\" data-from=\"n0\" data-to=\"n3\"/>\n    <polygon points=\"800,500 790,495 790,505\" fill=\"black\" data-from=\"n0\" data-to=\"n3\"/>\n  </g>\n  <!-- Nodes -->\n  <g data-symbol-id=\"n0\">\n    <rect x=\"100\" y=\"320\" width=\"200\" height=\"60\" fill=\"lightgrey\" stroke=\"black\"/>\n    <text x=\"200\" y=\"350\" font-family=\"Arial\" font-size=\"18\" fill=\"black\" text-anchor=\"middle\" alignment-baseline=\"middle\">LocalTasks.ReadImageAsync</text>\n  </g>\n  <g data-symbol-id=\"n1\">\n    <rect x=\"700\" y=\"170\" width=\"200\" height=\"60\" fill=\"lightgrey\" stroke=\"black\"/>\n    <text x=\"800\" y=\"200\" font-family=\"Arial\" font-size=\"18\" fill=\"black\" text-anchor=\"middle\" alignment-baseline=\"middle\">PdfPageReader.OpenAsync</text>\n  </g>\n  <g data-symbol-id=\"n2\">\n    <rect x=\"700\" y=\"320\" width=\"200\" height=\"60\" fill=\"lightgrey\" stroke=\"black\"/>\n    <text x=\"800\" y=\"350\" font-family=\"Arial\" font-size=\"18\" fill=\"black\" text-anchor=\"middle\" alignment-baseline=\"middle\">ILocalModelClient.RoutedChatAsync</text>\n  </g>\n  <g data-symbol-id=\"n3\">\n    <rect x=\"700\" y=\"470\" width=\"200\" height=\"60\" fill=\"lightgrey\" stroke=\"black\"/>\n    <text x=\"800\" y=\"500\" font-family=\"Arial\" font-size=\"18\" fill=\"black\" text-anchor=\"middle\" alignment-baseline=\"middle\">HierarchicalReducer</text>\n  </g>\n</svg>"
+  },
+  {
+    "Diagram": 2,
+    "Model": "qwen3.5:9b",
+    "Passed": false,
+    "Failures": [
+      "edges"
+    ],
+    "ExecutionDuration": "00:00:13.9541351",
+    "QueueDuration": "00:00:02.4190917",
+    "Svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"700\" viewBox=\"0 0 1200 700\">\n  <rect x=\"0\" y=\"0\" width=\"1200\" height=\"700\" fill=\"white\"/>\n\n  <!-- Edge n0 -> n1 -->\n  <line x1=\"300\" y1=\"100\" x2=\"600\" y2=\"350\" stroke=\"black\" stroke-width=\"2\" fill=\"none\"/>\n  <polygon points=\"610,350 590,340 590,360\" fill=\"black\"/>\n\n  <!-- Edge n0 -> n2 -->\n  <line x1=\"300\" y1=\"100\" x2=\"900\" y2=\"550\" stroke=\"black\" stroke-width=\"2\" fill=\"none\"/>\n  <polygon points=\"910,550 890,540 890,560\" fill=\"black\"/>\n\n  <!-- Node n0 -->\n  <g data-symbol-id=\"n0\">\n    <rect x=\"220\" y=\"20\" width=\"160\" height=\"60\" rx=\"10\" ry=\"10\" fill=\"#f8f9fa\" stroke=\"#333\" stroke-width=\"2\"/>\n    <text x=\"300\" y=\"55\" font-family=\"Arial\" font-size=\"18\" text-anchor=\"middle\" dominant-baseline=\"middle\">PdfPageReader.OpenAsync</text>\n  </g>\n\n  <!-- Node n1 -->\n  <g data-symbol-id=\"n1\">\n    <rect x=\"520\" y=\"270\" width=\"160\" height=\"60\" rx=\"10\" ry=\"10\" fill=\"#f8f9fa\" stroke=\"#333\" stroke-width=\"2\"/>\n    <text x=\"600\" y=\"305\" font-family=\"Arial\" font-size=\"18\" text-anchor=\"middle\" dominant-baseline=\"middle\">Conversion.GetPageSizes</text>\n  </g>\n\n  <!-- Node n2 -->\n  <g data-symbol-id=\"n2\">\n    <rect x=\"820\" y=\"470\" width=\"160\" height=\"60\" rx=\"10\" ry=\"10\" fill=\"#f8f9fa\" stroke=\"#333\" stroke-width=\"2\"/>\n    <text x=\"900\" y=\"505\" font-family=\"Arial\" font-size=\"18\" text-anchor=\"middle\" dominant-baseline=\"middle\">BoundedRaster</text>\n  </g>\n\n</svg>"
+  },
+  {
+    "Diagram": 2,
+    "Model": "gpt-oss:20b",
+    "Passed": true,
+    "Failures": [],
+    "ExecutionDuration": "00:00:24.3240600",
+    "QueueDuration": "00:00:02.2210543",
+    "Svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"700\" viewBox=\"0 0 1200 700\">\n  <g data-symbol-id=\"n0\">\n    <rect x=\"475\" y=\"115\" width=\"250\" height=\"70\" fill=\"white\" stroke=\"black\"/>\n    <text x=\"600\" y=\"150\" font-size=\"24\" text-anchor=\"middle\" dominant-baseline=\"middle\">PdfPageReader.OpenAsync</text>\n  </g>\n  <g data-symbol-id=\"n1\">\n    <rect x=\"300\" y=\"370\" width=\"200\" height=\"60\" fill=\"white\" stroke=\"black\"/>\n    <text x=\"400\" y=\"400\" font-size=\"24\" text-anchor=\"middle\" dominant-baseline=\"middle\">Conversion.GetPageSizes</text>\n  </g>\n  <g data-symbol-id=\"n2\">\n    <rect x=\"700\" y=\"370\" width=\"200\" height=\"60\" fill=\"white\" stroke=\"black\"/>\n    <text x=\"800\" y=\"400\" font-size=\"24\" text-anchor=\"middle\" dominant-baseline=\"middle\">BoundedRaster</text>\n  </g>\n  <path d=\"M600 185 L400 340\" fill=\"none\" stroke=\"black\" data-from=\"n0\" data-to=\"n1\"/>\n  <polygon points=\"400,340 395,335 395,345\" fill=\"black\"/>\n  <path d=\"M600 185 L800 340\" fill=\"none\" stroke=\"black\" data-from=\"n0\" data-to=\"n2\"/>\n  <polygon points=\"800,340 805,335 805,345\" fill=\"black\"/>\n</svg>"
+  },
+  {
+    "Diagram": 3,
+    "Model": "qwen3.5:9b",
+    "Passed": false,
+    "Failures": [
+      "edges"
+    ],
+    "ExecutionDuration": "00:00:17.2478451",
+    "QueueDuration": "00:00:02.2239484",
+    "Svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"700\" viewBox=\"0 0 1200 700\">\n  <rect x=\"0\" y=\"0\" width=\"1200\" height=\"700\" fill=\"white\"/>\n\n  <!-- Node n0: PdfPageReader.RenderAsync -->\n  <g data-symbol-id=\"n0\">\n    <rect x=\"150\" y=\"200\" width=\"300\" height=\"60\" rx=\"10\" ry=\"10\" fill=\"#f9f9f9\" stroke=\"#333\" stroke-width=\"2\"/>\n    <text x=\"300\" y=\"245\" font-family=\"Arial, sans-serif\" font-size=\"18\" text-anchor=\"middle\" dominant-baseline=\"middle\">PdfPageReader.RenderAsync</text>\n  </g>\n\n  <!-- Node n1: Conversion.ToImagesAsync -->\n  <g data-symbol-id=\"n1\">\n    <rect x=\"500\" y=\"100\" width=\"300\" height=\"60\" rx=\"10\" ry=\"10\" fill=\"#f9f9f9\" stroke=\"#333\" stroke-width=\"2\"/>\n    <text x=\"650\" y=\"145\" font-family=\"Arial, sans-serif\" font-size=\"18\" text-anchor=\"middle\" dominant-baseline=\"middle\">Conversion.ToImagesAsync</text>\n  </g>\n\n  <!-- Node n2: SKImage.FromBitmap -->\n  <g data-symbol-id=\"n2\">\n    <rect x=\"500\" y=\"340\" width=\"300\" height=\"60\" rx=\"10\" ry=\"10\" fill=\"#f9f9f9\" stroke=\"#333\" stroke-width=\"2\"/>\n    <text x=\"650\" y=\"385\" font-family=\"Arial, sans-serif\" font-size=\"18\" text-anchor=\"middle\" dominant-baseline=\"middle\">SKImage.FromBitmap</text>\n  </g>\n\n  <!-- Node n3: SKImage.Encode -->\n  <g data-symbol-id=\"n3\">\n    <rect x=\"900\" y=\"240\" width=\"300\" height=\"60\" rx=\"10\" ry=\"10\" fill=\"#f9f9f9\" stroke=\"#333\" stroke-width=\"2\"/>\n    <text x=\"1050\" y=\"285\" font-family=\"Arial, sans-serif\" font-size=\"18\" text-anchor=\"middle\" dominant-baseline=\"middle\">SKImage.Encode</text>\n  </g>\n\n  <!-- Edge n0 -> n1 -->\n  <path d=\"M 450 230 L 500 160\" fill=\"none\" stroke=\"#333\" stroke-width=\"2\"/>\n  <polygon points=\"530,145 520,160 530,175 540,160\" fill=\"#333\"/>\n\n  <!-- Edge n0 -> n2 -->\n  <path d=\"M 450 230 L 500 310\" fill=\"none\" stroke=\"#333\" stroke-width=\"2\"/>\n  <polygon points=\"530,325 520,310 530,295 540,310\" fill=\"#333\"/>\n\n  <!-- Edge n0 -> n3 -->\n  <path d=\"M 450 230 L 900 240\" fill=\"none\" stroke=\"#333\" stroke-width=\"2\"/>\n  <polygon points=\"970,260 960,275 970,290 980,275\" fill=\"#333\"/>\n\n</svg>"
+  },
+  {
+    "Diagram": 3,
+    "Model": "gpt-oss:20b",
+    "Passed": false,
+    "Failures": [
+      "edges"
+    ],
+    "ExecutionDuration": "00:00:33.8445993",
+    "QueueDuration": "00:00:02.2233327",
+    "Svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"700\" viewBox=\"0 0 1200 700\">\n  <rect width=\"100%\" height=\"100%\" fill=\"white\"/>\n  <!-- Nodes -->\n  <g data-symbol-id=\"n0\">\n    <rect x=\"320\" y=\"75\" width=\"260\" height=\"50\" stroke=\"black\" fill=\"none\"/>\n    <text x=\"450\" y=\"100\" font-size=\"18\" text-anchor=\"middle\" dominant-baseline=\"middle\">PdfPageReader.RenderAsync</text>\n  </g>\n  <g data-symbol-id=\"n1\">\n    <rect x=\"170\" y=\"275\" width=\"260\" height=\"50\" stroke=\"black\" fill=\"none\"/>\n    <text x=\"300\" y=\"300\" font-size=\"18\" text-anchor=\"middle\" dominant-baseline=\"middle\">Conversion.ToImagesAsync</text>\n  </g>\n  <g data-symbol-id=\"n2\">\n    <rect x=\"320\" y=\"275\" width=\"260\" height=\"50\" stroke=\"black\" fill=\"none\"/>\n    <text x=\"450\" y=\"300\" font-size=\"18\" text-anchor=\"middle\" dominant-baseline=\"middle\">SKImage.FromBitmap</text>\n  </g>\n  <g data-symbol-id=\"n3\">\n    <rect x=\"470\" y=\"275\" width=\"260\" height=\"50\" stroke=\"black\" fill=\"none\"/>\n    <text x=\"600\" y=\"300\" font-size=\"18\" text-anchor=\"middle\" dominant-baseline=\"middle\">SKImage.Encode</text>\n  </g>\n  <!-- Edges -->\n  <line x1=\"450\" y1=\"100\" x2=\"300\" y2=\"300\" stroke=\"black\"/>\n  <polygon points=\"0,0 -5,-5 -5,5\" transform=\"rotate(125.537, 300, 300)\" fill=\"black\"/>\n  <line x1=\"450\" y1=\"100\" x2=\"450\" y2=\"300\" stroke=\"black\"/>\n  <polygon points=\"0,0 -5,-5 -5,5\" transform=\"rotate(90, 450, 300)\" fill=\"black\"/>\n  <line x1=\"450\" y1=\"100\" x2=\"600\" y2=\"300\" stroke=\"black\"/>\n  <polygon points=\"0,0 -5,-5 -5,5\" transform=\"rotate(53.130, 600, 300)\" fill=\"black\"/>\n</svg>"
+  },
+  {
+    "Diagram": 4,
+    "Model": "qwen3.5:9b",
+    "Passed": true,
+    "Failures": [],
+    "ExecutionDuration": "00:00:13.8780207",
+    "QueueDuration": "00:00:02.2234456",
+    "Svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"700\" viewBox=\"0 0 1200 700\">\n  <rect x=\"0\" y=\"0\" width=\"1200\" height=\"700\" fill=\"white\"/>\n  \n  <!-- Node n0: PdfPageReader.ReadNextAsync -->\n  <g data-symbol-id=\"n0\">\n    <rect x=\"50\" y=\"200\" width=\"360\" height=\"120\" rx=\"10\" ry=\"10\" stroke=\"black\" fill=\"white\"/>\n    <text x=\"230\" y=\"275\" font-family=\"sans-serif\" font-size=\"18\" text-anchor=\"middle\">PdfPageReader.ReadNextAsync</text>\n  </g>\n\n  <!-- Node n1: RenderAsync -->\n  <g data-symbol-id=\"n1\">\n    <rect x=\"600\" y=\"200\" width=\"360\" height=\"120\" rx=\"10\" ry=\"10\" stroke=\"black\" fill=\"white\"/>\n    <text x=\"780\" y=\"275\" font-family=\"sans-serif\" font-size=\"18\" text-anchor=\"middle\">RenderAsync</text>\n  </g>\n\n  <!-- Node n2: MoveNextAsync -->\n  <g data-symbol-id=\"n2\">\n    <rect x=\"600\" y=\"400\" width=\"360\" height=\"120\" rx=\"10\" ry=\"10\" stroke=\"black\" fill=\"white\"/>\n    <text x=\"780\" y=\"475\" font-family=\"sans-serif\" font-size=\"18\" text-anchor=\"middle\">MoveNextAsync</text>\n  </g>\n\n  <!-- Edge n0 -> n1 -->\n  <line data-from=\"n0\" data-to=\"n1\" x1=\"410\" y1=\"260\" x2=\"600\" y2=\"260\" stroke=\"black\" fill=\"none\"/>\n  <polygon points=\"610,260 605,250 615,250\" fill=\"black\"/>\n\n  <!-- Edge n0 -> n2 -->\n  <line data-from=\"n0\" data-to=\"n2\" x1=\"410\" y1=\"340\" x2=\"600\" y2=\"340\" stroke=\"black\" fill=\"none\"/>\n  <polygon points=\"610,340 605,330 615,330\" fill=\"black\"/>\n\n</svg>"
+  },
+  {
+    "Diagram": 4,
+    "Model": "gpt-oss:20b",
+    "Passed": true,
+    "Failures": [],
+    "ExecutionDuration": "00:00:28.8439786",
+    "QueueDuration": "00:00:02.2320453",
+    "Svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"700\" viewBox=\"0 0 1200 700\">\n  <rect width=\"1200\" height=\"700\" fill=\"white\"/>\n  <!-- Node n0 -->\n  <g data-symbol-id=\"n0\">\n    <rect x=\"100\" y=\"320\" width=\"200\" height=\"60\" fill=\"lightgray\" stroke=\"black\"/>\n    <text x=\"200\" y=\"350\" font-size=\"20\" font-family=\"sans-serif\" text-anchor=\"middle\" dominant-baseline=\"middle\">PdfPageReader.ReadNextAsync</text>\n  </g>\n  <!-- Node n1 -->\n  <g data-symbol-id=\"n1\">\n    <rect x=\"700\" y=\"170\" width=\"200\" height=\"60\" fill=\"lightgray\" stroke=\"black\"/>\n    <text x=\"800\" y=\"200\" font-size=\"20\" font-family=\"sans-serif\" text-anchor=\"middle\" dominant-baseline=\"middle\">RenderAsync</text>\n  </g>\n  <!-- Node n2 -->\n  <g data-symbol-id=\"n2\">\n    <rect x=\"700\" y=\"470\" width=\"200\" height=\"60\" fill=\"lightgray\" stroke=\"black\"/>\n    <text x=\"800\" y=\"500\" font-size=\"20\" font-family=\"sans-serif\" text-anchor=\"middle\" dominant-baseline=\"middle\">MoveNextAsync</text>\n  </g>\n  <!-- Edge n0->n1 -->\n  <line data-from=\"n0\" data-to=\"n1\" x1=\"300\" y1=\"350\" x2=\"700\" y2=\"200\" stroke=\"black\" fill=\"none\"/>\n  <polygon points=\"700,200 690,195 690,205\" fill=\"black\"/>\n  <!-- Edge n0->n2 -->\n  <line data-from=\"n0\" data-to=\"n2\" x1=\"300\" y1=\"350\" x2=\"700\" y2=\"500\" stroke=\"black\" fill=\"none\"/>\n  <polygon points=\"700,500 690,495 690,505\" fill=\"black\"/>\n</svg>"
+  },
+  {
+    "Diagram": 5,
+    "Model": "qwen3.5:9b",
+    "Passed": true,
+    "Failures": [],
+    "ExecutionDuration": "00:00:17.8308104",
+    "QueueDuration": "00:00:02.2267108",
+    "Svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"700\" viewBox=\"0 0 1200 700\">\n  <rect width=\"1200\" height=\"700\" fill=\"white\"/>\n  \n  <!-- Node n0: LocalRunProgress.Report -->\n  <g data-symbol-id=\"n0\">\n    <rect x=\"100\" y=\"250\" width=\"200\" height=\"60\" rx=\"10\" ry=\"10\" fill=\"#f8f9fa\" stroke=\"#333\" stroke-width=\"2\"/>\n    <text x=\"200\" y=\"295\" font-family=\"Arial\" font-size=\"18\" text-anchor=\"middle\" dominant-baseline=\"middle\">LocalRunProgress.Report</text>\n  </g>\n\n  <!-- Node n1: ReadingPdfPage -->\n  <g data-symbol-id=\"n1\">\n    <rect x=\"400\" y=\"150\" width=\"200\" height=\"60\" rx=\"10\" ry=\"10\" fill=\"#f8f9fa\" stroke=\"#333\" stroke-width=\"2\"/>\n    <text x=\"500\" y=\"195\" font-family=\"Arial\" font-size=\"18\" text-anchor=\"middle\" dominant-baseline=\"middle\">ReadingPdfPage</text>\n  </g>\n\n  <!-- Node n2: ReadingImage -->\n  <g data-symbol-id=\"n2\">\n    <rect x=\"400\" y=\"350\" width=\"200\" height=\"60\" rx=\"10\" ry=\"10\" fill=\"#f8f9fa\" stroke=\"#333\" stroke-width=\"2\"/>\n    <text x=\"500\" y=\"395\" font-family=\"Arial\" font-size=\"18\" text-anchor=\"middle\" dominant-baseline=\"middle\">ReadingImage</text>\n  </g>\n\n  <!-- Node n3: ReportCounted -->\n  <g data-symbol-id=\"n3\">\n    <rect x=\"800\" y=\"250\" width=\"200\" height=\"60\" rx=\"10\" ry=\"10\" fill=\"#f8f9fa\" stroke=\"#333\" stroke-width=\"2\"/>\n    <text x=\"900\" y=\"295\" font-family=\"Arial\" font-size=\"18\" text-anchor=\"middle\" dominant-baseline=\"middle\">ReportCounted</text>\n  </g>\n\n  <!-- Edge n0 -> n1 -->\n  <line data-from=\"n0\" data-to=\"n1\" x1=\"300\" y1=\"280\" x2=\"400\" y2=\"175\" stroke=\"#333\" stroke-width=\"2\"/>\n  <polygon points=\"400,175 390,168 390,182\" fill=\"#333\" transform=\"translate(400, 175) scale(0.5)\" />\n\n  <!-- Edge n0 -> n2 -->\n  <line data-from=\"n0\" data-to=\"n2\" x1=\"300\" y1=\"280\" x2=\"400\" y2=\"385\" stroke=\"#333\" stroke-width=\"2\"/>\n  <polygon points=\"400,385 390,378 390,392\" fill=\"#333\" transform=\"translate(400, 385) scale(0.5)\" />\n\n  <!-- Edge n0 -> n3 -->\n  <line data-from=\"n0\" data-to=\"n3\" x1=\"500\" y1=\"280\" x2=\"900\" y2=\"280\" stroke=\"#333\" stroke-width=\"2\"/>\n  <polygon points=\"900,280 890,273 890,287\" fill=\"#333\" transform=\"translate(900, 280) scale(0.5)\" />\n\n</svg>"
+  },
+  {
+    "Diagram": 5,
+    "Model": "gpt-oss:20b",
+    "Passed": true,
+    "Failures": [],
+    "ExecutionDuration": "00:00:28.9420446",
+    "QueueDuration": "00:00:02.2229061",
+    "Svg": "<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='700' viewBox='0 0 1200 700'>\n  <rect x='0' y='0' width='1200' height='700' fill='white'/>\n  <g data-symbol-id='n0'>\n    <rect x='400' y='50' width='200' height='60' fill='lightgrey' stroke='black'/>\n    <text x='500' y='80' font-size='18' text-anchor='middle' fill='black'>LocalRunProgress.Report</text>\n  </g>\n  <g data-symbol-id='n1'>\n    <rect x='200' y='200' width='180' height='50' fill='lightgrey' stroke='black'/>\n    <text x='290' y='225' font-size='18' text-anchor='middle' fill='black'>ReadingPdfPage</text>\n  </g>\n  <g data-symbol-id='n2'>\n    <rect x='620' y='200' width='180' height='50' fill='lightgrey' stroke='black'/>\n    <text x='710' y='225' font-size='18' text-anchor='middle' fill='black'>ReadingImage</text>\n  </g>\n  <g data-symbol-id='n3'>\n    <rect x='410' y='350' width='180' height='50' fill='lightgrey' stroke='black'/>\n    <text x='500' y='375' font-size='18' text-anchor='middle' fill='black'>ReportCounted</text>\n  </g>\n  <line x1='500' y1='110' x2='290' y2='200' stroke='black' data-from='n0' data-to='n1'/>\n  <polygon points='296.56,197.38 294.59,201.97 292.62,206.56' fill='black' data-from='n0' data-to='n1'/>\n  <line x1='500' y1='110' x2='710' y2='200' stroke='black' data-from='n0' data-to='n2'/>\n  <polygon points='703.44,202.62 705.41,198.03 707.38,193.44' fill='black' data-from='n0' data-to='n2'/>\n  <line x1='500' y1='110' x2='500' y2='350' stroke='black' data-from='n0' data-to='n3'/>\n  <polygon points='495,345 500,345 505,345' fill='black' data-from='n0' data-to='n3'/>\n</svg>"
+  },
+  {
+    "Diagram": 6,
+    "Model": "qwen3.5:9b",
+    "Passed": false,
+    "Failures": [
+      "edges"
+    ],
+    "ExecutionDuration": "00:00:13.8521354",
+    "QueueDuration": "00:00:02.2249325",
+    "Svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"700\" viewBox=\"0 0 1200 700\">\n  <rect x=\"0\" y=\"0\" width=\"1200\" height=\"700\" fill=\"white\"/>\n  \n  <!-- Node n0: ReportCounted -->\n  <g data-symbol-id=\"n0\">\n    <rect x=\"350\" y=\"150\" width=\"160\" height=\"80\" fill=\"none\" stroke=\"black\" stroke-width=\"2\" rx=\"10\"/>\n    <text x=\"430\" y=\"215\" font-family=\"Arial\" font-size=\"18\" text-anchor=\"middle\">ReportCounted</text>\n  </g>\n\n  <!-- Node n1: ProgressMinutesLeft -->\n  <g data-symbol-id=\"n1\">\n    <rect x=\"350\" y=\"320\" width=\"160\" height=\"80\" fill=\"none\" stroke=\"black\" stroke-width=\"2\" rx=\"10\"/>\n    <text x=\"430\" y=\"385\" font-family=\"Arial\" font-size=\"18\" text-anchor=\"middle\">ProgressMinutesLeft</text>\n  </g>\n\n  <!-- Node n2: Write -->\n  <g data-symbol-id=\"n2\">\n    <rect x=\"650\" y=\"150\" width=\"160\" height=\"80\" fill=\"none\" stroke=\"black\" stroke-width=\"2\" rx=\"10\"/>\n    <text x=\"730\" y=\"215\" font-family=\"Arial\" font-size=\"18\" text-anchor=\"middle\">Write</text>\n  </g>\n\n  <!-- Edge n0->n1 -->\n  <line x1=\"450\" y1=\"230\" x2=\"450\" y2=\"320\" stroke=\"black\" stroke-width=\"2\"/>\n  \n  <!-- Arrowhead for n0->n1 (down) -->\n  <polygon points=\"450,320 446,332 454,332\" fill=\"black\"/>\n\n  <!-- Edge n0->n2 -->\n  <line x1=\"510\" y1=\"230\" x2=\"710\" y2=\"150\" stroke=\"black\" stroke-width=\"2\"/>\n  \n  <!-- Arrowhead for n0->n2 (diagonal up-right) -->\n  <polygon points=\"690,150 704,158 686,158\" fill=\"black\"/>\n\n</svg>"
+  },
+  {
+    "Diagram": 6,
+    "Model": "gpt-oss:20b",
+    "Passed": true,
+    "Failures": [],
+    "ExecutionDuration": "00:00:26.4196678",
+    "QueueDuration": "00:00:02.2194888",
+    "Svg": "<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='700' viewBox='0 0 1200 700'>\n  <rect width='1200' height='700' fill='white'/>\n  <g data-symbol-id='n0'>\n    <rect x='100' y='100' width='150' height='50' fill='none' stroke='black'/>\n    <text x='175' y='125' text-anchor='middle' alignment-baseline='middle' font-size='18'>ReportCounted</text>\n  </g>\n  <g data-symbol-id='n1'>\n    <rect x='400' y='100' width='150' height='50' fill='none' stroke='black'/>\n    <text x='475' y='125' text-anchor='middle' alignment-baseline='middle' font-size='18'>ProgressMinutesLeft</text>\n  </g>\n  <g data-symbol-id='n2'>\n    <rect x='400' y='300' width='150' height='50' fill='none' stroke='black'/>\n    <text x='475' y='325' text-anchor='middle' alignment-baseline='middle' font-size='18'>Write</text>\n  </g>\n  <line x1='175' y1='125' x2='475' y2='125' stroke='black' stroke-width='2' data-from='n0' data-to='n1'/>\n  <polygon points='468,118 482,125 468,132' fill='black' data-from='n0' data-to='n1'/>\n  <line x1='175' y1='125' x2='475' y2='325' stroke='black' stroke-width='2' data-from='n0' data-to='n2'/>\n  <polygon points='468,318 482,325 468,332' fill='black' data-from='n0' data-to='n2'/>\n</svg>"
+  },
+  {
+    "Diagram": 7,
+    "Model": "qwen3.5:9b",
+    "Passed": true,
+    "Failures": [],
+    "ExecutionDuration": "00:00:13.8046604",
+    "QueueDuration": "00:00:02.2258337",
+    "Svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"700\" viewBox=\"0 0 1200 700\">\n  <rect x=\"0\" y=\"0\" width=\"1200\" height=\"700\" fill=\"white\"/>\n  \n  <!-- Node: n0 -->\n  <g data-symbol-id=\"n0\">\n    <circle cx=\"300\" cy=\"350\" r=\"60\" fill=\"#f0f0f0\" stroke=\"black\" stroke-width=\"2\"/>\n    <text x=\"300\" y=\"350\" text-anchor=\"middle\" dominant-baseline=\"middle\" font-size=\"18\" font-family=\"sans-serif\">CurrentVersionFiles</text>\n  </g>\n\n  <!-- Edge: n0 -> n1 -->\n  <line data-from=\"n0\" data-to=\"n1\" x1=\"360\" y1=\"350\" x2=\"480\" y2=\"350\" stroke=\"black\" stroke-width=\"2\"/>\n  <polygon points=\"470,343 490,350 470,357\" fill=\"black\"/>\n\n  <!-- Node: n1 -->\n  <g data-symbol-id=\"n1\">\n    <circle cx=\"480\" cy=\"200\" r=\"60\" fill=\"#f0f0f0\" stroke=\"black\" stroke-width=\"2\"/>\n    <text x=\"480\" y=\"200\" text-anchor=\"middle\" dominant-baseline=\"middle\" font-size=\"18\" font-family=\"sans-serif\">VersionRequiredFiles</text>\n  </g>\n\n  <!-- Edge: n0 -> n2 -->\n  <line data-from=\"n0\" data-to=\"n2\" x1=\"360\" y1=\"350\" x2=\"480\" y2=\"450\" stroke=\"black\" stroke-width=\"2\"/>\n  <polygon points=\"470,443 490,450 470,457\" fill=\"black\"/>\n\n  <!-- Node: n2 -->\n  <g data-symbol-id=\"n2\">\n    <circle cx=\"480\" cy=\"550\" r=\"60\" fill=\"#f0f0f0\" stroke=\"black\" stroke-width=\"2\"/>\n    <text x=\"480\" y=\"550\" text-anchor=\"middle\" dominant-baseline=\"middle\" font-size=\"18\" font-family=\"sans-serif\">PdfRuntimeFiles</text>\n  </g>\n\n</svg>"
+  },
+  {
+    "Diagram": 7,
+    "Model": "gpt-oss:20b",
+    "Passed": true,
+    "Failures": [],
+    "ExecutionDuration": "00:00:23.4217178",
+    "QueueDuration": "00:00:02.2230663",
+    "Svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"700\" viewBox=\"0 0 1200 700\">\n  <rect width=\"100%\" height=\"100%\" fill=\"white\"/>\n  <g data-symbol-id=\"n0\" transform=\"translate(300,200)\">\n    <text font-size=\"18\" text-anchor=\"middle\">CurrentVersionFiles</text>\n  </g>\n  <g data-symbol-id=\"n1\" transform=\"translate(300,400)\">\n    <text font-size=\"18\" text-anchor=\"middle\">VersionRequiredFiles</text>\n  </g>\n  <g data-symbol-id=\"n2\" transform=\"translate(500,200)\">\n    <text font-size=\"18\" text-anchor=\"middle\">PdfRuntimeFiles</text>\n  </g>\n  <line data-from=\"n0\" data-to=\"n1\" x1=\"300\" y1=\"200\" x2=\"300\" y2=\"400\" stroke=\"black\" stroke-width=\"2\"/>\n  <polygon points=\"295,390 305,390 300,400\" fill=\"black\"/>\n  <line data-from=\"n0\" data-to=\"n2\" x1=\"300\" y1=\"200\" x2=\"500\" y2=\"200\" stroke=\"black\" stroke-width=\"2\"/>\n  <polygon points=\"490,195 490,205 500,200\" fill=\"black\"/>\n</svg>"
+  },
+  {
+    "Diagram": 8,
+    "Model": "qwen3.5:9b",
+    "Passed": false,
+    "Failures": [
+      "edges"
+    ],
+    "ExecutionDuration": "00:00:12.6362495",
+    "QueueDuration": "00:00:02.2129342",
+    "Svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"700\" viewBox=\"0 0 1200 700\">\n  <rect x=\"0\" y=\"0\" width=\"1200\" height=\"700\" fill=\"white\"/>\n  <g data-symbol-id=\"n0\">\n    <rect x=\"350\" y=\"150\" width=\"180\" height=\"60\" rx=\"10\" ry=\"10\" fill=\"#f0f0f0\" stroke=\"black\" stroke-width=\"2\"/>\n    <text x=\"440\" y=\"190\" font-family=\"Arial\" font-size=\"20\" text-anchor=\"middle\" dominant-baseline=\"middle\">CurrentPackageArtifactFiles</text>\n  </g>\n  <g data-symbol-id=\"n1\">\n    <rect x=\"650\" y=\"350\" width=\"180\" height=\"60\" rx=\"10\" ry=\"10\" fill=\"#f0f0f0\" stroke=\"black\" stroke-width=\"2\"/>\n    <text x=\"740\" y=\"390\" font-family=\"Arial\" font-size=\"20\" text-anchor=\"middle\" dominant-baseline=\"middle\">CurrentVersionFiles</text>\n  </g>\n  <g data-symbol-id=\"n2\">\n    <rect x=\"650\" y=\"480\" width=\"180\" height=\"60\" rx=\"10\" ry=\"10\" fill=\"#f0f0f0\" stroke=\"black\" stroke-width=\"2\"/>\n    <text x=\"740\" y=\"520\" font-family=\"Arial\" font-size=\"20\" text-anchor=\"middle\" dominant-baseline=\"middle\">StableLauncherFile</text>\n  </g>\n  <line x1=\"520\" y1=\"210\" x2=\"650\" y2=\"370\" stroke=\"black\" stroke-width=\"2\" fill=\"none\"/>\n  <polygon points=\"646,356 650,368 654,356\" fill=\"black\"/>\n  <line x1=\"520\" y1=\"210\" x2=\"650\" y2=\"500\" stroke=\"black\" stroke-width=\"2\" fill=\"none\"/>\n  <polygon points=\"646,486 650,498 654,486\" fill=\"black\"/>\n</svg>"
+  },
+  {
+    "Diagram": 8,
+    "Model": "gpt-oss:20b",
+    "Passed": false,
+    "Failures": [
+      "edges"
+    ],
+    "ExecutionDuration": "00:00:23.2470133",
+    "QueueDuration": "00:00:02.2181356",
+    "Svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"700\" viewBox=\"0 0 1200 700\">\n  <rect width=\"100%\" height=\"100%\" fill=\"white\"/>\n  <!-- Node n0 -->\n  <g data-symbol-id=\"n0\">\n    <rect x=\"200\" y=\"260\" width=\"200\" height=\"80\" rx=\"10\" ry=\"10\" fill=\"#e0e0e0\" stroke=\"black\"/>\n    <text x=\"300\" y=\"300\" font-size=\"18\" text-anchor=\"middle\" alignment-baseline=\"middle\">CurrentPackageArtifactFiles</text>\n  </g>\n  <!-- Node n1 -->\n  <g data-symbol-id=\"n1\">\n    <rect x=\"500\" y=\"160\" width=\"200\" height=\"80\" rx=\"10\" ry=\"10\" fill=\"#e0e0e0\" stroke=\"black\"/>\n    <text x=\"600\" y=\"200\" font-size=\"18\" text-anchor=\"middle\" alignment-baseline=\"middle\">CurrentVersionFiles</text>\n  </g>\n  <!-- Node n2 -->\n  <g data-symbol-id=\"n2\">\n    <rect x=\"500\" y=\"360\" width=\"200\" height=\"80\" rx=\"10\" ry=\"10\" fill=\"#e0e0e0\" stroke=\"black\"/>\n    <text x=\"600\" y=\"400\" font-size=\"18\" text-anchor=\"middle\" alignment-baseline=\"middle\">StableLauncherFile</text>\n  </g>\n  <!-- Edge n0->n1 -->\n  <g data-from=\"n0\" data-to=\"n1\">\n    <line x1=\"400\" y1=\"300\" x2=\"500\" y2=\"200\" stroke=\"black\" stroke-width=\"2\"/>\n    <polygon points=\"500,200 492,196 492,204\" fill=\"black\"/>\n  </g>\n  <!-- Edge n0->n2 -->\n  <g data-from=\"n0\" data-to=\"n2\">\n    <line x1=\"400\" y1=\"300\" x2=\"500\" y2=\"400\" stroke=\"black\" stroke-width=\"2\"/>\n    <polygon points=\"500,400 492,396 492,404\" fill=\"black\"/>\n  </g>\n</svg>"
+  },
+  {
+    "Diagram": 9,
+    "Model": "qwen3.5:9b",
+    "Passed": false,
+    "Failures": [
+      "edges"
+    ],
+    "ExecutionDuration": "00:00:13.5603730",
+    "QueueDuration": "00:00:10.0459038",
+    "Svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"700\" viewBox=\"0 0 1200 700\">\n  <rect width=\"1200\" height=\"700\" fill=\"white\"/>\n  \n  <!-- Node n0 -->\n  <g data-symbol-id=\"n0\">\n    <rect x=\"350\" y=\"200\" width=\"200\" height=\"60\" rx=\"8\" ry=\"8\" fill=\"#e0e0e0\" stroke=\"black\" stroke-width=\"1\"/>\n    <text x=\"450\" y=\"235\" text-anchor=\"middle\" font-family=\"sans-serif\" font-size=\"18\" fill=\"black\">ReleaseSigner.Pack</text>\n  </g>\n  \n  <!-- Node n1 -->\n  <g data-symbol-id=\"n1\">\n    <rect x=\"700\" y=\"280\" width=\"200\" height=\"60\" rx=\"8\" ry=\"8\" fill=\"#e0e0e0\" stroke=\"black\" stroke-width=\"1\"/>\n    <text x=\"800\" y=\"315\" text-anchor=\"middle\" font-family=\"sans-serif\" font-size=\"18\" fill=\"black\">CurrentPackageArtifactFiles</text>\n  </g>\n\n  <!-- Node n2 -->\n  <g data-symbol-id=\"n2\">\n    <rect x=\"700\" y=\"400\" width=\"200\" height=\"60\" rx=\"8\" ry=\"8\" fill=\"#e0e0e0\" stroke=\"black\" stroke-width=\"1\"/>\n    <text x=\"800\" y=\"435\" text-anchor=\"middle\" font-family=\"sans-serif\" font-size=\"18\" fill=\"black\">ZipArchive</text>\n  </g>\n\n  <!-- Edge n0 -> n1 -->\n  <line x1=\"550\" y1=\"230\" x2=\"740\" y2=\"315\" stroke=\"black\" stroke-width=\"2\"/>\n  <polygon points=\"740,315 728,300 752,300\" fill=\"black\" transform=\"rotate(-10 740 315)\"/>\n\n  <!-- Edge n0 -> n2 -->\n  <line x1=\"550\" y1=\"230\" x2=\"740\" y2=\"415\" stroke=\"black\" stroke-width=\"2\"/>\n  <polygon points=\"740,415 728,400 752,400\" fill=\"black\" transform=\"rotate(10 740 415)\"/>\n\n</svg>"
+  },
+  {
+    "Diagram": 9,
+    "Model": "gpt-oss:20b",
+    "Passed": false,
+    "Failures": [
+      "missing n0",
+      "missing n1",
+      "missing n2",
+      "edges"
+    ],
+    "ExecutionDuration": "00:00:20.6696307",
+    "QueueDuration": "00:00:09.7606082",
+    "Svg": "<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='700' viewBox='0 0 1200 700'>\n  <rect width='100%' height='100%' fill='white'/>\n  <g data-from='0' data-to='1'>\n    <line x1='200' y1='200' x2='200' y2='400' stroke='black' stroke-width='2'/>\n    <polygon points='200,400 195,390 205,390' fill='black'/>\n  </g>\n  <g data-from='0' data-to='2'>\n    <line x1='200' y1='200' x2='400' y2='200' stroke='black' stroke-width='2'/>\n    <polygon points='400,200 390,195 390,205' fill='black'/>\n  </g>\n  <g data-symbol-id='0' transform='translate(200,200)'>\n    <text font-size='20' text-anchor='middle' fill='black'>ReleaseSigner.Pack</text>\n  </g>\n  <g data-symbol-id='1' transform='translate(200,400)'>\n    <text font-size='20' text-anchor='middle' fill='black'>CurrentPackageArtifactFiles</text>\n  </g>\n  <g data-symbol-id='2' transform='translate(400,200)'>\n    <text font-size='20' text-anchor='middle' fill='black'>ZipArchive</text>\n  </g>\n</svg>"
+  },
+  {
+    "Diagram": 10,
+    "Model": "qwen3.5:9b",
+    "Passed": false,
+    "Failures": [
+      "edges"
+    ],
+    "ExecutionDuration": "00:00:14.2630860",
+    "QueueDuration": "00:00:10.0405441",
+    "Svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"700\" viewBox=\"0 0 1200 700\">\n  <rect x=\"0\" y=\"0\" width=\"1200\" height=\"700\" fill=\"white\" />\n  \n  <!-- Node n0: ReleasePackageVerifier -->\n  <g data-symbol-id=\"n0\" transform=\"translate(300, 150)\">\n    <rect x=\"0\" y=\"-40\" width=\"320\" height=\"80\" rx=\"10\" ry=\"10\" fill=\"white\" stroke=\"black\" stroke-width=\"2\" />\n    <text x=\"160\" y=\"10\" text-anchor=\"middle\" font-family=\"Arial\" font-size=\"18\" font-weight=\"bold\">ReleasePackageVerifier</text>\n  </g>\n\n  <!-- Node n1: ValidateLocalHeaders -->\n  <g data-symbol-id=\"n1\" transform=\"translate(300, 350)\">\n    <rect x=\"0\" y=\"-40\" width=\"320\" height=\"80\" rx=\"10\" ry=\"10\" fill=\"white\" stroke=\"black\" stroke-width=\"2\" />\n    <text x=\"160\" y=\"10\" text-anchor=\"middle\" font-family=\"Arial\" font-size=\"18\" font-weight=\"bold\">ValidateLocalHeaders</text>\n  </g>\n\n  <!-- Node n2: IsKnownPackageArtifacts -->\n  <g data-symbol-id=\"n2\" transform=\"translate(650, 350)\">\n    <rect x=\"0\" y=\"-40\" width=\"320\" height=\"80\" rx=\"10\" ry=\"10\" fill=\"white\" stroke=\"black\" stroke-width=\"2\" />\n    <text x=\"160\" y=\"10\" text-anchor=\"middle\" font-family=\"Arial\" font-size=\"18\" font-weight=\"bold\">IsKnownPackageArtifacts</text>\n  </g>\n\n  <!-- Edge n0 -> n1 -->\n  <line x1=\"320\" y1=\"50\" x2=\"320\" y2=\"260\" stroke=\"black\" stroke-width=\"2\" />\n  <polygon points=\"320,260 310,250 330,250\" fill=\"black\" />\n\n  <!-- Edge n0 -> n2 -->\n  <line x1=\"480\" y1=\"50\" x2=\"580\" y2=\"260\" stroke=\"black\" stroke-width=\"2\" />\n  <line x1=\"595\" y1=\"255\" x2=\"720\" y2=\"325\" stroke=\"black\" stroke-width=\"2\" /> <!-- Diagonal part -->\n  <polygon points=\"720,325 708,315 732,315\" fill=\"black\" />\n</svg>"
+  },
+  {
+    "Diagram": 10,
+    "Model": "gpt-oss:20b",
+    "Passed": true,
+    "Failures": [],
+    "ExecutionDuration": "00:00:53.2887612",
+    "QueueDuration": "00:00:02.2436322",
+    "Svg": "<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='700' viewBox='0 0 1200 700'>\n  <rect width='1200' height='700' fill='white'/>\n  <g data-symbol-id='n0' transform='translate(200,350)'>\n    <rect x='-140' y='-20' width='280' height='40' fill='white' stroke='black'/>\n    <text x='0' y='0' text-anchor='middle' dominant-baseline='middle' font-size='18' fill='black'>ReleasePackageVerifier</text>\n  </g>\n  <g data-symbol-id='n1' transform='translate(600,150)'>\n    <rect x='-140' y='-20' width='280' height='40' fill='white' stroke='black'/>\n    <text x='0' y='0' text-anchor='middle' dominant-baseline='middle' font-size='18' fill='black'>ValidateLocalHeaders</text>\n  </g>\n  <g data-symbol-id='n2' transform='translate(600,550)'>\n    <rect x='-140' y='-20' width='280' height='40' fill='white' stroke='black'/>\n    <text x='0' y='0' text-anchor='middle' dominant-baseline='middle' font-size='18' fill='black'>IsKnownPackageArtifacts</text>\n  </g>\n  <line data-from='n0' data-to='n1' x1='200' y1='350' x2='600' y2='150' stroke='black' stroke-width='2'/>\n  <polygon points='600,150 593.3,158.9 588.8,150' fill='black' stroke='none'/>\n  <line data-from='n0' data-to='n2' x1='200' y1='350' x2='600' y2='550' stroke='black' stroke-width='2'/>\n  <polygon points='600,550 588.8,550 593.3,541.1' fill='black' stroke='none'/>\n</svg>"
+  },
+  {
+    "Diagram": 11,
+    "Model": "qwen3.5:9b",
+    "Passed": false,
+    "Failures": [
+      "edges"
+    ],
+    "ExecutionDuration": "00:00:12.9060256",
+    "QueueDuration": "00:00:02.2196984",
+    "Svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"700\" viewBox=\"0 0 1200 700\">\n  <rect x=\"0\" y=\"0\" width=\"1200\" height=\"700\" fill=\"white\"/>\n  \n  <!-- Node n0 -->\n  <g data-symbol-id=\"n0\">\n    <rect x=\"50\" y=\"150\" width=\"180\" height=\"60\" fill=\"white\" stroke=\"black\" stroke-width=\"2\"/>\n    <text x=\"140\" y=\"195\" text-anchor=\"middle\" font-size=\"18\">RetainApprovedFiles</text>\n  </g>\n\n  <!-- Node n1 -->\n  <g data-symbol-id=\"n1\">\n    <rect x=\"430\" y=\"250\" width=\"340\" height=\"80\" fill=\"white\" stroke=\"black\" stroke-width=\"2\"/>\n    <text x=\"610\" y=\"295\" text-anchor=\"middle\" font-size=\"18\">IStagingRootLease.RetainFile</text>\n  </g>\n\n  <!-- Node n2 -->\n  <g data-symbol-id=\"n2\">\n    <rect x=\"780\" y=\"360\" width=\"250\" height=\"60\" fill=\"white\" stroke=\"black\" stroke-width=\"2\"/>\n    <text x=\"915\" y=\"405\" text-anchor=\"middle\" font-size=\"18\">IRetainedStagingFile</text>\n  </g>\n\n  <!-- Edge n0 -> n1 -->\n  <line x1=\"230\" y1=\"180\" x2=\"570\" y2=\"290\" stroke=\"black\" stroke-width=\"2\"/>\n  \n  <!-- Arrowhead n0 -> n1 -->\n  <polygon points=\"610,290 595,280 595,300\" fill=\"black\"/>\n\n  <!-- Edge n1 -> n2 -->\n  <line x1=\"870\" y1=\"320\" x2=\"840\" y2=\"360\" stroke=\"black\" stroke-width=\"2\"/>\n  \n  <!-- Arrowhead n1 -> n2 -->\n  <polygon points=\"850,360 865,350 865,370\" fill=\"black\"/>\n\n</svg>"
+  },
+  {
+    "Diagram": 11,
+    "Model": "gpt-oss:20b",
+    "Passed": true,
+    "Failures": [],
+    "ExecutionDuration": "00:00:23.6848808",
+    "QueueDuration": "00:00:02.2208586",
+    "Svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"700\" viewBox=\"0 0 1200 700\">\n  <rect width=\"100%\" height=\"100%\" fill=\"white\"/>\n  <g data-symbol-id=\"n0\" transform=\"translate(200,300)\">\n    <rect x=\"-90\" y=\"-40\" width=\"180\" height=\"80\" rx=\"10\" ry=\"10\" fill=\"none\" stroke=\"black\"/>\n    <text x=\"0\" y=\"0\" dy=\".3em\" text-anchor=\"middle\" font-size=\"18\" fill=\"black\">RetainApprovedFiles</text>\n  </g>\n  <g data-symbol-id=\"n1\" transform=\"translate(600,300)\">\n    <rect x=\"-90\" y=\"-40\" width=\"180\" height=\"80\" rx=\"10\" ry=\"10\" fill=\"none\" stroke=\"black\"/>\n    <text x=\"0\" y=\"0\" dy=\".3em\" text-anchor=\"middle\" font-size=\"18\" fill=\"black\">IStagingRootLease.RetainFile</text>\n  </g>\n  <g data-symbol-id=\"n2\" transform=\"translate(1000,300)\">\n    <rect x=\"-90\" y=\"-40\" width=\"180\" height=\"80\" rx=\"10\" ry=\"10\" fill=\"none\" stroke=\"black\"/>\n    <text x=\"0\" y=\"0\" dy=\".3em\" text-anchor=\"middle\" font-size=\"18\" fill=\"black\">IRetainedStagingFile</text>\n  </g>\n  <line x1=\"200\" y1=\"300\" x2=\"600\" y2=\"300\" data-from=\"n0\" data-to=\"n1\" stroke=\"black\" stroke-width=\"2\"/>\n  <polygon points=\"590,295 590,305 600,300\" fill=\"black\"/>\n  <line x1=\"600\" y1=\"300\" x2=\"1000\" y2=\"300\" data-from=\"n1\" data-to=\"n2\" stroke=\"black\" stroke-width=\"2\"/>\n  <polygon points=\"990,295 990,305 1000,300\" fill=\"black\"/>\n</svg>"
+  },
+  {
+    "Diagram": 12,
+    "Model": "qwen3.5:9b",
+    "Passed": false,
+    "Failures": [
+      "external or active content",
+      "external or active content",
+      "forbidden element",
+      "forbidden element",
+      "edges"
+    ],
+    "ExecutionDuration": "00:00:13.1501819",
+    "QueueDuration": "00:00:02.2254187",
+    "Svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"700\" viewBox=\"0 0 1200 700\">\n  <rect x=\"0\" y=\"0\" width=\"1200\" height=\"700\" fill=\"white\"/>\n  \n  <!-- Edge n0 -> n1 -->\n  <line x1=\"480\" y1=\"350\" x2=\"660\" y2=\"350\" stroke=\"black\" stroke-width=\"2\" marker-end=\"url(#arrowhead)\"/>\n  \n  <!-- Edge n0 -> n2 -->\n  <line x1=\"480\" y1=\"350\" x2=\"740\" y2=\"350\" stroke=\"black\" stroke-width=\"2\" marker-end=\"url(#arrowhead)\"/>\n\n  <!-- Node n0: ValidateAuthenticode -->\n  <g data-symbol-id=\"n0\">\n    <rect x=\"380\" y=\"300\" width=\"160\" height=\"40\" rx=\"10\" fill=\"white\" stroke=\"black\" stroke-width=\"2\"/>\n    <text x=\"460\" y=\"335\" font-family=\"Arial\" font-size=\"20\" text-anchor=\"middle\" dominant-baseline=\"middle\">ValidateAuthenticode</text>\n  </g>\n\n  <!-- Node n1: IRetainedStagingFile.Revalidate -->\n  <g data-symbol-id=\"n1\">\n    <rect x=\"560\" y=\"300\" width=\"240\" height=\"40\" rx=\"10\" fill=\"white\" stroke=\"black\" stroke-width=\"2\"/>\n    <text x=\"780\" y=\"335\" font-family=\"Arial\" font-size=\"18\" text-anchor=\"middle\" dominant-baseline=\"middle\">IRetainedStagingFile.Revalidate</text>\n  </g>\n\n  <!-- Node n2: IAuthenticodeVerifier.IsTrusted -->\n  <g data-symbol-id=\"n2\">\n    <rect x=\"640\" y=\"300\" width=\"240\" height=\"40\" rx=\"10\" fill=\"white\" stroke=\"black\" stroke-width=\"2\"/>\n    <text x=\"780\" y=\"335\" font-family=\"Arial\" font-size=\"16\" text-anchor=\"middle\" dominant-baseline=\"middle\">IAuthenticodeVerifier.IsTrusted</text>\n  </g>\n\n  <!-- Arrowhead marker definition -->\n  <defs>\n    <marker id=\"arrowhead\" markerWidth=\"10\" markerHeight=\"7\" refX=\"9\" refY=\"3.5\" orient=\"auto\">\n      <polygon points=\"0 0, 10 3.5, 0 7\" fill=\"black\"/>\n    </marker>\n  </defs>\n</svg>"
+  },
+  {
+    "Diagram": 12,
+    "Model": "gpt-oss:20b",
+    "Passed": true,
+    "Failures": [],
+    "ExecutionDuration": "00:00:30.2075711",
+    "QueueDuration": "00:00:02.2209061",
+    "Svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"700\" viewBox=\"0 0 1200 700\">\n  <rect width=\"100%\" height=\"100%\" fill=\"white\"/>\n  <g data-symbol-id=\"n0\">\n    <rect x=\"150\" y=\"300\" width=\"200\" height=\"50\" rx=\"5\" ry=\"5\" fill=\"none\" stroke=\"black\"/>\n    <text x=\"250\" y=\"330\" text-anchor=\"middle\" font-size=\"18\" fill=\"black\">ValidateAuthenticode</text>\n  </g>\n  <g data-symbol-id=\"n1\">\n    <rect x=\"500\" y=\"200\" width=\"260\" height=\"50\" rx=\"5\" ry=\"5\" fill=\"none\" stroke=\"black\"/>\n    <text x=\"630\" y=\"230\" text-anchor=\"middle\" font-size=\"18\" fill=\"black\">IRetainedStagingFile.Revalidate</text>\n  </g>\n  <g data-symbol-id=\"n2\">\n    <rect x=\"500\" y=\"400\" width=\"260\" height=\"50\" rx=\"5\" ry=\"5\" fill=\"none\" stroke=\"black\"/>\n    <text x=\"630\" y=\"430\" text-anchor=\"middle\" font-size=\"18\" fill=\"black\">IAuthenticodeVerifier.IsTrusted</text>\n  </g>\n  <line x1=\"250\" y1=\"325\" x2=\"630\" y2=\"225\" stroke=\"black\" stroke-width=\"2\" data-from=\"n0\" data-to=\"n1\"/>\n  <polygon points=\"630,225 621.61,232.37 619.07,222.71\" fill=\"black\" data-from=\"n0\" data-to=\"n1\"/>\n  <line x1=\"250\" y1=\"325\" x2=\"630\" y2=\"425\" stroke=\"black\" stroke-width=\"2\" data-from=\"n0\" data-to=\"n2\"/>\n  <polygon points=\"630,425 619.07,427.29 621.61,417.63\" fill=\"black\" data-from=\"n0\" data-to=\"n2\"/>\n</svg>"
+  },
+  {
+    "Diagram": 13,
+    "Model": "qwen3.5:9b",
+    "Passed": false,
+    "Failures": [
+      "edges"
+    ],
+    "ExecutionDuration": "00:00:14.3792199",
+    "QueueDuration": "00:00:02.2146649",
+    "Svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"700\" viewBox=\"0 0 1200 700\">\n  <rect width=\"1200\" height=\"700\" fill=\"white\"/>\n  \n  <!-- Edge n0 -> n1 -->\n  <line x1=\"150\" y1=\"350\" x2=\"400\" y2=\"350\" stroke=\"black\" stroke-width=\"2\"/>\n  <polygon points=\"400,350 390,343 390,357\" fill=\"black\"/>\n  \n  <!-- Edge n0 -> n2 -->\n  <line x1=\"150\" y1=\"350\" x2=\"700\" y2=\"200\" stroke=\"black\" stroke-width=\"2\"/>\n  <polygon points=\"700,200 692,190 692,210\" fill=\"black\"/>\n  \n  <!-- Edge n0 -> n3 -->\n  <line x1=\"150\" y1=\"350\" x2=\"700\" y2=\"550\" stroke=\"black\" stroke-width=\"2\"/>\n  <polygon points=\"700,550 692,540 692,560\" fill=\"black\"/>\n\n  <!-- Node n0 -->\n  <g data-symbol-id=\"n0\">\n    <rect x=\"50\" y=\"150\" width=\"240\" height=\"110\" rx=\"10\" fill=\"#f0f0f0\" stroke=\"black\" stroke-width=\"1\"/>\n    <text x=\"170\" y=\"305\" text-anchor=\"middle\" font-family=\"Arial\" font-size=\"18\">LocalAiPackageInstaller.InstallAsync</text>\n  </g>\n\n  <!-- Node n1 -->\n  <g data-symbol-id=\"n1\">\n    <rect x=\"260\" y=\"300\" width=\"240\" height=\"110\" rx=\"10\" fill=\"#f0f0f0\" stroke=\"black\" stroke-width=\"1\"/>\n    <text x=\"380\" y=\"355\" text-anchor=\"middle\" font-family=\"Arial\" font-size=\"18\">LockInstalledVersion</text>\n  </g>\n\n  <!-- Node n2 -->\n  <g data-symbol-id=\"n2\">\n    <rect x=\"580\" y=\"40\" width=\"260\" height=\"110\" rx=\"10\" fill=\"#f0f0f0\" stroke=\"black\" stroke-width=\"1\"/>\n    <text x=\"710\" y=\"130\" text-anchor=\"middle\" font-family=\"Arial\" font-size=\"18\">CopyVerifiedAsync</text>\n  </g>\n\n  <!-- Node n3 -->\n  <g data-symbol-id=\"n3\">\n    <rect x=\"580\" y=\"460\" width=\"260\" height=\"110\" rx=\"10\" fill=\"#f0f0f0\" stroke=\"black\" stroke-width=\"1\"/>\n    <text x=\"710\" y=\"590\" text-anchor=\"middle\" font-family=\"Arial\" font-size=\"18\">processRunner.RunAsync</text>\n  </g>\n</svg>"
+  },
+  {
+    "Diagram": 13,
+    "Model": "gpt-oss:20b",
+    "Passed": true,
+    "Failures": [],
+    "ExecutionDuration": "00:00:38.7030561",
+    "QueueDuration": "00:00:25.4994979",
+    "Svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"700\" viewBox=\"0 0 1200 700\">\n  <rect width=\"1200\" height=\"700\" fill=\"white\"/>\n  <g data-symbol-id=\"n0\" transform=\"translate(200,100)\">\n    <rect x=\"-80\" y=\"-30\" width=\"160\" height=\"60\" fill=\"white\" stroke=\"black\"/>\n    <text x=\"0\" y=\"0\" dy=\"0.35em\" text-anchor=\"middle\" font-size=\"18\" fill=\"black\">LocalAiPackageInstaller.InstallAsync</text>\n  </g>\n  <g data-symbol-id=\"n1\" transform=\"translate(200,300)\">\n    <rect x=\"-80\" y=\"-30\" width=\"160\" height=\"60\" fill=\"white\" stroke=\"black\"/>\n    <text x=\"0\" y=\"0\" dy=\"0.35em\" text-anchor=\"middle\" font-size=\"18\" fill=\"black\">LockInstalledVersion</text>\n  </g>\n  <g data-symbol-id=\"n2\" transform=\"translate(400,300)\">\n    <rect x=\"-80\" y=\"-30\" width=\"160\" height=\"60\" fill=\"white\" stroke=\"black\"/>\n    <text x=\"0\" y=\"0\" dy=\"0.35em\" text-anchor=\"middle\" font-size=\"18\" fill=\"black\">CopyVerifiedAsync</text>\n  </g>\n  <g data-symbol-id=\"n3\" transform=\"translate(600,300)\">\n    <rect x=\"-80\" y=\"-30\" width=\"160\" height=\"60\" fill=\"white\" stroke=\"black\"/>\n    <text x=\"0\" y=\"0\" dy=\"0.35em\" text-anchor=\"middle\" font-size=\"18\" fill=\"black\">processRunner.RunAsync</text>\n  </g>\n  <line data-from=\"n0\" data-to=\"n1\" x1=\"200\" y1=\"100\" x2=\"200\" y2=\"300\" stroke=\"black\"/>\n  <polygon data-from=\"n0\" data-to=\"n1\" points=\"200,300 190,290 210,290\" fill=\"black\"/>\n  <line data-from=\"n0\" data-to=\"n2\" x1=\"200\" y1=\"100\" x2=\"400\" y2=\"300\" stroke=\"black\"/>\n  <polygon data-from=\"n0\" data-to=\"n2\" points=\"400,300 390,290 410,290\" fill=\"black\"/>\n  <line data-from=\"n0\" data-to=\"n3\" x1=\"200\" y1=\"100\" x2=\"600\" y2=\"300\" stroke=\"black\"/>\n  <polygon data-from=\"n0\" data-to=\"n3\" points=\"600,300 590,290 610,290\" fill=\"black\"/>\n</svg>"
+  },
+  {
+    "Diagram": 14,
+    "Model": "qwen3.5:9b",
+    "Passed": false,
+    "Failures": [
+      "edges"
+    ],
+    "ExecutionDuration": "00:00:15.7257305",
+    "QueueDuration": "00:00:02.2236664",
+    "Svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"700\" viewBox=\"0 0 1200 700\">\n  <rect x=\"0\" y=\"0\" width=\"1200\" height=\"700\" fill=\"white\"/>\n  \n  <!-- Node n0: ValidateExactVersion -->\n  <g data-symbol-id=\"n0\">\n    <rect x=\"50\" y=\"100\" width=\"280\" height=\"160\" rx=\"10\" ry=\"10\" fill=\"none\" stroke=\"black\" stroke-width=\"2\"/>\n    <text x=\"70\" y=\"190\" font-family=\"Arial\" font-size=\"24\" text-anchor=\"middle\" dominant-baseline=\"middle\">ValidateExactVersion</text>\n  </g>\n  \n  <!-- Node n1: ValidateExactDirectory -->\n  <g data-symbol-id=\"n1\">\n    <rect x=\"50\" y=\"380\" width=\"280\" height=\"160\" rx=\"10\" ry=\"10\" fill=\"none\" stroke=\"black\" stroke-width=\"2\"/>\n    <text x=\"70\" y=\"470\" font-family=\"Arial\" font-size=\"24\" text-anchor=\"middle\" dominant-baseline=\"middle\">ValidateExactDirectory</text>\n  </g>\n  \n  <!-- Node n2: VerifyFile -->\n  <g data-symbol-id=\"n2\">\n    <rect x=\"550\" y=\"380\" width=\"280\" height=\"160\" rx=\"10\" ry=\"10\" fill=\"none\" stroke=\"black\" stroke-width=\"2\"/>\n    <text x=\"590\" y=\"470\" font-family=\"Arial\" font-size=\"24\" text-anchor=\"middle\" dominant-baseline=\"middle\">VerifyFile</text>\n  </g>\n  \n  <!-- Node n3: VerifiedPackage.Revalidate -->\n  <g data-symbol-id=\"n3\">\n    <rect x=\"50\" y=\"660\" width=\"280\" height=\"160\" rx=\"10\" ry=\"10\" fill=\"none\" stroke=\"black\" stroke-width=\"2\"/>\n    <text x=\"70\" y=\"750\" font-family=\"Arial\" font-size=\"24\" text-anchor=\"middle\" dominant-baseline=\"middle\">VerifiedPackage.Revalidate</text>\n  </g>\n  \n  <!-- Edge n0 -> n1 -->\n  <line x1=\"480\" y1=\"190\" x2=\"50\" y2=\"470\" stroke=\"black\" stroke-width=\"2\"/>\n  <polygon points=\"30,640 55,500 80,640\" fill=\"black\"/>\n\n  <!-- Edge n0 -> n2 -->\n  <line x1=\"480\" y1=\"190\" x2=\"590\" y2=\"470\" stroke=\"black\" stroke-width=\"2\"/>\n  <polygon points=\"610,580 585,390 610,580\" fill=\"black\"/>\n\n  <!-- Edge n0 -> n3 -->\n  <line x1=\"480\" y1=\"190\" x2=\"70\" y2=\"750\" stroke=\"black\" stroke-width=\"2\"/>\n  <polygon points=\"50,810 75,640 100,810\" fill=\"black\"/>\n</svg>"
+  },
+  {
+    "Diagram": 14,
+    "Model": "gpt-oss:20b",
+    "Passed": false,
+    "Failures": [
+      "edges"
+    ],
+    "ExecutionDuration": "00:00:23.2683838",
+    "QueueDuration": "00:00:02.2290465",
+    "Svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"700\" viewBox=\"0 0 1200 700\">\n  <!-- Background -->\n  <rect width=\"1200\" height=\"700\" fill=\"white\"/>\n  \n  <!-- Node n0: ValidateExactVersion -->\n  <g data-symbol-id=\"n0\">\n    <rect x=\"180\" y=\"180\" width=\"200\" height=\"40\" fill=\"none\" stroke=\"black\"/>\n    <text x=\"280\" y=\"200\" text-anchor=\"middle\" dominant-baseline=\"middle\" font-size=\"18\" fill=\"black\">ValidateExactVersion</text>\n  </g>\n  \n  <!-- Node n1: ValidateExactDirectory -->\n  <g data-symbol-id=\"n1\">\n    <rect x=\"480\" y=\"80\" width=\"200\" height=\"40\" fill=\"none\" stroke=\"black\"/>\n    <text x=\"580\" y=\"100\" text-anchor=\"middle\" dominant-baseline=\"middle\" font-size=\"18\" fill=\"black\">ValidateExactDirectory</text>\n  </g>\n  \n  <!-- Node n2: VerifyFile -->\n  <g data-symbol-id=\"n2\">\n    <rect x=\"480\" y=\"180\" width=\"200\" height=\"40\" fill=\"none\" stroke=\"black\"/>\n    <text x=\"580\" y=\"200\" text-anchor=\"middle\" dominant-baseline=\"middle\" font-size=\"18\" fill=\"black\">VerifyFile</text>\n  </g>\n  \n  <!-- Node n3: VerifiedPackage.Revalidate -->\n  <g data-symbol-id=\"n3\">\n    <rect x=\"480\" y=\"280\" width=\"200\" height=\"40\" fill=\"none\" stroke=\"black\"/>\n    <text x=\"580\" y=\"300\" text-anchor=\"middle\" dominant-baseline=\"middle\" font-size=\"18\" fill=\"black\">VerifiedPackage.Revalidate</text>\n  </g>\n  \n  <!-- Edge n0 -> n1 -->\n  <g data-from=\"n0\" data-to=\"n1\">\n    <line x1=\"380\" y1=\"200\" x2=\"480\" y2=\"100\" stroke=\"black\"/>\n    <polygon points=\"480,100 469.395,103.535 476.465,110.605\" fill=\"black\"/>\n  </g>\n  \n  <!-- Edge n0 -> n2 -->\n  <g data-from=\"n0\" data-to=\"n2\">\n    <line x1=\"380\" y1=\"200\" x2=\"480\" y2=\"180\" stroke=\"black\"/>\n    <polygon points=\"480,180 470,175 470,185\" fill=\"black\"/>\n  </g>\n  \n  <!-- Edge n0 -> n3 -->\n  <g data-from=\"n0\" data-to=\"n3\">\n    <line x1=\"380\" y1=\"200\" x2=\"480\" y2=\"280\" stroke=\"black\"/>\n    <polygon points=\"480,280 469.395,276.465 476.465,269.395\" fill=\"black\"/>\n  </g>\n</svg>"
+  },
+  {
+    "Diagram": 15,
+    "Model": "qwen3.5:9b",
+    "Passed": false,
+    "Failures": [
+      "node count",
+      "missing n0",
+      "missing n1",
+      "missing n2",
+      "edges"
+    ],
+    "ExecutionDuration": "00:00:12.9981147",
+    "QueueDuration": "00:00:02.2154529",
+    "Svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"700\" viewBox=\"0 0 1200 700\">\n  <rect width=\"1200\" height=\"700\" fill=\"white\"/>\n  \n  <g class=\"node-group-300\">\n    <text x=\"350\" y=\"150\" font-family=\"Arial, sans-serif\" font-size=\"18\" text-anchor=\"middle\" dominant-baseline=\"middle\">n0: PdfPageReader.DisposeAsync</text>\n  </g>\n\n  <g class=\"node-group-1200\">\n    <text x=\"1150\" y=\"250\" font-family=\"Arial, sans-serif\" font-size=\"18\" text-anchor=\"middle\" dominant-baseline=\"middle\">n1: rendered.DisposeAsync</text>\n  </g>\n\n  <g class=\"node-group-400\">\n    <text x=\"400\" y=\"350\" font-family=\"Arial, sans-serif\" font-size=\"18\" text-anchor=\"middle\" dominant-baseline=\"middle\">n2: input.DisposeAsync</text>\n  </g>\n\n  <line x1=\"350\" y1=\"150\" x2=\"750\" y2=\"250\" stroke=\"black\" stroke-width=\"2\"/>\n  <polygon points=\"814.6,269.6 810,274.6 804.4,269.6 785.4,279.6 791,284.6 785.4,289.6 814.6,279.6\" fill=\"black\"/>\n\n  <line x1=\"350\" y1=\"150\" x2=\"350\" y2=\"250\" stroke=\"black\" stroke-width=\"2\"/>\n  <polygon points=\"354.4,269.6 349.8,274.6 344.2,269.6 325.2,279.6 330.8,284.6 325.2,289.6 354.4,279.6\" fill=\"black\"/>\n\n</svg>"
+  },
+  {
+    "Diagram": 15,
+    "Model": "gpt-oss:20b",
+    "Passed": true,
+    "Failures": [],
+    "ExecutionDuration": "00:00:31.6742509",
+    "QueueDuration": "00:00:02.3043038",
+    "Svg": "<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='700' viewBox='0 0 1200 700'>\n  <rect width='100%' height='100%' fill='white'/>\n  <g data-symbol-id='n0'>\n    <rect x='190' y='125' width='220' height='50' fill='#e0e0e0' stroke='black'/>\n    <text x='300' y='150' text-anchor='middle' dy='0.35em' font-size='18' fill='black'>PdfPageReader.DisposeAsync</text>\n  </g>\n  <g data-symbol-id='n1'>\n    <rect x='60' y='325' width='180' height='50' fill='#e0e0e0' stroke='black'/>\n    <text x='150' y='350' text-anchor='middle' dy='0.35em' font-size='18' fill='black'>rendered.DisposeAsync</text>\n  </g>\n  <g data-symbol-id='n2'>\n    <rect x='360' y='325' width='180' height='50' fill='#e0e0e0' stroke='black'/>\n    <text x='450' y='350' text-anchor='middle' dy='0.35em' font-size='18' fill='black'>input.DisposeAsync</text>\n  </g>\n  <line x1='300' y1='150' x2='150' y2='350' data-from='n0' data-to='n1' stroke='black'/>\n  <polygon points='150,350 160,345 160,355' fill='black'/>\n  <line x1='300' y1='150' x2='450' y2='350' data-from='n0' data-to='n2' stroke='black'/>\n  <polygon points='450,350 440,345 440,355' fill='black'/>\n</svg>"
+  },
+  {
+    "Diagram": 16,
+    "Model": "qwen3.5:9b",
+    "Passed": false,
+    "Failures": [
+      "edges"
+    ],
+    "ExecutionDuration": "00:00:13.4178444",
+    "QueueDuration": "00:00:02.2217902",
+    "Svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"700\" viewBox=\"0 0 1200 700\">\n  <rect x=\"0\" y=\"0\" width=\"1200\" height=\"700\" fill=\"white\"/>\n  \n  <!-- Node n0 -->\n  <g data-symbol-id=\"n0\" transform=\"translate(50, 350)\">\n    <rect x=\"-140\" y=\"-60\" width=\"280\" height=\"120\" rx=\"10\" ry=\"10\" fill=\"#eef\" stroke=\"black\" stroke-width=\"2\"/>\n    <text x=\"-140\" y=\"10\" font-family=\"sans-serif\" font-size=\"18\" text-anchor=\"start\" fill=\"black\">ConfiguredCatalogStartupTests</text>\n  </g>\n\n  <!-- Node n1 -->\n  <g data-symbol-id=\"n1\" transform=\"translate(520, 350)\">\n    <rect x=\"-140\" y=\"-60\" width=\"280\" height=\"120\" rx=\"10\" ry=\"10\" fill=\"#eef\" stroke=\"black\" stroke-width=\"2\"/>\n    <text x=\"-140\" y=\"10\" font-family=\"sans-serif\" font-size=\"18\" text-anchor=\"start\" fill=\"black\">BrokerClient.ExecuteAsync</text>\n  </g>\n\n  <!-- Node n2 -->\n  <g data-symbol-id=\"n2\" transform=\"translate(990, 350)\">\n    <rect x=\"-140\" y=\"-60\" width=\"280\" height=\"120\" rx=\"10\" ry=\"10\" fill=\"#eef\" stroke=\"black\" stroke-width=\"2\"/>\n    <text x=\"-140\" y=\"10\" font-family=\"sans-serif\" font-size=\"18\" text-anchor=\"start\" fill=\"black\">DurableQueue.EnqueueAsync</text>\n  </g>\n\n  <!-- Edge n0->n1 -->\n  <line x1=\"50\" y1=\"350\" x2=\"520\" y2=\"350\" stroke=\"black\" stroke-width=\"2\"/>\n  <polygon points=\"496,350 520,340 520,360\" fill=\"black\"/>\n\n  <!-- Edge n1->n2 -->\n  <line x1=\"520\" y1=\"350\" x2=\"990\" y2=\"350\" stroke=\"black\" stroke-width=\"2\"/>\n  <polygon points=\"986,350 990,340 990,360\" fill=\"black\"/>\n</svg>"
+  },
+  {
+    "Diagram": 16,
+    "Model": "gpt-oss:20b",
+    "Passed": true,
+    "Failures": [],
+    "ExecutionDuration": "00:00:22.9256213",
+    "QueueDuration": "00:00:02.2524198",
+    "Svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"700\" viewBox=\"0 0 1200 700\">\n  <rect width=\"1200\" height=\"700\" fill=\"white\"/>\n  <!-- Node n0 -->\n  <g data-symbol-id=\"n0\">\n    <rect x=\"50\" y=\"175\" width=\"300\" height=\"50\" fill=\"none\" stroke=\"black\"/>\n    <text x=\"200\" y=\"200\" font-size=\"20\" text-anchor=\"middle\" alignment-baseline=\"middle\">ConfiguredCatalogStartupTests</text>\n  </g>\n  <!-- Node n1 -->\n  <g data-symbol-id=\"n1\">\n    <rect x=\"450\" y=\"175\" width=\"300\" height=\"50\" fill=\"none\" stroke=\"black\"/>\n    <text x=\"600\" y=\"200\" font-size=\"20\" text-anchor=\"middle\" alignment-baseline=\"middle\">BrokerClient.ExecuteAsync</text>\n  </g>\n  <!-- Node n2 -->\n  <g data-symbol-id=\"n2\">\n    <rect x=\"850\" y=\"175\" width=\"300\" height=\"50\" fill=\"none\" stroke=\"black\"/>\n    <text x=\"1000\" y=\"200\" font-size=\"20\" text-anchor=\"middle\" alignment-baseline=\"middle\">DurableQueue.EnqueueAsync</text>\n  </g>\n  <!-- Edge n0->n1 -->\n  <line x1=\"350\" y1=\"200\" x2=\"450\" y2=\"200\" stroke=\"black\" data-from=\"n0\" data-to=\"n1\"/>\n  <polygon points=\"440,190 440,210 460,200\" fill=\"black\"/>\n  <!-- Edge n1->n2 -->\n  <line x1=\"750\" y1=\"200\" x2=\"850\" y2=\"200\" stroke=\"black\" data-from=\"n1\" data-to=\"n2\"/>\n  <polygon points=\"840,190 840,210 860,200\" fill=\"black\"/>\n</svg>"
+  },
+  {
+    "Diagram": 17,
+    "Model": "qwen3.5:9b",
+    "Passed": false,
+    "Failures": [
+      "edges"
+    ],
+    "ExecutionDuration": "00:00:18.6603896",
+    "QueueDuration": "00:00:21.3523865",
+    "Svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"700\" viewBox=\"0 0 1200 700\">\n  <rect x=\"0\" y=\"0\" width=\"1200\" height=\"700\" fill=\"white\"/>\n  \n  <!-- Node n0 -->\n  <g data-symbol-id=\"n0\">\n    <rect x=\"50\" y=\"50\" width=\"300\" height=\"80\" rx=\"10\" ry=\"10\" fill=\"none\" stroke=\"black\" stroke-width=\"2\"/>\n    <text x=\"90\" y=\"85\" font-family=\"Arial\" font-size=\"18\" text-anchor=\"middle\">DurableQueue.EnqueueAsync</text>\n  </g>\n\n  <!-- Node n1 -->\n  <g data-symbol-id=\"n1\">\n    <rect x=\"450\" y=\"50\" width=\"300\" height=\"80\" rx=\"10\" ry=\"10\" fill=\"none\" stroke=\"black\" stroke-width=\"2\"/>\n    <text x=\"600\" y=\"85\" font-family=\"Arial\" font-size=\"18\" text-anchor=\"middle\">EnterMutex</text>\n  </g>\n\n  <!-- Node n2 -->\n  <g data-symbol-id=\"n2\">\n    <rect x=\"450\" y=\"200\" width=\"300\" height=\"80\" rx=\"10\" ry=\"10\" fill=\"none\" stroke=\"black\" stroke-width=\"2\"/>\n    <text x=\"600\" y=\"235\" font-family=\"Arial\" font-size=\"18\" text-anchor=\"middle\">AllocateSequence</text>\n  </g>\n\n  <!-- Node n3 -->\n  <g data-symbol-id=\"n3\">\n    <rect x=\"450\" y=\"350\" width=\"300\" height=\"80\" rx=\"10\" ry=\"10\" fill=\"none\" stroke=\"black\" stroke-width=\"2\"/>\n    <text x=\"600\" y=\"385\" font-family=\"Arial\" font-size=\"18\" text-anchor=\"middle\">AtomicWriteJson</text>\n  </g>\n\n  <!-- Node n4 -->\n  <g data-symbol-id=\"n4\">\n    <rect x=\"850\" y=\"200\" width=\"300\" height=\"80\" rx=\"10\" ry=\"10\" fill=\"none\" stroke=\"black\" stroke-width=\"2\"/>\n    <text x=\"1000\" y=\"235\" font-family=\"Arial\" font-size=\"18\" text-anchor=\"middle\">Directory.Move</text>\n  </g>\n\n  <!-- Edge n0->n1 -->\n  <line x1=\"195\" y1=\"60\" x2=\"470\" y2=\"60\" stroke=\"black\" stroke-width=\"2\" fill=\"none\"/>\n  <polygon points=\"470,60 460,50 480,50\" fill=\"black\" transform=\"translate(10 -5) rotate(-90) scale(0.75)\"/>\n\n  <!-- Edge n0->n2 -->\n  <line x1=\"195\" y1=\"90\" x2=\"470\" y2=\"190\" stroke=\"black\" stroke-width=\"2\" fill=\"none\"/>\n  <polygon points=\"470,190 460,180 480,180\" fill=\"black\" transform=\"translate(10 -5) rotate(-90) scale(0.75)\"/>\n\n  <!-- Edge n0->n3 -->\n  <line x1=\"195\" y1=\"90\" x2=\"470\" y2=\"390\" stroke=\"black\" stroke-width=\"2\" fill=\"none\"/>\n  <polygon points=\"470,390 460,380 480,380\" fill=\"black\" transform=\"translate(10 -5) rotate(-90) scale(0.75)\"/>\n\n  <!-- Edge n0->n4 -->\n  <line x1=\"195\" y1=\"90\" x2=\"950\" y2=\"230\" stroke=\"black\" stroke-width=\"2\" fill=\"none\"/>\n  <polygon points=\"950,230 940,220 960,220\" fill=\"black\" transform=\"translate(10 -5) rotate(-90) scale(0.75)\"/>\n\n</svg>"
+  },
+  {
+    "Diagram": 17,
+    "Model": "gpt-oss:20b",
+    "Passed": false,
+    "Failures": [
+      "edges"
+    ],
+    "ExecutionDuration": "00:00:42.4938118",
+    "QueueDuration": "00:00:02.2265879",
+    "Svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"700\" viewBox=\"0 0 1200 700\">\n  <rect x=\"0\" y=\"0\" width=\"1200\" height=\"700\" fill=\"white\" />\n  <g data-symbol-id=\"n0\">\n    <rect x=\"440\" y=\"80\" width=\"260\" height=\"40\" fill=\"white\" stroke=\"black\"/>\n    <text x=\"600\" y=\"100\" font-size=\"20\" text-anchor=\"middle\" dominant-baseline=\"middle\">DurableQueue.EnqueueAsync</text>\n  </g>\n  <g data-symbol-id=\"n1\">\n    <rect x=\"240\" y=\"280\" width=\"260\" height=\"40\" fill=\"white\" stroke=\"black\"/>\n    <text x=\"400\" y=\"300\" font-size=\"20\" text-anchor=\"middle\" dominant-baseline=\"middle\">EnterMutex</text>\n  </g>\n  <g data-symbol-id=\"n2\">\n    <rect x=\"340\" y=\"280\" width=\"260\" height=\"40\" fill=\"white\" stroke=\"black\"/>\n    <text x=\"500\" y=\"300\" font-size=\"20\" text-anchor=\"middle\" dominant-baseline=\"middle\">AllocateSequence</text>\n  </g>\n  <g data-symbol-id=\"n3\">\n    <rect x=\"540\" y=\"280\" width=\"260\" height=\"40\" fill=\"white\" stroke=\"black\"/>\n    <text x=\"700\" y=\"300\" font-size=\"20\" text-anchor=\"middle\" dominant-baseline=\"middle\">AtomicWriteJson</text>\n  </g>\n  <g data-symbol-id=\"n4\">\n    <rect x=\"640\" y=\"280\" width=\"260\" height=\"40\" fill=\"white\" stroke=\"black\"/>\n    <text x=\"800\" y=\"300\" font-size=\"20\" text-anchor=\"middle\" dominant-baseline=\"middle\">Directory.Move</text>\n  </g>\n  <line x1=\"600\" y1=\"120\" x2=\"400\" y2=\"280\" stroke=\"black\" />\n  <polygon points=\"400,280 405.93,271.41 409.68,276.09\" fill=\"black\" />\n  <line x1=\"600\" y1=\"120\" x2=\"500\" y2=\"280\" stroke=\"black\" />\n  <polygon points=\"500,280 502.75,269.91 507.85,273.09\" fill=\"black\" />\n  <line x1=\"600\" y1=\"120\" x2=\"700\" y2=\"280\" stroke=\"black\" />\n  <polygon points=\"700,280 692.15,273.09 697.25,269.91\" fill=\"black\" />\n  <line x1=\"600\" y1=\"120\" x2=\"800\" y2=\"280\" stroke=\"black\" />\n  <polygon points=\"800,280 790.33,276.09 794.08,271.41\" fill=\"black\" />\n</svg>"
+  },
+  {
+    "Diagram": 18,
+    "Model": "qwen3.5:9b",
+    "Passed": false,
+    "Failures": [
+      "edges"
+    ],
+    "ExecutionDuration": "00:00:14.9504316",
+    "QueueDuration": "00:00:23.5573290",
+    "Svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"700\" viewBox=\"0 0 1200 700\">\n  <rect x=\"0\" y=\"0\" width=\"1200\" height=\"700\" fill=\"white\"/>\n  \n  <!-- Edge n0 -> n1 -->\n  <line x1=\"200\" y1=\"650\" x2=\"400\" y2=\"300\" stroke=\"black\" stroke-width=\"2\" />\n  <polygon points=\"400,300 392,298 392,302\" fill=\"black\" />\n\n  <!-- Edge n0 -> n2 -->\n  <line x1=\"200\" y1=\"650\" x2=\"600\" y2=\"300\" stroke=\"black\" stroke-width=\"2\" />\n  <polygon points=\"600,300 592,298 592,302\" fill=\"black\" />\n\n  <!-- Edge n0 -> n3 -->\n  <line x1=\"200\" y1=\"650\" x2=\"800\" y2=\"300\" stroke=\"black\" stroke-width=\"2\" />\n  <polygon points=\"800,300 792,298 792,302\" fill=\"black\" />\n\n  <!-- Node n0 -->\n  <g data-symbol-id=\"n0\">\n    <rect x=\"150\" y=\"600\" width=\"100\" height=\"50\" rx=\"5\" ry=\"5\" stroke=\"black\" fill=\"white\"/>\n    <text x=\"200\" y=\"640\" font-family=\"Arial\" font-size=\"18\" text-anchor=\"middle\">DurableQueue.EnqueueAsync</text>\n  </g>\n\n  <!-- Node n1 -->\n  <g data-symbol-id=\"n1\">\n    <rect x=\"350\" y=\"250\" width=\"140\" height=\"60\" rx=\"5\" ry=\"5\" stroke=\"black\" fill=\"white\"/>\n    <text x=\"420\" y=\"298\" font-family=\"Arial\" font-size=\"18\" text-anchor=\"middle\">ReadEntries</text>\n  </g>\n\n  <!-- Node n2 -->\n  <g data-symbol-id=\"n2\">\n    <rect x=\"550\" y=\"250\" width=\"140\" height=\"60\" rx=\"5\" ry=\"5\" stroke=\"black\" fill=\"white\"/>\n    <text x=\"620\" y=\"298\" font-family=\"Arial\" font-size=\"18\" text-anchor=\"middle\">ReadRequest</text>\n  </g>\n\n  <!-- Node n3 -->\n  <g data-symbol-id=\"n3\">\n    <rect x=\"750\" y=\"250\" width=\"140\" height=\"60\" rx=\"5\" ry=\"5\" stroke=\"black\" fill=\"white\"/>\n    <text x=\"820\" y=\"298\" font-family=\"Arial\" font-size=\"18\" text-anchor=\"middle\">DeduplicationKey</text>\n  </g>\n\n</svg>"
+  },
+  {
+    "Diagram": 18,
+    "Model": "gpt-oss:20b",
+    "Passed": true,
+    "Failures": [],
+    "ExecutionDuration": "00:00:36.5720297",
+    "QueueDuration": "00:00:02.3172944",
+    "Svg": "<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='700' viewBox='0 0 1200 700'>\n  <rect width='1200' height='700' fill='white'/>\n  <g data-symbol-id='n0'>\n    <rect x='70' y='80' width='260' height='40' fill='white' stroke='black' stroke-width='1'/>\n    <text x='200' y='100' font-size='18' fill='black' text-anchor='middle' dominant-baseline='middle'>DurableQueue.EnqueueAsync</text>\n  </g>\n  <g data-symbol-id='n1'>\n    <rect x='425' y='80' width='150' height='40' fill='white' stroke='black' stroke-width='1'/>\n    <text x='500' y='100' font-size='18' fill='black' text-anchor='middle' dominant-baseline='middle'>ReadEntries</text>\n  </g>\n  <g data-symbol-id='n2'>\n    <rect x='425' y='180' width='140' height='40' fill='white' stroke='black' stroke-width='1'/>\n    <text x='500' y='200' font-size='18' fill='black' text-anchor='middle' dominant-baseline='middle'>ReadRequest</text>\n  </g>\n  <g data-symbol-id='n3'>\n    <rect x='410' y='280' width='180' height='40' fill='white' stroke='black' stroke-width='1'/>\n    <text x='500' y='300' font-size='18' fill='black' text-anchor='middle' dominant-baseline='middle'>DeduplicationKey</text>\n  </g>\n  <line x1='330' y1='100' x2='425' y2='100' stroke='black' stroke-width='1' data-from='n0' data-to='n1'/>\n  <polygon points='425,100 425,95 425,105' fill='black' data-from='n0' data-to='n1'/>\n  <line x1='330' y1='100' x2='425' y2='180' stroke='black' stroke-width='1' data-from='n0' data-to='n2'/>\n  <polygon points='425,180 421.775,183.83 428.225,176.17' fill='black' data-from='n0' data-to='n2'/>\n  <line x1='330' y1='100' x2='425' y2='280' stroke='black' stroke-width='1' data-from='n0' data-to='n3'/>\n  <polygon points='425,280 420.58,282.34 429.42,277.66' fill='black' data-from='n0' data-to='n3'/>\n</svg>"
+  },
+  {
+    "Diagram": 19,
+    "Model": "qwen3.5:9b",
+    "Passed": false,
+    "Failures": [
+      "edges"
+    ],
+    "ExecutionDuration": "00:00:16.0416017",
+    "QueueDuration": "00:00:02.2235089",
+    "Svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"700\" viewBox=\"0 0 1200 700\">\n  <rect width=\"1200\" height=\"700\" fill=\"white\"/>\n  \n  <!-- Node n0: DurableQueue.LeaseNextAsync -->\n  <g data-symbol-id=\"n0\">\n    <rect x=\"250\" y=\"150\" width=\"300\" height=\"60\" rx=\"8\" ry=\"8\" fill=\"none\" stroke=\"black\" stroke-width=\"2\"/>\n    <text x=\"400\" y=\"195\" font-family=\"Arial\" font-size=\"18\" text-anchor=\"middle\" dominant-baseline=\"middle\">DurableQueue.LeaseNextAsync</text>\n  </g>\n\n  <!-- Node n1: MaintainActiveRoot -->\n  <g data-symbol-id=\"n1\">\n    <rect x=\"70\" y=\"450\" width=\"300\" height=\"60\" rx=\"8\" ry=\"8\" fill=\"none\" stroke=\"black\" stroke-width=\"2\"/>\n    <text x=\"220\" y=\"495\" font-family=\"Arial\" font-size=\"18\" text-anchor=\"middle\" dominant-baseline=\"middle\">MaintainActiveRoot</text>\n  </g>\n\n  <!-- Node n2: RecoverExpiredLeases -->\n  <g data-symbol-id=\"n2\">\n    <rect x=\"430\" y=\"450\" width=\"300\" height=\"60\" rx=\"8\" ry=\"8\" fill=\"none\" stroke=\"black\" stroke-width=\"2\"/>\n    <text x=\"580\" y=\"495\" font-family=\"Arial\" font-size=\"18\" text-anchor=\"middle\" dominant-baseline=\"middle\">RecoverExpiredLeases</text>\n  </g>\n\n  <!-- Node n3: Lease -->\n  <g data-symbol-id=\"n3\">\n    <rect x=\"790\" y=\"450\" width=\"300\" height=\"60\" rx=\"8\" ry=\"8\" fill=\"none\" stroke=\"black\" stroke-width=\"2\"/>\n    <text x=\"940\" y=\"495\" font-family=\"Arial\" font-size=\"18\" text-anchor=\"middle\" dominant-baseline=\"middle\">Lease</text>\n  </g>\n\n  <!-- Edge n0 -> n1 -->\n  <line x1=\"400\" y1=\"190\" x2=\"350\" y2=\"435\" stroke=\"black\" stroke-width=\"2\"/>\n  <polygon points=\"350,435 360,428 340,428\" fill=\"black\"/>\n\n  <!-- Edge n0 -> n2 -->\n  <line x1=\"400\" y1=\"190\" x2=\"530\" y2=\"435\" stroke=\"black\" stroke-width=\"2\"/>\n  <polygon points=\"530,435 540,428 520,428\" fill=\"black\"/>\n\n  <!-- Edge n0 -> n3 -->\n  <line x1=\"650\" y1=\"210\" x2=\"940\" y2=\"435\" stroke=\"black\" stroke-width=\"2\"/>\n  <polygon points=\"940,435 950,428 930,428\" fill=\"black\"/>\n\n</svg>"
+  },
+  {
+    "Diagram": 19,
+    "Model": "gpt-oss:20b",
+    "Passed": true,
+    "Failures": [],
+    "ExecutionDuration": "00:00:32.5323387",
+    "QueueDuration": "00:00:02.2407041",
+    "Svg": "<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='700' viewBox='0 0 1200 700'>\n  <rect width='100%' height='100%' fill='white'/>\n  <!-- Node n0 -->\n  <g data-symbol-id='n0'>\n    <rect x='100' y='350' width='200' height='50' fill='none' stroke='black'/>\n    <text x='200' y='375' text-anchor='middle' dominant-baseline='middle' font-size='18'>DurableQueue.LeaseNextAsync</text>\n  </g>\n  <!-- Node n1 -->\n  <g data-symbol-id='n1'>\n    <rect x='500' y='200' width='200' height='50' fill='none' stroke='black'/>\n    <text x='600' y='225' text-anchor='middle' dominant-baseline='middle' font-size='18'>MaintainActiveRoot</text>\n  </g>\n  <!-- Node n2 -->\n  <g data-symbol-id='n2'>\n    <rect x='500' y='350' width='200' height='50' fill='none' stroke='black'/>\n    <text x='600' y='375' text-anchor='middle' dominant-baseline='middle' font-size='18'>RecoverExpiredLeases</text>\n  </g>\n  <!-- Node n3 -->\n  <g data-symbol-id='n3'>\n    <rect x='500' y='500' width='200' height='50' fill='none' stroke='black'/>\n    <text x='600' y='525' text-anchor='middle' dominant-baseline='middle' font-size='18'>Lease</text>\n  </g>\n  <!-- Edge n0->n1 -->\n  <line x1='300' y1='375' x2='500' y2='225' data-from='n0' data-to='n1' stroke='black' stroke-width='2'/>\n  <polygon points='500,225 495,235 489,227' fill='black' data-from='n0' data-to='n1'/>\n  <!-- Edge n0->n2 -->\n  <line x1='300' y1='375' x2='500' y2='375' data-from='n0' data-to='n2' stroke='black' stroke-width='2'/>\n  <polygon points='500,375 490,380 490,370' fill='black' data-from='n0' data-to='n2'/>\n  <!-- Edge n0->n3 -->\n  <line x1='300' y1='375' x2='500' y2='525' data-from='n0' data-to='n3' stroke='black' stroke-width='2'/>\n  <polygon points='500,525 489,523 495,515' fill='black' data-from='n0' data-to='n3'/>\n</svg>"
+  },
+  {
+    "Diagram": 20,
+    "Model": "qwen3.5:9b",
+    "Passed": true,
+    "Failures": [],
+    "ExecutionDuration": "00:00:15.7201594",
+    "QueueDuration": "00:00:02.2961483",
+    "Svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"700\" viewBox=\"0 0 1200 700\">\n  <rect x=\"0\" y=\"0\" width=\"1200\" height=\"700\" fill=\"white\"/>\n  \n  <!-- Node 0: InstallationLayoutLease.Publish -->\n  <g data-symbol-id=\"n0\">\n    <circle cx=\"150\" cy=\"280\" r=\"60\" fill=\"white\" stroke=\"black\" stroke-width=\"2\"/>\n    <text x=\"150\" y=\"280\" font-family=\"sans-serif\" font-size=\"14\" text-anchor=\"middle\" dominant-baseline=\"central\">InstallationLayoutLease.Publish</text>\n  </g>\n\n  <!-- Node 1: IsKnownVersionFiles -->\n  <g data-symbol-id=\"n1\">\n    <circle cx=\"380\" cy=\"250\" r=\"60\" fill=\"white\" stroke=\"black\" stroke-width=\"2\"/>\n    <text x=\"380\" y=\"250\" font-family=\"sans-serif\" font-size=\"14\" text-anchor=\"middle\" dominant-baseline=\"central\">IsKnownVersionFiles</text>\n  </g>\n\n  <!-- Node 2: ValidateExactVersionDirectory -->\n  <g data-symbol-id=\"n2\">\n    <circle cx=\"380\" cy=\"450\" r=\"60\" fill=\"white\" stroke=\"black\" stroke-width=\"2\"/>\n    <text x=\"380\" y=\"450\" font-family=\"sans-serif\" font-size=\"14\" text-anchor=\"middle\" dominant-baseline=\"central\">ValidateExactVersionDirectory</text>\n  </g>\n\n  <!-- Node 3: Revalidate -->\n  <g data-symbol-id=\"n3\">\n    <circle cx=\"600\" cy=\"350\" r=\"60\" fill=\"white\" stroke=\"black\" stroke-width=\"2\"/>\n    <text x=\"600\" y=\"350\" font-family=\"sans-serif\" font-size=\"14\" text-anchor=\"middle\" dominant-baseline=\"central\">Revalidate</text>\n  </g>\n\n  <!-- Edge n0 -> n1 -->\n  <path data-from=\"n0\" data-to=\"n1\" d=\"M 210 280 L 320 250\" fill=\"none\" stroke=\"black\" stroke-width=\"2\"/>\n  <polygon points=\"320,250 315,245 325,245\" fill=\"black\"/>\n\n  <!-- Edge n0 -> n2 -->\n  <path data-from=\"n0\" data-to=\"n2\" d=\"M 210 280 L 320 450\" fill=\"none\" stroke=\"black\" stroke-width=\"2\"/>\n  <polygon points=\"320,450 315,445 325,445\" fill=\"black\"/>\n\n  <!-- Edge n0 -> n3 -->\n  <path data-from=\"n0\" data-to=\"n3\" d=\"M 210 280 L 600 350\" fill=\"none\" stroke=\"black\" stroke-width=\"2\"/>\n  <polygon points=\"600,350 595,345 605,345\" fill=\"black\"/>\n</svg>"
+  },
+  {
+    "Diagram": 20,
+    "Model": "gpt-oss:20b",
+    "Passed": false,
+    "Failures": [
+      "external or active content",
+      "external or active content",
+      "external or active content",
+      "external or active content"
+    ],
+    "ExecutionDuration": "00:00:28.3207120",
+    "QueueDuration": "00:00:22.8698838",
+    "Svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"700\" viewBox=\"0 0 1200 700\">\n  <rect width=\"1200\" height=\"700\" fill=\"white\"/>\n  <g data-symbol-id=\"n0\" transform=\"translate(300,200)\">\n    <text x=\"0\" y=\"0\" text-anchor=\"middle\" dy=\"0.35em\" style=\"font-size:18px; fill:black; font-family:Arial\">InstallationLayoutLease.Publish</text>\n  </g>\n  <g data-symbol-id=\"n1\" transform=\"translate(600,100)\">\n    <text x=\"0\" y=\"0\" text-anchor=\"middle\" dy=\"0.35em\" style=\"font-size:18px; fill:black; font-family:Arial\">IsKnownVersionFiles</text>\n  </g>\n  <g data-symbol-id=\"n2\" transform=\"translate(600,250)\">\n    <text x=\"0\" y=\"0\" text-anchor=\"middle\" dy=\"0.35em\" style=\"font-size:18px; fill:black; font-family:Arial\">ValidateExactVersionDirectory</text>\n  </g>\n  <g data-symbol-id=\"n3\" transform=\"translate(600,400)\">\n    <text x=\"0\" y=\"0\" text-anchor=\"middle\" dy=\"0.35em\" style=\"font-size:18px; fill:black; font-family:Arial\">Revalidate</text>\n  </g>\n  <line x1=\"300\" y1=\"200\" x2=\"600\" y2=\"100\" stroke=\"black\" stroke-width=\"2\" data-from=\"n0\" data-to=\"n1\"/>\n  <polygon points=\"600,100 592.094,107.906 588.932,98.419\" fill=\"black\" data-from=\"n0\" data-to=\"n1\"/>\n  <line x1=\"300\" y1=\"200\" x2=\"600\" y2=\"250\" stroke=\"black\" stroke-width=\"2\" data-from=\"n0\" data-to=\"n2\"/>\n  <polygon points=\"600,250 589.316,253.292 590.956,243.428\" fill=\"black\" data-from=\"n0\" data-to=\"n2\"/>\n  <line x1=\"300\" y1=\"200\" x2=\"600\" y2=\"400\" stroke=\"black\" stroke-width=\"2\" data-from=\"n0\" data-to=\"n3\"/>\n  <polygon points=\"600,400 588.906,398.613 594.453,390.293\" fill=\"black\" data-from=\"n0\" data-to=\"n3\"/>\n</svg>"
+  }
+]

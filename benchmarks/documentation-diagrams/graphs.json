@@ -1,0 +1,242 @@
+[
+  {
+    "Edges": [
+      "0>1",
+      "0>2",
+      "0>3"
+    ],
+    "Labels": [
+      "LocalTasks.ReadImageAsync",
+      "PdfPageReader.OpenAsync",
+      "ILocalModelClient.RoutedChatAsync",
+      "HierarchicalReducer"
+    ]
+  },
+  {
+    "Edges": [
+      "0>1",
+      "0>2"
+    ],
+    "Labels": [
+      "PdfPageReader.OpenAsync",
+      "Conversion.GetPageSizes",
+      "BoundedRaster"
+    ]
+  },
+  {
+    "Edges": [
+      "0>1",
+      "0>2",
+      "0>3"
+    ],
+    "Labels": [
+      "PdfPageReader.RenderAsync",
+      "Conversion.ToImagesAsync",
+      "SKImage.FromBitmap",
+      "SKImage.Encode"
+    ]
+  },
+  {
+    "Edges": [
+      "0>1",
+      "0>2"
+    ],
+    "Labels": [
+      "PdfPageReader.ReadNextAsync",
+      "RenderAsync",
+      "MoveNextAsync"
+    ]
+  },
+  {
+    "Edges": [
+      "0>1",
+      "0>2",
+      "0>3"
+    ],
+    "Labels": [
+      "LocalRunProgress.Report",
+      "ReadingPdfPage",
+      "ReadingImage",
+      "ReportCounted"
+    ]
+  },
+  {
+    "Edges": [
+      "0>1",
+      "0>2"
+    ],
+    "Labels": [
+      "ReportCounted",
+      "ProgressMinutesLeft",
+      "Write"
+    ]
+  },
+  {
+    "Edges": [
+      "0>1",
+      "0>2"
+    ],
+    "Labels": [
+      "CurrentVersionFiles",
+      "VersionRequiredFiles",
+      "PdfRuntimeFiles"
+    ]
+  },
+  {
+    "Edges": [
+      "0>1",
+      "0>2"
+    ],
+    "Labels": [
+      "CurrentPackageArtifactFiles",
+      "CurrentVersionFiles",
+      "StableLauncherFile"
+    ]
+  },
+  {
+    "Edges": [
+      "0>1",
+      "0>2"
+    ],
+    "Labels": [
+      "ReleaseSigner.Pack",
+      "CurrentPackageArtifactFiles",
+      "ZipArchive"
+    ]
+  },
+  {
+    "Edges": [
+      "0>1",
+      "0>2"
+    ],
+    "Labels": [
+      "ReleasePackageVerifier",
+      "ValidateLocalHeaders",
+      "IsKnownPackageArtifacts"
+    ]
+  },
+  {
+    "Edges": [
+      "0>1",
+      "1>2"
+    ],
+    "Labels": [
+      "RetainApprovedFiles",
+      "IStagingRootLease.RetainFile",
+      "IRetainedStagingFile"
+    ]
+  },
+  {
+    "Edges": [
+      "0>1",
+      "0>2"
+    ],
+    "Labels": [
+      "ValidateAuthenticode",
+      "IRetainedStagingFile.Revalidate",
+      "IAuthenticodeVerifier.IsTrusted"
+    ]
+  },
+  {
+    "Edges": [
+      "0>1",
+      "0>2",
+      "0>3"
+    ],
+    "Labels": [
+      "LocalAiPackageInstaller.InstallAsync",
+      "LockInstalledVersion",
+      "CopyVerifiedAsync",
+      "processRunner.RunAsync"
+    ]
+  },
+  {
+    "Edges": [
+      "0>1",
+      "0>2",
+      "0>3"
+    ],
+    "Labels": [
+      "ValidateExactVersion",
+      "ValidateExactDirectory",
+      "VerifyFile",
+      "VerifiedPackage.Revalidate"
+    ]
+  },
+  {
+    "Edges": [
+      "0>1",
+      "0>2"
+    ],
+    "Labels": [
+      "PdfPageReader.DisposeAsync",
+      "rendered.DisposeAsync",
+      "input.DisposeAsync"
+    ]
+  },
+  {
+    "Edges": [
+      "0>1",
+      "1>2"
+    ],
+    "Labels": [
+      "ConfiguredCatalogStartupTests",
+      "BrokerClient.ExecuteAsync",
+      "DurableQueue.EnqueueAsync"
+    ]
+  },
+  {
+    "Edges": [
+      "0>1",
+      "0>2",
+      "0>3",
+      "0>4"
+    ],
+    "Labels": [
+      "DurableQueue.EnqueueAsync",
+      "EnterMutex",
+      "AllocateSequence",
+      "AtomicWriteJson",
+      "Directory.Move"
+    ]
+  },
+  {
+    "Edges": [
+      "0>1",
+      "0>2",
+      "0>3"
+    ],
+    "Labels": [
+      "DurableQueue.EnqueueAsync",
+      "ReadEntries",
+      "ReadRequest",
+      "DeduplicationKey"
+    ]
+  },
+  {
+    "Edges": [
+      "0>1",
+      "0>2",
+      "0>3"
+    ],
+    "Labels": [
+      "DurableQueue.LeaseNextAsync",
+      "MaintainActiveRoot",
+      "RecoverExpiredLeases",
+      "Lease"
+    ]
+  },
+  {
+    "Edges": [
+      "0>1",
+      "0>2",
+      "0>3"
+    ],
+    "Labels": [
+      "InstallationLayoutLease.Publish",
+      "IsKnownVersionFiles",
+      "ValidateExactVersionDirectory",
+      "Revalidate"
+    ]
+  }
+]
