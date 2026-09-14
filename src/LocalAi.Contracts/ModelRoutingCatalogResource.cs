@@ -9,8 +9,8 @@ namespace LocalAi.Contracts;
 /// The catalog is the only place that knows which models exist, what each one can do and
 /// which context sizes it may be loaded with — none of that is published by the model
 /// registry. The broker needs it to route requests; the installer needs it to offer a choice
-/// that the broker will actually accept. Both read it from here so there is one copy, and
-/// validation stays where routing lives.
+/// that the broker will actually accept. The shared store validates this default document
+/// or the installation's configured replacement.
 /// </summary>
 public static class ModelRoutingCatalogResource
 {
@@ -34,13 +34,13 @@ public static class ModelRoutingCatalogResource
     /// one capability and one usable context size. Callers that only need to present a choice
     /// use this instead of taking a dependency on the broker.
     /// </summary>
-    public static IReadOnlyList<ModelCatalogEntry> SelectableModels()
+    public static IReadOnlyList<ModelCatalogEntry> SelectableModels(string? runtimeRoot = null)
     {
         try
         {
             return
             [
-                .. LoadDocument().Models
+                .. new ModelRoutingCatalogStore(runtimeRoot).Read().Models
                     .Where(model =>
                         !string.IsNullOrWhiteSpace(model.Tag) &&
                         model.Capabilities is { Count: > 0 } &&

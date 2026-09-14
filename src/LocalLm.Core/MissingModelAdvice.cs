@@ -12,7 +12,7 @@ namespace LocalLm.Core;
 /// anything to do about it.
 ///
 /// The routing catalog already knows which models a profile can run on, and it is readable
-/// without depending on the broker, which is what <see cref="ModelRoutingCatalogResource"/>
+/// without depending on the broker, which is what <see cref="ModelRoutingCatalogStore"/>
 /// exists for. So the answer is assembled here, where the tool that failed can say it.
 /// </summary>
 public static class MissingModelAdvice
@@ -22,9 +22,9 @@ public static class MissingModelAdvice
     /// installs one. The pull goes through the launcher and the broker, which is the only route
     /// models are ever installed by.
     /// </summary>
-    public static string ForProfile(LocalTaskProfile profile)
+    public static string ForProfile(LocalTaskProfile profile, string? runtimeRoot = null)
     {
-        var models = ModelsFor(profile, out var catalogVersion);
+        var models = ModelsFor(profile, runtimeRoot, out var catalogVersion);
         if (models.Count == 0)
         {
             return LocalLmText.NoModelAndCatalogNamesNone(profile);
@@ -41,9 +41,9 @@ public static class MissingModelAdvice
     /// particular request. Telling somebody to install what they already have would waste an hour
     /// and several gigabytes, so this names the two limits that actually decide eligibility.
     /// </summary>
-    public static string ForIneligibleRequest(LocalTaskProfile profile)
+    public static string ForIneligibleRequest(LocalTaskProfile profile, string? runtimeRoot = null)
     {
-        var models = ModelsFor(profile, out _);
+        var models = ModelsFor(profile, runtimeRoot, out _);
         return models.Count == 0
             ? LocalLmText.Ineligible(profile)
             : LocalLmText.IneligibleWithModels(profile, string.Join(", ", models));
@@ -51,12 +51,13 @@ public static class MissingModelAdvice
 
     private static IReadOnlyList<string> ModelsFor(
         LocalTaskProfile profile,
+        string? runtimeRoot,
         out string catalogVersion)
     {
         catalogVersion = string.Empty;
         try
         {
-            var document = ModelRoutingCatalogResource.LoadDocument();
+            var document = new ModelRoutingCatalogStore(runtimeRoot).Read();
             catalogVersion = document.CatalogVersion;
             var route = document.Routes.FirstOrDefault(entry => entry.Profile == profile);
             if (route is null)

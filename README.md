@@ -214,7 +214,23 @@ Nothing is nailed down — the settings live in `%LOCALAPPDATA%\LocalAi\settings
 | How long a model stays loaded | `localai policy set --idle-model-keep-alive-seconds` |
 | Take the tools away from a client | unregister the MCP servers from Claude or Codex — the agent then simply does not see them |
 
-To see what is already set: `localai policy show`.
+To choose models for each task, copy the complete [model-routing.json](model-routing.json)
+from the repository root to `%LOCALAPPDATA%\LocalAi\settings\model-routing.json`.
+Edit `Candidates` and `Fallbacks` in the relevant `Routes` entry; declare any added
+model in `Models`. This file replaces the complete catalog. Keep `SchemaVersion` at
+`1`, a non-empty `CatalogVersion`, and one route for every task profile.
+
+Without this file, LocalAi reads the built-in catalog. An invalid file reports an
+error instead of falling back to defaults. Run `localai doctor` to check the file
+and see its calculated version: `custom-` followed by a content hash. Formatting
+changes do not change that version. Use `localai policy show` to inspect the other
+policies.
+
+To apply the saved catalog, let active local calls finish and run `localai doctor`.
+If its `model-catalog` check passes, run `localai-launcher.exe stop`. This stops
+the broker and all running LocalAi tools belonging to the active installed version,
+including its MCP servers. Reconnect the MCP servers in your client, or restart
+the client if needed. The next local task starts the broker with the saved catalog.
 
 **The limits, stated plainly — and who closes them.** Local models are markedly weaker than
 cloud ones. They are good at *list this*, *summarise that*, *where does this live* — and
