@@ -119,6 +119,10 @@ public sealed class ModelExecutionCoordinator
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(availability);
         ArgumentNullException.ThrowIfNull(selection);
+        if (_warmProof is { } proof && !availability.ResidentModels.Contains(proof.Model))
+        {
+            InvalidateResidencyProof();
+        }
         var chat = request.Payload as ChatJobPayload
             ?? throw new ArgumentException(
                 "Model execution coordinator currently accepts routed chat jobs.",
@@ -241,6 +245,23 @@ public sealed class ModelExecutionCoordinator
             primary.Validation.Outcome);
     }
 
+    /// <summary>A proof describes one model load, and cannot survive an unload.</summary>
+    public void InvalidateResidencyProof() => _warmProof = null;
+
+    /// <summary>Discard a cached proof when the backend's current process no longer matches it.</summary>
+    public void ObserveResidency(IReadOnlyList<OllamaProcessInfo> processes)
+    {
+        ArgumentNullException.ThrowIfNull(processes);
+        if (_warmProof is { } proof && !processes.Any(process =>
+                string.Equals(process.Model, proof.Model, StringComparison.Ordinal) &&
+                process.ContextTokens == proof.ContextTokens &&
+                process.SizeBytes == proof.SizeBytes &&
+                process.SizeVramBytes == proof.SizeVramBytes))
+        {
+            InvalidateResidencyProof();
+        }
+    }
+
     private async Task<AttemptResult> ExecuteAttemptAsync(
         LocalJobRequest original,
         ModelSelection selection,
@@ -258,6 +279,7 @@ public sealed class ModelExecutionCoordinator
         var loadStarted = now;
         if (wasCold)
         {
+            InvalidateResidencyProof();
             _warmProof = await _runtime.EnsureReadyAsync(
                 selection.Model,
                 selection.ContextTokens,
