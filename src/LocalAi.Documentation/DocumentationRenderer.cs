@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Net;
-using System.Resources;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -15,7 +14,6 @@ namespace LocalAi.Documentation;
 public static class DocumentationRenderer
 {
     private static readonly Lock PdfGate = new();
-    private static readonly ResourceManager TextCatalogue = new("LocalAi.Documentation.Resources.DocumentationText", typeof(DocumentationRenderer).Assembly);
     private static readonly MarkdownPipeline Markdown = new MarkdownPipelineBuilder().DisableHtml().Build();
     private sealed record Block(string Text, int Heading = 0, bool Code = false, bool Diagram = false);
 
@@ -52,7 +50,7 @@ public static class DocumentationRenderer
 
     private static List<Block> Content(DocumentationInput input, DocumentationDraft draft, string language)
     {
-        string Text(string key) => TextCatalogue.GetString(key, CultureInfo.GetCultureInfo(language)) ?? throw new InvalidOperationException("missing_documentation_text:" + key);
+        string Text(string key) => DocumentationText.Get(key, language);
         var blocks = new List<Block>
         {
             new(input.Name, 1), new(Text("Source") + ": " + input.SourcePath + ":" + input.SourceLine + " [" + input.SymbolId + "]"),

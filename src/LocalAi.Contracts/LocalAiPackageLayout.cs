@@ -33,22 +33,22 @@ public static class LocalAiPackageLayout
         ["pdfium.dll", "libSkiaSharp.dll", "THIRD-PARTY-NOTICES-PDF.txt"]);
 
     public static IReadOnlyList<string> CurrentVersionFiles { get; } = Array.AsReadOnly(
-        VersionRequiredFiles.Concat(PdfRuntimeFiles).ToArray());
+        VersionRequiredFiles.Concat(PdfRuntimeFiles).Concat(["libHarfBuzzSharp.dll", "THIRD-PARTY-NOTICES-DOCUMENTATION.txt"]).ToArray());
 
     public static IReadOnlyList<string> CurrentPackageArtifactFiles { get; } = Array.AsReadOnly(
         CurrentVersionFiles.Append(StableLauncherFile).ToArray());
 
-    // Two complete, exact shapes. A partial PDF payload, foreign DLL, or stray notice is never
+    // Three complete, exact shapes. A partial payload, foreign DLL, or stray notice is never
     // accepted by loosening the package allowlist to arbitrary optional files.
     public static bool IsKnownVersionFiles(IEnumerable<string> files)
     {
         var names = files.ToHashSet(StringComparer.Ordinal);
-        return names.SetEquals(VersionRequiredFiles) || names.SetEquals(CurrentVersionFiles);
+        return names.SetEquals(VersionRequiredFiles) || names.SetEquals(VersionRequiredFiles.Concat(PdfRuntimeFiles)) || names.SetEquals(CurrentVersionFiles);
     }
 
     public static bool IsKnownPackageArtifacts(IEnumerable<string> files)
     {
         var names = files.ToHashSet(StringComparer.Ordinal);
-        return names.SetEquals(PackageArtifactFiles) || names.SetEquals(CurrentPackageArtifactFiles);
+        return names.SetEquals(PackageArtifactFiles) || names.SetEquals(PackageArtifactFiles.Concat(PdfRuntimeFiles)) || names.SetEquals(CurrentPackageArtifactFiles);
     }
 }

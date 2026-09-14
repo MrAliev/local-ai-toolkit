@@ -1,4 +1,4 @@
-﻿using CodeSearch.Core.Embedding;
+using CodeSearch.Core.Embedding;
 using LocalAi.Cli;
 using LocalAi.Cli.Resources;
 using LocalAi.Contracts;
@@ -278,6 +278,9 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
     // The first commands in this binary that can run for minutes, so they are also the first
     // that have to answer Ctrl+C — an interrupted triage would otherwise exit with no envelope
     // and no line saying why.
+    if (args is ["docs", .. var docsArguments])
+        return await Interruptible(token => DocumentationCommand.ExecuteAsync(docsArguments, CommandStreams.Standard, machineReadable, token));
+
     if (args is ["ask", .. var askArguments])
     {
         if (!AskCommand.TryParse(askArguments, out var ask, out var askRefusal))
