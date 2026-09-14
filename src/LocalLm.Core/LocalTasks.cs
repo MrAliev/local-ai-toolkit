@@ -174,6 +174,7 @@ public sealed class LocalTasks
         bool together,
         CancellationToken ct)
     {
+        ct.ThrowIfCancellationRequested();
         if (!IsImageProfile(profile))
         {
             throw new ArgumentOutOfRangeException(
@@ -185,6 +186,13 @@ public sealed class LocalTasks
         {
             throw new ArgumentException(LocalLmText.NoImagePaths, nameof(paths));
         }
+
+        var isPdf = paths.Any(IsPdfFile);
+        if (isPdf && paths.Count != 1)
+            throw new ArgumentException(LocalLmText.PdfOnlyInput, nameof(paths));
+        if (isPdf && together)
+            throw new ArgumentException(LocalLmText.PdfTogetherUnsupported, nameof(together));
+        await using var pdf = isPdf ? await PdfPageReader.OpenAsync(Resolve(paths[0]), ct) : null;
 
         if (paths.Count > MaxImageCount)
         {
@@ -202,7 +210,7 @@ public sealed class LocalTasks
 
         // Metadata first, bytes second (#206): every base64 string is held in memory at once,
         // so the totals have to refuse the batch before the first file is materialized.
-        foreach (var path in paths)
+        foreach (var path in isPdf ? [] : paths)
         {
             var full = Resolve(path);
             if (!IsImageFile(full))
@@ -245,6 +253,16 @@ public sealed class LocalTasks
             pixels.Add((long)info.Width * info.Height);
         }
 
+        if (pdf is not null)
+        {
+            foreach (var page in pdf.Pages)
+            {
+                wouldHaveCost = checked(wouldHaveCost + TokenEstimator.ForImage(page));
+                pixels.Add((long)page.Width * page.Height);
+            }
+        }
+        var frameCount = pdf?.Pages.Count ?? fullPaths.Count;
+
         const string imageReadingSystem =
             "You are reading images on behalf of another engineer who will never see them. " +
             "Answer only from what is actually visible. Transcribe text exactly, preserving " +
@@ -265,13 +283,18 @@ public sealed class LocalTasks
             ? Guid.NewGuid()
             : (Guid?)null;
 
+        var queued = TimeSpan.Zero;
+        var executed = TimeSpan.Zero;
+        var answerTokens = 0;
+
         async Task<LocalJobResult<string>> AskAsync(
             string prompt,
             IReadOnlyList<string>? batch,
             long batchPixels,
             int stepIndex,
-            int stepCount) =>
-            await client.RoutedChatAsync(
+            int stepCount)
+        {
+            var answer = await client.RoutedChatAsync(
                 profile,
                 prompt,
                 imageSystem,
@@ -295,33 +318,37 @@ public sealed class LocalTasks
                 requestedContextTokens: 8192,
                 LocalJobPriority.Foreground,
                 ct);
+            queued += answer.Receipt.QueueDuration;
+            executed += answer.Receipt.ExecutionDuration;
+            answerTokens = checked(answerTokens + TokenEstimator.ForText(answer.Value));
+            return answer;
+        }
 
-        static async Task<string> EncodeAsync(string full, CancellationToken token) =>
-            Convert.ToBase64String(await File.ReadAllBytesAsync(full, token));
+        async Task<string> EncodeAsync(int index, CancellationToken token) =>
+            pdf is not null ? await pdf.ReadNextAsync(token)
+                : Convert.ToBase64String(await File.ReadAllBytesAsync(fullPaths[index], token));
 
         LocalJobResult<string> result;
         // Accumulated over every call, the way triage does it: reporting the last one as the whole
         // run understates a job of several calls in the line whose purpose is to show its cost.
-        var queued = TimeSpan.Zero;
-        var executed = TimeSpan.Zero;
-        var answerTokens = 0;
         // A single image takes the together path because there is nothing to merge it with, and
         // because "image 1 of 1" is a counter that never counts.
-        var inOneCall = together || fullPaths.Count == 1;
+        var inOneCall = together || frameCount == 1;
 
         if (inOneCall)
         {
-            var batch = new List<string>(fullPaths.Count);
-            foreach (var full in fullPaths)
+            if (isPdf) observer?.Report(new ReadingPdfPage(1, 1));
+            var batch = new List<string>(frameCount);
+            for (var index = 0; index < frameCount; index++)
             {
-                batch.Add(await EncodeAsync(full, ct));
+                batch.Add(await EncodeAsync(index, ct));
             }
 
             // One call, so there is nothing to count inside it. The console keeps the number and
             // spends it on the heartbeat it was going to print anyway.
-            observer?.Report(new ReadingImages(batch.Count));
-            result = await AskAsync(question, batch, totalImagePixels, 0, 1);
-            answerTokens = TokenEstimator.ForText(result.Value);
+            if (!isPdf) observer?.Report(new ReadingImages(batch.Count));
+            result = await AskAsync(isPdf ? $"PDF page 1 of 1.\n{question}" : question,
+                batch, isPdf ? pixels[0] : totalImagePixels, 0, 1);
         }
         else
         {
@@ -343,24 +370,24 @@ public sealed class LocalTasks
                         MergePrompt(question, readings, level),
                         null,
                         0,
-                        fullPaths.Count,
-                        fullPaths.Count + 1);
+                        frameCount,
+                        frameCount + 1);
                     return new ReducedSummary(merged.Value, merged.Receipt);
                 });
 
-            for (var index = 0; index < fullPaths.Count; index++)
+            for (var index = 0; index < frameCount; index++)
             {
-                observer?.Report(new ReadingImage(index + 1, fullPaths.Count));
+                ct.ThrowIfCancellationRequested();
+                observer?.Report(isPdf ? new ReadingPdfPage(index + 1, frameCount)
+                    : new ReadingImage(index + 1, frameCount));
                 var one = await AskAsync(
-                    question,
-                    [await EncodeAsync(fullPaths[index], ct)],
+                    isPdf ? $"PDF page {index + 1} of {frameCount}. Keep this page number with your findings.\n{question}" : question,
+                    [await EncodeAsync(index, ct)],
                     pixels[index],
                     index,
-                    fullPaths.Count + 1);
-                queued += one.Receipt.QueueDuration;
-                executed += one.Receipt.ExecutionDuration;
-                answerTokens += TokenEstimator.ForText(one.Value);
-                await reducer.AddAsync(one.Value, ct);
+                    frameCount + 1);
+                ct.ThrowIfCancellationRequested();
+                await reducer.AddAsync(isPdf ? $"PDF page {index + 1}:\n{one.Value}" : one.Value, ct);
             }
 
             var reduced = await reducer.CompleteAsync(ct);
@@ -368,11 +395,8 @@ public sealed class LocalTasks
                 reduced.Text,
                 reduced.Receipt
                     ?? throw new InvalidOperationException(LocalLmText.LogTriageNoReceipt));
-            answerTokens += TokenEstimator.ForText(reduced.Text);
         }
 
-        queued += result.Receipt.QueueDuration;
-        executed += result.Receipt.ExecutionDuration;
         result = result with
         {
             Receipt = result.Receipt with
@@ -426,7 +450,7 @@ public sealed class LocalTasks
             // five images can compare them and five merged readings cannot — the merge prompt
             // forbids exactly that. A reader deciding whether to trust a statement spanning the
             // images has only this line to go on.
-            inOneCall
+            isPdf ? LocalLmText.PdfPagesRead(Path.GetFileName(paths[0]), frameCount) : inOneCall
                 ? LocalLmText.ImagesRead(fullPaths.Count, string.Join(", ", described))
                 : LocalLmText.ImagesReadOneAtATime(
                     fullPaths.Count,
@@ -493,6 +517,7 @@ public sealed class LocalTasks
             them into one answer in the order given, keep every distinct finding and its exact
             wording, and do not add anything the readings do not contain — in particular, do not
             compare the images or draw a conclusion that needed more than one of them.
+            Keep any PDF page numbers attached to the findings they identify.
 
             {body}
             """;
@@ -507,12 +532,15 @@ public sealed class LocalTasks
     /// <summary>
     /// Whether a path names a file this can read as an image, by its extension.
     ///
-    /// Public so a caller can refuse a PDF before the call rather than after: inside, the answer
+    /// Public so a caller can refuse unsupported files before the call rather than after: inside, the answer
     /// is an argument failure among many, and a console reporting all of those the same way tells
     /// a program nothing it can act on. The same set, so the two cannot disagree.
     /// </summary>
     public static bool IsImageFile(string path) =>
         ImageExtensions.Contains(Path.GetExtension(path));
+
+    public static bool IsPdfFile(string path) =>
+        string.Equals(Path.GetExtension(path), ".pdf", StringComparison.OrdinalIgnoreCase);
 
     public static bool IsTextChatProfile(LocalTaskProfile profile) =>
         profile is not (
