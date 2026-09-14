@@ -42,8 +42,7 @@ public static class DocumentationWorkspace
             try
             {
                 var text = File.ReadAllText(path);
-                if (!SHA256.HashData(Encoding.UTF8.GetBytes(text)).SequenceEqual(document.Hash)) throw new DocumentationValidationException(["index_outdated"]);
-                sources.Add(document.RelPath, text);
+                sources.Add(document.RelPath, ValidatedSource(text, document.Hash));
             }
             catch (IOException) { throw new DocumentationValidationException(["index_outdated"]); }
         }
@@ -51,6 +50,22 @@ public static class DocumentationWorkspace
             paths => History(identity.WorkingRoot.Value, identity.HeadCommit, paths, cancellationToken), limit));
         if (Snapshot(RuntimeIndexLayout.Inspect(workingRoot, runtimeRoot)) != input.Snapshot) throw new DocumentationValidationException(["index_outdated"]);
         return input;
+    }
+
+    private static string ValidatedSource(string text, byte[] indexedHash)
+    {
+        // The index can be built in a checkout with different Git line-ending settings.
+        // Match its exact text hash using only the LF/CRLF representations, then give the
+        // documentation input one stable representation. Line/UTF-16-column ranges survive
+        // this conversion, and changing checkout settings does not invalidate cached prose.
+        var lf = text.Replace("\r\n", "\n", StringComparison.Ordinal);
+        if (Matches(text)) return lf;
+        if (lf != text && Matches(lf)) return lf;
+        var crlf = lf.Replace("\n", "\r\n", StringComparison.Ordinal);
+        if (crlf != text && Matches(crlf)) return lf;
+        throw new DocumentationValidationException(["index_outdated"]);
+
+        bool Matches(string candidate) => SHA256.HashData(Encoding.UTF8.GetBytes(candidate)).SequenceEqual(indexedHash);
     }
 
     private static IReadOnlyList<DocumentationHistory> History(string root, string commit, IReadOnlyList<string> paths, CancellationToken cancellationToken)
