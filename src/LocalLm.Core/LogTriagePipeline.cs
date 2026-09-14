@@ -14,7 +14,8 @@ namespace LocalLm.Core;
 internal sealed class LogTriagePipeline(
     ILocalModelClient client,
     LogTriagePolicy policy,
-    ILocalRunObserver? observer = null)
+    ILocalRunObserver? observer = null,
+    ModelRoutingCatalogStore? modelCatalog = null)
 {
     private const string DefaultQuestion =
         "What failed, and why? Give the exact file and line if the log names one.";
@@ -151,7 +152,7 @@ internal sealed class LogTriagePipeline(
         CancellationToken cancellationToken)
     {
         var status = (await client.GetModelsStatusAsync(cancellationToken)).Value;
-        var catalog = ModelRoutingCatalogResource.LoadDocument();
+        var catalog = (modelCatalog ?? new ModelRoutingCatalogStore()).Read();
         if (!string.Equals(
                 status.CatalogVersion,
                 catalog.CatalogVersion,

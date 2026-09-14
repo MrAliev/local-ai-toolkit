@@ -93,6 +93,7 @@ public sealed class LocalTasks
 {
     private readonly ILocalModelClient client;
     private readonly LogTriagePolicyStore logTriagePolicies;
+    private readonly ModelRoutingCatalogStore modelCatalog;
 
     /// <summary>
     /// Optional because only the console has a reader for it. An MCP server passes none and
@@ -112,10 +113,12 @@ public sealed class LocalTasks
     internal LocalTasks(
         ILocalModelClient client,
         LogTriagePolicyStore logTriagePolicies,
-        ILocalRunObserver? observer = null)
+        ILocalRunObserver? observer = null,
+        ModelRoutingCatalogStore? modelCatalog = null)
     {
         this.client = client;
         this.logTriagePolicies = logTriagePolicies;
+        this.modelCatalog = modelCatalog ?? new ModelRoutingCatalogStore();
         this.observer = observer;
     }
 
@@ -441,7 +444,7 @@ public sealed class LocalTasks
         string? question,
         string? model,
         CancellationToken ct) =>
-        new LogTriagePipeline(client, logTriagePolicies.Read(), observer)
+        new LogTriagePipeline(client, logTriagePolicies.Read(), observer, modelCatalog)
             .RunAsync(path, text, question, model, ct);
 
     /// <summary>

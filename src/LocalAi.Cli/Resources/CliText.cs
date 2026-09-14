@@ -1,4 +1,4 @@
-﻿using LocalAi.Contracts.Localization;
+using LocalAi.Contracts.Localization;
 
 namespace LocalAi.Cli.Resources;
 
@@ -23,6 +23,15 @@ public static class CliText
 
     public static string VersionNoPointer(string binRoot) =>
         Catalogue.Format(nameof(VersionNoPointer), binRoot);
+
+    public static string ModelCatalogEmbedded(string version) =>
+        Catalogue.Format(nameof(ModelCatalogEmbedded), version);
+
+    public static string ModelCatalogConfigured(string path, string version) =>
+        Catalogue.Format(nameof(ModelCatalogConfigured), path, version);
+
+    public static string ModelCatalogUnreadable(string path, string reason) =>
+        Catalogue.Format(nameof(ModelCatalogUnreadable), path, reason);
 
     public static string VersionPointerUnreadable(string reason) =>
         Catalogue.Format(nameof(VersionPointerUnreadable), reason);
