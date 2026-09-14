@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using CodeSearch.Core.Indexing;
+using CodeSearch.Core.Semantics;
 
 namespace CodeSearch.Tests;
 
@@ -146,6 +147,66 @@ public sealed class WhatChangedSinceTheIndexWasBuiltTests : IDisposable
 
         Assert.Empty(RuntimeIndexLayout.GetDirtyPaths(_root));
         Assert.Empty(RuntimeIndexLayout.GetPathsChangedSince(_root, _baseTree)!);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void A_cross_project_rename_rebuilds_both_owners_and_removes_the_old_document(
+        bool committed)
+    {
+        foreach (var name in new[] { "A", "B", "Consumer" }
+                     .Concat(Enumerable.Range(0, 13).Select(i => "Other" + i)))
+        {
+            Directory.CreateDirectory(Path.Combine(_root, name));
+            Write(name + "/" + name + ".csproj",
+                "<Project Sdk=\"Microsoft.NET.Sdk\">" +
+                (name == "Consumer"
+                    ? "<ItemGroup><ProjectReference Include=\"../A/A.csproj\" /></ItemGroup>"
+                    : "") + "</Project>");
+        }
+        Write("A/Moved.cs", "public class Moved { public int Value => 1; }");
+        Git("add", ".");
+        Git("commit", "-m", "projects");
+        _baseTree = Git("rev-parse", "HEAD^{tree}").Trim();
+        Git("mv", "A/Moved.cs", "B/Moved.cs");
+        if (committed)
+        {
+            Git("commit", "-m", "move source");
+        }
+
+        var changed = RuntimeIndexLayout.GetPathsChangedSince(_root, _baseTree);
+        Assert.NotNull(changed);
+        Assert.Equal(["A/Moved.cs", "B/Moved.cs"], changed.Select(p => p.Replace('\\', '/')));
+        if (!committed)
+        {
+            Assert.Equal(changed, RuntimeIndexLayout.GetDirtyPaths(_root));
+        }
+        var graph = ProjectGraph.Load(_root);
+        var plan = ScopedRebuild.Plan(changed, graph,
+            p => File.Exists(Path.Combine(_root, p)) ? File.ReadAllText(Path.Combine(_root, p)) : null,
+            p => RuntimeIndexLayout.GetTextAt(_root, _baseTree, p));
+        Assert.NotNull(plan);
+        Assert.Equal(["A/A.csproj", "B/B.csproj", "Consumer/Consumer.csproj"],
+            plan.Projects.Order(StringComparer.Ordinal));
+        Assert.True(ScopedRebuild.NarrowerThanTheSolution(plan, graph));
+
+        var baseline = new SemanticIndex
+        {
+            RepositoryId = "fixture", GenerationId = "fixture", GitTree = _baseTree,
+            BaseCommit = "fixture", IndexedAtUtc = DateTime.UtcNow,
+            Documents = [new SemanticDocument { RelPath = "A/Moved.cs", Hash = new byte[32] }],
+            Symbols = [], Occurrences = [], Relationships = []
+        };
+        var current = baseline with
+        {
+            GitTree = "changed",
+            Documents = [new SemanticDocument { RelPath = "B/Moved.cs", Hash = new byte[32] }]
+        };
+        var overlay = SemanticIndexOverlay.CreateScoped(baseline, current,
+            current.Documents.Select(d => d.RelPath).Concat(plan.ChangedPaths));
+        Assert.Equal(["A/Moved.cs"], overlay.DeletedDocuments);
+        Assert.Equal(["B/Moved.cs"], overlay.Materialize(baseline).Documents.Select(d => d.RelPath));
     }
 
     private void Write(string relative, string content) =>

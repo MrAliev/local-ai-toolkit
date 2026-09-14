@@ -169,7 +169,7 @@ public static class RuntimeIndexLayout
         var root = RepoLocator.ResolveWorkingRoot(workingRoot).Value;
         var changed = RepoLocator.GitOutputBytes(
             root,
-            ["diff", "--name-only", "-z", baseTree, "--"]);
+            ["diff", "--no-renames", "--name-only", "-z", baseTree, "--"]);
         if (changed is null)
         {
             return null;
@@ -208,7 +208,7 @@ public static class RuntimeIndexLayout
         var root = RepoLocator.ResolveWorkingRoot(workingRoot).Value;
         var changed = RepoLocator.GitOutputBytes(
             root,
-            ["diff", "--name-only", "-z", "HEAD", "--"]);
+            ["diff", "--no-renames", "--name-only", "-z", "HEAD", "--"]);
         var untracked = RepoLocator.GitOutputBytes(
             root,
             ["ls-files", "--others", "--exclude-standard", "-z"]);
