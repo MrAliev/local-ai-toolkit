@@ -464,15 +464,15 @@
     <comment>Printed when the oldest queued job has never been attempted and has waited past the age at which the scheduler force-includes a starved job. Counts stay invariant; {1} is minutes. The remedy is deliberately not named: what unblocks a stalled queue is not something the reader can do from the console today (#335).</comment>
   </data>
   <data name="ReadImageNoImages" xml:space="preserve">
-    <value>Команде localai read-image нужен хотя бы один файл изображения. Usage: {0}</value>
+    <value>Команде localai read-image нужны файлы изображений или один PDF. Usage: {0}</value>
     <comment>Shares the code source_missing with triage's own 'nothing to work on'.</comment>
   </data>
   <data name="ReadImageProfileNotSupported" xml:space="preserve">
-    <value>Команда localai read-image не выполняет профиль задачи '{0}': это профиль не для изображений. Поддерживаемые профили: {1}</value>
+    <value>Команда localai read-image не поддерживает профиль задачи '{0}'. Поддерживаемые профили: {1}</value>
     <comment>The sibling of AskProfileNotSupported, and a separate key rather than a reason-hole in one: each stays a whole sentence a translator can read. {1} is computed through LocalTasks.IsImageProfile, so it cannot name a profile the call would reject — unlike LocalLmText.ImageProfileUnsupported, which hardcodes the three names in two languages and stays only as the message the task's own guard carries.</comment>
   </data>
   <data name="ReadImageQuestionMissing" xml:space="preserve">
-    <value>Команде localai read-image нужен вопрос: что извлечь из изображений. Usage: {0}</value>
+    <value>Команде localai read-image нужен вопрос: что извлечь из изображений или PDF. Usage: {0}</value>
     <comment>The question has no default in the task and does not gain one here: 'transcribe the error text' and 'list every row' produce different answers.</comment>
   </data>
   <data name="RepoStatusIntervalWithoutSeconds" xml:space="preserve">
@@ -1010,5 +1010,8 @@
   </data>
   <data name="ModelCatalogUnreadable" xml:space="preserve">
     <value>Не удалось прочитать каталог {0}: {1}</value>
+  </data>
+  <data name="ProgressReadingPdfPage" xml:space="preserve">
+    <value>Читается страница PDF {0} из {1}.{2}</value>
   </data>
 </root>

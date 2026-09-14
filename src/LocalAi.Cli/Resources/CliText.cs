@@ -27,6 +27,9 @@ public static class CliText
     public static string ModelCatalogEmbedded(string version) =>
         Catalogue.Format(nameof(ModelCatalogEmbedded), version);
 
+    public static string ProgressReadingPdfPage(int index, int total, string left) =>
+        Catalogue.Format(nameof(ProgressReadingPdfPage), index, total, left);
+
     public static string ModelCatalogConfigured(string path, string version) =>
         Catalogue.Format(nameof(ModelCatalogConfigured), path, version);
 

@@ -463,15 +463,15 @@ Everything named above is under {2}.</value>
     <comment>Printed when the oldest queued job has never been attempted and has waited past the age at which the scheduler force-includes a starved job. Counts stay invariant; {1} is minutes. The remedy is deliberately not named: what unblocks a stalled queue is not something the reader can do from the console today (#335).</comment>
   </data>
   <data name="ReadImageNoImages" xml:space="preserve">
-    <value>localai read-image needs at least one image file. Usage: {0}</value>
+    <value>localai read-image needs image files or one PDF. Usage: {0}</value>
     <comment>Shares the code source_missing with triage's own 'nothing to work on'.</comment>
   </data>
   <data name="ReadImageProfileNotSupported" xml:space="preserve">
-    <value>localai read-image does not run the task profile '{0}': it is a profile for something other than images. Supported profiles: {1}</value>
+    <value>localai read-image does not support task profile '{0}'. Supported profiles: {1}</value>
     <comment>The sibling of AskProfileNotSupported, and a separate key rather than a reason-hole in one: each stays a whole sentence a translator can read. {1} is computed through LocalTasks.IsImageProfile, so it cannot name a profile the call would reject — unlike LocalLmText.ImageProfileUnsupported, which hardcodes the three names in two languages and stays only as the message the task's own guard carries.</comment>
   </data>
   <data name="ReadImageQuestionMissing" xml:space="preserve">
-    <value>localai read-image needs a question: what to extract from the images. Usage: {0}</value>
+    <value>localai read-image needs a question: what to extract from the images or PDF. Usage: {0}</value>
     <comment>The question has no default in the task and does not gain one here: 'transcribe the error text' and 'list every row' produce different answers.</comment>
   </data>
   <data name="RepoStatusIntervalWithoutSeconds" xml:space="preserve">
@@ -1008,5 +1008,8 @@ To keep a worktree whatever its branch: git worktree lock &lt;path&gt;</value>
   </data>
   <data name="ModelCatalogUnreadable" xml:space="preserve">
     <value>Cannot read catalog {0}: {1}</value>
+  </data>
+  <data name="ProgressReadingPdfPage" xml:space="preserve">
+    <value>Reading PDF page {0} of {1}.{2}</value>
   </data>
 </root>

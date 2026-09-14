@@ -319,7 +319,7 @@ public sealed class LocalAiPackageInstaller
             if (!targetExisted)
             {
                 using var temporaryVersion = layoutLease.CreateVersionTemporary();
-                foreach (var file in LocalAiPackageLayout.VersionRequiredFiles)
+                foreach (var file in VersionFiles(package))
                 {
                     await CopyVerifiedAsync(
                             package,
@@ -331,7 +331,7 @@ public sealed class LocalAiPackageInstaller
 
                 ValidateExactDirectory(
                     temporaryVersion.CanonicalPath,
-                    LocalAiPackageLayout.VersionRequiredFiles);
+                    VersionFiles(package));
                 package.Revalidate();
                 try
                 {
@@ -373,7 +373,7 @@ public sealed class LocalAiPackageInstaller
 
             retainedVersion = layoutLease.LockInstalledVersion(
                 version,
-                LocalAiPackageLayout.VersionRequiredFiles.Select(file => FileMetadata(package, file)));
+                VersionFiles(package).Select(file => FileMetadata(package, file)));
             retainedVersion.Revalidate();
             package.Revalidate();
 
@@ -865,12 +865,18 @@ public sealed class LocalAiPackageInstaller
         }
     }
 
+    private static string[] VersionFiles(VerifiedPackage package) => package.Files
+        .Select(file => file.RelativePath)
+        .Where(file => file != LocalAiPackageLayout.StableLauncherFile &&
+                       file != ReleasePackageVerifier.PackageMetadataFileName)
+        .ToArray();
+
     private static bool ValidateExactVersion(VerifiedPackage package, string versionPath)
     {
         try
         {
-            ValidateExactDirectory(versionPath, LocalAiPackageLayout.VersionRequiredFiles);
-            foreach (var file in LocalAiPackageLayout.VersionRequiredFiles)
+            ValidateExactDirectory(versionPath, VersionFiles(package));
+            foreach (var file in VersionFiles(package))
             {
                 VerifyFile(Path.Combine(versionPath, file), FileMetadata(package, file));
             }
@@ -995,10 +1001,9 @@ public sealed class LocalAiPackageInstaller
             throw new LocalAiPackageInstallationException("The verified package contract is incompatible.");
         }
 
-        var expected = new HashSet<string>(
-            LocalAiPackageLayout.PackageArtifactFiles.Append(ReleasePackageVerifier.PackageMetadataFileName),
-            StringComparer.Ordinal);
-        if (!expected.SetEquals(package.Files.Select(file => file.RelativePath)))
+        var names = package.Files.Select(file => file.RelativePath).ToHashSet(StringComparer.Ordinal);
+        if (!names.Remove(ReleasePackageVerifier.PackageMetadataFileName) ||
+            !LocalAiPackageLayout.IsKnownPackageArtifacts(names))
         {
             throw new LocalAiPackageInstallationException("The verified package allowlist is invalid.");
         }

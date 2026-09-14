@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.IO.Compression;
 using System.Numerics;
 using System.Runtime.Versioning;
@@ -107,10 +107,10 @@ internal static class Program
 
     /// <summary>
     /// Builds the release package. The verifier compares the archive entry names against
-    /// <see cref="LocalAiPackageLayout.PackageArtifactFiles"/> with SetEquals, so the archive
+    /// <see cref="LocalAiPackageLayout.CurrentPackageArtifactFiles"/> with SetEquals, so the archive
     /// must hold exactly those files plus the metadata document — flat, with no directory
-    /// entries and nothing extra. That in turn means the executables have to be published
-    /// self-contained: there is no room in the format for sibling dependency assemblies.
+    /// entries and nothing extra. Managed dependencies stay bundled inside the self-contained
+    /// executables; the two PDF native libraries and their notices are explicit artifacts.
     /// </summary>
     private static int Pack(Args args)
     {
@@ -119,7 +119,7 @@ internal static class Program
         var versionDirectory = args.Require("version-directory");
         var modelCatalogVersion = args.Optional("model-catalog-version") ?? "1";
 
-        var missing = LocalAiPackageLayout.PackageArtifactFiles
+        var missing = LocalAiPackageLayout.CurrentPackageArtifactFiles
             .Where(file => !File.Exists(Path.Combine(input, file)))
             .ToArray();
         if (missing.Length > 0)
@@ -138,7 +138,7 @@ internal static class Program
 
         using (var archive = new ZipArchive(File.Create(output), ZipArchiveMode.Create))
         {
-            foreach (var file in LocalAiPackageLayout.PackageArtifactFiles)
+            foreach (var file in LocalAiPackageLayout.CurrentPackageArtifactFiles)
             {
                 var entry = archive.CreateEntry(file, CompressionLevel.Optimal);
                 using var target = entry.Open();
@@ -155,7 +155,7 @@ internal static class Program
 
         var package = new FileInfo(output);
         Console.WriteLine($"package : {package.FullName}");
-        Console.WriteLine($"entries : {LocalAiPackageLayout.PackageArtifactFiles.Count + 1}");
+        Console.WriteLine($"entries : {LocalAiPackageLayout.CurrentPackageArtifactFiles.Count + 1}");
         Console.WriteLine($"size    : {package.Length:N0} bytes");
         Console.WriteLine($"sha256  : {Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(output)))}");
         return 0;

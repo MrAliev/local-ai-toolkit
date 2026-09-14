@@ -332,10 +332,8 @@ public sealed class ReleasePackageVerifier
 
         ValidateLocalHeaders(stream, entries.Values, eocd.DirectoryOffset);
 
-        var approved = new HashSet<string>(
-            LocalAiPackageLayout.PackageArtifactFiles.Append(PackageMetadataFileName),
-            StringComparer.Ordinal);
-        if (!approved.SetEquals(entries.Keys))
+        if (!entries.ContainsKey(PackageMetadataFileName) ||
+            !LocalAiPackageLayout.IsKnownPackageArtifacts(entries.Keys.Where(name => name != PackageMetadataFileName)))
         {
             throw Failure();
         }
@@ -570,8 +568,9 @@ public sealed class ReleasePackageVerifier
         IReadOnlyDictionary<string, ExtractedFileEvidence> extracted,
         ICollection<IRetainedStagingFile> retainedFiles)
     {
-        foreach (var relativePath in LocalAiPackageLayout.PackageArtifactFiles.Append(
-                     PackageMetadataFileName))
+        // The exact archive allowlist was checked before extraction. Retain every approved
+        // file, including native libraries and their notices in PDF-capable releases.
+        foreach (var relativePath in extracted.Keys)
         {
             if (!extracted.TryGetValue(relativePath, out var evidence))
             {
@@ -613,7 +612,7 @@ public sealed class ReleasePackageVerifier
                 "build an installer whose policy names the real signer.");
         }
 
-        foreach (var file in LocalAiPackageLayout.PackageArtifactFiles.Where(
+        foreach (var file in retainedByPath.Keys.Where(
                      file => file.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ||
                              file.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)))
         {

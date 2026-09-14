@@ -94,6 +94,9 @@ public sealed record ReadingImages(int Count) : LocalRunStep;
 /// </summary>
 public sealed record ReadingImage(int Index, int Total) : LocalRunStep;
 
+/// <summary>About to render and read one PDF page, with its original page number.</summary>
+public sealed record ReadingPdfPage(int Index, int Total) : LocalRunStep;
+
 /// <summary>The same fact for a question asked over files, which is also one call.</summary>
 public sealed record AskingOverFiles(int Count) : LocalRunStep;
 
