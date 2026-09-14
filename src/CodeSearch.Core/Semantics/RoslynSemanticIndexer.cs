@@ -292,12 +292,15 @@ public sealed class RoslynSemanticIndexer(TimeProvider? time = null)
         var id = CanonicalId(symbol, repositoryRoot);
         if (!symbols.ContainsKey(id))
         {
+            // The ID names a definition shared by every construction. Its metadata must
+            // describe that same definition, regardless of which use was visited first.
+            var definition = symbol.OriginalDefinition;
             symbols.Add(id, new SemanticSymbol
             {
                 Id = id,
-                DisplayName = symbol.Name,
-                Kind = Kind(symbol),
-                Signature = symbol.ToDisplayString(SignatureFormat),
+                DisplayName = definition.Name,
+                Kind = Kind(definition),
+                Signature = definition.ToDisplayString(SignatureFormat),
             });
         }
 
