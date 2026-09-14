@@ -65,11 +65,15 @@ public sealed class ReleasePackageVerifierTests : IDisposable
     /// The staging cleanup a successful install owes (#204): Dispose closes handles, and
     /// every success used to leave the full unpacked package under the temp root forever.
     /// </summary>
-    [Fact]
-    public async Task Pdf_payload_is_retained_and_both_native_libraries_are_checked_for_authenticode()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Pdf_and_documentation_payloads_are_retained_and_native_libraries_are_checked_for_authenticode(bool documentation)
     {
         using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
-        var package = CreatePackage(extraEntries: ["pdfium.dll", "libSkiaSharp.dll", "THIRD-PARTY-NOTICES-PDF.txt"]);
+        string[] payload = ["pdfium.dll", "libSkiaSharp.dll", "THIRD-PARTY-NOTICES-PDF.txt"];
+        if (documentation) payload = [.. payload, "libHarfBuzzSharp.dll", "THIRD-PARTY-NOTICES-DOCUMENTATION.txt"];
+        var package = CreatePackage(extraEntries: payload);
         var manifest = CreateManifest(package, requiresAuthenticode: true);
         var json = ReleaseManifestVerifier.CreateCanonicalUnsignedPayload(manifest);
         var auth = new RecordingAuthenticodeVerifier(true);
@@ -79,6 +83,11 @@ public sealed class ReleasePackageVerifierTests : IDisposable
         Assert.Contains(verified.Files, file => file.RelativePath == "THIRD-PARTY-NOTICES-PDF.txt");
         Assert.Contains(auth.Paths, path => Path.GetFileName(path) == "pdfium.dll");
         Assert.Contains(auth.Paths, path => Path.GetFileName(path) == "libSkiaSharp.dll");
+        if (documentation)
+        {
+            Assert.Contains(auth.Paths, path => Path.GetFileName(path) == "libHarfBuzzSharp.dll");
+            Assert.Contains(verified.Files, file => file.RelativePath == "THIRD-PARTY-NOTICES-DOCUMENTATION.txt");
+        }
         Assert.DoesNotContain(auth.Paths, path => path.EndsWith(".txt", StringComparison.Ordinal));
         using var pdfium = verified.OpenRead("pdfium.dll");
         Assert.Equal(1, pdfium.ReadByte());
@@ -91,6 +100,15 @@ public sealed class ReleasePackageVerifierTests : IDisposable
     public async Task A_partial_pdf_payload_is_rejected(string missing)
     {
         string[] payload = ["pdfium.dll", "libSkiaSharp.dll", "THIRD-PARTY-NOTICES-PDF.txt"];
+        await AssertPackageRejected(CreatePackage(extraEntries: payload.Where(file => file != missing).ToArray()));
+    }
+
+    [Theory]
+    [InlineData("libHarfBuzzSharp.dll")]
+    [InlineData("THIRD-PARTY-NOTICES-DOCUMENTATION.txt")]
+    public async Task A_partial_documentation_payload_is_rejected(string missing)
+    {
+        string[] payload = ["pdfium.dll", "libSkiaSharp.dll", "THIRD-PARTY-NOTICES-PDF.txt", "libHarfBuzzSharp.dll", "THIRD-PARTY-NOTICES-DOCUMENTATION.txt"];
         await AssertPackageRejected(CreatePackage(extraEntries: payload.Where(file => file != missing).ToArray()));
     }
 

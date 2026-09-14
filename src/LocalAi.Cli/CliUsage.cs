@@ -42,6 +42,8 @@ internal static class CliUsage
     // No brackets around the flag: here it is required rather than optional. The listing is
     // for a program, and the block this line sits in is the list for a person.
     public const string Capabilities = "localai capabilities --json";
+    public const string DocsBuild = "localai docs build --root <repo> [--limit N | --all] [--json]";
+    public const string DocsApply = "localai docs apply --root <repo> [--json]";
 
     // No options and no operands: the payload arrives on standard input and the answer goes to
     // standard output, both in the client's own schema. Two words rather than one because `hook`
@@ -86,5 +88,5 @@ internal static class CliUsage
         "localai sync [--root dir] [--base-only] [--require-semantics] [--max-inline-files n] | " + Hook + " | " +
         "localai hooks install [--root dir] | " + Prune + " | " + Doctor + " | " +
         Telemetry + " | " + Ask + " | " + Triage + " | " + ReadImage + " | " + Translate +
-        " | " + Capabilities + " | " + AgentGate + " | " + AgentWorktree;
+        " | " + Capabilities + " | " + AgentGate + " | " + AgentWorktree + " | " + DocsBuild + " | " + DocsApply;
 }

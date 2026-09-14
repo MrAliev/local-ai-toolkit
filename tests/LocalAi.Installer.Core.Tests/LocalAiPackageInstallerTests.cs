@@ -73,10 +73,13 @@ public sealed class LocalAiPackageInstallerTests : IDisposable
         Assert.Equal(TimeSpan.FromSeconds(5), call.Timeout);
     }
 
-    [Fact]
-    public async Task Pdf_files_are_copied_locked_and_recognized_on_a_repeated_install()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Pdf_and_documentation_files_are_copied_locked_and_recognized_on_a_repeated_install(bool documentation)
     {
         string[] payload = ["pdfium.dll", "libSkiaSharp.dll", "THIRD-PARTY-NOTICES-PDF.txt"];
+        if (documentation) payload = [.. payload, "libHarfBuzzSharp.dll", "THIRD-PARTY-NOTICES-DOCUMENTATION.txt"];
         using var package = Package("pdf-v1", extraFiles: payload);
         var layout = InstallationLayout.FromLocalAppData(localAppData);
         var runner = new RecordingRunner((_, _, _, _) =>

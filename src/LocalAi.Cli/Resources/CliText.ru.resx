@@ -1014,4 +1014,39 @@
   <data name="ProgressReadingPdfPage" xml:space="preserve">
     <value>Читается страница PDF {0} из {1}.{2}</value>
   </data>
+  <data name="DocsAll" xml:space="preserve"><value>Выбраны все публичные типы.</value></data>
+  <data name="DocsApplyCopied" xml:space="preserve"><value>Скопировано файлов: {0}. Каталог: {1}</value></data>
+  <data name="DocsApplySkipped" xml:space="preserve"><value>Пропущено из-за ручных изменений: {0}</value></data>
+  <data name="DocsApplySummary" xml:space="preserve"><value>Файлы: скопировано {0}, без изменений {1}, пропущено из-за ручных изменений {2}.</value></data>
+  <data name="DocsBuildAlreadyRunning" xml:space="preserve"><value>Для этого репозитория уже идёт сборка документации: {0}</value></data>
+  <data name="DocsBuildFinished" xml:space="preserve"><value>Сборка завершена за {0} с.</value></data>
+  <data name="DocsBuildingType" xml:space="preserve"><value>Документируется {0} ({1} из {2}).</value></data>
+  <data name="DocsChangedType" xml:space="preserve"><value>Изменилось: {0}. Причина: {1}</value></data>
+  <data name="DocsCheckpointsKept" xml:space="preserve"><value>Завершённые этапы сохранены для следующей сборки.</value></data>
+  <data name="DocsDestinationLink" xml:space="preserve"><value>Невозможно применить пакет: путь назначения {0} содержит символическую ссылку или junction.</value></data>
+  <data name="DocsIndexOutdated" xml:space="preserve"><value>Индекс не соответствует текущим исходникам. Выполните localai sync --root {0}.</value></data>
+  <data name="DocsKeptCount" xml:space="preserve"><value>Документов оставлено без изменений: {0}.</value></data>
+  <data name="DocsLimitInvalid" xml:space="preserve"><value>После --limit требуется положительное целое число.</value></data>
+  <data name="DocsNoPrevious" xml:space="preserve"><value>Предыдущего документа для {0} нет.</value></data>
+  <data name="DocsOperationFailed" xml:space="preserve"><value>Не удалось выполнить операцию с документацией: {0}</value></data>
+  <data name="DocsPackageMissing" xml:space="preserve"><value>Для этого репозитория нет пакета. Выполните localai docs build --root {0}.</value></data>
+  <data name="DocsPackageReady" xml:space="preserve"><value>Пакет готов к просмотру: {0}</value></data>
+  <data name="DocsPreviousKept" xml:space="preserve"><value>Предыдущий документ сохранён: {0}.</value></data>
+  <data name="DocsReason_generator" xml:space="preserve"><value>Изменился генератор документации.</value></data>
+  <data name="DocsReason_history" xml:space="preserve"><value>Изменилась история.</value></data>
+  <data name="DocsReason_new" xml:space="preserve"><value>Предыдущего документа нет.</value></data>
+  <data name="DocsReason_references" xml:space="preserve"><value>Изменились ссылки на символы.</value></data>
+  <data name="DocsReason_source" xml:space="preserve"><value>Изменился исходный код.</value></data>
+  <data name="DocsRootRequired" xml:space="preserve"><value>Команде localai docs требуется --root &lt;repo&gt;.</value></data>
+  <data name="DocsRuntimeInsideRepository" xml:space="preserve"><value>Невозможно собрать документацию: каталог пакета {0} находится внутри репозитория.</value></data>
+  <data name="DocsSelectedCount" xml:space="preserve"><value>Выбрано типов: {0}.</value></data>
+  <data name="DocsSelectionConflict" xml:space="preserve"><value>Укажите либо --limit, либо --all.</value></data>
+  <data name="DocsSourcesChanged" xml:space="preserve"><value>Исходники изменились после сборки пакета. Перед применением снова выполните localai docs build --root {0}.</value></data>
+  <data name="DocsSubset" xml:space="preserve"><value>Выбран поднабор: до {0} публичных типов.</value></data>
+  <data name="DocsUsage" xml:space="preserve"><value>Использование: localai docs build --root &lt;repo&gt; [--limit N | --all] [--json]; localai docs apply --root &lt;repo&gt; [--json]</value></data>
+  <data name="DocsValidatingType" xml:space="preserve"><value>Проверяется документация для {0}.</value></data>
+  <data name="DocsValidationFailed" xml:space="preserve"><value>Не удалось подготовить документацию для {0}: {1}</value></data>
+  <data name="DocsModelReceipt" xml:space="preserve"><value>🔧 Локально: {0}{1}. В очереди: {2} с. Выполнение: {3} с. Экономия облачных токенов не измерялась.</value></data>
+  <data name="DocsResidencyCpu" xml:space="preserve"><value> (целиком на процессоре — ответы намного медленнее)</value></data>
+  <data name="DocsResidencyPartial" xml:space="preserve"><value> (в видеопамяти {0}% модели — ответы медленнее)</value></data>
 </root>

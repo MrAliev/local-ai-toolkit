@@ -36,6 +36,9 @@ public sealed class TextCatalogue
     /// </summary>
     public string Get(string key) => _manager.GetString(key, CultureInfo.CurrentUICulture) ?? key;
 
+    /// <summary>A fixed output language, for packages containing several languages at once.</summary>
+    public string Get(string key, CultureInfo culture) => _manager.GetString(key, culture) ?? key;
+
     /// <summary>The string with its holes filled, invariantly whatever the language.</summary>
     public string Format(string key, params object?[] arguments) =>
         string.Format(CultureInfo.InvariantCulture, Get(key), arguments);

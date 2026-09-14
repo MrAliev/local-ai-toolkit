@@ -1012,4 +1012,39 @@ To keep a worktree whatever its branch: git worktree lock &lt;path&gt;</value>
   <data name="ProgressReadingPdfPage" xml:space="preserve">
     <value>Reading PDF page {0} of {1}.{2}</value>
   </data>
+  <data name="DocsAll" xml:space="preserve"><value>Selected: all public types.</value></data>
+  <data name="DocsApplyCopied" xml:space="preserve"><value>Copied files: {0}. Destination: {1}</value></data>
+  <data name="DocsApplySkipped" xml:space="preserve"><value>Skipped, manually edited: {0}</value></data>
+  <data name="DocsApplySummary" xml:space="preserve"><value>Files: {0} copied, {1} unchanged, {2} skipped because of manual edits.</value></data>
+  <data name="DocsBuildAlreadyRunning" xml:space="preserve"><value>Documentation is already being built for this repository: {0}</value></data>
+  <data name="DocsBuildFinished" xml:space="preserve"><value>Build finished in {0}s.</value></data>
+  <data name="DocsBuildingType" xml:space="preserve"><value>Documenting {0} ({1} of {2}).</value></data>
+  <data name="DocsChangedType" xml:space="preserve"><value>Changed: {0}. Reason: {1}</value></data>
+  <data name="DocsCheckpointsKept" xml:space="preserve"><value>Completed checkpoints are kept for the next build.</value></data>
+  <data name="DocsDestinationLink" xml:space="preserve"><value>Cannot apply the package: destination path {0} contains a symbolic link or junction.</value></data>
+  <data name="DocsIndexOutdated" xml:space="preserve"><value>The index does not match the current source files. Run localai sync --root {0}.</value></data>
+  <data name="DocsKeptCount" xml:space="preserve"><value>Documents kept unchanged: {0}.</value></data>
+  <data name="DocsLimitInvalid" xml:space="preserve"><value>--limit requires a positive integer.</value></data>
+  <data name="DocsNoPrevious" xml:space="preserve"><value>No previous document exists for {0}.</value></data>
+  <data name="DocsOperationFailed" xml:space="preserve"><value>Documentation operation failed: {0}</value></data>
+  <data name="DocsPackageMissing" xml:space="preserve"><value>No package is available for this repository. Run localai docs build --root {0}.</value></data>
+  <data name="DocsPackageReady" xml:space="preserve"><value>Package ready for review: {0}</value></data>
+  <data name="DocsPreviousKept" xml:space="preserve"><value>Previous document kept: {0}.</value></data>
+  <data name="DocsReason_generator" xml:space="preserve"><value>Documentation generator changed.</value></data>
+  <data name="DocsReason_history" xml:space="preserve"><value>History changed.</value></data>
+  <data name="DocsReason_new" xml:space="preserve"><value>No previous document.</value></data>
+  <data name="DocsReason_references" xml:space="preserve"><value>References changed.</value></data>
+  <data name="DocsReason_source" xml:space="preserve"><value>Source changed.</value></data>
+  <data name="DocsRootRequired" xml:space="preserve"><value>localai docs requires --root &lt;repo&gt;.</value></data>
+  <data name="DocsRuntimeInsideRepository" xml:space="preserve"><value>Cannot build documentation: package directory {0} is inside the repository.</value></data>
+  <data name="DocsSelectedCount" xml:space="preserve"><value>Selected types: {0}.</value></data>
+  <data name="DocsSelectionConflict" xml:space="preserve"><value>Choose either --limit or --all.</value></data>
+  <data name="DocsSourcesChanged" xml:space="preserve"><value>Source files changed after the package was built. Run localai docs build --root {0} again before applying it.</value></data>
+  <data name="DocsSubset" xml:space="preserve"><value>Selected subset: up to {0} public types.</value></data>
+  <data name="DocsUsage" xml:space="preserve"><value>Usage: localai docs build --root &lt;repo&gt; [--limit N | --all] [--json]; localai docs apply --root &lt;repo&gt; [--json]</value></data>
+  <data name="DocsValidatingType" xml:space="preserve"><value>Checking documentation for {0}.</value></data>
+  <data name="DocsValidationFailed" xml:space="preserve"><value>Could not prepare documentation for {0}: {1}</value></data>
+  <data name="DocsModelReceipt" xml:space="preserve"><value>🔧 Local: {0}{1}. Queue: {2}s. Execution: {3}s. Cloud token savings were not measured.</value></data>
+  <data name="DocsResidencyCpu" xml:space="preserve"><value> (entirely on the CPU — answers are much slower)</value></data>
+  <data name="DocsResidencyPartial" xml:space="preserve"><value> ({0}% of the model in VRAM — answers are slower)</value></data>
 </root>
