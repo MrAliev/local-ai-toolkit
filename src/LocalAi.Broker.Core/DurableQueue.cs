@@ -474,6 +474,35 @@ public sealed class DurableQueue : ISelectableBrokerQueue
         return Task.FromResult<JobResponse?>(response);
     }
 
+    /// <summary>
+    /// Routine polling reads only mutable state and bounded progress/failure metadata.
+    /// Requests are validated when admitted, leased, and read for full diagnostics; their
+    /// immutable payload must not be deserialized and hashed on every 100 ms client poll.
+    /// </summary>
+    public Task<JobStatus?> GetStatusAsync(
+        Guid jobId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        using var mutex = EnterMutex(cancellationToken);
+        foreach (var directory in new[] { GetJobDirectory(jobId), GetArchiveDirectory(jobId) })
+        {
+            if (!Directory.Exists(directory))
+            {
+                continue;
+            }
+            var state = ReadState(directory);
+            if (state.JobId != jobId || !File.Exists(Path.Combine(directory, "request.json")))
+            {
+                throw new InvalidDataException("The polled job metadata is invalid.");
+            }
+            var entry = new JobEntry(directory, state);
+            return Task.FromResult<JobStatus?>(new JobStatus(
+                state.JobId, state.State, state.FailureCode, ReadFailureReason(entry), ReadProgress(entry)));
+        }
+        return Task.FromResult<JobStatus?>(null);
+    }
+
     public Task<JobDiagnostic?> GetDiagnosticAsync(
         Guid jobId,
         CancellationToken cancellationToken = default)
@@ -1263,6 +1292,13 @@ public sealed record JobFailure(
     [property: JsonRequired] Guid JobId,
     [property: JsonRequired] DateTimeOffset FailedAtUtc,
     [property: JsonRequired] string Reason);
+
+public sealed record JobStatus(
+    Guid JobId,
+    LocalJobState State,
+    string? FailureCode,
+    string? FailureReason,
+    JobProgress? Progress);
 
 public sealed record JobDiagnostic(
     Guid JobId,

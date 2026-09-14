@@ -83,11 +83,11 @@ public sealed class BrokerClient : IBrokerClient
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var diagnostic = await _queue.GetDiagnosticAsync(jobId, cancellationToken)
+            var status = await _queue.GetStatusAsync(jobId, cancellationToken)
                 ?? throw new BrokerProtocolException(
                     $"Broker job '{jobId}' disappeared from durable state.");
 
-            switch (diagnostic.State)
+            switch (status.State)
             {
                 case LocalJobState.Succeeded:
                 {
@@ -122,8 +122,8 @@ public sealed class BrokerClient : IBrokerClient
                 case LocalJobState.Failed:
                     throw new BrokerJobFailedException(
                         jobId,
-                        diagnostic.FailureCode ?? "UnknownFailure",
-                        diagnostic.FailureReason);
+                        status.FailureCode ?? "UnknownFailure",
+                        status.FailureReason);
 
                 case LocalJobState.Cancelled:
                     throw new BrokerJobCancelledException(jobId);
@@ -137,7 +137,7 @@ public sealed class BrokerClient : IBrokerClient
                     // would, and "the model is working" would be false of a download:
                     // no model is working, a file is arriving.
                     _observer?.Report(
-                        diagnostic is
+                        status is
                         {
                             State: LocalJobState.Running,
                             Progress: { } position,
@@ -148,13 +148,13 @@ public sealed class BrokerClient : IBrokerClient
                                 position.Completed,
                                 position.Total)
                             : new BrokerJobPending(
-                                diagnostic.State == LocalJobState.Running));
+                                status.State == LocalJobState.Running));
                     await _delay(_pollInterval, cancellationToken);
                     break;
 
                 default:
                     throw new BrokerProtocolException(
-                        $"Broker job '{jobId}' has unsupported state '{diagnostic.State}'.");
+                        $"Broker job '{jobId}' has unsupported state '{status.State}'.");
             }
         }
     }
