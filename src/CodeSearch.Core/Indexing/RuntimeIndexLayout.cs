@@ -178,6 +178,11 @@ public static class RuntimeIndexLayout
         var untracked = RepoLocator.GitOutputBytes(
             root,
             ["ls-files", "--others", "--exclude-standard", "-z"]);
+        if (untracked is null)
+        {
+            return null;
+        }
+
         return ParseNullPaths(changed)
             .Where(ChunkerFactory.IsIndexable)
             .Concat(ParseNullPaths(untracked)
@@ -206,10 +211,10 @@ public static class RuntimeIndexLayout
     public static List<string> GetDirtyPaths(string workingRoot)
     {
         var root = RepoLocator.ResolveWorkingRoot(workingRoot).Value;
-        var changed = RepoLocator.GitOutputBytes(
+        var changed = RepoLocator.GitOutputBytesOrThrow(
             root,
             ["diff", "--no-renames", "--name-only", "-z", "HEAD", "--"]);
-        var untracked = RepoLocator.GitOutputBytes(
+        var untracked = RepoLocator.GitOutputBytesOrThrow(
             root,
             ["ls-files", "--others", "--exclude-standard", "-z"]);
         return ParseNullPaths(changed)

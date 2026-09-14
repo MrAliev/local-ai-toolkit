@@ -209,6 +209,20 @@ public sealed class WhatChangedSinceTheIndexWasBuiltTests : IDisposable
         Assert.Equal(["B/Moved.cs"], overlay.Materialize(baseline).Documents.Select(d => d.RelPath));
     }
 
+    [Fact]
+    public void A_failed_diff_cannot_report_a_clean_working_tree()
+    {
+        Write("Edited.cs", "class Edited { public int Value => 2; }");
+        Git("config", "diff.renames", "invalid-review-value");
+
+        var failure = Assert.Throws<InvalidOperationException>(() =>
+            RuntimeIndexLayout.GetDirtyPaths(_root));
+        Assert.Contains("git diff", failure.Message, StringComparison.Ordinal);
+        Assert.Throws<InvalidOperationException>(() =>
+            RuntimeIndexLayout.Inspect(_root, Path.Combine(_root, "runtime")));
+        Assert.Null(RuntimeIndexLayout.GetPathsChangedSince(_root, _baseTree));
+    }
+
     private void Write(string relative, string content) =>
         File.WriteAllText(Path.Combine(_root, relative), content + Environment.NewLine);
 
