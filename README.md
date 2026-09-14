@@ -664,6 +664,52 @@ the log of what installs did to this machine.
 
 ---
 
+## Documentation packages
+
+```powershell
+lai localai docs build --root R:\YourRepo           # up to 5 public C# types
+lai localai docs build --root R:\YourRepo --limit 20
+lai localai docs build --root R:\YourRepo --all
+```
+
+The semantic index must match the source files; run `lai localai sync --root R:\YourRepo`
+after changing code. A unit is one precisely indexed public C# type, including its members
+and partial declarations. Type selection follows source path and position. Other indexed
+languages can supply references, but do not become documentation units in this version.
+
+Build writes under the runtime's `repositories/<repository-id>/documentation` directory,
+outside the worktree. The identity is the same Git common-directory identity used by the index.
+Each unit contains EN/RU Markdown, HTML and PDF, SVG/PNG diagrams, and third-party notices.
+Open `index.en.html` or `index.ru.html` in the printed package directory: changes and their
+reasons, failures with the fate of the previous document, a reuse count, and the contents.
+Review the prose and translation for meaning; automatic checks prove references and syntax.
+
+Source bodies, indexed references/relationships and related definitions, and the last ten
+commit messages scoped to those files are hashed separately. Unchanged units reuse the exact
+artifact bytes without a model call. A failed unit keeps its previous valid document, if one exists, and is
+named in the report. Completed units survive an interrupted build. `--json` returns the report;
+**check its `failed` count**: a completed report can contain failed units. Retained artifacts
+keep their original snapshot labels. Documentation caches are kept until the runtime is removed.
+
+Start with the default subset and use its measured elapsed time before choosing `--all`.
+Generation uses the shared broker, its queue/progress and the configured residency policy.
+Build does not download models or relax that policy. Overview generation uses `gpt-oss:20b`
+with one repair attempt, then `qwen3.5:9b`; Russian translation uses the configured
+`PlainTranslation` route. The underlying renderer and measured model comparison are described
+in [the diagram benchmark](benchmarks/documentation-diagrams/README.md).
+
+After reading the package:
+
+```powershell
+lai localai docs apply --root R:\YourRepo
+```
+
+Apply copies the available documents to `docs/generated/<symbol-hash>/`, runs no model and
+creates no commit. It skips files edited since the previous apply and prints their paths;
+files left by a different subset are retained. If sources or HEAD changed since build, build
+again before applying. Symbolic links and junctions in the destination are refused. Review
+the resulting Git diff and commit the accepted files together. No documentation hook is installed.
+
 ## Building and testing
 
 ```powershell

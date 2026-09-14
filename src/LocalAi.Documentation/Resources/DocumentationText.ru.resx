@@ -10,4 +10,20 @@
   <data name="Snapshot" xml:space="preserve"><value>Снимок</value></data>
   <data name="Source" xml:space="preserve"><value>Исходный код</value></data>
   <data name="Why" xml:space="preserve"><value>Почему устроено так</value></data>
+  <data name="NoPrevious" xml:space="preserve"><value>Предыдущего документа нет.</value></data>
+  <data name="PreviousKept" xml:space="preserve"><value>Предыдущий документ сохранён.</value></data>
+  <data name="Reason_generator" xml:space="preserve"><value>Изменился генератор документации.</value></data>
+  <data name="Reason_history" xml:space="preserve"><value>Изменилась история.</value></data>
+  <data name="Reason_new" xml:space="preserve"><value>Предыдущего документа нет.</value></data>
+  <data name="Reason_references" xml:space="preserve"><value>Изменились ссылки на символы.</value></data>
+  <data name="Reason_source" xml:space="preserve"><value>Изменился исходный код.</value></data>
+  <data name="ReportCounts" xml:space="preserve"><value>Выбрано типов: {0}. Повторно использовано без изменений: {1}. С ошибками: {2}. Время сборки: {3} с.</value></data>
+  <data name="ReportTitle" xml:space="preserve"><value>Отчёт по пакету документации</value></data>
+  <data name="Unchanged" xml:space="preserve"><value>Оставлено без изменений.</value></data>
+  <data name="ChangesTitle" xml:space="preserve"><value>Изменения</value></data>
+  <data name="ContentsTitle" xml:space="preserve"><value>Документы в пакете</value></data>
+  <data name="EmptyContents" xml:space="preserve"><value>В этом пакете нет доступных документов.</value></data>
+  <data name="EmptySelection" xml:space="preserve"><value>Для этой сборки не выбрано публичных типов.</value></data>
+  <data name="FailuresTitle" xml:space="preserve"><value>Ошибки сборки</value></data>
+  <data name="NoChanges" xml:space="preserve"><value>Изменившихся документов нет.</value></data>
 </root>
