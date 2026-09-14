@@ -55,6 +55,44 @@ public sealed class ModelExecutionCoordinatorTests : IDisposable
         Assert.False(result.Routing!.WasCold);
     }
 
+    [Fact]
+    public async Task A_model_no_longer_resident_is_preflighted_again_and_reports_its_current_shortfall()
+    {
+        var runtime = new FakeRuntime();
+        var coordinator = Create(runtime, (_, _) => Task.FromResult(Result("translated")));
+        await coordinator.ExecuteAsync(RoutedRequest("first"), Availability(), TestContext.Current.CancellationToken);
+        runtime.SizeVramBytes = 40;
+
+        var result = await coordinator.ExecuteAsync(
+            RoutedRequest("after-unload"), Availability(), TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, runtime.Preflights.Count);
+        Assert.True(result.Routing!.WasCold);
+        Assert.Equal(ResidencyShortfall.PartialOffload, result.Routing.ResidencyShortfall);
+        Assert.Equal(40, result.Routing.VramResidentPercent);
+    }
+
+    [Fact]
+    public async Task Residency_loss_cannot_bypass_a_preflight_refusal()
+    {
+        var runtime = new FakeRuntime();
+        var executions = 0;
+        var coordinator = Create(runtime, (_, _) =>
+        {
+            executions++;
+            return Task.FromResult(Result("translated"));
+        });
+        await coordinator.ExecuteAsync(RoutedRequest("first"), Availability(), TestContext.Current.CancellationToken);
+        runtime.Failure = new ModelPreflightException("translategemma:12b", 2048,
+            ModelExecutionOutcome.CpuOffload, "Residency changed after unload");
+
+        await Assert.ThrowsAsync<ModelPreflightException>(() => coordinator.ExecuteAsync(
+            RoutedRequest("after-unload"), Availability(), TestContext.Current.CancellationToken));
+
+        Assert.Equal(1, executions);
+        Assert.True(runtime.Preflights.Count >= 2);
+    }
+
     /// <summary>
     /// The join #277 is about: the runtime measures the shortfall, and the receipt is what
     /// carries it to the line a person reads. Testing the two ends apart — the arithmetic here,
@@ -533,11 +571,11 @@ public sealed class ModelExecutionCoordinatorTests : IDisposable
     {
         public List<string> Preflights { get; } = [];
 
-        public ModelPreflightException? Failure { get; init; }
+        public ModelPreflightException? Failure { get; set; }
 
         public long SizeBytes { get; init; } = 100;
 
-        public long SizeVramBytes { get; init; } = 100;
+        public long SizeVramBytes { get; set; } = 100;
 
         public bool IsDisabled(string model, int contextTokens) => false;
 

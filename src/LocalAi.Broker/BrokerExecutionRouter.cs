@@ -90,6 +90,8 @@ public sealed class BrokerExecutionRouter
     public async Task UnloadResidentAsync(
         CancellationToken cancellationToken = default)
     {
+        _coordinator.InvalidateResidencyProof();
+        _prepared.Clear();
         var processes = await _transport.ListProcessesAsync(cancellationToken);
         var managedModels = _catalog.Models
             .Select(model => model.Tag)
@@ -190,18 +192,20 @@ public sealed class BrokerExecutionRouter
         LocalJobRequest request,
         CancellationToken cancellationToken)
     {
+        // Scheduling preserves its model choice, but residency can change between preparation
+        // and execution. Read the live process state before deciding to reuse a warm proof.
+        var availability = await AvailabilityAsync(cancellationToken);
         BrokerExecutionResult result;
         if (_prepared.Remove(request.JobId, out var prepared))
         {
             result = await _coordinator.ExecuteAsync(
                 request,
-                prepared.Availability,
+                availability,
                 prepared.Selection,
                 cancellationToken);
         }
         else
         {
-            var availability = await AvailabilityAsync(cancellationToken);
             result = await _coordinator.ExecuteAsync(
                 request,
                 availability,
@@ -326,6 +330,7 @@ public sealed class BrokerExecutionRouter
     {
         var installed = await _transport.ListInstalledAsync(cancellationToken);
         var processes = await _transport.ListProcessesAsync(cancellationToken);
+        _coordinator.ObserveResidency(processes);
         var resident = processes
             .Select(process => process.Model)
             .Distinct(StringComparer.Ordinal)
