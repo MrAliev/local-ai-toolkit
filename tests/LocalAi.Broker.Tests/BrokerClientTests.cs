@@ -81,6 +81,49 @@ public sealed class BrokerClientTests
         Assert.Equal(LocalJobState.Queued, diagnostic!.State);
     }
 
+    [Fact]
+    public async Task Polling_allocations_do_not_scale_with_image_payload_size()
+    {
+        var small = await MeasurePollingAllocations(64);
+        var large = await MeasurePollingAllocations(8 * 1024 * 1024);
+
+        Assert.True(large < small + 512 * 1024,
+            $"Ten polls allocated {small:N0} bytes for a small request and {large:N0} for an 8 MiB request.");
+    }
+
+    private static async Task<long> MeasurePollingAllocations(int imageCharacters)
+    {
+        using var fixture = new BrokerClientFixture();
+        using var stop = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        var polls = 0;
+        long started = 0, allocated = 0;
+        var client = new BrokerClient(fixture.Queue, fixture.Process, (_, _) =>
+        {
+            // Enqueue and the first poll have already completed. The remaining polls run
+            // synchronously on this thread; measure only their allocations, not the payload setup.
+            polls++;
+            if (polls == 1)
+            {
+                started = GC.GetAllocatedBytesForCurrentThread();
+            }
+            else if (polls == 11)
+            {
+                allocated = GC.GetAllocatedBytesForCurrentThread() - started;
+                stop.Cancel();
+            }
+            return Task.CompletedTask;
+        });
+        var request = LocalJobRequestFactory.CreateChat(
+            "allocation-probe", LocalJobPriority.Foreground, "fixture", "prompt", null,
+            [new string('A', imageCharacters)]);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            client.ExecuteAsync<ChatJobOutput>(request, stop.Token));
+
+        Assert.Equal(11, polls);
+        return allocated;
+    }
+
     private sealed class BrokerClientFixture : IDisposable
     {
         /// <summary>
