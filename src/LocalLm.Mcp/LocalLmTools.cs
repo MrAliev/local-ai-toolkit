@@ -181,12 +181,17 @@ public static class LocalLmTools
         {
             target = Path.GetFullPath(outPath);
 
-            // Translating in place destroys the original and there is no undo. Compared resolved,
-            // so two spellings of one file are still one file.
-            if (document is not null &&
-                string.Equals(document, target, StringComparison.OrdinalIgnoreCase))
+            try
             {
-                return LocalLmText.TranslateOutputIsSource("path", "outPath", document);
+                if (document is not null && TranslationOutput.IsSource(document, target))
+                {
+                    return LocalLmText.TranslateOutputIsSource("path", "outPath", document);
+                }
+            }
+            catch (Exception failure) when (
+                failure is IOException or UnauthorizedAccessException or Win32Exception)
+            {
+                return LocalLmText.TranslateNotWritten(target, failure.Message);
             }
 
             if (Directory.Exists(target))
@@ -261,10 +266,22 @@ public static class LocalLmTools
 
             try
             {
-                await File.WriteAllTextAsync(target, result.Answer, cancellationToken);
+                // The destination may have changed while the model was running. Recheck,
+                // then publish by replacement so a late hard link cannot truncate its source.
+                if (document is not null && TranslationOutput.IsSource(document, target))
+                {
+                    return LocalLmText.TranslateOutputIsSource("path", "outPath", document);
+                }
+                await AtomicFile.WriteAsync(target, async (stream, token) =>
+                {
+                    await using var writer = new StreamWriter(stream, leaveOpen: true);
+                    await writer.WriteAsync(result.Answer.AsMemory(), token);
+                    await writer.FlushAsync(token);
+                    token.ThrowIfCancellationRequested();
+                }, AtomicWrite.Irrecoverable, cancellationToken);
             }
             catch (Exception failure) when (
-                failure is IOException or UnauthorizedAccessException or NotSupportedException)
+                failure is IOException or UnauthorizedAccessException or NotSupportedException or Win32Exception)
             {
                 // Deliberately not falling back to returning the document: handing back a
                 // translation the caller asked to be written to disk would drop everything

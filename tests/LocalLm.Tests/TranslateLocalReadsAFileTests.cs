@@ -2,6 +2,7 @@ using LocalAi.Contracts;
 using LocalLm.Core;
 using LocalLm.Core.Resources;
 using LocalLm.Mcp;
+using System.Runtime.InteropServices;
 
 namespace LocalLm.Tests;
 
@@ -310,6 +311,60 @@ public sealed class TranslateLocalReadsAFileTests : IDisposable
         Assert.Empty(client.Profiles);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_hard_link_to_the_source_is_refused_even_if_created_during_translation(
+        bool createdDuringTranslation)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.Skip("Windows file identity regression.");
+        }
+        var document = Write("source.txt", English);
+        var target = Path.Combine(_root, "translation.txt");
+        void Link() => Assert.True(CreateHardLink(target, document, IntPtr.Zero),
+            "CreateHardLinkW failed: " + Marshal.GetLastWin32Error());
+        if (!createdDuringTranslation)
+        {
+            Link();
+        }
+        var client = new RecordingClient(Russian, createdDuringTranslation ? Link : null);
+
+        var answer = await LocalLmTools.TranslateLocal(new LocalTasks(client),
+            "English", "Russian", path: document, outPath: target,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(English, File.ReadAllText(document));
+        Assert.Equal(LocalLmText.TranslateOutputIsSource("path", "outPath", document), answer);
+        Assert.Equal(createdDuringTranslation ? 1 : 0, client.Profiles.Count);
+    }
+
+    [Fact]
+    public async Task Replacing_an_output_does_not_modify_its_other_hard_links()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.Skip("Windows hard-link regression.");
+        }
+        var document = Write("source.txt", English);
+        var other = Write("previous.txt", "keep previous translation");
+        var target = Path.Combine(_root, "translation.txt");
+        Assert.True(CreateHardLink(target, other, IntPtr.Zero));
+
+        await LocalLmTools.TranslateLocal(new LocalTasks(new RecordingClient(Russian)),
+            "English", "Russian", path: document, outPath: target,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal("keep previous translation", File.ReadAllText(other));
+        Assert.Contains(Russian, File.ReadAllText(target), StringComparison.Ordinal);
+        Assert.Empty(Directory.EnumerateFiles(_root, "*.tmp"));
+    }
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true, EntryPoint = "CreateHardLinkW")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool CreateHardLink(string newFileName, string existingFileName, IntPtr securityAttributes);
+
     /// <summary>
     /// The reader's own sentences reach this face unchanged - it is the same reader the console
     /// uses - and they arrive as the answer rather than as a protocol error, so a mistyped path
@@ -395,7 +450,7 @@ public sealed class TranslateLocalReadsAFileTests : IDisposable
         }
     }
 
-    private sealed class RecordingClient(string answer) : ILocalModelClient
+    private sealed class RecordingClient(string answer, Action? beforeReply = null) : ILocalModelClient
     {
         public List<LocalTaskProfile> Profiles { get; } = [];
 
@@ -421,6 +476,7 @@ public sealed class TranslateLocalReadsAFileTests : IDisposable
             CancellationToken cancellationToken = default)
         {
             Profiles.Add(profile);
+            beforeReply?.Invoke();
             return Task.FromResult(new LocalJobResult<string>(
                 answer,
                 new LocalUsageReceipt(
