@@ -7,6 +7,11 @@ namespace CodeSearch.Tests;
 
 public class LspJsonRpcConnectionTests
 {
+    private static readonly TimeSpan BlockedRequestTimeout = TimeSpan.FromMilliseconds(30);
+    // The deadline itself is the property under test. Give its watchdog 1000 times that
+    // budget so it detects an absent timeout without measuring how busy the machine is.
+    private static readonly TimeSpan BlockedRequestWatchdog = BlockedRequestTimeout * 1000;
+
     [Fact]
     public async Task FramesARequestAndRoutesItsResponseByIdentifier()
     {
@@ -95,6 +100,52 @@ public class LspJsonRpcConnectionTests
             null,
             TimeSpan.FromMilliseconds(20),
             Ct));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RequestDeadlineCoversBlockedWritesAndFlushes(bool blockFlush)
+    {
+        using var stop = CancellationTokenSource.CreateLinkedTokenSource(Ct);
+        using var output = new BackpressuredStream(blockFlush);
+        await using var connection = new LspJsonRpcConnection(new TestDuplex().ClientInput, output);
+        var request = connection.RequestAsync("blocked", null, BlockedRequestTimeout, stop.Token);
+        try
+        {
+            var finished = await Task.WhenAny(request, Task.Delay(BlockedRequestWatchdog, Ct));
+            Assert.Same(request, finished);
+            await Assert.ThrowsAsync<TimeoutException>(() => request);
+        }
+        finally
+        {
+            stop.Cancel();
+            await Record.ExceptionAsync(() => request);
+        }
+    }
+
+    [Fact]
+    public async Task RequestDeadlineCoversWaitingBehindAnotherWriter()
+    {
+        using var stop = CancellationTokenSource.CreateLinkedTokenSource(Ct);
+        using var output = new BackpressuredStream(false);
+        await using var connection = new LspJsonRpcConnection(new TestDuplex().ClientInput, output);
+        var notification = connection.NotifyAsync("blocked-writer", null, stop.Token);
+        await output.Entered.Task.WaitAsync(Ct);
+        var request = connection.RequestAsync("waiting-for-gate", null, BlockedRequestTimeout, stop.Token);
+        try
+        {
+            var finished = await Task.WhenAny(request, Task.Delay(BlockedRequestWatchdog, Ct));
+            Assert.Same(request, finished);
+            await Assert.ThrowsAsync<TimeoutException>(() => request);
+            Assert.False(notification.IsCompleted);
+        }
+        finally
+        {
+            stop.Cancel();
+            await Record.ExceptionAsync(() => notification);
+            await Record.ExceptionAsync(() => request);
+        }
     }
 
     [Fact]
@@ -480,6 +531,24 @@ public class LspJsonRpcConnectionTests
     }
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
+
+    private sealed class BackpressuredStream(bool blockFlush) : MemoryStream
+    {
+        public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public override ValueTask WriteAsync(
+            ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default) =>
+            blockFlush ? ValueTask.CompletedTask : new ValueTask(BlockAsync(cancellationToken));
+
+        public override Task FlushAsync(CancellationToken cancellationToken) =>
+            blockFlush ? BlockAsync(cancellationToken) : Task.CompletedTask;
+
+        private Task BlockAsync(CancellationToken cancellationToken)
+        {
+            Entered.TrySetResult();
+            return Task.Delay(Timeout.Infinite, cancellationToken);
+        }
+    }
 
     private sealed class TestDuplex
     {
