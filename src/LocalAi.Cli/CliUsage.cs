@@ -1,4 +1,4 @@
-﻿namespace LocalAi.Cli;
+namespace LocalAi.Cli;
 
 internal static class CliUsage
 {
@@ -37,7 +37,7 @@ internal static class CliUsage
         "localai translate [text|-|--in file] --from language --to language [--markdown] " +
         "[--out file] [--json]";
     public const string ReadImage =
-        "localai read-image <question> <image> [image ...] [--profile name] "  +
+        "localai read-image <question> <file> [file ...] [--profile name] "  +
         "[--model model] [--together] [--language en|ru] [--json]";
     // No brackets around the flag: here it is required rather than optional. The listing is
     // for a program, and the block this line sits in is the list for a person.

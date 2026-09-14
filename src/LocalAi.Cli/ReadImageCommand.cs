@@ -135,18 +135,14 @@ public static class ReadImageCommand
                     // merely ends in a file name — "what is in shot.png" — has a space in it and
                     // stays a question.
                     if (question is null &&
-                        !(LocalTasks.IsImageFile(argument) &&
+                        !((LocalTasks.IsImageFile(argument) || LocalTasks.IsPdfFile(argument)) &&
                           !argument.Contains(' ', StringComparison.Ordinal)))
                     {
                         question = argument;
                         break;
                     }
 
-                    // Pointing at a PDF is the likeliest mistake this command has, and left to
-                    // the task it would arrive as one argument failure among many. Checked here
-                    // with the same predicate and the same sentence, so it earns a code a program
-                    // can act on.
-                    if (!LocalTasks.IsImageFile(argument))
+                    if (!LocalTasks.IsImageFile(argument) && !LocalTasks.IsPdfFile(argument))
                     {
                         refusal = new CommandRefusal(
                             "file_not_image",
@@ -173,6 +169,20 @@ public static class ReadImageCommand
                 "source_missing",
                 CliText.ReadImageNoImages(CliUsage.ReadImage));
             return false;
+        }
+
+        if (images.Any(LocalTasks.IsPdfFile))
+        {
+            if (images.Count != 1)
+            {
+                refusal = new CommandRefusal("pdf_single_input_required", LocalLmText.PdfOnlyInput);
+                return false;
+            }
+            if (together)
+            {
+                refusal = new CommandRefusal("pdf_together_unsupported", LocalLmText.PdfTogetherUnsupported);
+                return false;
+            }
         }
 
         request = new ReadImageRequest(question, images, profile, model, together, language);

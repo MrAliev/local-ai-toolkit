@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!--
     What the LocalLm tools say, in every language they say it in. English is the neutral resource every other language falls back to. Numbers, durations and identifiers are formatted by the caller and arrive already invariant, so a hole is never a place a decimal separator can change.
@@ -74,7 +74,7 @@
     <value>, файлов пропущено: {0}</value>
   </data>
   <data name="ImageProfileUnsupported" xml:space="preserve">
-    <value>Задачи с изображениями поддерживают только VisualAnalysis, Ocr и ImageTranslation.</value>
+    <value>Задачи с изображениями и PDF поддерживают только VisualAnalysis, Ocr и ImageTranslation.</value>
     <comment>Profile names are identifiers and are never translated.</comment>
   </data>
   <data name="ImageTooLarge" xml:space="preserve">
@@ -122,7 +122,7 @@
     <comment>{0} is the MCP tool name and is never translated. {1} is what was recorded with the failure, written by whatever refused and English whatever the reader's language, so it is quoted rather than translated. One key for all five model-management tools: the broker records the exception type name as the failure code, so a refusal by rule and a fault arrive under the same one, and a word that told them apart would be a guess.</comment>
   </data>
   <data name="NoImagePaths" xml:space="preserve">
-    <value>Пути к изображениям не переданы.</value>
+    <value>Пути к изображениям или PDF не переданы.</value>
   </data>
   <data name="NoModelAndCatalogNamesNone" xml:space="preserve">
     <value>Локальных моделей для задачи {0} не установлено, и каталог маршрутизации ни одной для неё не называет. Посмотреть, что установлено: local_models_status.</value>
@@ -319,5 +319,20 @@
   <data name="ImagesReadOneAtATime" xml:space="preserve">
     <value>Изображения прочитаны по одному и сведены: {0} — {1}</value>
     <comment>The counted form's detail. Separate from ImagesRead because the two are different claims about the answer: one look at five images can compare them and five merged readings cannot, which is what the merge prompt forbids. A reader deciding whether to trust a statement spanning the images has only this line to go on. Renders inside Notice's hole, so no trailing full stop.</comment>
+  </data>
+  <data name="PdfOnlyInput" xml:space="preserve">
+    <value>Передайте путь к одному PDF за вызов, без других файлов.</value>
+  </data>
+  <data name="PdfTogetherUnsupported" xml:space="preserve">
+    <value>Для PDF режим together недоступен: страницы читаются по одной.</value>
+  </data>
+  <data name="PdfTooLarge" xml:space="preserve">
+    <value>PDF '{0}' превышает предел {1} МиБ.</value>
+  </data>
+  <data name="PdfUnreadable" xml:space="preserve">
+    <value>Не удалось прочитать PDF '{0}': {1}</value>
+  </data>
+  <data name="PdfPagesRead" xml:space="preserve">
+    <value>Прочитано страниц PDF: {1} — {0}</value>
   </data>
 </root>

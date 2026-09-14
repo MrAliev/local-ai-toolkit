@@ -63,7 +63,7 @@ locally.
 | `lsp_close_document` | give navigation back to the indexed snapshot |
 | `ask_local` | mechanical work over files you name |
 | `triage_log` | make sense of machine output of any length |
-| `read_image` | read an image from disk |
+| `read_image` | read images from disk or one PDF page by page |
 | `translate_local` | translate, structure intact |
 | `index_status` | whether an index exists, what built it, how far behind HEAD |
 | `index_refresh` | refresh the index after a commit |
@@ -89,7 +89,7 @@ The set is **not the same**: some tools exist only here, some only over MCP.
 | `localai semantic definition` / `references` / `implementations` / `relationships` | navigate by symbol |
 | `localai ask "…" <file> …` | mechanical work over files |
 | `localai triage <log>` | make sense of a log |
-| `localai read-image "…" <image>` | read an image |
+| `localai read-image "…" <file>` | read images or one PDF |
 | `localai translate --in <file> --from … --to …` | translate |
 | `localai sync` | build or refresh the index |
 | `localai hooks install` | install the hooks that keep the index current |
@@ -532,6 +532,16 @@ dotnet build 2>&1 | lai localai triage -
 lai localai read-image "What error is on this screenshot, and in which window?" C:\shots\error.png
 lai localai translate --in docs\notes.md --from Russian --to English --markdown --out docs\notes.en.md
 ```
+
+`read_image` and `localai read-image` also accept one PDF, up to 256 MiB.
+Pass its path without other files and without `--together`. Pages are rendered
+and sent to the model one at a time, then their answers are merged. The console
+reports the current page and total; the final notice names the file and the
+number of pages read. PDFs have no eight-page limit.
+
+Pages are rendered at up to 150 DPI, with at most 4 million pixels per page.
+Encrypted or malformed PDFs report an error with the file path; password input
+is not supported.
 
 Languages are given as **names**, not codes: `--to Russian`, not `--to ru`.
 

@@ -99,6 +99,10 @@ public sealed class LocalRunProgress : ILocalRunObserver
                     now);
                 break;
 
+            case ReadingPdfPage page:
+                ReportCounted(page.Index, page.Total, CliText.ProgressReadingPdfPage, now);
+                break;
+
             case TranslationRetrying retry:
                 // The pass starts over, so the mean the estimate is built from has to as well:
                 // carrying the old one across would understate a run that has just doubled.

@@ -16,7 +16,10 @@ public static class LocalLmTools
     [Description("""
         Reads image files with a local vision model and returns what they contain, as text.
         Use this INSTEAD of reading an image yourself whenever the image is a file on disk:
-        screenshots, PDF pages rendered to PNG, photographed tables, diagrams, scans.
+        screenshots, photographed tables, diagrams, scans.
+        Alternatively, pass one PDF path without other files. PDF pages are rendered
+        and read sequentially, and their answers are merged; together must be false.
+        PDFs may be up to 256 MiB. Encrypted PDFs are not supported.
         A single screenshot costs ~1.5K tokens to look at directly and ~0.2K through this tool;
         a 100-page PDF is the difference between ~200K and ~3K.
         Note: an image already pasted into the conversation is already paid for - this tool only
@@ -27,7 +30,7 @@ public static class LocalLmTools
         """)]
     public static async Task<string> ReadImage(
         LocalTasks tasks,
-        [Description("Absolute paths to image files (.png, .jpg, .bmp, .gif, .webp). Several are read together in one call.")]
+        [Description("Absolute paths to image files (.png, .jpg, .jpeg, .bmp, .gif, .webp), or one PDF path. Images and PDF pages are read one at a time by default.")]
         string[] paths,
         [Description("What to extract or answer. Be specific: 'transcribe the error text', 'list every row of the table', 'what does this diagram show'.")]
         string question,
