@@ -199,6 +199,58 @@ public sealed class BrokerExecutionRouterTests : IDisposable
     }
 
     [Fact]
+    public async Task A_prepared_selection_does_not_preserve_residency_across_idle_unload()
+    {
+        var fixture = CreateFixture();
+        fixture.Transport.Installed = ["translategemma:12b", "qwen3.5:9b"];
+        var request = LocalJobRequestFactory.CreateRoutedChat(
+            "resident", LocalJobPriority.Foreground, LocalTaskProfile.PlainTranslation,
+            "translate", null, [], new LocalWorkloadMetadata(9, 20, 1, 0, 0, LocalDurationClass.Short),
+            requestedContextTokens: 2048);
+        await fixture.Router.ExecuteAsync(request, null, TestContext.Current.CancellationToken);
+        await fixture.Router.PrepareAsync(
+            [new QueuedJobCandidate(request, 2, DateTimeOffset.UtcNow)],
+            TestContext.Current.CancellationToken);
+
+        await fixture.Router.UnloadResidentAsync(TestContext.Current.CancellationToken);
+        var result = await fixture.Router.ExecuteAsync(request, null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, fixture.Transport.Preflights);
+        Assert.True(result.Routing!.WasCold);
+        Assert.Contains(fixture.Transport.Processes, p => p.Model == "translategemma:12b");
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task Current_residency_is_checked_even_after_selection_was_prepared(
+        bool prepared, bool contextChanged)
+    {
+        var fixture = CreateFixture();
+        fixture.Transport.Installed = ["translategemma:12b", "qwen3.5:9b"];
+        var request = LocalJobRequestFactory.CreateRoutedChat(
+            "residency", LocalJobPriority.Foreground, LocalTaskProfile.PlainTranslation,
+            "translate", null, [], new LocalWorkloadMetadata(9, 20, 1, 0, 0, LocalDurationClass.Short),
+            requestedContextTokens: 2048);
+        await fixture.Router.ExecuteAsync(request, null, TestContext.Current.CancellationToken);
+        if (prepared)
+        {
+            await fixture.Router.PrepareAsync(
+                [new QueuedJobCandidate(request, 2, DateTimeOffset.UtcNow)],
+                TestContext.Current.CancellationToken);
+        }
+        fixture.Transport.Processes = [new OllamaProcessInfo("translategemma:12b", 100,
+            contextChanged ? 100 : 40, contextChanged ? 4096 : 2048, DateTimeOffset.UtcNow.AddMinutes(5))];
+
+        var result = await fixture.Router.ExecuteAsync(request, null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, fixture.Transport.Preflights);
+        Assert.True(result.Routing!.WasCold);
+    }
+
+    [Fact]
     public async Task Direct_embedding_is_tracked_for_idle_unload()
     {
         var fixture = CreateFixture();
@@ -564,6 +616,7 @@ public sealed class BrokerExecutionRouterTests : IDisposable
         public IReadOnlyList<OllamaProcessInfo> Processes { get; set; } = [];
         public List<string> PulledModels { get; } = [];
         public List<string> UnloadedModels { get; } = [];
+        public int Preflights { get; private set; }
 
         public Task<IReadOnlyList<string>> ListInstalledAsync(CancellationToken ct) =>
             Task.FromResult(Installed);
@@ -585,6 +638,7 @@ public sealed class BrokerExecutionRouterTests : IDisposable
             int contextTokens,
             CancellationToken ct)
         {
+            Preflights++;
             Processes =
             [
                 new OllamaProcessInfo(
