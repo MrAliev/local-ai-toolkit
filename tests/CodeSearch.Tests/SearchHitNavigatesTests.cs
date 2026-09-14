@@ -59,6 +59,23 @@ public sealed class SearchHitNavigatesTests : IDisposable
         Assert.DoesNotContain("Idle", response, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task An_attributed_method_navigates_from_the_unchanged_search_hit()
+    {
+        var source = Source.Replace("public int Work", "[System.Obsolete]\n    [System.Diagnostics.DebuggerStepThrough]\n    public int Work", StringComparison.Ordinal);
+        var chunk = Chunks(source).Single(item => item.Symbol.EndsWith("Work", StringComparison.Ordinal));
+        Assert.Contains("[System.Obsolete]", source.Split('\n')[chunk.StartLine - 1], StringComparison.Ordinal);
+        var gateway = await GatewayAsync(source);
+
+        var response = await CodeSearchTools.GoToDefinition(
+            gateway, NoBuildRunning.Notice, RelativePath, chunk.StartLine,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Contains("symbol: dotnet M:Fixture.Machine.Work(System.Int32)", response, StringComparison.Ordinal);
+        Assert.Contains("precision: Precise", response, StringComparison.Ordinal);
+        Assert.DoesNotContain("semantic_navigation_degraded", response, StringComparison.Ordinal);
+    }
+
     /// <summary>
     /// And the neighbouring member is not what answers. Without this, a navigation that resolved
     /// to the nearest declaration in either direction would pass the test above on a file where
@@ -79,25 +96,25 @@ public sealed class SearchHitNavigatesTests : IDisposable
     }
 
     /// <summary>The lines `search_code` prints, produced by the chunker from the file itself.</summary>
-    private IReadOnlyList<Chunk> Chunks()
+    private IReadOnlyList<Chunk> Chunks(string source = Source)
     {
         Directory.CreateDirectory(_root);
         var path = Path.Combine(_root, RelativePath);
-        File.WriteAllText(path, Source);
-        return new RoslynChunker().Split(RelativePath, Source).ToArray();
+        File.WriteAllText(path, source);
+        return new RoslynChunker().Split(RelativePath, source).ToArray();
     }
 
     /// <summary>
     /// Navigation over the same text, built by Roslyn rather than by the chunker — which is what
     /// makes the two numbers independent.
     /// </summary>
-    private async Task<SemanticNavigationGateway> GatewayAsync()
+    private async Task<SemanticNavigationGateway> GatewayAsync(string source = Source)
     {
         Directory.CreateDirectory(_root);
         var path = Path.Combine(_root, RelativePath);
-        File.WriteAllText(path, Source);
+        File.WriteAllText(path, source);
 
-        var workspace = new AdhocWorkspace();
+        using var workspace = new AdhocWorkspace();
         var projectId = ProjectId.CreateNewId("Fixture");
         var project = ProjectInfo.Create(
             projectId,
@@ -110,7 +127,7 @@ public sealed class SearchHitNavigatesTests : IDisposable
             metadataReferences: TrustedPlatformReferences());
         var solution = workspace.CurrentSolution
             .AddProject(project)
-            .AddDocument(DocumentId.CreateNewId(projectId), RelativePath, Source, filePath: path);
+            .AddDocument(DocumentId.CreateNewId(projectId), RelativePath, source, filePath: path);
 
         var index = await new RoslynSemanticIndexer().BuildAsync(
             solution,
