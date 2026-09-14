@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using CodeSearch.Core.Chunking;
 using LocalAi.Contracts;
 using LocalAi.Repository;
 
@@ -178,8 +179,9 @@ public static class RuntimeIndexLayout
             root,
             ["ls-files", "--others", "--exclude-standard", "-z"]);
         return ParseNullPaths(changed)
-            .Concat(ParseNullPaths(untracked))
-            .Where(path => DirtyCorpusPolicy.IsAllowed(path, gitIgnored: false))
+            .Where(ChunkerFactory.IsIndexable)
+            .Concat(ParseNullPaths(untracked)
+                .Where(path => DirtyCorpusPolicy.IsAllowed(path, gitIgnored: false)))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -211,8 +213,9 @@ public static class RuntimeIndexLayout
             root,
             ["ls-files", "--others", "--exclude-standard", "-z"]);
         return ParseNullPaths(changed)
-            .Concat(ParseNullPaths(untracked))
-            .Where(path => DirtyCorpusPolicy.IsAllowed(path, gitIgnored: false))
+            .Where(ChunkerFactory.IsIndexable)
+            .Concat(ParseNullPaths(untracked)
+                .Where(path => DirtyCorpusPolicy.IsAllowed(path, gitIgnored: false)))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
             .ToList();
