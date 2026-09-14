@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Security.AccessControl;
@@ -234,8 +234,7 @@ public sealed class InstallationLayoutLease : IDisposable
         var expected = expectedFiles.ToDictionary(
             file => file.RelativePath,
             StringComparer.Ordinal);
-        if (!expected.Keys.ToHashSet(StringComparer.Ordinal).SetEquals(
-                LocalAiPackageLayout.VersionRequiredFiles))
+        if (!LocalAiPackageLayout.IsKnownVersionFiles(expected.Keys))
         {
             throw Failure();
         }
@@ -253,7 +252,7 @@ public sealed class InstallationLayoutLease : IDisposable
         var files = new List<RetainedInstalledVersion.FileEvidence>();
         try
         {
-            foreach (var name in LocalAiPackageLayout.VersionRequiredFiles)
+            foreach (var name in expected.Keys)
             {
                 var path = Path.Combine(versionPath, name);
                 var stream = new FileStream(
@@ -550,9 +549,10 @@ public sealed class InstallationLayoutLease : IDisposable
         }
 
         Revalidate();
-        ValidateExactVersionDirectory(
-            temporary.CanonicalPath,
-            LocalAiPackageLayout.VersionRequiredFiles);
+        var names = Directory.EnumerateFileSystemEntries(temporary.CanonicalPath)
+            .Select(path => Path.GetFileName(path)!).ToArray();
+        if (!LocalAiPackageLayout.IsKnownVersionFiles(names)) throw Failure();
+        ValidateExactVersionDirectory(temporary.CanonicalPath, names);
         var targetPath = Path.Combine(Layout.VersionsRoot, version);
         publishVersionDirectory(
             temporary.Handle,
@@ -659,16 +659,12 @@ public sealed class InstallationLayoutLease : IDisposable
         var names = entries
             .Select(Path.GetFileName)
             .ToHashSet(StringComparer.Ordinal);
-        var runtimeFiles = LocalAiPackageLayout.VersionRequiredFiles
-            .ToHashSet(StringComparer.Ordinal);
-        var expandedPackageFiles = LocalAiPackageLayout.PackageArtifactFiles
-            .ToHashSet(StringComparer.Ordinal);
 
         // Older repair and pre-release builds sometimes published the verified stable
         // launcher beside the runtime executables. The versioned launcher is never executed;
         // the trusted copy under bin\launcher remains the only activation entry point. Accept
         // that one known expanded package shape, while continuing to reject every other extra.
-        if (!names.SetEquals(runtimeFiles) && !names.SetEquals(expandedPackageFiles))
+        if (!LocalAiPackageLayout.IsKnownVersionFiles(names!) && !LocalAiPackageLayout.IsKnownPackageArtifacts(names!))
         {
             throw Failure();
         }
@@ -1326,7 +1322,7 @@ public sealed class InstallationLayoutLease : IDisposable
             owner.Revalidate();
             ValidateExactVersionDirectory(
                 CanonicalPath,
-                LocalAiPackageLayout.VersionRequiredFiles);
+                files.Select(file => file.Expected.RelativePath));
             foreach (var file in files)
             {
                 ValidateFileHandle(file.Stream, file.CanonicalPath);

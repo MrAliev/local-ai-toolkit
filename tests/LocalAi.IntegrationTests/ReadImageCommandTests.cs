@@ -51,7 +51,7 @@ public sealed class ReadImageCommandTests
     }
 
     /// <summary>
-    /// Pointing at a PDF is the likeliest mistake this command has. Left to the task it would
+    /// Pointing at an unsupported document should be refused before the task. Otherwise it would
     /// arrive as a bare argument failure and be reported as `input_rejected`, which tells a
     /// program nothing it can act on — so the parser checks the extension itself, with the same
     /// sentence the task would have used.
@@ -60,12 +60,12 @@ public sealed class ReadImageCommandTests
     public void A_file_that_is_not_an_image_is_named_and_gets_a_code_of_its_own()
     {
         Assert.False(ReadImageCommand.TryParse(
-            ["transcribe", @"C:\report.pdf"],
+            ["transcribe", @"C:\report.docx"],
             out _,
             out var refusal));
 
         Assert.Equal("file_not_image", refusal!.Code, StringComparer.Ordinal);
-        Assert.Contains("report.pdf", refusal.Message, StringComparison.Ordinal);
+        Assert.Contains("report.docx", refusal.Message, StringComparison.Ordinal);
     }
 
     /// <summary>

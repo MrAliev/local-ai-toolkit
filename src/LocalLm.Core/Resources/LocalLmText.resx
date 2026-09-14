@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!--
     What the LocalLm tools say, in every language they say it in. English is the neutral resource every other language falls back to. Numbers, durations and identifiers are formatted by the caller and arrive already invariant, so a hole is never a place a decimal separator can change.
@@ -74,7 +74,7 @@
     <value>, files skipped: {0}</value>
   </data>
   <data name="ImageProfileUnsupported" xml:space="preserve">
-    <value>Image tasks support VisualAnalysis, Ocr, or ImageTranslation.</value>
+    <value>Image and PDF tasks support VisualAnalysis, Ocr, or ImageTranslation.</value>
     <comment>Profile names are identifiers and are never translated.</comment>
   </data>
   <data name="ImageTooLarge" xml:space="preserve">
@@ -122,7 +122,7 @@
     <comment>{0} is the MCP tool name and is never translated. {1} is what was recorded with the failure, written by whatever refused and English whatever the reader's language, so it is quoted rather than translated. One key for all five model-management tools: the broker records the exception type name as the failure code, so a refusal by rule and a fault arrive under the same one, and a word that told them apart would be a guess.</comment>
   </data>
   <data name="NoImagePaths" xml:space="preserve">
-    <value>No image paths given.</value>
+    <value>No image or PDF paths given.</value>
   </data>
   <data name="NoModelAndCatalogNamesNone" xml:space="preserve">
     <value>No local model able to do {0} is installed, and the routing catalog names none for it. Run local_models_status to see what is installed.</value>
@@ -319,5 +319,20 @@
   <data name="ImagesReadOneAtATime" xml:space="preserve">
     <value>Images read one at a time and merged: {0} — {1}</value>
     <comment>The counted form's detail. Separate from ImagesRead because the two are different claims about the answer: one look at five images can compare them and five merged readings cannot, which is what the merge prompt forbids. A reader deciding whether to trust a statement spanning the images has only this line to go on. Renders inside Notice's hole, so no trailing full stop.</comment>
+  </data>
+  <data name="PdfOnlyInput" xml:space="preserve">
+    <value>Pass one PDF path per call, without other files.</value>
+  </data>
+  <data name="PdfTogetherUnsupported" xml:space="preserve">
+    <value>PDF pages are read one at a time; together mode is not supported.</value>
+  </data>
+  <data name="PdfTooLarge" xml:space="preserve">
+    <value>PDF '{0}' exceeds the {1} MiB limit.</value>
+  </data>
+  <data name="PdfUnreadable" xml:space="preserve">
+    <value>Cannot read PDF '{0}': {1}</value>
+  </data>
+  <data name="PdfPagesRead" xml:space="preserve">
+    <value>PDF pages read: {1} — {0}</value>
   </data>
 </root>

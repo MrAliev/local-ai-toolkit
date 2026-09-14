@@ -59,6 +59,12 @@ public static class LocalLmText
     public static string ImagesRead(int count, string described) =>
         Format(nameof(ImagesRead), count, described);
 
+    public static string PdfOnlyInput => Get(nameof(PdfOnlyInput));
+    public static string PdfTogetherUnsupported => Get(nameof(PdfTogetherUnsupported));
+    public static string PdfTooLarge(string path, long limitMiB) => Format(nameof(PdfTooLarge), path, limitMiB);
+    public static string PdfUnreadable(string path, string reason) => Format(nameof(PdfUnreadable), path, reason);
+    public static string PdfPagesRead(string filename, int count) => Format(nameof(PdfPagesRead), filename, count);
+
     /// <summary>
     /// The counted form's detail, and separate from <see cref="ImagesRead"/> on purpose: one look
     /// at five images can compare them and five merged readings cannot, so the two sentences are

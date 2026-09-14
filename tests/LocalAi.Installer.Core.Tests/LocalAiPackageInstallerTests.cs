@@ -74,6 +74,34 @@ public sealed class LocalAiPackageInstallerTests : IDisposable
     }
 
     [Fact]
+    public async Task Pdf_files_are_copied_locked_and_recognized_on_a_repeated_install()
+    {
+        string[] payload = ["pdfium.dll", "libSkiaSharp.dll", "THIRD-PARTY-NOTICES-PDF.txt"];
+        using var package = Package("pdf-v1", extraFiles: payload);
+        var layout = InstallationLayout.FromLocalAppData(localAppData);
+        var runner = new RecordingRunner((_, _, _, _) =>
+        {
+            foreach (var file in payload)
+            {
+                var path = Path.Combine(layout.VersionsRoot, "pdf-v1", file);
+                Assert.Equal(Content(file), File.ReadAllBytes(path));
+                Assert.Throws<IOException>(() => File.Open(path, FileMode.Open, FileAccess.Write, FileShare.ReadWrite).Dispose());
+            }
+            WritePointer("pdf-v1");
+            return Task.FromResult(new ProcessResult(0, "", "", false, false));
+        });
+        var installer = new LocalAiPackageInstaller(runner,
+            new ExistingLocalAiInspector(new SystemFileSystemProbe()), TimeSpan.FromSeconds(5));
+
+        var installed = await installer.InstallAsync(package, layout, TestContext.Current.CancellationToken);
+        Assert.Equal(LocalAiPackageInstallStatus.Installed, installed.Status);
+        var repeated = await installer.InstallAsync(package, layout, TestContext.Current.CancellationToken);
+        Assert.Equal(LocalAiPackageInstallStatus.AlreadyInstalled, repeated.Status);
+        foreach (var file in payload)
+            Assert.Equal(Content(file), File.ReadAllBytes(Path.Combine(layout.VersionsRoot, "pdf-v1", file)));
+    }
+
+    [Fact]
     public async Task Concurrent_installers_serialize_before_reinspection_and_launcher_handoff()
     {
         using var packageA = Package("v1");
@@ -1436,7 +1464,8 @@ public sealed class LocalAiPackageInstallerTests : IDisposable
     private VerifiedPackage Package(
         string version,
         string? corruptedFile = null,
-        string? omitFile = null)
+        string? omitFile = null,
+        IReadOnlyList<string>? extraFiles = null)
     {
         var manifest = new ReleaseManifest(
             1,
@@ -1451,6 +1480,7 @@ public sealed class LocalAiPackageInstallerTests : IDisposable
             false,
             []);
         var files = LocalAiPackageLayout.PackageArtifactFiles
+            .Concat(extraFiles ?? [])
             .Append(ReleasePackageVerifier.PackageMetadataFileName)
             .Where(name => !string.Equals(name, omitFile, StringComparison.Ordinal))
             .Select(name => (IRetainedStagingFile)new MemoryRetainedFile(

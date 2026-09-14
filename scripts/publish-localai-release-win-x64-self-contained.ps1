@@ -214,6 +214,10 @@ $artifactMap = [ordered]@{
     "locallm-mcp.exe"      = "LocalLm.Mcp/locallm-mcp.exe"
     "LocalAi.Broker.exe"   = "LocalAi.Broker/LocalAi.Broker.exe"
     "localai-launcher.exe" = "LocalAi.Launcher/localai-launcher.exe"
+    # Native libraries are outside the SDK's single-file bundle. The RID-specific publish
+    # selects win-x64; copy one shared pair beside both consumers in the version directory.
+    "pdfium.dll"          = "LocalAi.Cli/pdfium.dll"
+    "libSkiaSharp.dll"    = "LocalAi.Cli/libSkiaSharp.dll"
 }
 foreach ($entry in $artifactMap.GetEnumerator()) {
     $source = Join-Path $ResolvedPublishRoot $entry.Value
@@ -223,6 +227,9 @@ foreach ($entry in $artifactMap.GetEnumerator()) {
 
     Copy-Item -LiteralPath $source -Destination (Join-Path $artifacts $entry.Key)
 }
+
+$pdfNotices = Join-Path $Root "THIRD-PARTY-NOTICES-PDF.txt"
+Copy-Item -LiteralPath $pdfNotices -Destination (Join-Path $artifacts "THIRD-PARTY-NOTICES-PDF.txt")
 
 $package = Join-Path $release "localai-package.zip"
 dotnet run --project $SignerProject `
