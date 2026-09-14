@@ -199,6 +199,25 @@ public static class RepoLocator
     {
         try
         {
+            return GitOutputBytesOrThrow(workingDirectory, arguments);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Unlike optional repository probes, freshness checks must distinguish a successful
+    /// empty path list from a failed Git command. Preserve binary output and the failure reason.
+    /// </summary>
+    public static byte[] GitOutputBytesOrThrow(
+        string workingDirectory,
+        IReadOnlyList<string> arguments)
+    {
+        var command = "git " + string.Join(' ', arguments);
+        try
+        {
             var start = new ProcessStartInfo("git")
             {
                 WorkingDirectory = workingDirectory,
@@ -219,7 +238,7 @@ public static class RepoLocator
             using var process = Process.Start(start);
             if (process is null)
             {
-                return null;
+                throw new InvalidOperationException($"'{command}' could not be started.");
             }
 
             process.StandardInput.Close();
@@ -229,7 +248,7 @@ public static class RepoLocator
             if (!process.WaitForExit(GitTimeoutMs))
             {
                 process.Kill(entireProcessTree: true);
-                return null;
+                throw new InvalidOperationException($"'{command}' timed out after {GitTimeoutMs} ms.");
             }
 
             // The result is checked, as `Run` checks it: `WaitForExit(int)` returns once the
@@ -240,14 +259,19 @@ public static class RepoLocator
             // files rather than failing.
             if (!Task.WaitAll([copy, stderr], GitTimeoutMs))
             {
-                return null;
+                throw new InvalidOperationException($"'{command}' output could not be read within {GitTimeoutMs} ms.");
             }
 
-            return process.ExitCode == 0 ? output.ToArray() : null;
+            if (process.ExitCode != 0)
+            {
+                throw new InvalidOperationException(
+                    $"'{command}' exited {process.ExitCode}: {FirstLine(stderr.GetAwaiter().GetResult())}");
+            }
+            return output.ToArray();
         }
-        catch (Exception)
+        catch (Exception error) when (error is not InvalidOperationException)
         {
-            return null;
+            throw new InvalidOperationException($"'{command}' could not be read: {error.Message}", error);
         }
     }
 
