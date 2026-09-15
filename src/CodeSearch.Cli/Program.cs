@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using CodeSearch.Core.Chunking;
@@ -315,13 +316,20 @@ async Task<int> RunAsync(TextWriter stdout, TextWriter stderr)
 
         var noFloor = opts.ContainsKey("no-floor");
         var root = RepoLocator.ResolveWorkingRoot(opts.GetValueOrDefault("root")).Value;
-        var corpus = SearchEvaluationCorpus.Load(Path.GetFullPath(casesPath));
+        var sourceSnapshot = RuntimeIndexLayout.Inspect(root);
+        casesPath = Path.GetFullPath(casesPath);
+        var corpusHash = Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(casesPath)));
+        var corpus = SearchEvaluationCorpus.Load(casesPath);
+        var scope = SearchEvaluationScope.Create(root, casesPath, corpus);
         corpus = SearchEvaluationCorpus.ResolveAgainstSource(corpus, root);
-        var service = new SearchService
+        using var service = new SearchService
         {
             UseQueryInstruction = !opts.ContainsKey("no-instruct")
         };
-        var searchOptions = SearchEvaluation.CreateSearchOptions(noFloor);
+        var searchOptions = SearchEvaluation.CreateSearchOptions(noFloor) with { ExcludedPaths = scope.ExcludedPaths };
+        var initialStatus = service.Status(root);
+        var initialIndex = CodeIndex.Load(initialStatus.IndexPath, withVectors: false);
+        searchOptions = SearchQualityProfile.Resolve(initialIndex.Model, searchOptions);
         var observations = new List<SearchEvaluationObservation>(corpus.Cases.Count);
 
         foreach (var item in corpus.Cases)
@@ -350,6 +358,14 @@ async Task<int> RunAsync(TextWriter stdout, TextWriter stderr)
         }
 
         var status = service.Status(root);
+        var finalIndex = CodeIndex.Load(status.IndexPath, withVectors: false);
+        if (sourceSnapshot != RuntimeIndexLayout.Inspect(root) ||
+            initialIndex.GenerationId != finalIndex.GenerationId ||
+            corpusHash != Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(casesPath))))
+        {
+            throw new InvalidDataException("Evaluation source, index, or annotations changed during the run; rerun on one fixed snapshot.");
+        }
+
         var output = new
         {
             schemaVersion = 1,
@@ -357,8 +373,19 @@ async Task<int> RunAsync(TextWriter stdout, TextWriter stderr)
             corpusSchemaVersion = corpus.SchemaVersion,
             caseCount = corpus.Cases.Count,
             repository = status.RepositoryRoot,
-            generationId = CodeIndex.Load(status.IndexPath, withVectors: false).GenerationId,
+            generationId = initialIndex.GenerationId,
             model = status.Model,
+            sourceCommit = sourceSnapshot.HeadCommit,
+            sourceTree = sourceSnapshot.HeadTree,
+            dirtyHash = sourceSnapshot.DirtyHash,
+            indexedCommit = initialIndex.GitCommit,
+            indexedTree = initialIndex.GitTree,
+            corpusSha256 = corpusHash,
+            candidateScope = scope,
+            annotations = corpus.Cases.Select(item => new { item.Id, item.Relevant }),
+            searchOptions,
+            useQueryInstruction = service.UseQueryInstruction,
+            qualityProfile = noFloor ? null : SearchQualityProfile.Require(initialIndex.Model),
             brokerQueueWait = "unavailable: embedding client does not expose receipt telemetry",
             tokenEstimator = new
             {
