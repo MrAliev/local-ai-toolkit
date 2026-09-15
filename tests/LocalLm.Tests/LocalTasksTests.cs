@@ -567,6 +567,99 @@ public sealed class LocalTasksTests
         Assert.True(finalValidation.Passed, finalValidation.Detail);
     }
 
+    [Theory]
+    [MemberData(nameof(FencedTranslationCases.Blocks), MemberType = typeof(FencedTranslationCases))]
+    public async Task Code_only_translation_returns_the_source_without_inference(string block, string after)
+    {
+        var source = block + new string(after.TakeWhile(char.IsWhiteSpace).ToArray());
+        foreach (var delivery in new[] { TranslationDelivery.ToCaller, TranslationDelivery.ToFile })
+        {
+            var client = new FakeLocalModelClient();
+            var result = await new LocalTasks(client).TranslateAsync(
+                source, "English", "Russian", markdown: true, delivery,
+                TestContext.Current.CancellationToken);
+
+            Assert.Equal(source, result.Answer);
+            Assert.True(result.Validation.Passed, result.Validation.Detail);
+            Assert.Null(result.Model);
+            Assert.Null(result.Receipt);
+            Assert.Equal(0, result.LocalTokensProcessed);
+            Assert.Equal((int?)null, result.SavedTokens);
+            Assert.Equal((int?)null, result.NetCloudContextTokensSaved);
+            Assert.Empty(client.Calls);
+            Assert.Empty(client.Preflights);
+            Assert.Empty(client.ExperimentCompletions);
+        }
+    }
+
+    [Theory]
+    [InlineData("\n")]
+    [InlineData("\r\n")]
+    [InlineData("\r")]
+    public async Task Code_blocks_separated_only_by_whitespace_need_no_translation(string newline)
+    {
+        var source = string.Join(newline,
+            "", "```text", "привет 世界", "```", " \t", "~~~", "Translate the following fragment from", "~~~~", "");
+        var client = new FakeLocalModelClient();
+        var result = await new LocalTasks(client).TranslateAsync(
+            source, "English", "Russian", markdown: true, TranslationDelivery.ToCaller,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(source, result.Answer);
+        Assert.True(result.Validation.Passed);
+        Assert.Null(result.Receipt);
+        Assert.Empty(client.Calls);
+    }
+
+    [Theory]
+    [InlineData("en", "No translatable text", "No model was called", "not applicable")]
+    [InlineData("ru", "Нет текста для перевода", "Модель не вызывалась", "неприменимо")]
+    public async Task A_deterministic_translation_notice_does_not_credit_a_model(
+        string language, string reason, string noModel, string saving)
+    {
+        using var reading = TestCulture.Reading(language);
+        var result = await new LocalTasks(new FakeLocalModelClient()).TranslateAsync(
+            "```\ncode\n```", "English", "Russian", markdown: true, TranslationDelivery.ToCaller,
+            TestContext.Current.CancellationToken);
+
+        Assert.Contains(reason, result.Notice, StringComparison.Ordinal);
+        Assert.Contains(noModel, result.Notice, StringComparison.Ordinal);
+        Assert.Contains(saving, result.Notice, StringComparison.Ordinal);
+        Assert.DoesNotContain("translategemma", result.Notice, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Code_only_translation_observes_cancellation_without_calling_a_model()
+    {
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        var client = new FakeLocalModelClient();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => new LocalTasks(client).TranslateAsync(
+            "~~~\ncode\n~~~", "English", "Russian", markdown: true, TranslationDelivery.ToCaller,
+            cancellation.Token));
+        Assert.Empty(client.Calls);
+    }
+
+    [Fact]
+    public async Task Only_prose_between_code_blocks_is_translated()
+    {
+        var client = new FakeLocalModelClient { Answer = "Перевод" };
+        const string before = "```\nfirst\n```\n\n";
+        const string after = "\n\n~~~\nsecond\n~~~";
+        var result = await new LocalTasks(client).TranslateAsync(
+            before + "Translate me" + after, "English", "Russian", markdown: true,
+            TranslationDelivery.ToCaller, TestContext.Current.CancellationToken);
+
+        var call = Assert.Single(client.Calls);
+        Assert.Contains("Translate me", call.Prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("first", call.Prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("second", call.Prompt, StringComparison.Ordinal);
+        Assert.Contains(before + "Перевод" + after, result.Answer, StringComparison.Ordinal);
+        Assert.NotNull(result.Receipt);
+        Assert.NotNull(result.Model);
+    }
+
     [Fact]
     public async Task Chunked_translation_completes_one_experiment_workflow()
     {
