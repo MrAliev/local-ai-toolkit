@@ -47,6 +47,9 @@
   <data name="CatalogMismatch" xml:space="preserve">
     <value>Local model catalog mismatch: client '{0}', broker '{1}'.</value>
   </data>
+  <data name="CatalogMismatchRecovery" xml:space="preserve">
+    <value>Use the same model catalog for the client and broker, then retry the translation.</value>
+  </data>
   <data name="DurationSeconds" xml:space="preserve">
     <value>{0} s</value>
     <comment>The number arrives already formatted invariantly.</comment>

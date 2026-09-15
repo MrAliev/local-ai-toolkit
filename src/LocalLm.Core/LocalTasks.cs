@@ -779,6 +779,11 @@ public sealed class LocalTasks
                 Receipt: null);
         }
 
+        // Keep one snapshot through all fragments and retries. A later call can read
+        // a changed file, but an in-flight translation cannot mix catalog versions.
+        var catalog = modelCatalog.Read();
+        var fallbackModels = catalog.Routes.Single(route => route.Profile == profile)
+            .Fallbacks.Distinct(StringComparer.Ordinal).ToArray();
         var profiles = Enumerable.Repeat(profile, modelStepCount).ToArray();
         var workflowId = Guid.NewGuid();
         async Task<TranslationAttempt> RunAttemptAsync(string? modelOverride)
@@ -809,29 +814,44 @@ public sealed class LocalTasks
                     "Return only the translated fragment. Preserve Markdown structure, code, URLs, " +
                     "placeholders, and line endings exactly where they are not natural language.\r\n\r\n" +
                     text;
-                var result = await client.RoutedChatAsync(
-                    profile,
-                    prompt,
-                    "Translate faithfully without explanations or omissions.",
-                    null,
-                    new LocalWorkloadMetadata(
-                        text.Length,
-                        text.Length,
-                        0,
-                        0,
-                        0,
-                        LocalDurationClass.Short),
-                    new LocalWorkflowHint(
-                        workflowId,
-                        modelStep,
-                        modelStepCount,
-                        profiles,
-                        isDependencyReady: true),
-                    modelOverride,
-                    requestedContextTokens: SelectContext(
-                        checked(prompt.Length + (text.Length * 2))),
-                    LocalJobPriority.Foreground,
-                    ct);
+                LocalJobResult<string> result;
+                try
+                {
+                    result = await client.RoutedChatAsync(
+                        profile,
+                        prompt,
+                        "Translate faithfully without explanations or omissions.",
+                        null,
+                        new LocalWorkloadMetadata(
+                            text.Length,
+                            text.Length,
+                            0,
+                            0,
+                            0,
+                            LocalDurationClass.Short),
+                        new LocalWorkflowHint(
+                            workflowId,
+                            modelStep,
+                            modelStepCount,
+                            profiles,
+                            isDependencyReady: true,
+                            catalogVersion: catalog.CatalogVersion),
+                        modelOverride,
+                        requestedContextTokens: SelectContext(
+                            checked(prompt.Length + (text.Length * 2))),
+                        LocalJobPriority.Foreground,
+                        ct);
+                }
+                catch (BrokerJobFailedException failure) when (
+                    failure.FailureCode == "ModelCatalogMismatchException")
+                {
+                    // Keep the stable failure code. Put recovery first so it survives
+                    // the broker client's bounded diagnostic excerpt.
+                    throw new BrokerJobFailedException(
+                        failure.JobId,
+                        failure.FailureCode,
+                        LocalLmText.CatalogMismatchRecovery + " " + failure.FailureReason);
+                }
                 receipts.Add(result.Receipt);
                 inputTokens = checked(inputTokens + TokenEstimator.ForText(prompt));
                 outputTokens = checked(
@@ -872,9 +892,6 @@ public sealed class LocalTasks
         if (!validation.Passed)
         {
             usedFallback = true;
-            var fallbackModels = markdown
-                ? new[] { "qwen2.5-coder:14b", "qwen3.5:9b" }
-                : ["qwen3.5:9b"];
             for (var index = 0; index < fallbackModels.Length; index++)
             {
                 try
@@ -887,7 +904,8 @@ public sealed class LocalTasks
                     attempts.Add(attempt);
                     break;
                 }
-                catch (BrokerJobFailedException) when (
+                catch (BrokerJobFailedException failure) when (
+                    failure.FailureCode != "ModelCatalogMismatchException" &&
                     index < fallbackModels.Length - 1)
                 {
                 }

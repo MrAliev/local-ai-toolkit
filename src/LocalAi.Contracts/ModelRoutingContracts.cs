@@ -190,7 +190,8 @@ public sealed record LocalWorkflowHint
         int stepIndex,
         int expectedStepCount,
         IReadOnlyList<LocalTaskProfile>? expectedProfiles,
-        bool isDependencyReady)
+        bool isDependencyReady,
+        string? catalogVersion = null)
     {
         if (workflowId == Guid.Empty)
         {
@@ -222,6 +223,7 @@ public sealed record LocalWorkflowHint
         ExpectedStepCount = expectedStepCount;
         ExpectedProfiles = profiles;
         IsDependencyReady = isDependencyReady;
+        CatalogVersion = catalogVersion;
     }
 
     [JsonRequired]
@@ -243,6 +245,11 @@ public sealed record LocalWorkflowHint
     [JsonRequired]
     [JsonInclude]
     public bool IsDependencyReady { get; private init; }
+
+    /// <summary>The catalog snapshot this workflow requires; absent on older requests.</summary>
+    [JsonInclude]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? CatalogVersion { get; private init; }
 }
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]

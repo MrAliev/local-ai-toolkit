@@ -96,6 +96,7 @@ public sealed class ModelExecutionCoordinator
             ?? throw new ArgumentException(
                 "Routed chat has no workload metadata.",
                 nameof(request));
+        _router.RequireCatalogVersion(chat.Workflow?.CatalogVersion);
         var context = chat.RequestedContextTokens ?? 2048;
         var experiments = await _experiments.LoadAsync(cancellationToken);
         return _router.Select(
@@ -133,6 +134,8 @@ public sealed class ModelExecutionCoordinator
             ?? throw new ArgumentException(
                 "Routed chat has no workload metadata.",
                 nameof(request));
+        _router.RequireCatalogVersion(chat.Workflow?.CatalogVersion);
+        _router.RequireCatalogVersion(selection.CatalogVersion);
         var context = chat.RequestedContextTokens ?? 2048;
         if (selection.Profile != profile ||
             selection.ContextTokens != context ||

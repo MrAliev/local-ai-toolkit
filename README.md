@@ -226,6 +226,11 @@ and see its calculated version: `custom-` followed by a content hash. Formatting
 changes do not change that version. Use `localai policy show` to inspect the other
 policies.
 
+Translation retries use the ordered `Fallbacks` for `PlainTranslation` or
+`TechnicalTranslation` from one catalog snapshot. Every fragment carries that
+snapshot's version; a broker with a different catalog rejects it before loading
+or running a model. Apply the saved catalog as described below, then retry.
+
 To apply the saved catalog, let active local calls finish and run `localai doctor`.
 If its `model-catalog` check passes, run `localai-launcher.exe stop`. This stops
 the broker and all running LocalAi tools belonging to the active installed version,
