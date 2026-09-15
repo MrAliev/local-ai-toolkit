@@ -127,8 +127,9 @@ and `index_status` answers for the index. A person needs the wider picture:
 
 - `localai doctor` — what is wrong with the installation: reachability, models, permissions,
   paths. Read-only; it starts nothing and repairs nothing.
-- `localai telemetry` — a summary over a period: how many jobs, how many succeeded, median
-  and p90 duration, the estimated saving — broken down by model and by kind of task.
+- `localai telemetry` — distinct jobs, attempts, known workflows, and confirmed delivered
+  calls. Model/profile tables show attempt outcomes and durations; cloud input/output
+  comparisons have separate totals and known/unknown coverage.
 - `codesearch scan` — what would be indexed at all. You look at it while setting a repository
   up, to see the size of the job, not while asking a question about code.
 - `codesearch evaluate` — the search-quality corpus. A tool for developing LocalAi itself,
@@ -196,10 +197,19 @@ tokenizer or vision profile. Previously retrieved text and overlapping chunks ar
 twice. Missing evidence produces `unknown` with a reason; unsupported image profiles do not
 fall back to a universal area formula.
 
-Existing numeric JSON fields and broker telemetry retain their compatibility formats.
-Complete runtime reporting and telemetry migration are tracked in #596 and #597; profile
-calibration and the common concise presentation are tracked in #598. The current scalar
-notices are not calibrated measurements, and not every tool reports the new contract yet.
+Existing numeric response fields retain their JSON shapes. New broker attempt records use
+schema 2, with attempt/workflow identities and observed backend counts where available.
+Attempts cannot prove delivery or cloud savings: their versioned value is `unknown`, and
+their legacy scalar savings fields are zero. Older telemetry remains readable; its unsupported
+scalar estimates are excluded from totals. Final call reports are stored separately, once
+per call, and account for the complete returned volume. Multiple jobs in one call do not
+multiply its savings. Incompatible comparison profiles are not summed. `localai prune`
+applies the telemetry retention policy to both attempts and final reports.
+
+Full runtime production of final call reports is tracked in #597; calibration and the common
+concise presentation remain in #598. Until those reports are wired through every surface,
+telemetry identifies jobs without a report and leaves their delivery and savings unknown.
+The current scalar notices are not calibrated measurements.
 
 ### If something does not work the way you want
 

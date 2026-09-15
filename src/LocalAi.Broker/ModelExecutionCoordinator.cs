@@ -271,6 +271,7 @@ public sealed class ModelExecutionCoordinator
         LocalWorkloadMetadata workload,
         CancellationToken cancellationToken)
     {
+        var attemptId = Guid.NewGuid();
         var now = _timeProvider.GetUtcNow();
         var wasCold = _warmProof is null ||
                       !string.Equals(
@@ -294,9 +295,11 @@ public sealed class ModelExecutionCoordinator
             original,
             selection.Model);
         var executionStarted = _timeProvider.GetUtcNow();
-        var gross = Math.Max(0, (workload.InputCharacters + 3L) / 4L);
+        // These legacy numeric fields cannot express unknown. No comparison is credited here:
+        // the broker has neither cloud-context provenance nor the final surface payload.
+        const long gross = 0;
         const long verification = 0;
-        var net = Math.Max(0, gross - verification);
+        const long net = 0;
         BrokerExecutionResult raw;
         try
         {
@@ -323,6 +326,8 @@ public sealed class ModelExecutionCoordinator
                 gross,
                 verification,
                 net,
+                attemptId,
+                null,
                 cancellationToken);
 
             throw new ModelAttemptExecutionException(executionException);
@@ -366,6 +371,8 @@ public sealed class ModelExecutionCoordinator
             gross,
             verification,
             net,
+            attemptId,
+            raw,
             cancellationToken);
         return new AttemptResult(result, validation);
     }
@@ -393,6 +400,8 @@ public sealed class ModelExecutionCoordinator
         long gross,
         long verification,
         long net,
+        Guid attemptId,
+        BrokerExecutionResult? observed,
         CancellationToken cancellationToken)
     {
         try
@@ -411,6 +420,8 @@ public sealed class ModelExecutionCoordinator
                 gross,
                 verification,
                 net,
+                attemptId,
+                observed,
                 cancellationToken);
         }
         catch (OperationCanceledException)
@@ -441,6 +452,8 @@ public sealed class ModelExecutionCoordinator
         long gross,
         long verification,
         long net,
+        Guid attemptId,
+        BrokerExecutionResult? observed,
         CancellationToken cancellationToken)
     {
         await _telemetry.AppendAsync(
@@ -464,7 +477,20 @@ public sealed class ModelExecutionCoordinator
                 verification,
                 net,
                 selection.CatalogVersion,
-                executionCompleted),
+                executionCompleted)
+            {
+                SchemaVersion = 2,
+                AttemptId = attemptId,
+                WorkflowId = ((ChatJobPayload)original.Payload).Workflow?.WorkflowId,
+                InputCharacters = (long)((ChatJobPayload)original.Payload).Prompt.Length
+                    + (((ChatJobPayload)original.Payload).System?.Length ?? 0),
+                OutputCharacters = observed?.Body.ValueKind == System.Text.Json.JsonValueKind.Object
+                    && observed.Body.TryGetProperty("Content", out var content)
+                    && content.ValueKind == System.Text.Json.JsonValueKind.String ? content.GetString()!.Length : null,
+                BackendInputTokens = observed?.BackendInputTokens,
+                BackendOutputTokens = observed?.BackendOutputTokens,
+                CloudTokenSavings = UsageValue.Unknown("surface_comparison_required"),
+            },
             cancellationToken);
     }
 

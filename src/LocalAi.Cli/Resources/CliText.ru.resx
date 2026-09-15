@@ -609,13 +609,13 @@
     <comment>The prefix stays in the value: this line is not in the guard and owns its whole line. No hole, because the flag can be the last argument with no value at all. No trailing full stop — the line ends in a command somebody copies. The Russian reuses PolicyKeepAliveInvalid's wording, and the code accepts zero, so it says non-negative.</comment>
   </data>
   <data name="TelemetryByModel" xml:space="preserve">
-    <value>по моделям</value>
+    <value>Попытки по моделям</value>
   </data>
   <data name="TelemetryByProfile" xml:space="preserve">
-    <value>по профилям задач</value>
+    <value>Попытки по профилям задач</value>
   </data>
   <data name="TelemetryFailureOutlier" xml:space="preserve">
-    <value>{0} валит {1} своих заданий — это {2} из {3} записанных отказов.</value>
+    <value>У {0} без успеха завершились {1} попыток — {2} из {3} таких попыток всего.</value>
     <comment>The old tail pointed at a table four lines below that states the complementary fact: the line says 30% fail, the table says 70% ok. 0 is a model name and stays Latin.</comment>
   </data>
   <data name="TelemetryNone" xml:space="preserve">
@@ -623,19 +623,52 @@
     <comment>Split from TelemetryNoneUnreadable: the empty report used to print this and then say that some records could not be read, which is proof that something was delegated.</comment>
   </data>
   <data name="TelemetryNoneUnreadable" xml:space="preserve">
-    <value>В {0} не прочитано ни одной записи телеметрии. Все найденные записи нечитаемы, поэтому сказать, что здесь делегировали, нельзя.</value>
+    <value>В {0} нет пригодных для отчёта записей телеметрии. Все найденные записи нечитаемы или противоречивы.</value>
     <comment>The other half of the split. Only the cause tells the reader whether the empty verdict is right.</comment>
   </data>
   <data name="TelemetryRecorded" xml:space="preserve">
-    <value>Записано заданий {0} за период с {1} по {2} UTC.</value>
+    <value>Записано попыток: {0}, за период с {1} по {2} UTC.</value>
     <comment>Noun-first in Russian. UTC is named because the timestamps are UtcDateTime and a reader three hours ahead read the range as local and concluded the report was stale.</comment>
   </data>
   <data name="TelemetrySaved" xml:space="preserve">
     <value>Оценка экономии облачных токенов: {0} чистыми, {1} валовых ({2} на проверку)</value>
     <comment>Signed point estimates; K and M stay invariant.</comment>
   </data>
+  <data name="TelemetryJobCounts" xml:space="preserve">
+    <value>Уникальных заданий: {0}; известных рабочих процессов: {1}.</value>
+  </data>
+  <data name="TelemetryResultCounts" xml:space="preserve">
+    <value>Вызовов с отчётом об использовании токенов: {0}; результатов с подтверждённой доставкой: {1}.</value>
+  </data>
+  <data name="TelemetryUnreportedJobs" xml:space="preserve">
+    <value>Заданий без отчёта об использовании токенов: {0}. Доставка их результатов и экономия облачных токенов неизвестны.</value>
+  </data>
+  <data name="TelemetryCloudInputSavings" xml:space="preserve">
+    <value>Экономия входных облачных токенов (INPUT) по вызовам с известными значениями: {0}.</value>
+  </data>
+  <data name="TelemetryCloudOutputSavings" xml:space="preserve">
+    <value>Экономия выходных облачных токенов (OUTPUT) по вызовам с известными значениями: {0}.</value>
+  </data>
+  <data name="TelemetrySavingsCoverage" xml:space="preserve">
+    <value>Известно для вызовов: {0}; неизвестно: {1}; неприменимо: {2}.</value>
+  </data>
+  <data name="TelemetrySavingsSign" xml:space="preserve">
+    <value>Положительные значения означают сокращение числа облачных токенов, отрицательные — увеличение.</value>
+  </data>
+  <data name="TelemetrySavingsUnknown" xml:space="preserve">
+    <value>Неизвестно</value>
+  </data>
+  <data name="TelemetrySavingsNotApplicable" xml:space="preserve">
+    <value>Неприменимо</value>
+  </data>
+  <data name="TelemetryAttemptDiagnostics" xml:space="preserve">
+    <value>Диагностика попыток</value>
+  </data>
+  <data name="TelemetryAttemptCount" xml:space="preserve">
+    <value>попыток: {0}</value>
+  </data>
   <data name="TelemetryUnreadable" xml:space="preserve">
-    <value>Не прочитано записей {0}; в подсчётах ниже они не участвуют.</value>
+    <value>Из этого отчёта исключено нечитаемых или противоречивых записей: {0}.</value>
     <comment>Only ever printed with a table under it, which is what makes 'below' true. Noun-first.</comment>
   </data>
   <data name="TranslateEmptyInput" xml:space="preserve">

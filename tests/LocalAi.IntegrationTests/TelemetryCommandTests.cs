@@ -14,6 +14,46 @@ public sealed class TelemetryCommandTests : IDisposable
         Path.GetTempPath(),
         "localai-telemetry-" + Guid.NewGuid().ToString("N"));
 
+    [Fact]
+    public async Task A_failed_attempt_and_successful_fallback_are_one_job()
+    {
+        var first = Record() with { Outcome = ModelExecutionOutcome.TechnicalFailure };
+        await Write(first);
+        await Write(Record() with { JobId = first.JobId, UsedFallback = true });
+
+        var summary = await Summarize();
+
+        Assert.Equal(1, summary.Jobs);
+    }
+
+    [Fact]
+    public async Task Legacy_estimates_without_delivery_or_comparison_evidence_are_unknown()
+    {
+        await Write(Record());
+
+        var summary = await Summarize();
+
+        Assert.DoesNotContain("~900", TelemetryCommand.Render(summary, _root), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_final_call_report_is_read_even_without_attempt_files()
+    {
+        var report = UsageReportingRegistry.CreateReport(UsageSurface.Mcp, "locallm", "ask_local", Guid.NewGuid());
+        report = report with { Outcome = new(UsageTechnicalOutcome.Succeeded, UsageValidation.Passed, UsageDelivery.Delivered, null, null, null) };
+        report = CloudTokenMethodology.Apply(report, new("explicit-reading-v1",
+            [new CloudTextSource("snapshot", new string('a', 400), Presence: CloudContextPresence.NotPresent)],
+            "answer", "", ""), "answer", HeuristicCloudTokenProfile.Instance);
+        var directory = Path.Combine(_root, "telemetry", "usage");
+        Directory.CreateDirectory(directory);
+        await File.WriteAllTextAsync(Path.Combine(directory, $"{report.Identity.CallId:N}.json"),
+            UsageReportJson.Write(report), TestContext.Current.CancellationToken);
+        using var output = new StringWriter();
+        await TelemetryCommand.ExecuteAsync(_root, output, TestContext.Current.CancellationToken);
+        Assert.Contains("Calls with usage reports: 1; results confirmed delivered: 1.", output.ToString(), StringComparison.Ordinal);
+        Assert.Contains("~98", output.ToString(), StringComparison.Ordinal);
+    }
+
     /// <summary>
     /// The pattern this line surfaces stayed invisible for a month: one model failed half of
     /// its jobs — every technical failure in the system — while the fallback quietly absorbed
@@ -45,7 +85,7 @@ public sealed class TelemetryCommandTests : IDisposable
         var rendered = TelemetryCommand.Render(await Summarize(), _root);
 
         Assert.Contains(
-            "attention   sick-model fails 50% of its jobs — 5 of the 5 failure(s) recorded",
+            "attention   sick-model: 50% of attempts were unsuccessful (5 of 5 unsuccessful attempts overall).",
             rendered,
             StringComparison.Ordinal);
         Assert.DoesNotContain(
@@ -122,12 +162,12 @@ public sealed class TelemetryCommandTests : IDisposable
             2,
             summary.Outcomes
                 .Single(outcome => outcome.Outcome == ModelExecutionOutcome.Success)
-                .Jobs);
+                .Attempts);
         Assert.Equal(
             1,
             summary.Outcomes
                 .Single(outcome => outcome.Outcome == ModelExecutionOutcome.StructuralFailure)
-                .Jobs);
+                .Attempts);
     }
 
     /// <summary>
@@ -211,12 +251,14 @@ public sealed class TelemetryCommandTests : IDisposable
     /// approximate and must not acquire an unsupported percentage interval.
     /// </summary>
     [Fact]
-    public async Task Token_savings_are_printed_as_a_point_estimate_without_an_invented_band()
+    public void Token_savings_are_printed_as_a_point_estimate_without_an_invented_band()
     {
-        await Write(Record() with { EstimatedNetCloudTokensSaved = 40_000 });
-        await Write(Record() with { EstimatedNetCloudTokensSaved = 60_000 });
-
-        var text = TelemetryCommand.Render(await Summarize(), _root);
+        var report = UsageReportingRegistry.CreateReport(UsageSurface.Mcp, "locallm", "ask_local", Guid.NewGuid());
+        report = report with { Outcome = new(UsageTechnicalOutcome.Succeeded, UsageValidation.Passed, UsageDelivery.Delivered, null, null, null) };
+        report = CloudTokenMethodology.Apply(report, new("explicit-reading-v1",
+            [new CloudTextSource("snapshot", new string('a', 400_000), Presence: CloudContextPresence.NotPresent)],
+            "", "", ""), "", HeuristicCloudTokenProfile.Instance);
+        var text = TelemetryCommand.Render(TelemetryCommand.Summarize(new([], 0), [report]), _root);
 
         Assert.Contains("~100K", text, StringComparison.Ordinal);
         Assert.DoesNotContain("–", text, StringComparison.Ordinal);
@@ -243,7 +285,7 @@ public sealed class TelemetryCommandTests : IDisposable
         Assert.Equal(2, summary.Jobs);
         Assert.Equal(1, summary.Unreadable);
         Assert.Contains(
-            "could not be read",
+            "unreadable or conflicting",
             TelemetryCommand.Render(summary, _root),
             StringComparison.Ordinal);
     }

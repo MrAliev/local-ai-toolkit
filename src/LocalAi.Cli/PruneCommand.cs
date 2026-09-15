@@ -384,8 +384,8 @@ public static class PruneCommand
     ///
     /// One record is a few hundred bytes describing one job — no prompts, no answers, no paths —
     /// and nothing ever removed them, so the directory grows for the life of the installation.
-    /// The file name starts with the record's timestamp in fixed-width ticks, so age is read from
-    /// the name and a file whose name does not parse is left alone rather than guessed at.
+    /// Legacy names carry timestamps. Versioned attempt files carry their recorded time;
+    /// immutable call reports use their write time. Only recognized identity files are removed.
     /// </summary>
     private static (int Removed, long Bytes) PruneTelemetry(
         string runtimeRoot,
@@ -393,46 +393,48 @@ public static class PruneCommand
         DateTimeOffset now,
         bool dryRun)
     {
-        var metrics = Path.Combine(runtimeRoot, "telemetry", "metrics");
-        if (!Directory.Exists(metrics))
-        {
-            return (0, 0);
-        }
-
         var cutoff = (now - policy.TelemetryRetention).UtcTicks;
         var removed = 0;
         var bytes = 0L;
-        foreach (var path in Directory.EnumerateFiles(metrics, "*.json"))
+        foreach (var folder in new[] { "metrics", "usage" })
         {
-            var name = Path.GetFileNameWithoutExtension(path);
-            var separator = name.IndexOf('-', StringComparison.Ordinal);
-            if (separator <= 0 ||
-                !long.TryParse(name[..separator], out var ticks) ||
-                ticks >= cutoff)
+            var directory = Path.Combine(runtimeRoot, "telemetry", folder);
+            if (!Directory.Exists(directory)) continue;
+            foreach (var path in Directory.EnumerateFiles(directory, "*.json"))
             {
-                continue;
-            }
-
-            long size;
-            try
-            {
-                size = new FileInfo(path).Length;
-                if (!dryRun)
+                try
                 {
-                    File.Delete(path);
+                    var ticks = TelemetryTicks(path, folder == "usage");
+                    if (ticks is null || ticks >= cutoff) continue;
+                    var size = new FileInfo(path).Length;
+                    if (!dryRun) File.Delete(path);
+                    bytes += size;
+                    removed++;
                 }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException or InvalidDataException)
+                { /* Unrecognized or unavailable records are left alone. */ }
             }
-            catch (Exception exception) when (
-                exception is IOException or UnauthorizedAccessException)
-            {
-                continue;
-            }
-
-            bytes += size;
-            removed++;
         }
-
         return (removed, bytes);
+    }
+
+    private static long? TelemetryTicks(string path, bool usage)
+    {
+        var name = Path.GetFileNameWithoutExtension(path);
+        if (Guid.TryParseExact(name, "N", out var id) && id != Guid.Empty)
+        {
+            if (usage)
+            {
+                var report = UsageReportJson.Read(File.ReadAllText(path));
+                return report.Identity.CallId == id ? File.GetLastWriteTimeUtc(path).Ticks : null;
+            }
+            var attempt = JsonSerializer.Deserialize<ModelTelemetryRecord>(File.ReadAllText(path), LocalAiJson.Strict);
+            return attempt is { SchemaVersion: 2 } && attempt.AttemptId == id && attempt.RecordedAtUtc != default
+                ? attempt.RecordedAtUtc.UtcTicks : null;
+        }
+        if (usage) return null;
+        var separator = name.IndexOf('-', StringComparison.Ordinal);
+        return separator > 0 && long.TryParse(name[..separator], out var ticks) ? ticks : null;
     }
 
     /// <summary>
