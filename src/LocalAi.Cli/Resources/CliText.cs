@@ -17,6 +17,8 @@ namespace LocalAi.Cli.Resources;
 /// </summary>
 public static class CliText
 {
+    public static string UsageReportArguments => Catalogue.Get(nameof(UsageReportArguments));
+    public static string UsageReportNotFound(Guid id) => Catalogue.Format(nameof(UsageReportNotFound), id);
     public static TextCatalogue Catalogue { get; } = new(
         "LocalAi.Cli.Resources.CliText",
         typeof(CliText).Assembly);

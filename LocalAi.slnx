@@ -7,6 +7,7 @@
     <Project Path="src/LocalAi.Broker/LocalAi.Broker.csproj" />
     <Project Path="src/LocalAi.Broker.Client/LocalAi.Broker.Client.csproj" />
     <Project Path="src/LocalAi.Contracts/LocalAi.Contracts.csproj" />
+    <Project Path="src/LocalAi.Mcp/LocalAi.Mcp.csproj" />
     <Project Path="src/LocalAi.Documentation/LocalAi.Documentation.csproj" />
     <Project Path="src/LocalAi.Installer/LocalAi.Installer.csproj" />
     <Project Path="src/LocalAi.Installer.Core/LocalAi.Installer.Core.csproj" />

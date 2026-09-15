@@ -51,7 +51,7 @@ public static class ModelCommand
     public static Task<int> ExecuteProductionAsync(
         IReadOnlyList<string> arguments,
         TextWriter output,
-        CancellationToken cancellationToken) =>
+        CancellationToken cancellationToken, TextWriter? error = null) =>
         ExecuteProductionAsync(
             arguments,
             static (observer, deadline, token) =>
@@ -63,14 +63,14 @@ public static class ModelCommand
                         deadline: deadline));
             },
             output,
-            cancellationToken);
+            cancellationToken, error);
 
     internal static async Task<int> ExecuteProductionAsync(
         IReadOnlyList<string> arguments,
         Func<ILocalRunObserver?, TimeSpan?, CancellationToken, ILocalModelClient>
             clientFactory,
         TextWriter output,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, TextWriter? error = null)
     {
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(clientFactory);
@@ -85,7 +85,7 @@ public static class ModelCommand
         // Only a pull is long enough to have anything to say, and only a pull needs the
         // long guard. Everything else here answers in a moment.
         var isPull = string.Equals(request.Operation, "pull", StringComparison.Ordinal);
-        var observer = isPull ? Watching(request) : null;
+        var observer = isPull ? Watching(request, error ?? Console.Error) : null;
 
         ILocalModelClient client;
         try
@@ -397,6 +397,9 @@ public static class ModelCommand
         string code,
         int exitCode)
     {
+        if (exitCode == CancelledExitCode) UsageCall.Current?.Cancelled();
+        else if (exitCode is InvalidArgumentsExitCode or RejectedExitCode) UsageCall.Current?.Refused(code);
+        else UsageCall.Current?.Failed(code);
         await WriteAsync(
             output,
             new ModelCommandError(SchemaVersion, operation, false, code));
@@ -408,11 +411,11 @@ public static class ModelCommand
     /// standard error, which leaves the single JSON object on standard output exactly as
     /// it was — that is the answer, and an answer is not a progress report.
     /// </summary>
-    private static ILocalRunObserver Watching(Request request) =>
+    private static ILocalRunObserver Watching(Request request, TextWriter error) =>
         request.ProgressJson
-            ? new ModelPullProgressJson(Console.Error, request.Model ?? string.Empty)
+            ? new ModelPullProgressJson(error, request.Model ?? string.Empty)
             : new LocalRunProgress(
-                Console.Error,
+                error,
                 static () => DateTimeOffset.UtcNow,
                 request.Model);
 

@@ -172,6 +172,7 @@ public static class LocalLmTools
         var hasPath = !string.IsNullOrWhiteSpace(path);
         if (hasSource == hasPath)
         {
+            UsageCall.Current?.Refused("invalid_input");
             return hasSource
                 ? LocalLmText.TranslateSourceAmbiguous
                 : LocalLmText.TranslateSourceMissing;
@@ -188,17 +189,20 @@ public static class LocalLmTools
             {
                 if (document is not null && TranslationOutput.IsSource(document, target))
                 {
+                    UsageCall.Current?.Refused("output_is_source");
                     return LocalLmText.TranslateOutputIsSource("path", "outPath", document);
                 }
             }
             catch (Exception failure) when (
                 failure is IOException or UnauthorizedAccessException or Win32Exception)
             {
+                UsageCall.Current?.Refused("output_unavailable");
                 return LocalLmText.TranslateNotWritten(target, failure.Message);
             }
 
             if (Directory.Exists(target))
             {
+                UsageCall.Current?.Refused("output_is_directory");
                 return LocalLmText.TranslateOutputIsDirectory(target);
             }
 
@@ -208,6 +212,7 @@ public static class LocalLmTools
             if (Path.GetDirectoryName(target) is { Length: > 0 } directory &&
                 !Directory.Exists(directory))
             {
+                UsageCall.Current?.Refused("output_directory_missing");
                 return LocalLmText.TranslateOutputDirectoryMissing(target);
             }
 
@@ -221,6 +226,7 @@ public static class LocalLmTools
             var read = TranslateSource.Read(document);
             if (read.Message is { } refusal)
             {
+                UsageCall.Current?.Refused(read.RefusalCode ?? "input_not_read");
                 // The reader's own sentence, as the answer rather than as a protocol error: a
                 // mistyped path should not look like a broken tool.
                 return refusal;
@@ -234,6 +240,7 @@ public static class LocalLmTools
             // the wait.
             if (target is null && text!.Length > MaximumReturnedCharacters)
             {
+                UsageCall.Current?.Refused("output_path_required");
                 return LocalLmText.TranslateNeedsOutPath(
                     document,
                     text.Length,
@@ -243,6 +250,9 @@ public static class LocalLmTools
 
         try
         {
+            UsageCall.Current?.Observe(UsageVolume.InputCharacters, text!.Length);
+            if (document is null)
+                UsageCall.Current?.Observe(UsageVolume.InputBytes, System.Text.Encoding.UTF8.GetByteCount(text!));
             var result = await tasks.TranslateAsync(
                 text!,
                 sourceLanguage,
@@ -250,6 +260,8 @@ public static class LocalLmTools
                 markdown ?? assumedMarkdown,
                 target is null ? TranslationDelivery.ToCaller : TranslationDelivery.ToFile,
                 cancellationToken);
+
+            UsageCall.Current?.Validated(result.Validation.Passed);
 
             // What ran, then what was assumed while it ran. Past tense, because a caller here
             // cannot stop a run the way a person watching a console can.
@@ -273,6 +285,7 @@ public static class LocalLmTools
                 // then publish by replacement so a late hard link cannot truncate its source.
                 if (document is not null && TranslationOutput.IsSource(document, target))
                 {
+                    UsageCall.Current?.DeliveryFailed("output_is_source");
                     return LocalLmText.TranslateOutputIsSource("path", "outPath", document);
                 }
                 await AtomicFile.WriteAsync(target, async (stream, token) =>
@@ -286,10 +299,11 @@ public static class LocalLmTools
             catch (Exception failure) when (
                 failure is IOException or UnauthorizedAccessException or NotSupportedException or Win32Exception)
             {
+                UsageCall.Current?.DeliveryFailed("output_not_written");
                 // Deliberately not falling back to returning the document: handing back a
                 // translation the caller asked to be written to disk would drop everything
                 // outPath saved into its context, as a surprise, at the worst moment.
-                return said + "\n" + LocalLmText.TranslateNotWritten(target, failure.Message);
+                return LocalLmText.TranslateNotWritten(target, failure.Message);
             }
 
             // No untrusted markers on this route: nothing content-derived comes back, and
@@ -307,6 +321,7 @@ public static class LocalLmTools
         }
         catch (Exception exception)
         {
+            ObserveFailure(exception);
             return LocalLmText.TranslationFailed(exception.Message);
         }
     }
@@ -414,10 +429,12 @@ public static class LocalLmTools
         }
         catch (ArgumentException exception)
         {
+            ObserveFailure(exception);
             return LocalLmText.InvalidRequest(exception.Message);
         }
         catch (Exception exception)
         {
+            ObserveFailure(exception);
             return LocalLmText.NoAnswerFromTool(tool, exception.Message);
         }
     }
@@ -488,6 +505,7 @@ public static class LocalLmTools
         {
             // The code is all the broker sends back, so the sentence is assembled here
             // from the catalog. Before this the caller was told only the exception type.
+            ObserveFailure(ex);
             return MissingModelAdvice.ForProfile(wanted);
         }
         catch (BrokerJobFailedException ex)
@@ -496,20 +514,41 @@ public static class LocalLmTools
                     "NoEligibleModelException",
                     StringComparison.Ordinal))
         {
+            ObserveFailure(ex);
             return MissingModelAdvice.ForIneligibleRequest(wanted);
         }
         catch (FileNotFoundException ex)
         {
+            ObserveFailure(ex);
             return LocalLmText.FileNotFound(ex.FileName ?? string.Empty);
         }
         catch (ArgumentException ex)
         {
+            ObserveFailure(ex);
             return LocalLmText.InvalidRequest(ex.Message);
         }
         catch (Exception ex)
         {
+            ObserveFailure(ex);
             return LocalLmText.LocalModelFailed(ex.Message);
         }
+    }
+
+    private static void ObserveFailure(Exception exception)
+    {
+        if (UsageCall.Current is not { } usage) return;
+        if (exception is BrokerJobFailedException { FailureCode: "NoModelInstalledException" or "NoEligibleModelException" })
+        {
+            usage.NoInference();
+            usage.Refused("model_unavailable");
+        }
+        else if (exception is ArgumentException or FileNotFoundException) usage.Refused("invalid_input");
+        else if (exception is InvalidDataException)
+        {
+            usage.Validated(false);
+            usage.Refused("result_rejected");
+        }
+        else usage.Failed("tool_failed");
     }
 
     private static string PrimarySource(IReadOnlyList<string> sources) =>

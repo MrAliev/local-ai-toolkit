@@ -74,6 +74,27 @@ public sealed record TelemetrySummary(
 /// </summary>
 public static class TelemetryCommand
 {
+    internal static async Task<int> ExecuteAsync(string[] arguments, string runtimeRoot, CommandStreams streams,
+        CancellationToken cancellationToken = default)
+    {
+        if (arguments.Length == 0) return await ExecuteAsync(runtimeRoot, streams.Out, cancellationToken);
+        if (arguments is not ["--call-id", var value] || !Guid.TryParse(value, out var id) || id == Guid.Empty)
+        {
+            UsageCall.Current?.Refused("invalid_call_id");
+            streams.Error.WriteLine(CliText.UsageReportArguments);
+            return 2;
+        }
+        var report = await new UsageReportStore(runtimeRoot).ReadAsync(id, cancellationToken);
+        if (report is null)
+        {
+            UsageCall.Current?.Refused("usage_report_not_found");
+            streams.Error.WriteLine(CliText.UsageReportNotFound(id));
+            return 1;
+        }
+        streams.Out.WriteLine(UsageReportJson.Write(report));
+        return 0;
+    }
+
     public static async Task<int> ExecuteAsync(
         string runtimeRoot,
         TextWriter output,
