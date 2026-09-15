@@ -6,6 +6,29 @@ namespace CodeSearch.Tests;
 public sealed class SearchEvaluationTests
 {
     [Fact]
+    public void Serialized_token_bounds_identify_the_heuristic_instead_of_implying_confidence()
+    {
+        var corpus = new SearchEvaluationCorpus(1, [Case("sample", "query", "Sample.cs", "Sample")]);
+        var metrics = SearchEvaluation.Measure(corpus,
+            [new("sample", [Hit("Sample.cs", "Sample", 1, 1, 266)], TimeSpan.Zero, null)]);
+        using var json = JsonDocument.Parse(JsonSerializer.Serialize(metrics, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
+        Assert.True(json.RootElement.TryGetProperty("responseTokenEstimatePolicy", out var policy));
+        Assert.Equal("heuristic_not_confidence_interval", policy.GetProperty("rangeBasis").GetString());
+        Assert.Equal("utf16_characters_v1", policy.GetProperty("method").GetString());
+        Assert.Equal(1, policy.GetProperty("schemaVersion").GetInt32());
+        Assert.Equal(67, json.RootElement.GetProperty("estimatedResponseTokens").GetInt32());
+    }
+
+    [Fact]
+    public void Large_recorded_response_sizes_do_not_overflow_the_token_proxy()
+    {
+        var estimate = SearchEvaluation.EstimateTokens(int.MaxValue);
+        Assert.Equal(536870912, estimate.Point);
+        Assert.Equal(357913942, estimate.LowerBound);
+        Assert.Equal(715827883, estimate.UpperBound);
+    }
+
+    [Fact]
     public void Committed_corpus_has_24_unique_source_verified_cases()
     {
         var root = RepositoryRoot();
