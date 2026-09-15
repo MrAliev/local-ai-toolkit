@@ -1,6 +1,7 @@
 using CodeSearch.Core.Chunking;
 using CodeSearch.Core.Indexing;
 using CodeSearch.Core.Search;
+using LocalAi.Contracts;
 
 namespace CodeSearch.Tests;
 
@@ -13,6 +14,7 @@ public class SearchServiceCacheTests : IDisposable
     [Fact]
     public void KeepsTheIndexInMemoryWhileItIsBeingUsed()
     {
+        using var call = new UsageCall(UsageSurface.Mcp, "codesearch", "search_code");
         var service = new SearchService { IdleTimeout = TimeSpan.FromHours(1) };
 
         var first = service.Load(_indexPath);
@@ -20,6 +22,10 @@ public class SearchServiceCacheTests : IDisposable
 
         Assert.Same(first, second);
         Assert.Single(service.Loaded());
+        var report = call.Complete();
+        Assert.Equal(UsageCache.Hit, report.Models.Cache);
+        Assert.Equal("index_memory_cache", report.Models.CacheReason);
+        Assert.Equal(UsageModelState.NotCalled, report.Models.State);
     }
 
     [Fact]

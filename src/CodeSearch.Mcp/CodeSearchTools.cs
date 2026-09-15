@@ -63,11 +63,13 @@ public static class CodeSearchTools
     {
         if (!SemanticDocumentPath.IsRepositoryRelative(path))
         {
+            UsageCall.Current?.Refused("path_not_relative");
             return CodeSearchText.PathNotRelative(path);
         }
 
         if (!SourcePosition.TryFromOneBased(line, column, out var position))
         {
+            UsageCall.Current?.Refused("invalid_position");
             return CodeSearchText.PositionNotFromOne(line, column);
         }
 
@@ -93,6 +95,7 @@ public static class CodeSearchTools
         }
         catch (SemanticSnapshotMismatchException ex)
         {
+            UsageCall.Current?.Refused("semantic_snapshot_mismatch");
             return $"semantic_snapshot_mismatch: {ex.Message}";
         }
         // Cancellation is not a tool failure and must not be described as one: the client asked
@@ -100,6 +103,7 @@ public static class CodeSearchTools
         // sentence in the answer.
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            ObserveFailure(ex);
             return CodeSearchText.ToolFailed("go_to_definition", Describe(ex));
         }
     }
@@ -131,11 +135,13 @@ public static class CodeSearchTools
     {
         if (!SemanticDocumentPath.IsRepositoryRelative(path))
         {
+            UsageCall.Current?.Refused("path_not_relative");
             return CodeSearchText.PathNotRelative(path);
         }
 
         if (!SourcePosition.TryFromOneBased(line, column, out var position))
         {
+            UsageCall.Current?.Refused("invalid_position");
             return CodeSearchText.PositionNotFromOne(line, column);
         }
 
@@ -162,11 +168,13 @@ public static class CodeSearchTools
         }
         catch (SemanticSnapshotMismatchException ex)
         {
+            UsageCall.Current?.Refused("semantic_snapshot_mismatch");
             return $"semantic_snapshot_mismatch: {ex.Message}";
         }
         // See go_to_definition: a cancelled call is reported by the exception, not by a sentence.
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            ObserveFailure(ex);
             return CodeSearchText.ToolFailed("find_references", Describe(ex));
         }
     }
@@ -195,11 +203,13 @@ public static class CodeSearchTools
     {
         if (!SemanticDocumentPath.IsRepositoryRelative(path))
         {
+            UsageCall.Current?.Refused("path_not_relative");
             return CodeSearchText.PathNotRelative(path);
         }
 
         if (!SourcePosition.TryFromOneBased(line, column, out var position))
         {
+            UsageCall.Current?.Refused("invalid_position");
             return CodeSearchText.PositionNotFromOne(line, column);
         }
 
@@ -225,11 +235,13 @@ public static class CodeSearchTools
         }
         catch (SemanticSnapshotMismatchException ex)
         {
+            UsageCall.Current?.Refused("semantic_snapshot_mismatch");
             return $"semantic_snapshot_mismatch: {ex.Message}";
         }
         // See go_to_definition: a cancelled call is reported by the exception, not by a sentence.
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            ObserveFailure(ex);
             return CodeSearchText.ToolFailed("find_implementations", Describe(ex));
         }
     }
@@ -260,11 +272,13 @@ public static class CodeSearchTools
     {
         if (!SemanticDocumentPath.IsRepositoryRelative(path))
         {
+            UsageCall.Current?.Refused("path_not_relative");
             return CodeSearchText.PathNotRelative(path);
         }
 
         if (!SourcePosition.TryFromOneBased(line, column, out var position))
         {
+            UsageCall.Current?.Refused("invalid_position");
             return CodeSearchText.PositionNotFromOne(line, column);
         }
 
@@ -313,10 +327,12 @@ public static class CodeSearchTools
         }
         catch (SemanticSnapshotMismatchException ex)
         {
+            UsageCall.Current?.Refused("semantic_snapshot_mismatch");
             return $"semantic_snapshot_mismatch: {ex.Message}";
         }
         catch (Exception ex)
         {
+            ObserveFailure(ex);
             return CodeSearchText.ToolFailed("find_relationships", Describe(ex));
         }
     }
@@ -353,6 +369,7 @@ public static class CodeSearchTools
         }
         catch (Exception exception)
         {
+            ObserveFailure(exception);
             return CodeSearchText.ToolFailed("lsp_open_document", exception.Message);
         }
     }
@@ -382,6 +399,7 @@ public static class CodeSearchTools
         }
         catch (Exception exception)
         {
+            ObserveFailure(exception);
             return CodeSearchText.ToolFailed("lsp_close_document", exception.Message);
         }
     }
@@ -437,6 +455,7 @@ public static class CodeSearchTools
         }
         catch (FileNotFoundException)
         {
+            UsageCall.Current?.Refused("index_not_built");
             // The answer this whole notice exists for. On a new machine this is what every search
             // says for the whole of the first build, and the command it named would have exited
             // 75 sync_busy against the gate.
@@ -460,6 +479,7 @@ public static class CodeSearchTools
         }
         catch (Exception ex)
         {
+            ObserveFailure(ex);
             return CodeSearchText.ToolFailed("search_code", Describe(ex));
         }
 
@@ -580,10 +600,12 @@ public static class CodeSearchTools
         // exactly what rotates one.
         catch (SearchChunkIdException ex)
         {
+            UsageCall.Current?.Refused(ex.Code);
             return notice.Above(root, SyncNoticeAudience.Answer) + $"{ex.Code}: {ex.Message}";
         }
         catch (SearchChunkResolutionException ex)
         {
+            UsageCall.Current?.Refused("chunk_unavailable");
             return notice.Above(root, SyncNoticeAudience.Answer) + ex.Message;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -595,8 +617,16 @@ public static class CodeSearchTools
             // The type as well as the message: two of the three failures reported in #140 came
             // back with a message that named nothing, and a caller left holding "get_code_chunk
             // failed" has nothing to retry, report or look up.
+            ObserveFailure(ex);
             return CodeSearchText.ToolFailed("get_code_chunk", Describe(ex));
         }
+    }
+
+    private static void ObserveFailure(Exception ex)
+    {
+        if (ex is ArgumentException or FileNotFoundException or SearchNotReadyException)
+            UsageCall.Current?.Refused("tool_not_ready");
+        else UsageCall.Current?.Failed("tool_failed");
     }
 
     /// <summary>
@@ -787,6 +817,7 @@ public static class CodeSearchTools
         SyncNotice notice,
         string? root)
     {
+        UsageCall.Current?.Refused("semantic_navigation_not_ready");
         if (exception.Degradation.Remedy is null)
         {
             return $"semantic_navigation_not_ready: {exception.Message}";
@@ -950,15 +981,18 @@ public static class CodeSearchTools
         var executable = Path.Combine(AppContext.BaseDirectory, "localai.exe");
         if (!File.Exists(executable))
         {
+            UsageCall.Current?.Refused("cli_unavailable");
             return CodeSearchText.CliUnavailable(executable);
         }
 
+        UsageCall.Current?.UnknownInference();
         var start = SyncStartInfo(executable, resolvedRoot, InlineRefreshFileLimit);
         var (exitCode, output, error) = await RunProcessToCompletionAsync(
             start,
             cancellationToken);
         if (exitCode != 0)
         {
+            UsageCall.Current?.Failed("sync_failed");
             return CodeSearchText.SyncFailed(exitCode, error.Trim());
         }
 
@@ -1101,6 +1135,8 @@ public static class CodeSearchTools
             return null;
         }
 
+        UsageCall.Current?.NoInference();
+        UsageCall.Current?.Refused("inline_limit");
         // The refusal already says "not inside a tool call, run this instead". While a build holds
         // the gate that instruction names the one command that cannot run, so the block takes its
         // slot: the reason for the refusal above it stays true either way, and the blank line

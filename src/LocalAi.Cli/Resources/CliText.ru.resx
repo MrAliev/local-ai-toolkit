@@ -1082,4 +1082,6 @@
   <data name="DocsModelReceipt" xml:space="preserve"><value>🔧 Локально: {0}{1}. В очереди: {2} с. Выполнение: {3} с. Экономия облачных токенов не измерялась.</value></data>
   <data name="DocsResidencyCpu" xml:space="preserve"><value> (целиком на процессоре — ответы намного медленнее)</value></data>
   <data name="DocsResidencyPartial" xml:space="preserve"><value> (в видеопамяти {0}% модели — ответы медленнее)</value></data>
+  <data name="UsageReportArguments" xml:space="preserve"><value>Используйте: localai telemetry --call-id &lt;guid&gt;. Идентификатор вызова должен быть корректным GUID.</value></data>
+  <data name="UsageReportNotFound" xml:space="preserve"><value>Отчёт для вызова {0} не найден.</value></data>
 </root>

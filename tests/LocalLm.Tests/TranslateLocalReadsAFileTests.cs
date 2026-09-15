@@ -432,19 +432,26 @@ public sealed class TranslateLocalReadsAFileTests : IDisposable
     [Fact]
     public async Task A_write_that_fails_says_the_translation_was_not_kept()
     {
+        using var usage = new UsageCall(UsageSurface.Mcp, "locallm", "translate_local");
         var document = Write("notes.txt", English);
         var target = Write("notes.ru.txt", "занято");
 
-        using var exclusive = new FileStream(
-            target, FileMode.Open, FileAccess.Read, FileShare.None);
-
-        var answer = await LocalLmTools.TranslateLocal(
-            new LocalTasks(new RecordingClient(Russian)),
-            sourceLanguage: "English",
-            targetLanguage: "Russian",
-            path: document,
-            outPath: target,
-            cancellationToken: TestContext.Current.CancellationToken);
+        FileStream? exclusive = null;
+        string answer;
+        var client = new RecordingClient(Russian, () =>
+            exclusive = new FileStream(target, FileMode.Open, FileAccess.Read, FileShare.None));
+        try
+        {
+            answer = await LocalLmTools.TranslateLocal(
+                new LocalTasks(client),
+                sourceLanguage: "English",
+                targetLanguage: "Russian",
+                path: document,
+                outPath: target,
+                cancellationToken: TestContext.Current.CancellationToken);
+        }
+        finally { exclusive?.Dispose(); }
+        Assert.NotEmpty(client.Profiles);
 
         // The reason is the framework's own message, so the sentence is asserted up to the
         // hole that carries it - which is what makes this hold in either language.
@@ -454,6 +461,10 @@ public sealed class TranslateLocalReadsAFileTests : IDisposable
             answer,
             StringComparison.Ordinal);
         Assert.DoesNotContain(Russian, answer, StringComparison.Ordinal);
+        Assert.DoesNotContain("cloud generation savings:", answer, StringComparison.Ordinal);
+        Assert.DoesNotContain("экономия на облачной генерации", answer, StringComparison.Ordinal);
+        Assert.Equal(UsageDelivery.Failed, usage.Complete().Outcome.Delivery);
+        Assert.Equal(UsageValidation.Passed, usage.Complete().Outcome.Validation);
     }
 
     /// <summary>

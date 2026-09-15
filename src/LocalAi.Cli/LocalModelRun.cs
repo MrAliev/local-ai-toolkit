@@ -100,23 +100,23 @@ internal static class LocalModelRun
         LocalTaskProfile profile,
         Func<LocalTasks, CancellationToken, Task<LocalResult>> job,
         bool machineReadable,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, CommandStreams streams)
     {
         ArgumentNullException.ThrowIfNull(job);
         try
         {
-            var result = await job(Tasks(Watching()), cancellationToken);
+            var result = await job(Tasks(Watching(streams.Error)), cancellationToken);
             if (machineReadable)
             {
-                Console.WriteLine(MachineOutput.Answer(command, Describe(origin, result)));
+                streams.Out.WriteLine(MachineOutput.Answer(command, Describe(origin, result)));
                 return 0;
             }
 
             // The notice is about the run and the answer is the product, so
             // `localai ask "…" x.cs > out.md` leaves a file with the answer and nothing else.
             // `hook` already puts its own synchronization line on stderr for this reason.
-            Console.Error.WriteLine(result.Notice);
-            Console.WriteLine(LocalModelOutput.Answer(
+            streams.Error.WriteLine(result.Notice);
+            streams.Out.WriteLine(LocalModelOutput.Answer(
                 origin,
                 result.Answer,
                 Console.IsOutputRedirected));
@@ -125,7 +125,7 @@ internal static class LocalModelRun
         catch (Exception exception) when (Classify(exception, profile) is not null)
         {
             var (code, message, exit) = Classify(exception, profile)!.Value;
-            return Fail(command, code, message, exit, machineReadable);
+            return Fail(command, code, message, exit, machineReadable, streams);
         }
     }
 
@@ -139,12 +139,17 @@ internal static class LocalModelRun
         TranslateRequest request,
         string text,
         bool machineReadable,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, CommandStreams streams)
     {
         ArgumentNullException.ThrowIfNull(request);
+        if (request.InputPath is null)
+        {
+            UsageCall.Current?.Observe(UsageVolume.InputCharacters, text.Length);
+            UsageCall.Current?.Observe(UsageVolume.InputBytes, System.Text.Encoding.UTF8.GetByteCount(text));
+        }
         try
         {
-            var result = await Tasks(Watching()).TranslateAsync(
+            var result = await Tasks(Watching(streams.Error)).TranslateAsync(
                 text,
                 request.From,
                 request.To,
@@ -157,6 +162,7 @@ internal static class LocalModelRun
                     : TranslationDelivery.ToFile,
                 cancellationToken);
 
+            UsageCall.Current?.Validated(result.Validation.Passed);
             if (request.OutputPath is { } path)
             {
                 try
@@ -168,6 +174,7 @@ internal static class LocalModelRun
                 catch (Exception failure) when (
                     failure is IOException or UnauthorizedAccessException or NotSupportedException)
                 {
+                    UsageCall.Current?.DeliveryFailed("output_not_written");
                     // 73 is EX_CANTCREAT. Not 2 — the command line was right, and the cause is a
                     // permission or a directory that is not there.
                     return Fail(
@@ -175,27 +182,27 @@ internal static class LocalModelRun
                         "output_not_written",
                         CliText.OutputNotWritten(path, failure.Message),
                         73,
-                        machineReadable);
+                        machineReadable, streams);
                 }
             }
 
             if (machineReadable)
             {
-                Console.WriteLine(MachineOutput.Answer("translate", Describe(origin, result)));
+                streams.Out.WriteLine(MachineOutput.Answer("translate", Describe(origin, result)));
                 return 0;
             }
 
-            Console.Error.WriteLine(result.Notice);
+            streams.Error.WriteLine(result.Notice);
             if (request.OutputPath is null)
             {
                 if (Console.IsOutputRedirected)
                 {
                     // Discoverability is what `--out` costs, and this line is what pays it: the
                     // reader is otherwise about to save a document full of markers.
-                    Console.Error.WriteLine(CliText.TranslateWriteDocument);
+                    streams.Error.WriteLine(CliText.TranslateWriteDocument);
                 }
 
-                Console.WriteLine(LocalModelOutput.Answer(
+                streams.Out.WriteLine(LocalModelOutput.Answer(
                     origin,
                     result.Answer,
                     Console.IsOutputRedirected));
@@ -205,6 +212,8 @@ internal static class LocalModelRun
         }
         catch (InvalidDataException malformed)
         {
+            UsageCall.Current?.Validated(false);
+            UsageCall.Current?.Refused("result_rejected");
             // The validator checks structure — fences, placeholders, counts, prompt leak — so it
             // is the output's form that failed, which is why this is not called "invalid". Exit 65
             // is the one `chunk_rejected` uses: a model produced data this cannot use.
@@ -213,14 +222,14 @@ internal static class LocalModelRun
                 "translation_malformed",
                 malformed.Message,
                 65,
-                machineReadable);
+                machineReadable, streams);
         }
         catch (Exception exception) when (
             Classify(exception, LocalTaskProfile.PlainTranslation) is not null)
         {
             var (code, message, exit) =
                 Classify(exception, LocalTaskProfile.PlainTranslation)!.Value;
-            return Fail("translate", code, message, exit, machineReadable);
+            return Fail("translate", code, message, exit, machineReadable, streams);
         }
     }
 
@@ -240,8 +249,8 @@ internal static class LocalModelRun
     /// Built at the moment the run starts, because its first decision is measured from
     /// then: ten seconds of a run that has said nothing earns the first line.
     /// </summary>
-    private static LocalRunProgress Watching() =>
-        new(Console.Error, static () => DateTimeOffset.UtcNow);
+    private static LocalRunProgress Watching(TextWriter error) =>
+        new(error, static () => DateTimeOffset.UtcNow);
 
     /// <summary>
     /// One ladder for every local task in this binary. The MCP face has its own, which turns each
@@ -320,15 +329,18 @@ internal static class LocalModelRun
         string code,
         string message,
         int exitCode,
-        bool machineReadable)
+        bool machineReadable, CommandStreams streams)
     {
+        if (exitCode == 69) UsageCall.Current?.NoInference();
+        if (exitCode is 2 or 69) UsageCall.Current?.Refused(code);
+        else if (exitCode != 73 && exitCode != 65) UsageCall.Current?.Failed(code);
         if (machineReadable)
         {
-            Console.WriteLine(MachineOutput.Refusal(command, code, message));
+            streams.Out.WriteLine(MachineOutput.Refusal(command, code, message));
         }
         else
         {
-            Console.Error.WriteLine(message);
+            streams.Error.WriteLine(message);
         }
 
         return exitCode;

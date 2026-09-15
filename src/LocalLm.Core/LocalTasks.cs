@@ -30,7 +30,7 @@ public sealed record LocalResult(
     /// long it ran — and then went only into experiment telemetry, so a caller asked to report
     /// it could only guess. It comes from the receipt now.
     /// </summary>
-    public string Notice => LocalLmText.Notice(
+    public string Notice => UsageCall.Current is not null ? Detail + DescribeResidency(Receipt) : LocalLmText.Notice(
         Model,
         DescribeResidency(Receipt),
         Detail,
@@ -1123,6 +1123,7 @@ public sealed record LocalTranslationResult(
 
     public string Notice => Receipt is null
         ? LocalLmText.TranslationNoTranslatableText
+        : UsageCall.Current is not null ? Validation.Detail + LocalResult.DescribeResidency(Receipt)
         : LocalLmText.TranslationNotice(
             Model!,
             LocalResult.DescribeResidency(Receipt),
