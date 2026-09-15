@@ -544,6 +544,29 @@ public sealed class LocalTasksTests
         Assert.True(result.Validation.Passed, result.Validation.Detail);
     }
 
+    [Theory]
+    [MemberData(nameof(FencedTranslationCases.Blocks), MemberType = typeof(FencedTranslationCases))]
+    public async Task Technical_translation_never_sends_fenced_source_bytes_to_the_model(
+        string block, string after)
+    {
+        var client = new FakeLocalModelClient();
+        client.Answers.Enqueue("# До");
+        if (after.Length > 0) client.Answers.Enqueue("После");
+        var source = "# Before\n\n" + block + after;
+
+        var result = await new LocalTasks(client).TranslateAsync(
+            source, "English", "Russian", markdown: true,
+            TranslationDelivery.ToCaller, TestContext.Current.CancellationToken);
+
+        Assert.Equal(after.Length > 0 ? 2 : 1, client.Calls.Count);
+        Assert.All(client.Calls, call => Assert.DoesNotContain("var x", call.Prompt, StringComparison.Ordinal));
+        Assert.Contains("# До\n\n" + block + after.Replace("After", "После", StringComparison.Ordinal),
+            result.Answer, StringComparison.Ordinal);
+        Assert.True(result.Validation.Passed, result.Validation.Detail);
+        var finalValidation = TranslationValidator.ValidateMarkdown(source, result.Answer);
+        Assert.True(finalValidation.Passed, finalValidation.Detail);
+    }
+
     [Fact]
     public async Task Chunked_translation_completes_one_experiment_workflow()
     {
