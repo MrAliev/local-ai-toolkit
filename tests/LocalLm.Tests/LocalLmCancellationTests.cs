@@ -14,6 +14,17 @@ namespace LocalLm.Tests;
 public sealed class LocalLmCancellationTests
 {
     [Fact]
+    public async Task A_missing_model_is_a_refusal_with_no_inference()
+    {
+        using var usage = new UsageCall(UsageSurface.Mcp, "locallm", "ask_local");
+        await LocalLmTools.AskLocal(new LocalTasks(new RoutedClient(_ =>
+            throw new LocalAi.Broker.Client.BrokerJobFailedException(Guid.NewGuid(), "NoModelInstalledException"))),
+            "list the TODOs", cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Equal(UsageTechnicalOutcome.Refused, usage.Complete().Outcome.Technical);
+        Assert.Equal(UsageModelState.NotCalled, usage.Complete().Models.State);
+    }
+
+    [Fact]
     public async Task The_hosts_cancellation_propagates_instead_of_becoming_a_tool_error()
     {
         using var cancelled = new CancellationTokenSource();

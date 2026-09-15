@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using LocalAi.Contracts;
+using LocalAi.Mcp;
 
 // The language every line below is written in, decided before the first one is. Numbers stay
 // invariant whatever the language is; only the words move.
@@ -26,6 +27,7 @@ builder.Services.AddHostedService<RecommendedModelSyncService>();
 
 builder.Services
     .AddMcpServer()
+    .WithUsageReporting("locallm", ModelResidencyPolicyStore.DefaultRuntimeRoot)
     .WithStdioServerTransport()
     .WithToolsFromAssembly();
 

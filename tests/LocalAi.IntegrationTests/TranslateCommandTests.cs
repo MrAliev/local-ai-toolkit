@@ -1,6 +1,9 @@
 using System.Diagnostics;
 using System.Text.Json;
 using LocalAi.Cli;
+using LocalAi.Broker;
+using LocalAi.Contracts;
+using System.Text.RegularExpressions;
 
 namespace LocalAi.IntegrationTests;
 
@@ -19,6 +22,7 @@ public sealed class TranslateCommandTests
     {
         var root = Path.Combine(Path.GetTempPath(), "localai-code-only-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
+        string? callReportPath = null;
         try
         {
             const string source = "~~~text\r\nпривет 世界\r\n~~~~\r\n";
@@ -58,6 +62,13 @@ public sealed class TranslateCommandTests
             var output = await outputTask;
             var error = await errorTask;
             Assert.True(process.ExitCode == 0, output + error);
+            Assert.Matches(@"(?:Call |Вызов )[0-9a-f-]{36}", error);
+            var callId = Guid.Parse(Regex.Match(error, @"(?:Call |Вызов )([0-9a-f-]{36})").Groups[1].Value);
+            var reports = new UsageReportStore(ModelResidencyPolicyStore.DefaultRuntimeRoot);
+            callReportPath = Path.Combine(reports.ReportsDirectory, $"{callId:N}.json");
+            var report = await reports.ReadAsync(callId, TestContext.Current.CancellationToken);
+            Assert.NotNull(report);
+            Assert.Equal(UsageDelivery.Delivered, report.Outcome.Delivery);
             if (writeFile) Assert.Equal(File.ReadAllBytes(input), File.ReadAllBytes(target));
             if (json)
             {
@@ -82,6 +93,7 @@ public sealed class TranslateCommandTests
         }
         finally
         {
+            if (callReportPath is not null) File.Delete(callReportPath);
             Directory.Delete(root, recursive: true);
         }
     }

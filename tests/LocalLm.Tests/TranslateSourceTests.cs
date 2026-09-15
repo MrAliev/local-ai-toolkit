@@ -1,6 +1,7 @@
 using System.Text;
 using LocalLm.Core;
 using LocalLm.Core.Resources;
+using LocalAi.Contracts;
 
 namespace LocalLm.Tests;
 
@@ -29,6 +30,7 @@ public sealed class TranslateSourceTests : IDisposable
     [InlineData(true)]
     public void A_named_file_is_read_as_utf8(bool withBom)
     {
+        using var call = new UsageCall(UsageSurface.Mcp, "locallm", "translate_local");
         var path = Path.Combine(_root, "readme.md");
         File.WriteAllText(path, "Брокер держит модель.", new UTF8Encoding(withBom));
 
@@ -36,6 +38,8 @@ public sealed class TranslateSourceTests : IDisposable
 
         Assert.Null(read.RefusalCode);
         Assert.Equal("Брокер держит модель.", read.Text, StringComparer.Ordinal);
+        Assert.Equal(new FileInfo(path).Length, call.Complete().Volumes[UsageVolume.InputBytes].Value);
+        Assert.Equal(read.Text!.Length, call.Complete().Volumes[UsageVolume.InputCharacters].Value);
     }
 
     /// <summary>The same code `triage` gives for the same mistake.</summary>

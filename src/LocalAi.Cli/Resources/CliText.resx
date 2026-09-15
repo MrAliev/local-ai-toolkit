@@ -1080,4 +1080,6 @@ To keep a worktree whatever its branch: git worktree lock &lt;path&gt;</value>
   <data name="DocsModelReceipt" xml:space="preserve"><value>🔧 Local: {0}{1}. Queue: {2}s. Execution: {3}s. Cloud token savings were not measured.</value></data>
   <data name="DocsResidencyCpu" xml:space="preserve"><value> (entirely on the CPU — answers are much slower)</value></data>
   <data name="DocsResidencyPartial" xml:space="preserve"><value> ({0}% of the model in VRAM — answers are slower)</value></data>
+  <data name="UsageReportArguments" xml:space="preserve"><value>Use: localai telemetry --call-id &lt;guid&gt;. The call ID must be a valid GUID.</value></data>
+  <data name="UsageReportNotFound" xml:space="preserve"><value>No usage report found for call {0}.</value></data>
 </root>

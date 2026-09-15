@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json;
 using LocalAi.Broker.Client.Resources;
 using LocalAi.Contracts;
@@ -59,12 +59,20 @@ public sealed class BrokerClient : IBrokerClient
 
         await _process.EnsureRunningAsync(cancellationToken);
         var queued = await _queue.EnqueueAsync(request, cancellationToken);
+        var usage = UsageCall.Current;
+        var inference = request.Payload is ChatJobPayload or EmbedJobPayload
+            or NativeOllamaJobPayload { Operation: NativeOllamaOperation.Chat or NativeOllamaOperation.Generate or NativeOllamaOperation.Embed };
+        usage?.LinkJob(queued.JobId, (request.Payload as ChatJobPayload)?.Workflow?.WorkflowId, inference);
+        if (inference) usage?.RegisterJobEvidence(_queue.RuntimeRoot, queued.JobId);
+        LocalUsageReceipt? receipt = null;
 
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(_timeout);
         try
         {
-            return await AwaitAsync<T>(queued.JobId, timeout.Token);
+            var result = await AwaitAsync<T>(queued.JobId, timeout.Token);
+            receipt = result.Receipt;
+            return result;
         }
         catch (OperationCanceledException)
             when (!cancellationToken.IsCancellationRequested &&
@@ -73,6 +81,11 @@ public sealed class BrokerClient : IBrokerClient
             // The job never ran, and the reason is not in the job. Reporting the wait as a bare
             // cancellation left "the tool hung and gave up", which nobody can act on.
             throw new BrokerBackendUnreachableException(backend.Endpoint);
+        }
+        finally
+        {
+            if (usage is not null && inference)
+                usage.RegisterJobEvidence(_queue.RuntimeRoot, queued.JobId, receipt);
         }
     }
 

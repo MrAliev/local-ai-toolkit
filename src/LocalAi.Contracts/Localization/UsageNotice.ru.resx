@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+  <data name="UsageNotice" xml:space="preserve"><value>Вызов {0} | модели: {1} | длительность: {2} | экономия облачных токенов: INPUT {3}; OUTPUT {4}.</value></data>
+  <data name="UsageModelNotCalled" xml:space="preserve"><value>Модель не вызывалась</value></data>
+  <data name="UsageUnknown" xml:space="preserve"><value>Неизвестно</value></data>
+  <data name="UsageUnknownReason" xml:space="preserve"><value>Неизвестно ({0})</value></data>
+  <data name="UsageNotApplicableReason" xml:space="preserve"><value>Неприменимо ({0})</value></data>
+  <data name="UsageEstimatedValue" xml:space="preserve"><value>Оценка: {0}</value></data>
+  <data name="UsageReportSaveFailed" xml:space="preserve"><value>Не удалось сохранить отчёт для вызова {0} ({1}).</value></data>
+  <data name="UsageInvalidToolArguments" xml:space="preserve"><value>Недопустимые аргументы инструмента.</value></data>
+  <data name="UsageToolCallFailed" xml:space="preserve"><value>Не удалось выполнить вызов инструмента.</value></data>
+</root>
