@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+using System.Text;
 
 namespace LocalLm.Core;
 
@@ -34,24 +34,24 @@ public sealed record ProtectedTranslationText(
     }
 }
 
-public static partial class TranslationProtector
+public static class TranslationProtector
 {
     public static IReadOnlyList<TranslationPart> SplitFencedCode(string source)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(source);
         var parts = new List<TranslationPart>();
         var offset = 0;
-        foreach (Match match in FencedCode().Matches(source))
+        foreach (var range in MarkdownCodeBlocks.Find(source))
         {
-            if (match.Index > offset)
+            if (range.Start > offset)
             {
                 parts.Add(new TranslationPart(
-                    source.Substring(offset, match.Index - offset),
+                    source.Substring(offset, range.Start - offset),
                     IsTranslatable: true));
             }
 
-            parts.Add(new TranslationPart(match.Value, IsTranslatable: false));
-            offset = match.Index + match.Length;
+            parts.Add(new TranslationPart(source.Substring(range.Start, range.Length), IsTranslatable: false));
+            offset = range.Start + range.Length;
         }
 
         if (offset < source.Length)
@@ -66,21 +66,22 @@ public static partial class TranslationProtector
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(source);
         var segments = new List<ProtectedTranslationSegment>();
-        var text = FencedCode().Replace(
-            source,
-            match =>
+        var text = new StringBuilder();
+        foreach (var part in SplitFencedCode(source))
+        {
+            if (part.IsTranslatable)
             {
-                var token = $"__LOCALAI_PROTECTED_FENCE_{segments.Count:D4}__";
-                segments.Add(new ProtectedTranslationSegment(token, match.Value));
-                return token;
-            });
+                text.Append(part.Text);
+                continue;
+            }
+
+            var token = $"__LOCALAI_PROTECTED_FENCE_{segments.Count:D4}__";
+            segments.Add(new ProtectedTranslationSegment(token, part.Text));
+            text.Append(token);
+        }
+
         return new ProtectedTranslationText(
-            text,
+            text.ToString(),
             Array.AsReadOnly(segments.ToArray()));
     }
-
-    [GeneratedRegex(
-        @"(?ms)^(`{3,}|~{3,})[^\r\n]*\r?\n.*?^\1[ \t]*(?:\r?\n|$)",
-        RegexOptions.CultureInvariant)]
-    private static partial Regex FencedCode();
 }
