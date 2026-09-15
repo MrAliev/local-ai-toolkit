@@ -745,6 +745,7 @@ public sealed class LocalTasks
         ArgumentException.ThrowIfNullOrWhiteSpace(source);
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceLanguage);
         ArgumentException.ThrowIfNullOrWhiteSpace(targetLanguage);
+        ct.ThrowIfCancellationRequested();
         var profile = markdown
             ? LocalTaskProfile.TechnicalTranslation
             : LocalTaskProfile.PlainTranslation;
@@ -763,6 +764,21 @@ public sealed class LocalTasks
                     IsTranslatable: false)])
             .ToArray();
         var modelStepCount = work.Count(item => item.IsTranslatable);
+        if (modelStepCount == 0)
+        {
+            ct.ThrowIfCancellationRequested();
+            // This is deterministic preservation, not an inference attempt. There is
+            // no model, receipt, or applicable cloud-generation comparison to invent.
+            return new LocalTranslationResult(
+                source,
+                SavedTokens: null,
+                LocalTokensProcessed: 0,
+                NetCloudContextTokensSaved: null,
+                Model: null,
+                Validation: new TranslationValidationResult(true, LocalLmText.TranslationNotRequired),
+                Receipt: null);
+        }
+
         var profiles = Enumerable.Repeat(profile, modelStepCount).ToArray();
         var workflowId = Guid.NewGuid();
         async Task<TranslationAttempt> RunAttemptAsync(string? modelOverride)
@@ -1058,19 +1074,24 @@ public sealed class LocalTasks
 
 public sealed record LocalTranslationResult(
     string Answer,
-    int SavedTokens,
+    int? SavedTokens,
     int LocalTokensProcessed,
-    int NetCloudContextTokensSaved,
-    string Model,
+    int? NetCloudContextTokensSaved,
+    string? Model,
     TranslationValidationResult Validation,
-    LocalUsageReceipt Receipt)
+    LocalUsageReceipt? Receipt)
 {
-    public string Notice => LocalLmText.TranslationNotice(
-        Model,
-        LocalResult.DescribeResidency(Receipt),
-        Validation.Detail,
-        LocalResult.DescribeDuration(Receipt),
-        TokenEstimator.Describe(LocalTokensProcessed),
-        TokenEstimator.Describe(SavedTokens),
-        TokenEstimator.Describe(NetCloudContextTokensSaved));
+    /// <summary>No model call was needed; nullable model and savings fields are not applicable.</summary>
+    public bool NoTranslatableText => Receipt is null;
+
+    public string Notice => Receipt is null
+        ? LocalLmText.TranslationNoTranslatableText
+        : LocalLmText.TranslationNotice(
+            Model!,
+            LocalResult.DescribeResidency(Receipt),
+            Validation.Detail,
+            LocalResult.DescribeDuration(Receipt),
+            TokenEstimator.Describe(LocalTokensProcessed),
+            TokenEstimator.Describe(SavedTokens!.Value),
+            TokenEstimator.Describe(NetCloudContextTokensSaved!.Value));
 }
