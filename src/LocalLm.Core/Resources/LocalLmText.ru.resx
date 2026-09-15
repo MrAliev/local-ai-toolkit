@@ -47,6 +47,9 @@
   <data name="CatalogMismatch" xml:space="preserve">
     <value>Каталоги моделей разошлись: у клиента '{0}', у брокера '{1}'.</value>
   </data>
+  <data name="CatalogMismatchRecovery" xml:space="preserve">
+    <value>Используйте один и тот же каталог моделей для клиента и брокера, затем повторите перевод.</value>
+  </data>
   <data name="DurationSeconds" xml:space="preserve">
     <value>{0} с</value>
     <comment>The number arrives already formatted invariantly.</comment>

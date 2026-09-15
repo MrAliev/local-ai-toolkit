@@ -7,6 +7,27 @@ namespace LocalLm.Tests;
 public sealed class BrokerLocalModelClientTests
 {
     [Fact]
+    public async Task Routed_chat_does_not_join_an_inflight_request_using_another_catalog()
+    {
+        var broker = new FakeBrokerClient(new ChatJobOutput("answer"));
+        var client = new BrokerLocalModelClient(broker);
+        var keys = new List<string>();
+        foreach (var version in new[] { "catalog-one", "catalog-two", "catalog-two" })
+        {
+            await client.RoutedChatAsync(
+                LocalTaskProfile.TechnicalTranslation, "translate", null, null,
+                new LocalWorkloadMetadata(9, 9, 0, 0, 0, LocalDurationClass.Short),
+                new LocalWorkflowHint(Guid.NewGuid(), 0, 1, [LocalTaskProfile.TechnicalTranslation], true, version),
+                "qwen3.5:9b", 2048, LocalJobPriority.Foreground, TestContext.Current.CancellationToken);
+            Assert.Equal(version, Assert.IsType<ChatJobPayload>(broker.Request!.Payload).Workflow!.CatalogVersion);
+            keys.Add(broker.Request.DeduplicationKey);
+        }
+
+        Assert.NotEqual(keys[0], keys[1]);
+        Assert.Equal(keys[1], keys[2]);
+    }
+
+    [Fact]
     public async Task Chat_routes_images_priority_and_returns_common_receipt()
     {
         var broker = new FakeBrokerClient(new ChatJobOutput("answer"));
