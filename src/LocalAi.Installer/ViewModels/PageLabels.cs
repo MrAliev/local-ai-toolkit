@@ -285,6 +285,22 @@ public static class PageLabels
         "not reached — model setup stopped before this one",
         "не дошло — настройка моделей остановилась раньше");
 
+    public static string ModelCancelled => InstallerCulture.Pick(
+        "validation cancelled",
+        "проверка отменена");
+
+    public static string ModelLimitedDownloaded => InstallerCulture.Pick(
+        "ready with limitations — downloaded",
+        "готова с ограничениями — скачана");
+
+    public static string ModelLimitedAlreadyHere => InstallerCulture.Pick(
+        "ready with limitations — already on this computer",
+        "готова с ограничениями — уже на компьютере");
+
+    public static string ModelResultUnknown => InstallerCulture.Pick(
+        "validation result unknown",
+        "результат проверки неизвестен");
+
     public static string ResultPackage => InstallerCulture.Pick(
         "LocalAi package",
         "Пакет LocalAi");
@@ -326,6 +342,25 @@ public static class PageLabels
     public static string ResultModelsReady => InstallerCulture.Pick(
         "{0} of {1} ready",
         "готовы {0} из {1}");
+
+    public static string ResultModelsRejected => InstallerCulture.Pick("{0} rejected", "отказ: {0}");
+
+    public static string ResultModelsLimited => InstallerCulture.Pick(
+        "with limitations: {0}", "с ограничениями: {0}");
+
+    public static string ResultModelsFailed => InstallerCulture.Pick("{0} failed", "ошибки: {0}");
+
+    public static string ResultModelsCancelled => InstallerCulture.Pick(
+        "validation cancelled: {0}", "проверка отменена: {0}");
+
+    public static string ResultModelsNotValidated => InstallerCulture.Pick(
+        "{0} not validated", "не проверялись: {0}");
+
+    public static string ResultModelsUnknown => InstallerCulture.Pick(
+        "result unknown: {0}", "результат неизвестен: {0}");
+
+    public static string ResultModelsWorking => InstallerCulture.Pick(
+        "{0} checks in progress", "проверяются: {0}");
 
     public static string WhatToDoNext => InstallerCulture.Pick(
         "What to do next",

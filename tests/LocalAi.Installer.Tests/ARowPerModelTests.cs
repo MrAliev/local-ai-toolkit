@@ -41,6 +41,53 @@ public sealed class ARowPerModelTests
         Assert.Equal(ModelRunState.Working, wizard.ModelRuns[1].State);
     }
 
+    [Theory]
+    [InlineData(ModelProvisioningPhase.Accepted, ModelRunState.Ready, RunMark.Done, "ready")]
+    [InlineData(ModelProvisioningPhase.Rejected, ModelRunState.Rejected, RunMark.Warned, "does not fit")]
+    public void A_verdict_updates_the_row_and_its_bindings_before_the_batch_finishes(
+        ModelProvisioningPhase verdict,
+        ModelRunState expectedState,
+        RunMark expectedMark,
+        string expectedDetail)
+    {
+        var wizard = new InstallerWizardViewModel();
+        wizard.ApplyModelStep(Step("model-a", ModelProvisioningPhase.Planned));
+        wizard.ApplyModelStep(Step("model-b", ModelProvisioningPhase.Planned));
+        wizard.ApplyModelStep(Step("model-a", ModelProvisioningPhase.Checking));
+        var first = wizard.ModelRuns[0];
+        var changed = new List<string?>();
+        first.PropertyChanged += (_, args) => changed.Add(args.PropertyName);
+
+        wizard.ApplyModelStep(Step("model-a", verdict));
+        wizard.ApplyModelStep(Step("model-b", ModelProvisioningPhase.Checking));
+
+        Assert.Equal(expectedState, first.State);
+        Assert.Equal(expectedMark, first.Mark);
+        Assert.Contains(expectedDetail, first.Detail, StringComparison.Ordinal);
+        Assert.Contains(nameof(ModelRunRow.State), changed);
+        Assert.Contains(nameof(ModelRunRow.Mark), changed);
+        Assert.Contains(nameof(ModelRunRow.Detail), changed);
+        Assert.Equal(ModelRunState.Working, wizard.ModelRuns[1].State);
+        Assert.Equal(RunMark.Busy, wizard.ModelRuns[1].Mark);
+    }
+
+    [Theory]
+    [InlineData(ModelProvisioningPhase.Downloading)]
+    [InlineData(ModelProvisioningPhase.Verifying)]
+    [InlineData(ModelProvisioningPhase.Storing)]
+    [InlineData(ModelProvisioningPhase.Other)]
+    [InlineData(ModelProvisioningPhase.Checking)]
+    public void Finishing_a_download_does_not_claim_the_model_passed_validation(
+        ModelProvisioningPhase phase)
+    {
+        var row = new ModelRunRow("model-a", 2048);
+
+        row.Apply(Step("model-a", phase, completedBytes: 1024, totalBytes: 1024));
+
+        Assert.Equal(ModelRunState.Working, row.State);
+        Assert.Equal(RunMark.Busy, row.Mark);
+    }
+
     [Fact]
     public void A_download_says_how_far_it_has_got()
     {
@@ -97,7 +144,6 @@ public sealed class ARowPerModelTests
     [Theory]
     [InlineData(BrokerModelInstallOutcome.Failed)]
     [InlineData(BrokerModelInstallOutcome.TimedOut)]
-    [InlineData(BrokerModelInstallOutcome.Cancelled)]
     public void A_failure_quotes_its_code(BrokerModelInstallOutcome outcome)
     {
         var row = new ModelRunRow("model-a", 2048);
@@ -123,7 +169,8 @@ public sealed class ARowPerModelTests
 
         wizard.SettleModelRuns();
 
-        Assert.All(wizard.ModelRuns, row => Assert.Equal(ModelRunState.NotReached, row.State));
+        Assert.Equal(ModelRunState.Unknown, wizard.ModelRuns[0].State);
+        Assert.Equal(ModelRunState.NotReached, wizard.ModelRuns[1].State);
     }
 
     [Fact]

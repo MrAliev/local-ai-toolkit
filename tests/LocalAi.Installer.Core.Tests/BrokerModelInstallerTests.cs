@@ -79,6 +79,36 @@ public sealed class BrokerModelInstallerTests : IDisposable
         Assert.Equal(4, launcher.RevalidationCount);
     }
 
+    [Theory]
+    [InlineData(ModelResidencyPolicy.RequireFullVram, 100, false)]
+    [InlineData(ModelResidencyPolicy.AllowPartialOffload, 100, false)]
+    [InlineData(ModelResidencyPolicy.AllowPartialOffload, 40, true)]
+    [InlineData(ModelResidencyPolicy.AllowCpu, 0, true)]
+    public async Task An_accepted_models_actual_residency_reaches_both_progress_and_the_batch(
+        ModelResidencyPolicy policy, long residentBytes, bool degraded)
+    {
+        var runner = new RecordingProcessRunner(
+            Success(Status(["model-a"], [], "signed-7")),
+            Success(Preflight("model-a", 2048, 100, residentBytes, residentBytes == 100)));
+        using var installer = new BrokerModelInstaller(
+            runner, Launcher(), layout, Trust(), TimeSpan.FromMinutes(5),
+            readResidencyPolicy: () => policy);
+        var steps = new List<ModelProvisioningProgress>();
+
+        var result = await installer.InstallAsync(
+            [Request("a", "model-a", 2048, "signed-7")],
+            new ImmediateProgress<ModelProvisioningProgress>(steps.Add),
+            TestContext.Current.CancellationToken);
+
+        var model = Assert.Single(result.Models);
+        Assert.Equal(BrokerModelInstallOutcome.Accepted, model.Outcome);
+        Assert.Equal(degraded, model.ResidencyDegraded);
+        var verdict = Assert.Single(steps, step => step.Phase == ModelProvisioningPhase.Accepted);
+        Assert.Equal(degraded, verdict.ResidencyDegraded);
+        Assert.All(steps.Where(step => step.Phase != ModelProvisioningPhase.Accepted),
+            step => Assert.False(step.ResidencyDegraded));
+    }
+
     /// <summary>
     /// A preflight loads a model into video memory and a pull is measured in gigabytes, so a
     /// batch runs for minutes. Reporting only at the end left the progress bar frozen on the
