@@ -27,7 +27,12 @@ public enum McpToolApproval
     Prompt,
 }
 
-public sealed record McpToolPolicy(string Name, McpToolApproval Approval);
+public sealed record McpToolPolicy(string Name, McpToolApproval Approval)
+{
+    // Installer policy serialization predates usage reporting and keeps its existing shape.
+    [System.Text.Json.Serialization.JsonIgnore]
+    public UsagePolicy? Usage { get; init; }
+}
 
 /// <summary>
 /// Every tool each managed MCP server exposes, with the approval each one deserves.
@@ -45,39 +50,39 @@ public static class McpToolNames
 {
     public static IReadOnlyList<McpToolPolicy> CodeSearchPolicies { get; } =
     [
-        new("search_code", McpToolApproval.Approve),
-        new("index_status", McpToolApproval.Approve),
+        new("search_code", McpToolApproval.Approve) { Usage = UsagePolicy.Context },
+        new("index_status", McpToolApproval.Approve) { Usage = UsagePolicy.Administration },
         // Mutates the index, but the size of that work is bounded and the bound is enforced:
         // the sync it shells out to refuses more chunks than CodeSearchTools'
         // InlineRefreshChunkLimit before embedding anything and hands back a background
         // command, so what can run inside a pre-approved call is a post-commit delta (#275).
         // "Bounded by construction" was the untrue half — it was bounded by description only.
-        new("index_refresh", McpToolApproval.Approve),
-        new("index_unload", McpToolApproval.Approve),
-        new("get_code_chunk", McpToolApproval.Approve),
-        new("go_to_definition", McpToolApproval.Approve),
-        new("find_references", McpToolApproval.Approve),
-        new("find_implementations", McpToolApproval.Approve),
-        new("find_relationships", McpToolApproval.Approve),
+        new("index_refresh", McpToolApproval.Approve) { Usage = UsagePolicy.Administration },
+        new("index_unload", McpToolApproval.Approve) { Usage = UsagePolicy.Administration },
+        new("get_code_chunk", McpToolApproval.Approve) { Usage = UsagePolicy.Context },
+        new("go_to_definition", McpToolApproval.Approve) { Usage = UsagePolicy.Context },
+        new("find_references", McpToolApproval.Approve) { Usage = UsagePolicy.Context },
+        new("find_implementations", McpToolApproval.Approve) { Usage = UsagePolicy.Context },
+        new("find_relationships", McpToolApproval.Approve) { Usage = UsagePolicy.Context },
         // Session-scoped, and inert until the user opts into live servers in their own
         // settings file — that opt-in is the real approval.
-        new("lsp_open_document", McpToolApproval.Approve),
-        new("lsp_close_document", McpToolApproval.Approve),
+        new("lsp_open_document", McpToolApproval.Approve) { Usage = UsagePolicy.Administration },
+        new("lsp_close_document", McpToolApproval.Approve) { Usage = UsagePolicy.Administration },
     ];
 
     public static IReadOnlyList<McpToolPolicy> LocalLmPolicies { get; } =
     [
-        new("ask_local", McpToolApproval.Approve),
-        new("translate_local", McpToolApproval.Approve),
-        new("triage_log", McpToolApproval.Approve),
-        new("read_image", McpToolApproval.Approve),
-        new("local_models_status", McpToolApproval.Approve),
+        new("ask_local", McpToolApproval.Approve) { Usage = UsagePolicy.Generation },
+        new("translate_local", McpToolApproval.Approve) { Usage = UsagePolicy.Generation },
+        new("triage_log", McpToolApproval.Approve) { Usage = UsagePolicy.Generation },
+        new("read_image", McpToolApproval.Approve) { Usage = UsagePolicy.Generation },
+        new("local_models_status", McpToolApproval.Approve) { Usage = UsagePolicy.AdministrationJson },
         // Downloads models by the gigabyte: the one network-and-disk heavyweight here.
-        new("local_models_sync", McpToolApproval.Prompt),
-        new("local_model_preflight", McpToolApproval.Approve),
+        new("local_models_sync", McpToolApproval.Prompt) { Usage = UsagePolicy.AdministrationJson },
+        new("local_model_preflight", McpToolApproval.Approve) { Usage = UsagePolicy.AdministrationJson },
         // An owner's decision that changes persistent experiment and routing state.
-        new("local_model_feedback", McpToolApproval.Prompt),
-        new("local_model_experiment_report", McpToolApproval.Approve),
+        new("local_model_feedback", McpToolApproval.Prompt) { Usage = UsagePolicy.AdministrationJson },
+        new("local_model_experiment_report", McpToolApproval.Approve) { Usage = UsagePolicy.AdministrationJson },
     ];
 
     public static IReadOnlyList<string> CodeSearch { get; } =

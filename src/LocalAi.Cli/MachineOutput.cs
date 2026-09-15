@@ -53,47 +53,14 @@ internal static class MachineOutput
     /// special case.
     /// </summary>
     public static IReadOnlyList<string> Commands { get; } =
-        ["repo status", "doctor", "ask", "triage", "read-image", "translate", "capabilities", "docs build", "docs apply"];
+        UsageReportingRegistry.EnvelopeCommands("localai");
 
     /// <summary>
-    /// The commands that printed a JSON shape of their own before the envelope existed, and still
-    /// do. Frozen — `model` is parsed by <c>BrokerModelInstaller</c> and nothing will join it.
-    ///
-    /// Listed rather than hidden: leaving them out would leave exactly the gap `capabilities`
-    /// exists to close, with a plugin wanting model state hard-coding the knowledge that this one
-    /// spells its version field differently.
-    /// </summary>
-    private static readonly string[] Legacy =
-        ["model status", "model pull", "model preflight"];
-
-    /// <summary>
-    /// The MCP tool that does the same job, for the commands that have one.
-    ///
-    /// This mapping exists nowhere else in the code, so it is a first copy rather than a second —
-    /// and a test holds every name here against <c>McpToolNames</c>, which the server's own
-    /// attributes are held against in turn.
-    ///
-    /// `model pull` is absent because there is no equivalent: <c>local_models_sync</c> queues the
-    /// recommended missing set rather than a named model, and the server deliberately exposes no
-    /// generic pull. `repo status` is absent for the same reason — nothing on the MCP surface
-    /// answers whether a repository is connected.
-    /// </summary>
-    private static readonly Dictionary<string, string> Tools = new(StringComparer.Ordinal)
-    {
-        ["ask"] = "ask_local",
-        ["triage"] = "triage_log",
-        ["read-image"] = "read_image",
-        ["translate"] = "translate_local",
-        ["model status"] = "local_models_status",
-        ["model preflight"] = "local_model_preflight",
-    };
-
-    /// <summary>
-    /// What this binary can be driven to do, derived from the lists above rather than written out
-    /// beside them. A listing that can disagree with the behaviour is worse than no listing.
+    /// JSON shapes and MCP correspondence come from the same registry as reporting policy.
+    /// The model commands retain their legacy schemaVersion format.
     /// </summary>
     public static CapabilityData Capabilities() =>
-        CommandCapabilities.Describe("localai", Commands, Legacy, Tools);
+        UsageReportingRegistry.Capabilities("localai");
 
     public static bool Supports(string commandPath) =>
         Commands.Contains(commandPath, StringComparer.Ordinal);
