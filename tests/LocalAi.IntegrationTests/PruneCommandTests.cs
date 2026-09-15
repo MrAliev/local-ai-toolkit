@@ -1,5 +1,6 @@
 using CodeSearch.Core.Indexing;
 using LocalAi.Cli;
+using LocalAi.Broker;
 using LocalAi.Contracts;
 using LocalAi.Contracts.Activation;
 using LocalAi.Repository;
@@ -276,6 +277,44 @@ public sealed class PruneCommandTests : IDisposable
         Assert.True(File.Exists(recent));
         Assert.True(File.Exists(foreign));
         Assert.Contains(report.Lines, line => line.StartsWith("telemetry:", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Final_call_reports_follow_retention_without_touching_unrecognized_files(bool dryRun)
+    {
+        var store = new UsageReportStore(Runtime);
+        var old = UsageReportingRegistry.CreateReport(UsageSurface.Mcp, "locallm", "ask_local", Guid.NewGuid());
+        var recent = UsageReportingRegistry.CreateReport(UsageSurface.Mcp, "locallm", "ask_local", Guid.NewGuid());
+        await store.WriteAsync(old, TestContext.Current.CancellationToken);
+        await store.WriteAsync(recent, TestContext.Current.CancellationToken);
+        var oldPath = Path.Combine(store.ReportsDirectory, $"{old.Identity.CallId:N}.json");
+        var recentPath = Path.Combine(store.ReportsDirectory, $"{recent.Identity.CallId:N}.json");
+        File.SetLastWriteTimeUtc(oldPath, (Now - TimeSpan.FromDays(45)).UtcDateTime);
+        File.SetLastWriteTimeUtc(recentPath, (Now - TimeSpan.FromDays(3)).UtcDateTime);
+        var foreign = Path.Combine(store.ReportsDirectory, $"{Guid.NewGuid():N}.json");
+        await File.WriteAllTextAsync(foreign, "{}", TestContext.Current.CancellationToken);
+        File.SetLastWriteTimeUtc(foreign, (Now - TimeSpan.FromDays(45)).UtcDateTime);
+
+        PruneCommand.Execute(Runtime, dryRun, Now);
+
+        Assert.Equal(dryRun, File.Exists(oldPath));
+        Assert.True(File.Exists(recentPath));
+        Assert.True(File.Exists(foreign));
+    }
+
+    [Fact]
+    public async Task Version_two_attempt_identity_files_are_pruned_by_their_recorded_time()
+    {
+        var record = new ModelTelemetryRecord(Guid.NewGuid(), LocalTaskProfile.ShortSummary, "qwen3.5:9b",
+            2048, LocalSizeBucket.Small, LocalSizeBucket.Small, false, false, false, "none",
+            ModelExecutionOutcome.Success, TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero,
+            0, 0, 0, "test", Now - TimeSpan.FromDays(45)) { SchemaVersion = 2, AttemptId = Guid.NewGuid() };
+        var store = new ModelTelemetryStore(Runtime);
+        await store.AppendAsync(record, TestContext.Current.CancellationToken);
+        PruneCommand.Execute(Runtime, dryRun: false, Now);
+        Assert.Empty(await store.ReadAllAsync(TestContext.Current.CancellationToken));
     }
 
     [Fact]

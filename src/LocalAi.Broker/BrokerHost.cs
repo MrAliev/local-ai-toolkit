@@ -618,7 +618,9 @@ internal sealed class LeasedJobProgress(IBrokerQueue queue, LeasedJob lease) : I
 
 public sealed record BrokerExecutionResult(
     JsonElement Body,
-    LocalRoutingReceipt? Routing = null);
+    LocalRoutingReceipt? Routing = null,
+    long? BackendInputTokens = null,
+    long? BackendOutputTokens = null);
 
 public sealed record BrokerHostDiagnostic(
     Guid JobId,

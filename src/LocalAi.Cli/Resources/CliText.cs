@@ -390,8 +390,8 @@ public static class CliText
     public static string TelemetryNoneUnreadable(string runtimeRoot) =>
         Catalogue.Format(nameof(TelemetryNoneUnreadable), runtimeRoot);
 
-    public static string TelemetryRecorded(int jobs, string earliest, string latest) =>
-        Catalogue.Format(nameof(TelemetryRecorded), jobs, earliest, latest);
+    public static string TelemetryRecorded(int attempts, string earliest, string latest) =>
+        Catalogue.Format(nameof(TelemetryRecorded), attempts, earliest, latest);
 
     public static string TelemetrySaved(string net, string gross, string verifying) =>
         Catalogue.Format(nameof(TelemetrySaved), net, gross, verifying);

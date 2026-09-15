@@ -25,7 +25,17 @@ public sealed record ModelTelemetryRecord(
     long EstimatedVerificationTokens,
     long EstimatedNetCloudTokensSaved,
     string CatalogVersion,
-    DateTimeOffset RecordedAtUtc);
+    DateTimeOffset RecordedAtUtc)
+{
+    public int SchemaVersion { get; init; } = 1;
+    public Guid? AttemptId { get; init; }
+    public Guid? WorkflowId { get; init; }
+    public long? InputCharacters { get; init; }
+    public long? OutputCharacters { get; init; }
+    public long? BackendInputTokens { get; init; }
+    public long? BackendOutputTokens { get; init; }
+    public UsageValue CloudTokenSavings { get; init; } = UsageValue.Unknown("legacy_comparison_unavailable");
+}
 
 public sealed record ExperimentTaskTelemetryRecord(
     Guid WorkflowId,
@@ -75,8 +85,15 @@ public sealed class ModelTelemetryStore
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(record);
+        ValidateRecord(record);
         EnsureContentFree(record);
         Directory.CreateDirectory(MetricsDirectory);
+        if (record.SchemaVersion == 2)
+        {
+            await TelemetryFile.WriteOnceAsync(Path.Combine(MetricsDirectory, $"{record.AttemptId:N}.json"),
+                JsonSerializer.Serialize(record, LocalAiJson.Strict), cancellationToken);
+            return;
+        }
         var destination = Path.Combine(
             MetricsDirectory,
             $"{record.RecordedAtUtc.UtcTicks:D19}-{record.JobId:N}-{Guid.NewGuid():N}.json");
@@ -130,14 +147,14 @@ public sealed class ModelTelemetryStore
                 4096,
                 FileOptions.Asynchronous | FileOptions.SequentialScan);
             records.Add(
-                await JsonSerializer.DeserializeAsync<ModelTelemetryRecord>(
+                ValidateRecord(await JsonSerializer.DeserializeAsync<ModelTelemetryRecord>(
                     stream,
                     LocalAiJson.Strict,
                     cancellationToken)
-                ?? throw new InvalidDataException("Telemetry record is empty."));
+                ?? throw new InvalidDataException("Telemetry record is empty.")));
         }
 
-        return records.AsReadOnly();
+        return records.OrderBy(record => record.RecordedAtUtc).ToArray();
     }
 
     /// <summary>
@@ -175,11 +192,11 @@ public sealed class ModelTelemetryStore
                     4096,
                     FileOptions.Asynchronous | FileOptions.SequentialScan);
                 records.Add(
-                    await JsonSerializer.DeserializeAsync<ModelTelemetryRecord>(
+                    ValidateRecord(await JsonSerializer.DeserializeAsync<ModelTelemetryRecord>(
                         stream,
                         LocalAiJson.Strict,
                         cancellationToken)
-                    ?? throw new InvalidDataException("Telemetry record is empty."));
+                    ?? throw new InvalidDataException("Telemetry record is empty.")));
             }
             catch (Exception exception) when (
                 exception is JsonException or IOException or UnauthorizedAccessException or
@@ -189,7 +206,21 @@ public sealed class ModelTelemetryStore
             }
         }
 
-        return new ModelTelemetryReadResult(records.AsReadOnly(), unreadable);
+        return new ModelTelemetryReadResult(records.OrderBy(record => record.RecordedAtUtc).ToArray(), unreadable);
+    }
+
+    private static ModelTelemetryRecord ValidateRecord(ModelTelemetryRecord record)
+    {
+        if (record.SchemaVersion is not (1 or 2)) throw new JsonException("unsupported_attempt_schema");
+        if (record.JobId == Guid.Empty || string.IsNullOrWhiteSpace(record.Model)
+            || !Enum.IsDefined(record.Outcome) || !Enum.IsDefined(record.TaskProfile))
+            throw new JsonException("invalid_attempt_record");
+        if (record.SchemaVersion == 2 && (record.AttemptId is null || record.AttemptId == Guid.Empty
+            || record.WorkflowId == Guid.Empty || record.InputCharacters < 0 || record.OutputCharacters < 0
+            || record.BackendInputTokens < 0 || record.BackendOutputTokens < 0
+            || record.CloudTokenSavings is not { Status: UsageValueStatus.Unknown, Value: null }))
+            throw new JsonException("invalid_attempt_usage");
+        return record;
     }
 
     public async Task AppendExperimentTaskAsync(

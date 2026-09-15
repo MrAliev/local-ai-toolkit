@@ -608,13 +608,13 @@ Everything named above is under {2}.</value>
     <comment>The prefix stays in the value: this line is not in the guard and owns its whole line. No hole, because the flag can be the last argument with no value at all. No trailing full stop — the line ends in a command somebody copies. The Russian reuses PolicyKeepAliveInvalid's wording, and the code accepts zero, so it says non-negative.</comment>
   </data>
   <data name="TelemetryByModel" xml:space="preserve">
-    <value>by model</value>
+    <value>Attempts by model</value>
   </data>
   <data name="TelemetryByProfile" xml:space="preserve">
-    <value>by task profile</value>
+    <value>Attempts by task profile</value>
   </data>
   <data name="TelemetryFailureOutlier" xml:space="preserve">
-    <value>{0} fails {1} of its jobs — {2} of the {3} failure(s) recorded.</value>
+    <value>{0}: {1} of attempts were unsuccessful ({2} of {3} unsuccessful attempts overall).</value>
     <comment>The old tail pointed at a table four lines below that states the complementary fact: the line says 30% fail, the table says 70% ok. 0 is a model name and stays Latin.</comment>
   </data>
   <data name="TelemetryNone" xml:space="preserve">
@@ -622,19 +622,52 @@ Everything named above is under {2}.</value>
     <comment>Split from TelemetryNoneUnreadable: the empty report used to print this and then say that some records could not be read, which is proof that something was delegated.</comment>
   </data>
   <data name="TelemetryNoneUnreadable" xml:space="preserve">
-    <value>No job telemetry could be read under {0}. Every record found there is unreadable, so what was delegated here cannot be said.</value>
+    <value>No usable telemetry under {0}. All records found were unreadable or conflicting.</value>
     <comment>The other half of the split. Only the cause tells the reader whether the empty verdict is right.</comment>
   </data>
   <data name="TelemetryRecorded" xml:space="preserve">
-    <value>{0} job(s) recorded between {1} and {2} UTC.</value>
+    <value>{0} attempt(s) recorded between {1} and {2} UTC.</value>
     <comment>Noun-first in Russian. UTC is named because the timestamps are UtcDateTime and a reader three hours ahead read the range as local and concluded the report was stale.</comment>
   </data>
   <data name="TelemetrySaved" xml:space="preserve">
     <value>Estimated cloud token savings: {0} net, {1} gross ({2} used for verification)</value>
     <comment>Signed point estimates; K and M stay invariant.</comment>
   </data>
+  <data name="TelemetryJobCounts" xml:space="preserve">
+    <value>Distinct jobs: {0}; known workflows: {1}.</value>
+  </data>
+  <data name="TelemetryResultCounts" xml:space="preserve">
+    <value>Calls with usage reports: {0}; results confirmed delivered: {1}.</value>
+  </data>
+  <data name="TelemetryUnreportedJobs" xml:space="preserve">
+    <value>Jobs without a usage report: {0}. Their delivery and cloud token savings are unknown.</value>
+  </data>
+  <data name="TelemetryCloudInputSavings" xml:space="preserve">
+    <value>Cloud INPUT token savings (calls with known values): {0}.</value>
+  </data>
+  <data name="TelemetryCloudOutputSavings" xml:space="preserve">
+    <value>Cloud OUTPUT token savings (calls with known values): {0}.</value>
+  </data>
+  <data name="TelemetrySavingsCoverage" xml:space="preserve">
+    <value>Known: {0} call(s); unknown: {1}; not applicable: {2}.</value>
+  </data>
+  <data name="TelemetrySavingsSign" xml:space="preserve">
+    <value>Positive values mean fewer cloud tokens; negative values mean more.</value>
+  </data>
+  <data name="TelemetrySavingsUnknown" xml:space="preserve">
+    <value>Unknown</value>
+  </data>
+  <data name="TelemetrySavingsNotApplicable" xml:space="preserve">
+    <value>Not applicable</value>
+  </data>
+  <data name="TelemetryAttemptDiagnostics" xml:space="preserve">
+    <value>Attempt diagnostics</value>
+  </data>
+  <data name="TelemetryAttemptCount" xml:space="preserve">
+    <value>{0} attempt(s)</value>
+  </data>
   <data name="TelemetryUnreadable" xml:space="preserve">
-    <value>{0} record(s) could not be read and are not counted in anything below.</value>
+    <value>{0} unreadable or conflicting record(s) are excluded from this report.</value>
     <comment>Only ever printed with a table under it, which is what makes 'below' true. Noun-first.</comment>
   </data>
   <data name="TranslateEmptyInput" xml:space="preserve">
