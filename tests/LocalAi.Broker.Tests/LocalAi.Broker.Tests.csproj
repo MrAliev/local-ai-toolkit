@@ -8,6 +8,8 @@
 
   <ItemGroup>
     <PackageReference Include="xunit.v3" Version="4.0.0" />
+    <EmbeddedResource Include="..\Fixtures\TokenCalibration\*.json;..\Fixtures\TokenCalibration\*.png;..\Fixtures\TokenCalibration\*.pdf"
+                      LogicalName="TokenCalibration.%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>

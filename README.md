@@ -189,9 +189,9 @@ reaches for `search_code` instead of opening files.
 
 **Runtime token reports use one shared record per call.** MCP tools and both CLIs emit a
 compact notice with separate signed cloud INPUT and OUTPUT savings. Without an explicit
-comparison scenario and supported profile, the value is `unknown`, not zero. Calibration
-remains tracked in #598; legacy numeric JSON fields are retained for compatibility and are
-not calibrated measurements.
+comparison scenario and supported profile, the value is `unknown`, not zero. Character-based
+values are explicitly marked as heuristic estimates; measured text counts identify their
+tokenizer profile. Legacy numeric JSON fields remain compatible and are not calibrated measurements.
 
 The shared method compares cloud input and output separately. It requires an explicit
 alternative reading scenario, source provenance, the complete returned payload, and a named
@@ -228,6 +228,28 @@ Delivery records a completed file write or handoff to the output surface, not ac
 by a remote client. Missing measurements remain unknown; partial reports describe the
 evidence available at cancellation. An `index_memory_cache` hit describes cached index data
 and does not imply that inference was skipped.
+
+The [synthetic calibration corpus](tests/Fixtures/TokenCalibration/corpus.json) has
+[reference counts and comparison results](tests/Fixtures/TokenCalibration/reference.json)
+from tiktoken 0.12.0 for `cl100k_base` and `o200k_base`. It covers EN/RU, code, mixed text,
+an empty input, a long response, source/path/outPath, prior and repeated reads, PNGs, and a
+two-page PDF. Error statistics describe this corpus and these encodings; they do not establish
+a universal tokenizer or provider-reported usage. The long sample repeats shorter fixtures
+to exercise response size, not to add independent language coverage.
+
+Image references use the [documented `gpt-4o` tile formula](https://developers.openai.com/api/docs/guides/images-vision) and are labeled formula estimates.
+PDF references include text counts but leave the full input unknown because provider page
+rendering is not observed. Unsupported vision profiles remain unknown at runtime. Character
+estimates have no statistical interval; the search evaluator's existing numeric bounds are
+explicitly labeled `heuristic_not_confidence_interval` in the versioned
+`responseTokenEstimatePolicy` companion. Calibration does not replace comparison scenarios,
+source provenance, delivery evidence, or complete response accounting.
+
+To reproduce the references, install `tiktoken==0.12.0` and run
+`python tools/calibrate-tokens.py --verify`. The tokenizer may download its hash-checked
+encoding tables on first use; no model or provider API is called. `--write` deliberately
+regenerates the synthetic assets and reference JSON. The normal .NET suite checks the retained
+measurements, scenario arithmetic and report privacy without Python, a network connection, or a GPU.
 
 ### If something does not work the way you want
 
