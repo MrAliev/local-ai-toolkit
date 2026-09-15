@@ -262,7 +262,7 @@ public static class LocalLmTools
             {
                 return Report(
                     said,
-                    result.Receipt.Routing?.ResidencyShortfall ?? ResidencyShortfall.None,
+                    result.Receipt?.Routing?.ResidencyShortfall ?? ResidencyShortfall.None,
                     result.Answer,
                     document is null ? "translate_local" : "translate_local:" + document);
             }
