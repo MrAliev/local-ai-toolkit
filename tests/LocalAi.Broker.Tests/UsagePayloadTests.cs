@@ -6,6 +6,78 @@ namespace LocalAi.Broker.Tests;
 
 public sealed class UsagePayloadTests
 {
+    [Theory]
+    [InlineData("en", false, "Measured", "Tokenizer tiktoken-0.12.0:cl100k_base:")]
+    [InlineData("ru", false, "Измерено:", "Токенизатор tiktoken-0.12.0:cl100k_base:")]
+    [InlineData("en", true, "Estimated", "Heuristic estimate")]
+    [InlineData("ru", true, "Оценка:", "Эвристическая оценка:")]
+    public void Mixed_vision_input_does_not_name_only_the_text_counting_method(string language, bool heuristic, string inputLabel, string outputLabel)
+    {
+        var old = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(language);
+            using var call = new UsageCall(UsageSurface.Mcp, "locallm", "read_image");
+            var report = call.Complete();
+            var tokens = report.CloudTokens.ToDictionary();
+            tokens[UsageCloudTokens.InputSaved] = heuristic ? UsageValue.Estimated(41, "fixture-sum") : UsageValue.Measured(41);
+            tokens[UsageCloudTokens.OutputSaved] = tokens[UsageCloudTokens.InputSaved];
+            var notice = UsageNotice.Render(report with
+            {
+                CloudTokens = tokens,
+                Comparison = new("fixture", heuristic ? "weighted-characters-v1" : "tiktoken-0.12.0:cl100k_base", "fixture-vision-v1"),
+            });
+            Assert.Contains("INPUT " + inputLabel + " +41", notice, StringComparison.Ordinal);
+            Assert.Contains("OUTPUT " + outputLabel + " +41", notice, StringComparison.Ordinal);
+        }
+        finally { CultureInfo.CurrentUICulture = old; }
+    }
+
+    [Theory]
+    [InlineData("en", "tiktoken-0.12.0:cl100k_base", "Tokenizer tiktoken-0.12.0:cl100k_base:")]
+    [InlineData("ru", "tiktoken-0.12.0:cl100k_base", "Токенизатор tiktoken-0.12.0:cl100k_base:")]
+    [InlineData("en", null, "Measured")]
+    [InlineData("ru", null, "Измерено:")]
+    [InlineData("en", "weighted-characters-v1", "Measured")]
+    [InlineData("ru", "weighted-characters-v1", "Измерено:")]
+    public void Measured_counts_name_only_an_actual_tokenizer_profile(string language, string? profile, string label)
+    {
+        var old = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(language);
+            using var call = new UsageCall(UsageSurface.Mcp, "locallm", "ask_local");
+            var report = call.Complete();
+            var tokens = report.CloudTokens.ToDictionary();
+            tokens[UsageCloudTokens.InputSaved] = UsageValue.Measured(0);
+            tokens[UsageCloudTokens.OutputSaved] = UsageValue.Measured(-41);
+            var notice = UsageNotice.Render(report with { Comparison = new("fixture", profile, null), CloudTokens = tokens });
+            Assert.Contains("INPUT " + label + " 0", notice, StringComparison.Ordinal);
+            Assert.Contains("OUTPUT " + label + " -41", notice, StringComparison.Ordinal);
+        }
+        finally { CultureInfo.CurrentUICulture = old; }
+    }
+
+    [Theory]
+    [InlineData("en", "Heuristic estimate")]
+    [InlineData("ru", "Эвристическая оценка:")]
+    public void Character_heuristics_are_identified_in_the_compact_notice(string language, string label)
+    {
+        var old = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(language);
+            using var call = new UsageCall(UsageSurface.Mcp, "locallm", "ask_local");
+            var scenario = new CloudTokenScenario("fixture", [new CloudTextSource("synthetic", "Пример текста", 0, CloudContextPresence.NotPresent)],
+                "answer", "", "");
+            var report = CloudTokenMethodology.Apply(call.Complete(), scenario, "a longer response with report overhead", HeuristicCloudTokenProfile.Instance);
+            var notice = UsageNotice.Render(report);
+            Assert.Contains("INPUT " + label + " -", notice, StringComparison.Ordinal);
+            Assert.Contains("OUTPUT " + label + " +", notice, StringComparison.Ordinal);
+        }
+        finally { CultureInfo.CurrentUICulture = old; }
+    }
+
     [Fact]
     public void A_nonconverging_payload_has_a_bounded_calculation_and_unknown_size()
     {

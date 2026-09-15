@@ -226,7 +226,16 @@ public sealed record SearchEvaluationMetrics(
     int ChunkReads,
     int FileReads,
     double ElapsedMilliseconds,
-    double? BrokerQueueWaitMilliseconds);
+    double? BrokerQueueWaitMilliseconds)
+{
+    // The existing numeric fields remain compatible. This versioned companion makes their
+    // heuristic provenance explicit; the bounds are not a statistical confidence interval.
+    public SearchTokenEstimatePolicy ResponseTokenEstimatePolicy { get; } = new(1,
+        "utf16_characters_v1", "heuristic_not_confidence_interval", 4, 6, 3);
+}
+
+public sealed record SearchTokenEstimatePolicy(int SchemaVersion, string Method, string RangeBasis,
+    int PointDivisor, int LowerBoundDivisor, int UpperBoundDivisor);
 
 public static class SearchEvaluation
 {
@@ -401,5 +410,5 @@ public static class SearchEvaluation
         path.Replace('\\', '/');
 
     private static int DivideRoundUp(int value, int divisor) =>
-        (value + divisor - 1) / divisor;
+        value / divisor + (value % divisor == 0 ? 0 : 1);
 }

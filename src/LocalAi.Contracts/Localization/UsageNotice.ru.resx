@@ -10,6 +10,9 @@
   <data name="UsageUnknownReason" xml:space="preserve"><value>Неизвестно ({0})</value></data>
   <data name="UsageNotApplicableReason" xml:space="preserve"><value>Неприменимо ({0})</value></data>
   <data name="UsageEstimatedValue" xml:space="preserve"><value>Оценка: {0}</value></data>
+  <data name="UsageHeuristicValue" xml:space="preserve"><value>Эвристическая оценка: {0}</value></data>
+  <data name="UsageTokenizerValue" xml:space="preserve"><value>Токенизатор {1}: {0}</value></data>
+  <data name="UsageMeasuredValue" xml:space="preserve"><value>Измерено: {0}</value></data>
   <data name="UsageReportSaveFailed" xml:space="preserve"><value>Не удалось сохранить отчёт для вызова {0} ({1}).</value></data>
   <data name="UsageInvalidToolArguments" xml:space="preserve"><value>Недопустимые аргументы инструмента.</value></data>
   <data name="UsageToolCallFailed" xml:space="preserve"><value>Не удалось выполнить вызов инструмента.</value></data>
