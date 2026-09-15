@@ -666,8 +666,16 @@ public sealed class OllamaTransport : IModelRuntimeTransport, IDisposable
             throw new InvalidDataException("Ollama returned empty chat content.");
         }
 
-        return Result(new ChatJobOutput(response.Message.Content.Trim()));
+        return Result(new ChatJobOutput(response.Message.Content.Trim())) with
+        {
+            BackendInputTokens = ReadTokenCount(document.RootElement, "prompt_eval_count"),
+            BackendOutputTokens = ReadTokenCount(document.RootElement, "eval_count"),
+        };
     }
+
+    private static long? ReadTokenCount(JsonElement response, string property) =>
+        response.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.Number
+            && value.TryGetInt64(out var count) && count >= 0 ? count : null;
 
     private async Task<BrokerExecutionResult> ExecuteListModelsAsync(
         CancellationToken cancellationToken)
