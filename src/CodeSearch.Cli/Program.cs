@@ -316,7 +316,7 @@ async Task<int> RunAsync(TextWriter stdout, TextWriter stderr)
         var noFloor = opts.ContainsKey("no-floor");
         var root = RepoLocator.ResolveWorkingRoot(opts.GetValueOrDefault("root")).Value;
         var corpus = SearchEvaluationCorpus.Load(Path.GetFullPath(casesPath));
-        SearchEvaluationCorpus.ValidateAgainstSource(corpus, root);
+        corpus = SearchEvaluationCorpus.ResolveAgainstSource(corpus, root);
         var service = new SearchService
         {
             UseQueryInstruction = !opts.ContainsKey("no-instruct")
