@@ -12,6 +12,21 @@ public sealed class OllamaTransportTests
     private static readonly Uri BaseUri = new("http://ollama.test:11434/");
 
     [Fact]
+    public async Task Routed_chat_preserves_backend_token_counts_without_changing_the_answer_shape()
+    {
+        var fake = new FakeOllamaServer();
+        fake.EnqueueJson(HttpStatusCode.OK,
+            """{"message":{"content":"answer"},"prompt_eval_count":12,"eval_count":3}""");
+        using var client = new HttpClient(fake);
+        using var transport = new OllamaTransport(client, BaseUri, NoDelay);
+        var result = await transport.ExecuteAsync(LocalJobRequestFactory.CreateChat("counts",
+            LocalJobPriority.Foreground, "chat-model", "input", null, []), TestContext.Current.CancellationToken);
+        Assert.Equal(12, result.BackendInputTokens);
+        Assert.Equal(3, result.BackendOutputTokens);
+        Assert.Equal("answer", result.Body.Deserialize<ChatJobOutput>(LocalAiJson.Strict)!.Content);
+    }
+
+    [Fact]
     public async Task Runtime_processes_map_full_vram_and_context_fields()
     {
         var fake = new FakeOllamaServer();

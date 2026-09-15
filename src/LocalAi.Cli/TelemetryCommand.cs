@@ -4,21 +4,25 @@ using LocalAi.Contracts;
 using LocalLm.Core;
 using System.Globalization;
 using System.Text;
+using System.Text.Json;
 
 namespace LocalAi.Cli;
 
 public sealed record LatencySummary(TimeSpan Median, TimeSpan P90, TimeSpan Longest);
 
-public sealed record TelemetryOutcomeCount(ModelExecutionOutcome Outcome, int Jobs);
+public sealed record TelemetryOutcomeCount(ModelExecutionOutcome Outcome, int Attempts);
+
+public sealed record TelemetryTokenTotal(UsageValue Total, int Known, int Unknown, int NotApplicable);
 
 public sealed record TelemetryBreakdown(
     string Name,
     int Jobs,
+    int Attempts,
     int Succeeded,
     int Cold,
     int Fallback,
     TimeSpan MedianExecution,
-    long NetTokensSaved);
+    long? NetTokensSaved);
 
 public sealed record TelemetrySummary(
     int Jobs,
@@ -30,11 +34,22 @@ public sealed record TelemetrySummary(
     int Fallback,
     LatencySummary Queue,
     LatencySummary Execution,
-    long GrossTokensSaved,
-    long VerificationTokens,
-    long NetTokensSaved,
+    long? GrossTokensSaved,
+    long? VerificationTokens,
+    long? NetTokensSaved,
     IReadOnlyList<TelemetryBreakdown> ByModel,
-    IReadOnlyList<TelemetryBreakdown> ByProfile);
+    IReadOnlyList<TelemetryBreakdown> ByProfile)
+{
+    public int Attempts { get; init; }
+    public int Workflows { get; init; }
+    public int Calls { get; init; }
+    public int DeliveredResults { get; init; }
+    public int UnreportedJobs { get; init; }
+    public TelemetryTokenTotal InputSavings { get; init; } = new(UsageValue.Unknown(), 0, 0, 0);
+    public TelemetryTokenTotal OutputSavings { get; init; } = new(UsageValue.Unknown(), 0, 0, 0);
+    public UsageValue BackendInputTokens { get; init; } = UsageValue.Unknown();
+    public UsageValue BackendOutputTokens { get; init; } = UsageValue.Unknown();
+}
 
 /// <summary>
 /// Reports what the broker has already been measuring.
@@ -54,9 +69,8 @@ public sealed record TelemetrySummary(
 /// "something is broken" would either make the code meaningless or make a quiet month look like
 /// a fault.
 ///
-/// Every token figure is a range. The estimator works from characters, there is no live token
-/// counter anywhere in this system, and a sum of a hundred thousand estimates is not more exact
-/// than the estimates it is made of.
+/// Attempts are diagnostics. Cloud comparisons belong to completed surface calls, which may
+/// link several jobs and attempts. Legacy scalar estimates are never added to those comparisons.
 /// </summary>
 public static class TelemetryCommand
 {
@@ -69,41 +83,125 @@ public static class TelemetryCommand
         ArgumentNullException.ThrowIfNull(output);
         var read = await new ModelTelemetryStore(runtimeRoot)
             .ReadForReportAsync(cancellationToken);
-        output.Write(Render(Summarize(read), Path.GetFullPath(runtimeRoot)));
+        var usage = await new UsageReportStore(runtimeRoot).ReadForReportAsync(cancellationToken);
+        output.Write(Render(Summarize(read with { Unreadable = read.Unreadable + usage.Unreadable }, usage.Reports), Path.GetFullPath(runtimeRoot)));
         return 0;
     }
 
-    public static TelemetrySummary Summarize(ModelTelemetryReadResult read)
+    public static TelemetrySummary Summarize(ModelTelemetryReadResult read, IReadOnlyList<UsageReport>? reports = null)
     {
         ArgumentNullException.ThrowIfNull(read);
-        var records = read.Records;
+        var unreadable = read.Unreadable;
+        var records = Unique(read.Records, record => record.AttemptId,
+            record => JsonSerializer.Serialize(record, LocalAiJson.Strict), ref unreadable);
+        var calls = Unique(reports ?? [], report => report.Identity.CallId, UsageReportJson.Write, ref unreadable);
+        var reportedJobs = calls.SelectMany(report => report.Identity.JobIds).ToHashSet();
+        var jobs = records.Select(record => record.JobId).Concat(reportedJobs).Distinct().ToArray();
         return new TelemetrySummary(
-            records.Count,
-            read.Unreadable,
-            records.Count == 0 ? null : records.Min(record => record.RecordedAtUtc),
-            records.Count == 0 ? null : records.Max(record => record.RecordedAtUtc),
+            jobs.Length,
+            unreadable,
+            records.Length == 0 ? null : records.Min(record => record.RecordedAtUtc),
+            records.Length == 0 ? null : records.Max(record => record.RecordedAtUtc),
             records
                 .GroupBy(record => record.Outcome)
                 .Select(group => new TelemetryOutcomeCount(group.Key, group.Count()))
-                .OrderByDescending(outcome => outcome.Jobs)
+                .OrderByDescending(outcome => outcome.Attempts)
                 .ThenBy(outcome => outcome.Outcome.ToString(), StringComparer.Ordinal)
                 .ToArray(),
             records.Count(record => record.WasCold),
             records.Count(record => record.UsedFallback),
             Latency(records.Select(record => record.QueueDuration)),
             Latency(records.Select(record => record.ExecutionDuration)),
-            records.Sum(record => record.EstimatedGrossCloudTokensSaved),
-            records.Sum(record => record.EstimatedVerificationTokens),
-            records.Sum(record => record.EstimatedNetCloudTokensSaved),
+            null,
+            null,
+            null,
             Breakdown(records, record => record.Model),
-            Breakdown(records, record => record.TaskProfile.ToString()));
+            Breakdown(records, record => record.TaskProfile.ToString()))
+        {
+            Attempts = records.Length,
+            Workflows = records.Select(record => record.WorkflowId).Concat(calls.Select(report => report.Identity.WorkflowId))
+                .Where(id => id is not null).Distinct().Count(),
+            Calls = calls.Length,
+            DeliveredResults = calls.Count(report => report.Outcome.Delivery == UsageDelivery.Delivered),
+            UnreportedJobs = jobs.Count(job => !reportedJobs.Contains(job)),
+            InputSavings = Savings(calls, UsageCloudTokens.InputSaved),
+            OutputSavings = Savings(calls, UsageCloudTokens.OutputSaved),
+            BackendInputTokens = AttemptTokens(records.Select(record => record.BackendInputTokens)),
+            BackendOutputTokens = AttemptTokens(records.Select(record => record.BackendOutputTokens)),
+        };
+    }
+
+    private static T[] Unique<T>(IEnumerable<T> records, Func<T, Guid?> key, Func<T, string> serialize, ref int unreadable)
+    {
+        var list = new List<T>();
+        foreach (var group in records.GroupBy(key))
+        {
+            if (group.Key is null) { list.AddRange(group); continue; }
+            var first = group.First();
+            if (group.Count() == 1) { list.Add(first); continue; }
+            using var expected = JsonDocument.Parse(serialize(first));
+            var conflict = group.Skip(1).Any(record =>
+            {
+                using var other = JsonDocument.Parse(serialize(record));
+                return !JsonElement.DeepEquals(expected.RootElement, other.RootElement);
+            });
+            if (conflict) unreadable += group.Count();
+            else list.Add(first);
+        }
+        return list.ToArray();
+    }
+
+    private static UsageValue AttemptTokens(IEnumerable<long?> values)
+    {
+        var counts = values.ToArray();
+        if (counts.Length == 0 || counts.Any(value => value is null or < 0))
+            return UsageValue.Unknown("attempt_usage_incomplete");
+        try { return UsageValue.Measured(counts.Aggregate(0L, (sum, value) => checked(sum + value!.Value))); }
+        catch (OverflowException) { return UsageValue.Unknown("token_count_overflow"); }
+    }
+
+    private static TelemetryTokenTotal Savings(IReadOnlyList<UsageReport> reports, UsageCloudTokens key)
+    {
+        var applicable = reports.Where(report => report.ComparisonKind != UsageComparisonKind.NotApplicable).ToArray();
+        var eligible = applicable.Where(report => report.Outcome.Technical == UsageTechnicalOutcome.Succeeded
+                && report.Outcome.Validation is UsageValidation.Passed or UsageValidation.NotApplicable
+                && report.Outcome.Delivery == UsageDelivery.Delivered
+                && report.CloudTokens[key].Status is UsageValueStatus.Measured or UsageValueStatus.Estimated).ToArray();
+        var sharedJobs = eligible.SelectMany(report => report.Identity.JobIds).GroupBy(id => id)
+            .Where(group => group.Count() > 1).Select(group => group.Key).ToHashSet();
+        var sharedAttempts = eligible.SelectMany(report => report.Identity.AttemptIds).GroupBy(id => id)
+            .Where(group => group.Count() > 1).Select(group => group.Key).ToHashSet();
+        // Two callers can receive the same cached execution. Without an independent comparison
+        // for its reuse, crediting each linked report would duplicate the replaced generation.
+        var known = eligible.Where(report => !report.Identity.JobIds.Any(sharedJobs.Contains)
+            && !report.Identity.AttemptIds.Any(sharedAttempts.Contains)).ToArray();
+        var unknown = applicable.Length - known.Length;
+        var notApplicable = reports.Count - applicable.Length;
+        UsageValue total;
+        if (known.Length == 0)
+            total = reports.Count > 0 && notApplicable == reports.Count
+                ? UsageValue.NotApplicable("administrative_operation")
+                : UsageValue.Unknown(eligible.Length > 0 ? "shared_execution" : "comparison_not_recorded");
+        else if (known.Select(report => (report.MethodologyVersion, report.Comparison)).Distinct().Count() != 1)
+            total = UsageValue.Unknown("incompatible_comparisons");
+        else
+        {
+            try
+            {
+                var sum = known.Aggregate(0L, (value, report) => checked(value + report.CloudTokens[key].Value!.Value));
+                total = known.All(report => report.CloudTokens[key].Status == UsageValueStatus.Measured)
+                    ? UsageValue.Measured(sum) : UsageValue.Estimated(sum, "call-comparison-sum-v1");
+            }
+            catch (OverflowException) { total = UsageValue.Unknown("token_count_overflow"); }
+        }
+        return new(total, known.Length, unknown, notApplicable);
     }
 
     public static string Render(TelemetrySummary summary, string runtimeRoot)
     {
         ArgumentNullException.ThrowIfNull(summary);
         var text = new StringBuilder();
-        if (summary.Jobs == 0)
+        if (summary.Attempts == 0 && summary.Calls == 0)
         {
             // Not a failure and not an error: a runtime that has never been asked to run anything
             // locally has nothing to report, and so does one whose records have all aged out.
@@ -113,39 +211,56 @@ public static class TelemetryCommand
             return text.ToString();
         }
 
-        text.AppendLine(CliText.TelemetryRecorded(
-            summary.Jobs,
+        if (summary.Attempts > 0) text.AppendLine(CliText.TelemetryRecorded(
+            summary.Attempts,
             Moment(summary.Earliest),
             Moment(summary.Latest)));
         AppendUnreadable(text, summary);
+        text.AppendLine(CliText.Catalogue.Format("TelemetryJobCounts", summary.Jobs, summary.Workflows));
+        text.AppendLine(CliText.Catalogue.Format("TelemetryResultCounts", summary.Calls, summary.DeliveredResults));
+        if (summary.UnreportedJobs > 0)
+            text.AppendLine(CliText.Catalogue.Format("TelemetryUnreportedJobs", summary.UnreportedJobs));
+        AppendSavings(text, "TelemetryCloudInputSavings", summary.InputSavings);
+        AppendSavings(text, "TelemetryCloudOutputSavings", summary.OutputSavings);
+        text.AppendLine(CliText.Catalogue.Get("TelemetrySavingsSign"));
+        if (summary.Attempts == 0) return text.ToString();
         text.AppendLine();
+        text.AppendLine(CliText.Catalogue.Get("TelemetryAttemptDiagnostics"));
         text.AppendLine(
             "outcome     " + string.Join(
                 ", ",
                 summary.Outcomes.Select(outcome =>
-                    $"{outcome.Outcome} {outcome.Jobs} ({Percent(outcome.Jobs, summary.Jobs)})")));
+                    $"{outcome.Outcome} {outcome.Attempts} ({Percent(outcome.Attempts, summary.Attempts)})")));
         text.AppendLine(
-            $"loading     {summary.Cold} cold ({Percent(summary.Cold, summary.Jobs)}), " +
-            $"{summary.Jobs - summary.Cold} warm " +
-            $"({Percent(summary.Jobs - summary.Cold, summary.Jobs)})");
+            $"loading     {summary.Cold} cold ({Percent(summary.Cold, summary.Attempts)}), " +
+            $"{summary.Attempts - summary.Cold} warm " +
+            $"({Percent(summary.Attempts - summary.Cold, summary.Attempts)})");
         text.AppendLine(
             $"fallback    {summary.Fallback} " +
-            $"({Percent(summary.Fallback, summary.Jobs)})");
+            $"({Percent(summary.Fallback, summary.Attempts)})");
         foreach (var line in FailureOutliers(summary.ByModel))
         {
             text.AppendLine(line);
         }
         text.AppendLine($"queue       {Latencies(summary.Queue)}");
         text.AppendLine($"execution   {Latencies(summary.Execution)}");
-        text.AppendLine(
-            "saved       " + CliText.TelemetrySaved(
-                TokenEstimator.DescribeRange(summary.NetTokensSaved),
-                TokenEstimator.DescribeRange(summary.GrossTokensSaved),
-                TokenEstimator.DescribeRange(summary.VerificationTokens)));
 
         AppendBreakdown(text, CliText.TelemetryByModel, summary.ByModel);
         AppendBreakdown(text, CliText.TelemetryByProfile, summary.ByProfile);
         return text.ToString();
+    }
+
+    private static void AppendSavings(StringBuilder text, string key, TelemetryTokenTotal total)
+    {
+        var formatted = total.Total.Status switch
+        {
+            UsageValueStatus.Measured => total.Total.Value!.Value.ToString(CultureInfo.InvariantCulture),
+            UsageValueStatus.Estimated => TokenEstimator.DescribeRange(total.Total.Value!.Value),
+            UsageValueStatus.NotApplicable => CliText.Catalogue.Get("TelemetrySavingsNotApplicable"),
+            _ => $"{CliText.Catalogue.Get("TelemetrySavingsUnknown")} ({total.Total.Reason})",
+        };
+        text.AppendLine(CliText.Catalogue.Format(key, formatted));
+        text.AppendLine(CliText.Catalogue.Format("TelemetrySavingsCoverage", total.Known, total.Unknown, total.NotApplicable));
     }
 
     /// <summary>
@@ -161,23 +276,23 @@ public static class TelemetryCommand
         IReadOnlyList<TelemetryBreakdown> byModel)
     {
         ArgumentNullException.ThrowIfNull(byModel);
-        var totalFailures = byModel.Sum(row => row.Jobs - row.Succeeded);
+        var totalFailures = byModel.Sum(row => row.Attempts - row.Succeeded);
         if (totalFailures == 0)
         {
             return [];
         }
 
         return byModel
-            .Where(row => row.Jobs >= 10)
-            .Select(row => (Row: row, Failures: row.Jobs - row.Succeeded))
+            .Where(row => row.Attempts >= 10)
+            .Select(row => (Row: row, Failures: row.Attempts - row.Succeeded))
             .Where(entry =>
-                entry.Failures * 4 >= entry.Row.Jobs &&
+                entry.Failures * 4 >= entry.Row.Attempts &&
                 entry.Failures * 2 >= totalFailures)
             .OrderByDescending(entry => entry.Failures)
             .Select(entry =>
                 "attention   " + CliText.TelemetryFailureOutlier(
                     entry.Row.Name,
-                    Percent(entry.Failures, entry.Row.Jobs),
+                    Percent(entry.Failures, entry.Row.Attempts),
                     entry.Failures,
                     totalFailures))
             .ToArray();
@@ -208,12 +323,11 @@ public static class TelemetryCommand
         foreach (var row in rows)
         {
             text.AppendLine(
-                $"  {row.Name.PadRight(width)}  {row.Jobs,6} job(s)  " +
-                $"{Percent(row.Succeeded, row.Jobs),4} ok  " +
-                $"{Percent(row.Cold, row.Jobs),4} cold  " +
-                $"{Percent(row.Fallback, row.Jobs),4} fallback  " +
-                $"median {Duration(row.MedianExecution),7}  " +
-                $"{TokenEstimator.DescribeRange(row.NetTokensSaved)}");
+                $"  {row.Name.PadRight(width)}  {CliText.Catalogue.Format("TelemetryAttemptCount", row.Attempts)}  " +
+                $"{Percent(row.Succeeded, row.Attempts),4} ok  " +
+                $"{Percent(row.Cold, row.Attempts),4} cold  " +
+                $"{Percent(row.Fallback, row.Attempts),4} fallback  " +
+                $"median {Duration(row.MedianExecution),7}");
         }
     }
 
@@ -224,13 +338,14 @@ public static class TelemetryCommand
             .GroupBy(key, StringComparer.Ordinal)
             .Select(group => new TelemetryBreakdown(
                 group.Key,
+                group.Select(record => record.JobId).Distinct().Count(),
                 group.Count(),
                 group.Count(record => record.Outcome == ModelExecutionOutcome.Success),
                 group.Count(record => record.WasCold),
                 group.Count(record => record.UsedFallback),
                 Latency(group.Select(record => record.ExecutionDuration)).Median,
-                group.Sum(record => record.EstimatedNetCloudTokensSaved)))
-            .OrderByDescending(row => row.Jobs)
+                null))
+            .OrderByDescending(row => row.Attempts)
             .ThenBy(row => row.Name, StringComparer.Ordinal)
             .ToArray();
 

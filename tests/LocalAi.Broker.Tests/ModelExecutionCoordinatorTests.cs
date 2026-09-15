@@ -9,6 +9,27 @@ public sealed class ModelExecutionCoordinatorTests : IDisposable
         Path.GetTempPath(),
         "localai-coordinator-" + Guid.NewGuid().ToString("N"));
 
+    [Fact]
+    public async Task Successful_execution_records_attempt_identity_workflow_and_observed_usage_without_claiming_delivery()
+    {
+        var workflow = Workflow(null);
+        var coordinator = Create(new FakeRuntime(), (_, _) => Task.FromResult(
+            Result("translated") with { BackendInputTokens = 12, BackendOutputTokens = 3 }));
+        var request = RoutedRequest(workflow: workflow);
+        await coordinator.ExecuteAsync(request, Availability(), TestContext.Current.CancellationToken);
+        var record = Assert.Single(await new ModelTelemetryStore(_root).ReadAllAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(2, record.SchemaVersion);
+        Assert.NotNull(record.AttemptId);
+        Assert.NotEqual(Guid.Empty, record.AttemptId);
+        Assert.Equal(workflow.WorkflowId, record.WorkflowId);
+        Assert.Equal(request.JobId, record.JobId);
+        Assert.Equal(12, record.BackendInputTokens);
+        Assert.Equal(3, record.BackendOutputTokens);
+        Assert.Equal(10, record.OutputCharacters);
+        Assert.Equal(UsageValueStatus.Unknown, record.CloudTokenSavings.Status);
+        Assert.Equal("surface_comparison_required", record.CloudTokenSavings.Reason);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -351,6 +372,7 @@ public sealed class ModelExecutionCoordinatorTests : IDisposable
                 ModelExecutionOutcome.Success
             ],
             telemetry.Select(record => record.Outcome));
+        Assert.Equal(0, telemetry[0].EstimatedNetCloudTokensSaved);
     }
 
     [Fact]

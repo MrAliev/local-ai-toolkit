@@ -48,15 +48,15 @@ public sealed class TelemetryAndBootstrapFollowTheReaderTests
 
     /// <summary>A count with its noun in front of it, correct for one, two and five alike.</summary>
     [Fact]
-    public void A_job_count_reads_correctly_in_russian_for_any_number()
+    public void An_attempt_count_reads_correctly_in_russian_for_any_number()
     {
         using var reading = TestCulture.Reading("ru");
 
-        foreach (var jobs in new[] { 1, 2, 5, 21 })
+        foreach (var attempts in new[] { 1, 2, 5, 21 })
         {
             Assert.Contains(
-                $"заданий {jobs}",
-                CliText.TelemetryRecorded(jobs, "2026-09-04 09:30", "2026-09-04 11:00"),
+                $"попыток: {attempts}",
+                CliText.TelemetryRecorded(attempts, "2026-09-04 09:30", "2026-09-04 11:00"),
                 StringComparison.Ordinal);
         }
     }
