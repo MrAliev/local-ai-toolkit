@@ -239,6 +239,9 @@ public enum ModelRunState
     Rejected,
     Failed,
     NotReached,
+    Cancelled,
+    Unknown,
+    ReadyWithLimitations,
 }
 
 /// <summary>
@@ -273,8 +276,10 @@ public sealed class ModelRunRow(string tag, int contextTokens) : ObservableObjec
     {
         ModelRunState.Working => RunMark.Busy,
         ModelRunState.Ready => RunMark.Done,
+        ModelRunState.ReadyWithLimitations => RunMark.Warned,
         ModelRunState.Rejected => RunMark.Warned,
         ModelRunState.Failed => RunMark.Failed,
+        ModelRunState.Unknown => RunMark.Warned,
         _ => RunMark.None,
     };
 
@@ -287,9 +292,22 @@ public sealed class ModelRunRow(string tag, int contextTokens) : ObservableObjec
 
     public void Apply(ModelProvisioningProgress step)
     {
-        State = step.Phase == ModelProvisioningPhase.Planned
-            ? ModelRunState.Waiting
-            : ModelRunState.Working;
+        ArgumentNullException.ThrowIfNull(step);
+        // Progress can be posted before a verdict and delivered after it. Only the batch's
+        // authoritative result may enrich a terminal row through Settled.
+        if (State is not (ModelRunState.Waiting or ModelRunState.Working))
+        {
+            return;
+        }
+
+        State = step.Phase switch
+        {
+            ModelProvisioningPhase.Planned => ModelRunState.Waiting,
+            ModelProvisioningPhase.Accepted when step.ResidencyDegraded => ModelRunState.ReadyWithLimitations,
+            ModelProvisioningPhase.Accepted => ModelRunState.Ready,
+            ModelProvisioningPhase.Rejected => ModelRunState.Rejected,
+            _ => ModelRunState.Working,
+        };
         Detail = ModelStepWording.ForARow(step);
     }
 
@@ -302,16 +320,17 @@ public sealed class ModelRunRow(string tag, int contextTokens) : ObservableObjec
         BrokerModelInstallOutcome outcome,
         bool downloaded,
         IReadOnlyList<ModelFallbackSuggestion> smaller,
-        string code)
+        string code,
+        bool residencyDegraded = false)
     {
         ArgumentNullException.ThrowIfNull(smaller);
         switch (outcome)
         {
             case BrokerModelInstallOutcome.Accepted:
-                State = ModelRunState.Ready;
-                Detail = downloaded
-                    ? PageLabels.ModelReadyDownloaded
-                    : PageLabels.ModelReadyAlreadyHere;
+                State = residencyDegraded ? ModelRunState.ReadyWithLimitations : ModelRunState.Ready;
+                Detail = residencyDegraded
+                    ? downloaded ? PageLabels.ModelLimitedDownloaded : PageLabels.ModelLimitedAlreadyHere
+                    : downloaded ? PageLabels.ModelReadyDownloaded : PageLabels.ModelReadyAlreadyHere;
                 break;
             case BrokerModelInstallOutcome.RejectedResidency:
                 State = ModelRunState.Rejected;
@@ -324,6 +343,10 @@ public sealed class ModelRunRow(string tag, int contextTokens) : ObservableObjec
                             ", ",
                             smaller.Select(choice =>
                                 $"{choice.Model} / {choice.ContextTokens}")));
+                break;
+            case BrokerModelInstallOutcome.Cancelled:
+                State = ModelRunState.Cancelled;
+                Detail = PageLabels.ModelCancelled;
                 break;
             default:
                 State = ModelRunState.Failed;
@@ -339,6 +362,19 @@ public sealed class ModelRunRow(string tag, int contextTokens) : ObservableObjec
     {
         State = ModelRunState.NotReached;
         Detail = PageLabels.ModelNotReached;
+    }
+
+    public void FinishWithoutVerdict(bool cancelled)
+    {
+        if (State == ModelRunState.Waiting)
+        {
+            NeverReached();
+        }
+        else if (State == ModelRunState.Working)
+        {
+            State = cancelled ? ModelRunState.Cancelled : ModelRunState.Unknown;
+            Detail = cancelled ? PageLabels.ModelCancelled : PageLabels.ModelResultUnknown;
+        }
     }
 }
 

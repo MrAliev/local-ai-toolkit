@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Text;
 using System.Text.Json;
@@ -167,7 +167,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
     private readonly AgentIntegrationPageViewModel agents = new();
     private readonly ReviewApplyPageViewModel review = new();
     private readonly FinishPageViewModel finish = new();
-    private readonly WindowsEnvironmentDetector environmentDetector;
+    private readonly Func<CancellationToken, Task<EnvironmentDiagnosis>> detectEnvironment;
     private readonly IProcessRunner processRunner;
 
     private readonly AnonymousReleaseFeed anonymousFeed = new();
@@ -211,12 +211,15 @@ public sealed class InstallerWizardViewModel : ObservableObject
     /// <paramref name="readInstalledVersion"/> is how the rail learns which version is on this
     /// computer. Injectable because the property that matters — that the answer stops changing
     /// once the run starts — cannot be observed without moving the disk underneath it.
+    /// <paramref name="detectEnvironment"/> lets completion paths be exercised with a
+    /// diagnostic failure or cancellation without probing or changing the host machine.
     /// </summary>
     public InstallerWizardViewModel(
         StartChoice mode = StartChoice.Install,
         Func<string?>? readInstalledVersion = null,
         IReleaseFeed? releaseFeed = null,
-        bool canReturnToStart = false)
+        bool canReturnToStart = false,
+        Func<CancellationToken, Task<EnvironmentDiagnosis>>? detectEnvironment = null)
     {
         this.canReturnToStart = canReturnToStart;
         feedForTests = releaseFeed;
@@ -229,7 +232,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         // Kept, not just handed to the detector: the detector's answer may have come from a
         // plain PATH lookup, and only the validated one is worth recording as launchable.
         installedApplications = new WindowsInstalledApplicationProbe();
-        environmentDetector = new WindowsEnvironmentDetector(
+        var environmentDetector = new WindowsEnvironmentDetector(
             new SystemEnvironmentProbe(),
             new SystemFileSystemProbe(),
             runner,
@@ -237,6 +240,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             new SystemDiskProbe(),
             new SystemNetworkProbe(),
             new WindowsGpuProbe(new DxgiNativeGpuAdapterEnumerator()));
+        this.detectEnvironment = detectEnvironment ?? environmentDetector.DetectAsync;
 
         BackCommand = new RelayCommand(() => MovePrevious(), () => CanMovePrevious);
         NextCommand = new RelayCommand(() => MoveNext(), () => CanMoveNext);
@@ -870,6 +874,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         isRunning = true;
         isComplete = false;
         hasRunError = false;
+        wasCancelled = false;
         // A second attempt after a failure reports on itself, not on the one before it.
         configuredAgents.Clear();
         ModelRuns.Clear();
@@ -1981,6 +1986,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
     /// </summary>
     private void BuildFinishResults(int requested, int installed, int failed)
     {
+        SettleModelRuns(wasCancelled);
         finish.Results.Clear();
         finish.Results.Add(RunResults.Package(packageOutcome, packageInstalled));
         finish.Results.Add(RunResults.Prerequisites(requested, installed, failed));
@@ -2013,7 +2019,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
 
     private async Task RunEnvironmentDiagnosticsAsync(CancellationToken cancellationToken)
     {
-        var diagnosis = await environmentDetector.DetectAsync(cancellationToken);
+        var diagnosis = await detectEnvironment(cancellationToken);
         environmentDiagnosis = diagnosis;
 
         diagnose.Load(diagnosis);
@@ -2525,7 +2531,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             processRunner,
             new SystemFileSystemProbe());
         var planned = new List<ModelProvisioningProgress>();
-        var modelProgress = new Progress<ModelProvisioningProgress>(step =>
+        using var modelProgress = new ModelRunProgress(step =>
         {
             downloadFinished = true;
             ApplyModelStep(step);
@@ -2634,6 +2640,14 @@ public sealed class InstallerWizardViewModel : ObservableObject
 
             hasRunError = true;
             return;
+        }
+
+        finally
+        {
+            // Flush reported model events before the batch verdict, and close both streams
+            // before this run can finish or another attempt can start.
+            downloadFinished = true;
+            modelProgress.Dispose();
         }
 
         SetProgress(90, InstallerCulture.Pick("Installing the LocalAi package...", "Устанавливаю пакет LocalAi…"));
@@ -2748,12 +2762,16 @@ public sealed class InstallerWizardViewModel : ObservableObject
         ArgumentNullException.ThrowIfNull(step);
         if (step.Phase == ModelProvisioningPhase.Planned)
         {
-            ModelRuns.Add(new ModelRunRow(step.Model, step.ContextTokens));
-            OnPropertyChanged(nameof(HasModelRuns));
+            if (Row(step.Model, step.ContextTokens) is null)
+            {
+                ModelRuns.Add(new ModelRunRow(step.Model, step.ContextTokens));
+                OnPropertyChanged(nameof(HasModelRuns));
+            }
+
             return;
         }
 
-        Row(step.Model)?.Apply(step);
+        Row(step.Model, step.ContextTokens)?.Apply(step);
     }
 
     /// <summary>
@@ -2761,20 +2779,18 @@ public sealed class InstallerWizardViewModel : ObservableObject
     /// models after it are neither done nor running, and they would otherwise sit spinning on a
     /// page that has finished.
     /// </summary>
-    public void SettleModelRuns()
+    public void SettleModelRuns(bool cancelled = false)
     {
         foreach (var row in ModelRuns)
         {
-            if (row.State is ModelRunState.Waiting or ModelRunState.Working)
-            {
-                row.NeverReached();
-            }
+            row.FinishWithoutVerdict(cancelled);
         }
     }
 
-    private ModelRunRow? Row(string model) =>
+    private ModelRunRow? Row(string model, int contextTokens) =>
         ModelRuns.FirstOrDefault(row =>
-            string.Equals(row.Tag, model, StringComparison.Ordinal));
+            string.Equals(row.Tag, model, StringComparison.Ordinal) &&
+            row.ContextTokens == contextTokens);
 
     /// <summary>
     /// A model that was asked for and did not arrive has to be visible here. The broker
@@ -2823,11 +2839,12 @@ public sealed class InstallerWizardViewModel : ObservableObject
 
         foreach (var model in batch.Models)
         {
-            Row(model.Model)?.Settled(
+            Row(model.Model, model.ContextTokens)?.Settled(
                 model.Outcome,
                 model.PullCompleted,
                 model.FallbackSuggestions,
-                model.Code);
+                model.Code,
+                model.ResidencyDegraded);
         }
 
         SettleModelRuns();
@@ -2844,7 +2861,9 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 AppendLog(
                     report,
                     $"Model {model.Model} at {model.ContextTokens} tokens: {pulled}, " +
-                    "fully resident.");
+                    (model.ResidencyDegraded
+                        ? "ready with limitations under the selected memory policy."
+                        : "fully resident."));
                 continue;
             }
 
