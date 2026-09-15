@@ -950,7 +950,8 @@ public sealed class LocalTasks
         var answer = TranslationAttribution.Append(
             attempt.Text,
             targetLanguage,
-            model);
+            model,
+            markdown);
         return new LocalTranslationResult(
             answer,
             tokenMetrics.EstimatedCloudGenerationTokensSaved,

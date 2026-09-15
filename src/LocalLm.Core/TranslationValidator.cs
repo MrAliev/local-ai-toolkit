@@ -63,15 +63,27 @@ public static partial class TranslationValidator
         var checks = new[]
         {
             CompareCount(LocalLmText.ValidatorHeadings, Heading().Matches(source).Count, Heading().Matches(translated).Count),
-            CompareCount(LocalLmText.ValidatorFenceMarkers, Fence().Matches(source).Count, Fence().Matches(translated).Count),
+            CompareFencedCode(source, translated),
             CompareCount(LocalLmText.ValidatorListMarkers, ListMarker().Matches(source).Count, ListMarker().Matches(translated).Count),
-            CompareTokens(LocalLmText.ValidatorFencedCode, FencedCode().Matches(source), translated),
             CompareTokens(LocalLmText.ValidatorInlineCode, InlineCode().Matches(source), translated),
             CompareTokens(LocalLmText.ValidatorUrls, Url().Matches(source), translated),
             CompareTokens(LocalLmText.ValidatorPlaceholders, Placeholder().Matches(source), translated)
         };
         var failure = checks.FirstOrDefault(result => !result.Passed);
         return failure ?? new TranslationValidationResult(true, LocalLmText.ValidatorStructurePreserved);
+    }
+
+    private static TranslationValidationResult CompareFencedCode(string source, string translated)
+    {
+        var expected = MarkdownCodeBlocks.Find(source)
+            .Select(range => source.Substring(range.Start, range.Length));
+        var actual = MarkdownCodeBlocks.Find(translated)
+            .Select(range => translated.Substring(range.Start, range.Length));
+
+        return expected.SequenceEqual(actual, StringComparer.Ordinal)
+            ? new TranslationValidationResult(true, LocalLmText.ValidatorFencedCode)
+            : new TranslationValidationResult(false,
+                LocalLmText.ValidatorProtectedTokensChanged(LocalLmText.ValidatorFencedCode));
     }
 
     private static TranslationValidationResult CompareCount(
@@ -112,16 +124,8 @@ public static partial class TranslationValidator
     [GeneratedRegex(@"^#{1,6}\s", RegexOptions.Multiline | RegexOptions.CultureInvariant)]
     private static partial Regex Heading();
 
-    [GeneratedRegex(
-        @"^[ \t]{0,3}(?:`{3,}|~{3,})",
-        RegexOptions.Multiline | RegexOptions.CultureInvariant)]
-    private static partial Regex Fence();
-
     [GeneratedRegex(@"^\s*(?:[-*+]|\d+\.)\s", RegexOptions.Multiline | RegexOptions.CultureInvariant)]
     private static partial Regex ListMarker();
-
-    [GeneratedRegex(@"```[\s\S]*?```", RegexOptions.CultureInvariant)]
-    private static partial Regex FencedCode();
 
     [GeneratedRegex(@"`[^`\r\n]+`", RegexOptions.CultureInvariant)]
     private static partial Regex InlineCode();
