@@ -4,6 +4,45 @@ namespace LocalLm.Tests;
 
 public sealed class TranslationProtectorTests
 {
+    [Theory]
+    [MemberData(nameof(FencedTranslationCases.Blocks), MemberType = typeof(FencedTranslationCases))]
+    public void Markdown_fences_are_excluded_from_translation_without_reformatting(
+        string block, string after)
+    {
+        var source = "# Before\n\n" + block + after;
+
+        var parts = TranslationProtector.SplitFencedCode(source);
+
+        Assert.Equal(block, Assert.Single(parts, part => !part.IsTranslatable).Text);
+        Assert.DoesNotContain("var x", string.Concat(parts.Where(part => part.IsTranslatable)
+            .Select(part => part.Text)), StringComparison.Ordinal);
+        Assert.Equal(source, string.Concat(parts.Select(part => part.Text)));
+    }
+
+    [Theory]
+    [MemberData(nameof(FencedTranslationCases.Blocks), MemberType = typeof(FencedTranslationCases))]
+    public void Protected_fences_round_trip_the_original_source_ranges(string block, string after)
+    {
+        var source = "# Before\n\n" + block + after;
+
+        var protectedText = TranslationProtector.ProtectFencedCode(source);
+
+        Assert.Equal(block, Assert.Single(protectedText.Segments).Original);
+        Assert.DoesNotContain("var x", protectedText.Text, StringComparison.Ordinal);
+        Assert.Equal(source, protectedText.Restore(protectedText.Text));
+    }
+
+    [Theory]
+    [InlineData("Text with ~~~ in the middle of a sentence.")]
+    [InlineData("<!--\n~~~\nvar x = 1;\n~~~\n-->")]
+    [InlineData("<div>\n~~~\nvar x = 1;\n~~~\n</div>")]
+    [InlineData("    ~~~\n    var x = 1;\n    ~~~")]
+    public void Non_fenced_Markdown_is_not_mistaken_for_a_fenced_block(string source)
+    {
+        Assert.True(Assert.Single(TranslationProtector.SplitFencedCode(source)).IsTranslatable);
+        Assert.Empty(TranslationProtector.ProtectFencedCode(source).Segments);
+    }
+
     [Fact]
     public void Fenced_code_is_removed_from_model_input_and_restored_exactly()
     {
