@@ -101,6 +101,13 @@ The set is **not the same**: some tools exist only here, some only over MCP.
 | `localai telemetry` | a summary of local jobs |
 | `localai update` | update the installation |
 
+`codesearch evaluate --cases …` resolves C# symbol targets to their source declarations
+before querying. Split chunks such as `[1/6]` and `[2/6]` belong to a single target. Use the
+optional `signature` and `namespace` target fields to disambiguate names; signatures that
+still match multiple declarations are rejected rather than scored. Path-only targets
+continue to accept any hit in the specified file. These changes affect evaluation scoring;
+search ranking and the calibrated threshold remain unchanged.
+
 **Not on the command line.** `lsp_open_document` and `lsp_close_document` take the text of an
 unsaved buffer — and in a shell there is no such buffer, so there is nothing to hand over.
 

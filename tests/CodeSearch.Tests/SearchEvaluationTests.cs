@@ -264,6 +264,9 @@ public sealed class SearchEvaluationTests
 
         Assert.Equal(hit.RelPath, evaluationHit.Path);
         Assert.Equal(hit.Symbol, evaluationHit.Symbol);
+        Assert.Equal(hit.Signature, evaluationHit.Signature);
+        Assert.Equal(hit.Namespace, evaluationHit.Namespace);
+        Assert.Equal(hit.Kind, evaluationHit.Kind);
         Assert.Equal(hit.StartLine, evaluationHit.StartLine);
         Assert.Equal(hit.EndLine, evaluationHit.EndLine);
         Assert.Equal(hit.VectorScore, evaluationHit.VectorScore);
