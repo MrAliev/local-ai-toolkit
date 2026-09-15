@@ -65,7 +65,8 @@ public sealed record ModelProvisioningProgress(
     int Total,
     long CompletedBytes = 0,
     long TotalBytes = 0,
-    string? OllamaStatus = null);
+    string? OllamaStatus = null,
+    bool ResidencyDegraded = false);
 
 /// <summary>
 /// Turns a model choice into requests the broker installer will actually accept.

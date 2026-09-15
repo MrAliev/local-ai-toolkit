@@ -48,24 +48,51 @@ public static class RunResults
     public static RunResultRow Models(IReadOnlyList<ModelRunRow> models)
     {
         ArgumentNullException.ThrowIfNull(models);
-        var ready = models.Count(model => model.State == ModelRunState.Ready);
+        var limited = models.Count(model => model.State == ModelRunState.ReadyWithLimitations);
+        var ready = models.Count(model => model.State == ModelRunState.Ready) + limited;
         var mark = models.Count == 0
             ? RunMark.None
-            : models.Any(model => model.State is ModelRunState.Failed or ModelRunState.NotReached)
+            : models.Any(model => model.State == ModelRunState.Failed)
                 ? RunMark.Failed
-                : models.Any(model => model.State == ModelRunState.Rejected)
-                    ? RunMark.Warned
-                    : RunMark.Done;
+                : ready == models.Count && limited == 0
+                    ? RunMark.Done
+                    : models.All(model => model.State is
+                        ModelRunState.Waiting or ModelRunState.NotReached or ModelRunState.Cancelled)
+                        ? RunMark.None
+                        : RunMark.Warned;
+        var details = new List<string>
+        {
+            string.Format(CultureInfo.InvariantCulture, PageLabels.ResultModelsReady, ready, models.Count),
+        };
+        AddCount(ModelRunState.ReadyWithLimitations, PageLabels.ResultModelsLimited);
+        AddCount(ModelRunState.Rejected, PageLabels.ResultModelsRejected);
+        AddCount(ModelRunState.Failed, PageLabels.ResultModelsFailed);
+        AddCount(ModelRunState.Cancelled, PageLabels.ResultModelsCancelled);
+        AddCount(ModelRunState.Unknown, PageLabels.ResultModelsUnknown);
+        AddCount(ModelRunState.Working, PageLabels.ResultModelsWorking);
+        var notValidated = models.Count(model => model.State is
+            ModelRunState.Waiting or ModelRunState.NotReached);
+        if (notValidated > 0)
+        {
+            details.Add(string.Format(
+                CultureInfo.InvariantCulture, PageLabels.ResultModelsNotValidated, notValidated));
+        }
+
         return new(
             mark,
             PageLabels.LocalModels,
             models.Count == 0
                 ? PageLabels.ResultNotAttempted
-                : string.Format(
-                    CultureInfo.InvariantCulture,
-                    PageLabels.ResultModelsReady,
-                    ready,
-                    models.Count));
+                : string.Join("; ", details));
+
+        void AddCount(ModelRunState state, string wording)
+        {
+            var count = models.Count(model => model.State == state);
+            if (count > 0)
+            {
+                details.Add(string.Format(CultureInfo.InvariantCulture, wording, count));
+            }
+        }
     }
 
     public static RunResultRow Clients(IReadOnlyList<string> configured)

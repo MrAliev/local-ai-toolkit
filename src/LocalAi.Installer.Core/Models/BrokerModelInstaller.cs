@@ -161,7 +161,8 @@ public sealed class BrokerModelInstallResult
         bool pullCompleted,
         bool externalStateMayBeIndeterminate,
         IReadOnlyList<ModelFallbackSuggestion> fallbackSuggestions,
-        string code)
+        string code,
+        bool residencyDegraded = false)
     {
         ActionId = actionId;
         Model = model;
@@ -175,6 +176,7 @@ public sealed class BrokerModelInstallResult
         NoFallbackAvailable = outcome == BrokerModelInstallOutcome.RejectedResidency &&
             FallbackSuggestions.Count == 0;
         Code = code;
+        ResidencyDegraded = residencyDegraded;
     }
 
     public string ActionId { get; }
@@ -187,6 +189,8 @@ public sealed class BrokerModelInstallResult
     public IReadOnlyList<ModelFallbackSuggestion> FallbackSuggestions { get; }
     public bool NoFallbackAvailable { get; }
     public string Code { get; }
+
+    public bool ResidencyDegraded { get; }
 }
 
 public sealed class BrokerModelInstallBatchResult
@@ -235,6 +239,8 @@ public sealed class BrokerModelInstaller : IDisposable
     private readonly TimeSpan pullTimeout;
     private readonly IDisposable? ownedLauncher;
     private readonly IModelInstallTrust trust;
+    private readonly Func<ModelResidencyPolicy> readResidencyPolicy =
+        () => ModelResidencyPolicyStore.ReadDefault().ModelResidency;
     private bool disposed;
 
     internal BrokerModelInstaller(
@@ -243,12 +249,17 @@ public sealed class BrokerModelInstaller : IDisposable
         InstallationLayout layout,
         IModelInstallTrust trust,
         TimeSpan timeout,
-        TimeSpan? pullTimeout = null)
+        TimeSpan? pullTimeout = null,
+        Func<ModelResidencyPolicy>? readResidencyPolicy = null)
     {
         this.processRunner = processRunner ??
             throw new ArgumentNullException(nameof(processRunner));
         this.launcher = launcher ?? throw new ArgumentNullException(nameof(launcher));
         this.trust = trust ?? throw new ArgumentNullException(nameof(trust));
+        if (readResidencyPolicy is not null)
+        {
+            this.readResidencyPolicy = readResidencyPolicy;
+        }
         ArgumentNullException.ThrowIfNull(layout);
         if (timeout <= TimeSpan.Zero || timeout > MaximumCommandTimeout)
         {
@@ -529,6 +540,7 @@ public sealed class BrokerModelInstaller : IDisposable
                     continue;
                 }
 
+                var residencyDegraded = !proof.FullyResident || proof.SizeVramBytes != proof.SizeBytes;
                 results.Add(new BrokerModelInstallResult(
                     action.ActionId,
                     action.Model,
@@ -538,8 +550,9 @@ public sealed class BrokerModelInstaller : IDisposable
                     pullCompleted,
                     false,
                     [],
-                    "accepted"));
-                Report(action, ModelProvisioningPhase.Accepted, results.Count);
+                    "accepted",
+                    residencyDegraded));
+                Report(action, ModelProvisioningPhase.Accepted, results.Count, residencyDegraded);
             }
             catch (CommandFailure failure)
             {
@@ -563,13 +576,16 @@ public sealed class BrokerModelInstaller : IDisposable
 
         return Batch(results, BrokerModelBatchStopReason.None, false, "none");
 
-        void Report(ModelInstallAction action, ModelProvisioningPhase phase, int completed) =>
+        void Report(
+            ModelInstallAction action, ModelProvisioningPhase phase, int completed,
+            bool residencyDegraded = false) =>
             progress?.Report(new ModelProvisioningProgress(
                 action.Model,
                 action.ContextSize,
                 phase,
                 completed,
-                snapshot.Length));
+                snapshot.Length,
+                ResidencyDegraded: residencyDegraded));
     }
 
     public void Dispose()
@@ -1256,8 +1272,8 @@ public sealed class BrokerModelInstaller : IDisposable
     /// full residency unconditionally. On a machine deliberately set up for integrated
     /// graphics, a partially offloaded load is the expected outcome, not a rejection.
     /// </summary>
-    private static bool IsResidencyAcceptable(ModelPreflightCommandSuccess proof) =>
-        ModelResidencyPolicyStore.ReadDefault().ModelResidency switch
+    private bool IsResidencyAcceptable(ModelPreflightCommandSuccess proof) =>
+        readResidencyPolicy() switch
         {
             ModelResidencyPolicy.RequireFullVram =>
                 proof.FullyResident && proof.SizeVramBytes == proof.SizeBytes,
