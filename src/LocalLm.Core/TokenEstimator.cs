@@ -1,174 +1,83 @@
 using LocalLm.Core.Resources;
+using LocalAi.Contracts;
+using System.Globalization;
 
 namespace LocalLm.Core;
 
 /// <summary>
-/// Estimates how many cloud tokens a delegated job avoided spending.
-///
-/// The point is to make the saving a *measurement of what was actually processed* rather than a
-/// number invented after the fact. It is still an estimate - there is no live token counter here -
-/// so every figure is reported as a range, never as an exact count.
+/// Compatibility counters for existing callers. New reports use CloudTokenMethodology with
+/// explicit provenance, the full tool payload and a named cloud tokenization profile.
+/// These scalar estimates cannot represent unknown data or measured backend tokens.
 /// </summary>
 public static class TokenEstimator
 {
-    /// <summary>
-    /// Latin text and source code sit near 4 characters per token.
-    /// </summary>
-    private const double LatinCharsPerToken = 4.0;
+    public static int ForText(string text) => HeuristicCloudTokenProfile.EstimateText(text);
 
     /// <summary>
-    /// Cyrillic is far less efficient - most tokenizers split Russian into 2-3 character pieces,
-    /// which matters a lot here: this codebase's comments, commit messages and docs are Russian,
-    /// so assuming the Latin ratio would understate the saving by roughly half.
+    /// Legacy area heuristic, not a cloud vision profile. New reports return unknown until
+    /// a specific vision profile is supplied. Retained for existing scalar callers.
     /// </summary>
-    private const double CyrillicCharsPerToken = 2.2;
+    public static int ForImage(ImageInfo image) =>
+        (int)Math.Ceiling(image.Width * (double)image.Height / 750.0);
 
     /// <summary>
-    /// Image cost scales with pixel area, at roughly width x height / 750 tokens.
+    /// A signed difference. The caller owns the comparison scenario and must supply the full
+    /// returned payload when available; a longer response can increase cloud input.
     /// </summary>
-    private const double PixelsPerImageToken = 750.0;
-
-    public static int ForText(string text)
+    public static int Saved(int wouldHaveCost, string actualAnswer)
     {
-        if (string.IsNullOrEmpty(text))
-        {
-            return 0;
-        }
-
-        var cyrillic = 0;
-        var letters = 0;
-        foreach (var ch in text)
-        {
-            if (!char.IsLetter(ch))
-            {
-                continue;
-            }
-
-            letters++;
-            if (ch is >= 'Ѐ' and <= 'ӿ')
-            {
-                cyrillic++;
-            }
-        }
-
-        var cyrillicShare = letters == 0 ? 0 : (double)cyrillic / letters;
-        var charsPerToken = (LatinCharsPerToken * (1 - cyrillicShare)) + (CyrillicCharsPerToken * cyrillicShare);
-
-        return (int)Math.Ceiling(text.Length / charsPerToken);
+        ArgumentOutOfRangeException.ThrowIfNegative(wouldHaveCost);
+        return checked((int)CloudTokenMethodology.Difference(
+            UsageValue.Estimated(wouldHaveCost, HeuristicCloudTokenProfile.Instance.TextProfileId),
+            HeuristicCloudTokenProfile.Instance.CountText(actualAnswer)).Value!.Value);
     }
 
-    public static int ForImage(ImageInfo image) =>
-        (int)Math.Ceiling(image.Width * (double)image.Height / PixelsPerImageToken);
-
     /// <summary>
-    /// What the job would have cost in the cloud, minus what it actually cost (the short answer
-    /// that came back). Never negative - a delegation that returns more than it consumed saved
-    /// nothing, it did not cost extra.
+    /// Legacy comparison assuming previously unseen source text and no wrapper overhead.
+    /// Generation and input are separate; writing output to a file never counts that output
+    /// a second time as saved input. Use CloudTokenMethodology when provenance is unknown.
     /// </summary>
-    public static int Saved(int wouldHaveCost, string actualAnswer) =>
-        Math.Max(0, wouldHaveCost - ForText(actualAnswer));
-
-    /// <summary>
-    /// The three figures a translation reports, and the one of them that depends on where
-    /// the document went.
-    ///
-    /// The subtraction is what a translation costs a caller that receives it: the source
-    /// was in its context and the translation lands there too. A document written to a
-    /// file puts neither there, so the whole of both is what was kept out - the same
-    /// number as <c>LocalTokensProcessed</c>, arrived at for a different reason.
-    /// </summary>
-    public static TranslationTokenMetrics ForTranslation(
-        string source,
-        string translated,
-        TranslationDelivery delivery)
+    public static TranslationTokenMetrics ForTranslation(string source, string translated, TranslationDelivery delivery)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(translated);
         var input = ForText(source);
         var output = ForText(translated);
-        return new TranslationTokenMetrics(
-            input,
-            output,
-            checked(input + output),
-            output,
-            delivery is TranslationDelivery.ToFile
-                ? checked(input + output)
-                : Math.Max(0, input - output));
+        return new(input, output, checked(input + output), output,
+            delivery is TranslationDelivery.ToFile ? input : Saved(input, translated));
     }
 
-    /// <summary>
-    /// Formats a saving as a deliberately coarse range. Presenting "~18,437 tokens" would imply a
-    /// precision that does not exist.
-    /// </summary>
-    public static string Describe(int saved) => saved switch
-    {
-        0 => "0",
-        < 500 => LocalLmText.SavingUnderHalfK,
-        _ => DescribeRange(saved),
-    };
+    public static string Describe(int saved) => DescribeRange(saved);
 
-    /// <summary>
-    /// The band on its own, without a sentence around it, for callers reporting in another
-    /// language or over a total rather than a single job.
-    ///
-    /// The width is the same judgement either way: a fifteen per cent band up to a hundred
-    /// thousand tokens, twenty above it, because the further the estimate is extrapolated from
-    /// characters the less the middle of it is worth. A month of broker telemetry sums past what
-    /// thousands can express, so the unit follows the number instead of being fixed at K.
-    /// </summary>
+    /// <summary>Historical name retained for callers. Returns a point, never an invented band.</summary>
     public static string DescribeRange(long saved)
     {
-        if (saved <= 0)
-        {
-            return "0";
-        }
-
-        var band = saved < 100_000 ? 0.15 : 0.2;
-        var low = saved * (1 - band);
-        var high = saved * (1 + band);
-        return high >= 1_000_000
-            ? $"~{Round(low / 1000.0)}–{Round(high / 1000.0)}M"
-            : $"~{Round(low)}–{Round(high)}K";
+        if (saved == 0) return "0";
+        var magnitude = Math.Abs((decimal)saved);
+        var divisor = magnitude >= 1_000_000 ? 1_000_000m : magnitude >= 1000 ? 1000m : 1m;
+        var rounded = Round(magnitude / divisor);
+        if (divisor == 1000 && rounded >= 1000) { divisor = 1_000_000; rounded = Round(magnitude / divisor); }
+        var suffix = divisor == 1_000_000 ? "M" : divisor == 1000 ? "K" : "";
+        return "~" + (saved < 0 ? "-" : "") + rounded.ToString("0.#", CultureInfo.InvariantCulture) + suffix;
     }
 
-    /// <summary>
-    /// The whole sentence about the saving, rather than a number to drop into one.
-    ///
-    /// A zero here is a real and correct answer — a 336x52 image is worth about two dozen tokens
-    /// to look at, and any useful answer about it is longer than that, so delegating it saved
-    /// nothing. But "Saved about 0 cloud tokens" reads as a broken counter rather
-    /// than as a job too small to be worth delegating, and the difference matters: one is a bug
-    /// report, the other is advice.
-    /// </summary>
+    /// <summary>The sign selects the direction; zero does not establish why the count stayed unchanged.</summary>
     public static string DescribeSaving(int saved) => saved switch
     {
         0 => LocalLmText.SavedNothing,
-        < 500 => LocalLmText.SavedNegligible,
+        < 0 => LocalLmText.Catalogue.Format("CloudTokensIncreased", DescribeRange(-(long)saved)),
         _ => LocalLmText.SavedAbout(Describe(saved)),
     };
 
-    private static string Round(double tokens)
-    {
-        var thousands = tokens / 1000.0;
-        return thousands >= 10 ? Math.Round(thousands).ToString("0") : Math.Round(thousands, 1).ToString("0.#");
-    }
+    private static decimal Round(decimal value) => Math.Round(value, value < 10 ? 1 : 0, MidpointRounding.AwayFromZero);
 }
 
-/// <summary>
-/// Where the translated document ends up, which is what the last figure of the notice depends
-/// on. A translation handed back to the caller lands in its context, so only the difference
-/// between the two halves was saved; one written to a file never gets there at all, and neither
-/// does the source, so the whole of both was.
-///
-/// A parameter rather than something read off the result, because it is decided before the run:
-/// the console knows `--out` and the tool knows `outPath` at the moment they ask.
-/// </summary>
+/// <summary>Requested destination; does not prove source provenance or successful delivery.</summary>
 public enum TranslationDelivery
 {
-    /// <summary>Returned as text, into the context of whoever asked.</summary>
+    /// <summary>Returned as text into the caller's context.</summary>
     ToCaller,
-
-    /// <summary>Written to a file, so no part of it is ever read into a context.</summary>
+    /// <summary>Intended for a file; saving can still fail or the file can later be read.</summary>
     ToFile,
 }
 

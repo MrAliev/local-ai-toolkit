@@ -23,7 +23,7 @@ public sealed class ToolOutputFollowsTheReaderTests
         var notice = Result(ResidencyShortfall.None, residentPercent: 100).Notice;
 
         Assert.StartsWith("🔧 Локально: qwen3-coder:30b.", notice, StringComparison.Ordinal);
-        Assert.Contains("Сэкономлено", notice, StringComparison.Ordinal);
+        Assert.Contains("Оценка экономии облачных токенов:", notice, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -32,7 +32,17 @@ public sealed class ToolOutputFollowsTheReaderTests
         var notice = Result(ResidencyShortfall.None, residentPercent: 100).Notice;
 
         Assert.StartsWith("🔧 Local: qwen3-coder:30b.", notice, StringComparison.Ordinal);
-        Assert.Contains("Saved", notice, StringComparison.Ordinal);
+        Assert.Contains("Estimated cloud token savings:", notice, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("en", "Estimated increase in cloud tokens: ~1.3K.")]
+    [InlineData("ru", "Оценка увеличения числа облачных токенов: ~1.3K.")]
+    public void A_negative_estimate_names_an_increase_in_both_languages(string language, string expected)
+    {
+        using var reading = TestCulture.Reading(language);
+        var result = Result(ResidencyShortfall.None, residentPercent: 100) with { SavedTokens = -1250 };
+        Assert.Contains(expected, result.Notice, StringComparison.Ordinal);
     }
 
     /// <summary>
