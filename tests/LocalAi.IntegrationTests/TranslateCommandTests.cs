@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using LocalAi.Cli;
 
@@ -9,6 +10,82 @@ namespace LocalAi.IntegrationTests;
 /// </summary>
 public sealed class TranslateCommandTests
 {
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task Code_only_input_succeeds_in_the_real_cli(bool json, bool writeFile)
+    {
+        var root = Path.Combine(Path.GetTempPath(), "localai-code-only-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            const string source = "~~~text\r\nпривет 世界\r\n~~~~\r\n";
+            var input = Path.Combine(root, "code.md");
+            var target = Path.Combine(root, "copy.md");
+            await File.WriteAllTextAsync(input, source, TestContext.Current.CancellationToken);
+            var start = new ProcessStartInfo("dotnet")
+            {
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+            };
+            foreach (var argument in new[]
+            {
+                typeof(HookInstaller).Assembly.Location, "translate", "--in", input,
+                "--from", "English", "--to", "Russian", "--markdown",
+            }) start.ArgumentList.Add(argument);
+            if (json) start.ArgumentList.Add("--json");
+            if (writeFile)
+            {
+                start.ArgumentList.Add("--out");
+                start.ArgumentList.Add(target);
+            }
+
+            using var process = Process.Start(start) ?? throw new InvalidOperationException("Cannot start the CLI.");
+            var outputTask = process.StandardOutput.ReadToEndAsync(TestContext.Current.CancellationToken);
+            var errorTask = process.StandardError.ReadToEndAsync(TestContext.Current.CancellationToken);
+            try
+            {
+                await process.WaitForExitAsync(TestContext.Current.CancellationToken);
+            }
+            finally
+            {
+                if (!process.HasExited) process.Kill(entireProcessTree: true);
+            }
+            var output = await outputTask;
+            var error = await errorTask;
+            Assert.True(process.ExitCode == 0, output + error);
+            if (writeFile) Assert.Equal(File.ReadAllBytes(input), File.ReadAllBytes(target));
+            if (json)
+            {
+                using var document = JsonDocument.Parse(output);
+                Assert.True(document.RootElement.GetProperty("ok").GetBoolean());
+                var data = document.RootElement.GetProperty("data");
+                Assert.Equal(source, data.GetProperty("answer").GetString());
+                Assert.Equal(JsonValueKind.Null, data.GetProperty("model").ValueKind);
+                Assert.Equal(JsonValueKind.Null, data.GetProperty("residency").ValueKind);
+                Assert.Equal(JsonValueKind.Null, data.GetProperty("savedTokensEstimate").ValueKind);
+                Assert.Equal(JsonValueKind.Null, data.GetProperty("netContextTokensSavedEstimate").ValueKind);
+                Assert.Equal(0, data.GetProperty("localTokensProcessedEstimate").GetInt32());
+                Assert.Equal(0, data.GetProperty("modelCalls").GetInt32());
+                Assert.Equal("no_translatable_text", data.GetProperty("reason").GetString());
+            }
+            else if (!writeFile)
+            {
+                Assert.Contains(source, output, StringComparison.Ordinal);
+                Assert.Contains("<untrusted-content", output, StringComparison.Ordinal);
+            }
+            else Assert.True(string.IsNullOrWhiteSpace(output), output);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
     /// <summary>
     /// Neither language has a default, and neither can be guessed. One code for both, because the
     /// remedy is the same and the caller knows which one they left out — the message names it.
@@ -270,6 +347,8 @@ public sealed class TranslateCommandTests
         // Translation chunks the whole input and drops nothing, so a constant `false` here would
         // imply a concept that does not apply to this command.
         Assert.False(data.TryGetProperty("truncated", out _));
+        Assert.False(data.TryGetProperty("reason", out _));
+        Assert.False(data.TryGetProperty("modelCalls", out _));
     }
 
     /// <summary>Marked in the usage, filling an envelope, and offering no model override.</summary>

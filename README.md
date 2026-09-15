@@ -546,6 +546,12 @@ is not supported.
 
 Languages are given as **names**, not codes: `--to Russian`, not `--to ru`.
 
+With `--markdown`, a document containing only fenced code blocks and whitespace is
+returned unchanged without calling a model or adding a translation note. Local token
+usage is zero; cloud token savings are not applicable. In `--json`, this successful
+result has `reason: "no_translatable_text"`, `modelCalls: 0`, and `null` for the model,
+residency, and both cloud savings estimates. Results that use a model keep their existing fields.
+
 #### Look at the state of things
 
 ```powershell

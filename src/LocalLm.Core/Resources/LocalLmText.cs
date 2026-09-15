@@ -112,6 +112,10 @@ public static class LocalLmText
             generationSaved,
             contextSaved);
 
+    public static string TranslationNoTranslatableText => Get(nameof(TranslationNoTranslatableText));
+
+    public static string TranslationNotRequired => Get(nameof(TranslationNotRequired));
+
     public static string SavingUnderHalfK => Get(nameof(SavingUnderHalfK));
 
     public static string SavedNothing => Get(nameof(SavedNothing));

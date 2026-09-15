@@ -338,4 +338,10 @@
   <data name="PdfPageHeading" xml:space="preserve">
     <value>PDF page {0} of {1}</value>
   </data>
+  <data name="TranslationNoTranslatableText" xml:space="preserve">
+    <value>No translatable text; source returned unchanged. No model was called. Local tokens: 0 input, 0 output. Cloud token savings: not applicable.</value>
+  </data>
+  <data name="TranslationNotRequired" xml:space="preserve">
+    <value>No translation required; protected code and whitespace preserved exactly.</value>
+  </data>
 </root>

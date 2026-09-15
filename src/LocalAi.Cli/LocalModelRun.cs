@@ -46,6 +46,9 @@ public sealed record LocalModelData(
 /// <c>false</c> would imply a concept that does not apply here. No validation verdict either: a
 /// failure throws, so on this path it is always "passed" and <c>ok</c> already says so, and its
 /// detail is catalogue prose, which is what the notice is kept off the wire for.
+/// When no text needs translation, model/residency and savings estimates are null;
+/// reason and modelCalls describe that new success case. Model-backed output keeps
+/// its existing shape because these optional fields are omitted.
 /// </summary>
 public sealed record TranslationData(
     [property: JsonRequired, JsonPropertyName("answer"), JsonPropertyOrder(0)]
@@ -53,9 +56,9 @@ public sealed record TranslationData(
     [property: JsonRequired, JsonPropertyName("origin"), JsonPropertyOrder(1)]
     string Origin,
     [property: JsonRequired, JsonPropertyName("model"), JsonPropertyOrder(2)]
-    string Model,
+    string? Model,
     [property: JsonRequired, JsonPropertyName("residency"), JsonPropertyOrder(3)]
-    string Residency,
+    string? Residency,
     [property: JsonRequired, JsonPropertyName("queuedMs"), JsonPropertyOrder(4)]
     long QueuedMs,
     [property: JsonRequired, JsonPropertyName("ranMs"), JsonPropertyOrder(5)]
@@ -63,16 +66,22 @@ public sealed record TranslationData(
     /// All three say they are estimates: three bare numbers would invite three false precisions
     /// where one would have done.
     [property: JsonRequired, JsonPropertyName("savedTokensEstimate"), JsonPropertyOrder(6)]
-    int SavedTokensEstimate,
+    int? SavedTokensEstimate,
     [property: JsonRequired, JsonPropertyName("localTokensProcessedEstimate"),
                JsonPropertyOrder(7)]
     int LocalTokensProcessedEstimate,
     [property: JsonRequired, JsonPropertyName("netContextTokensSavedEstimate"),
                JsonPropertyOrder(8)]
-    int NetContextTokensSavedEstimate,
+    int? NetContextTokensSavedEstimate,
     [property: JsonPropertyName("vramResidentPercent"), JsonPropertyOrder(9),
                JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    int? VramResidentPercent = null);
+    int? VramResidentPercent = null,
+    [property: JsonPropertyName("modelCalls"), JsonPropertyOrder(10),
+               JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    int? ModelCalls = null,
+    [property: JsonPropertyName("reason"), JsonPropertyOrder(11),
+               JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    string? Reason = null);
 
 /// <summary>
 /// The half of a local-model command that is the same for all of them: run the task, put the
@@ -289,18 +298,22 @@ internal static class LocalModelRun
             result.Answer,
             origin,
             result.Model,
-            (result.Receipt.Routing?.ResidencyShortfall ?? ResidencyShortfall.None).ToString(),
-            (long)result.Receipt.QueueDuration.TotalMilliseconds,
-            (long)result.Receipt.ExecutionDuration.TotalMilliseconds,
+            result.Receipt is { } receipt
+                ? (receipt.Routing?.ResidencyShortfall ?? ResidencyShortfall.None).ToString()
+                : null,
+            (long)(result.Receipt?.QueueDuration.TotalMilliseconds ?? 0),
+            (long)(result.Receipt?.ExecutionDuration.TotalMilliseconds ?? 0),
             result.SavedTokens,
             result.LocalTokensProcessed,
             result.NetCloudContextTokensSaved,
-            Vram(result.Receipt));
+            Vram(result.Receipt),
+            result.NoTranslatableText ? 0 : null,
+            result.NoTranslatableText ? "no_translatable_text" : null);
 
-    private static int? Vram(LocalUsageReceipt receipt) =>
-        receipt.Routing?.ResidencyShortfall is ResidencyShortfall.None or null
+    private static int? Vram(LocalUsageReceipt? receipt) =>
+        receipt?.Routing?.ResidencyShortfall is ResidencyShortfall.None or null
             ? null
-            : receipt.Routing?.VramResidentPercent;
+            : receipt?.Routing?.VramResidentPercent;
 
     private static int Fail(
         string command,

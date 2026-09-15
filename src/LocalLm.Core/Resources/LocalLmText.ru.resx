@@ -338,4 +338,10 @@
   <data name="PdfPageHeading" xml:space="preserve">
     <value>Страница PDF {0} из {1}</value>
   </data>
+  <data name="TranslationNoTranslatableText" xml:space="preserve">
+    <value>Нет текста для перевода; исходный текст возвращён без изменений. Модель не вызывалась. Локальные токены: 0 входных, 0 выходных. Экономия облачных токенов: неприменимо.</value>
+  </data>
+  <data name="TranslationNotRequired" xml:space="preserve">
+    <value>Перевод не требуется; защищённый код и пробельные символы сохранены в точности.</value>
+  </data>
 </root>
