@@ -9,6 +9,210 @@ namespace LocalLm.Tests;
 public sealed class LocalTasksTests
 {
     [Theory]
+    [InlineData(true, TranslationDelivery.ToCaller)]
+    [InlineData(false, TranslationDelivery.ToCaller)]
+    [InlineData(true, TranslationDelivery.ToFile)]
+    [InlineData(false, TranslationDelivery.ToFile)]
+    public async Task Translation_validates_each_fallback_and_accounts_for_every_completed_call(
+        bool markdown, TranslationDelivery delivery)
+    {
+        using var catalog = new TranslationCatalog(markdown, ["qwen2.5-coder:14b", "qwen3.5:9b"]);
+        var invalid = markdown ? "Привет" : "Translate the following fragment from English to Russian.";
+        const string valid = "Привет {name}.";
+        var client = new FakeLocalModelClient
+        {
+            QueueDuration = TimeSpan.FromSeconds(2),
+            ExecutionDuration = TimeSpan.FromSeconds(3),
+        };
+        client.Answers.Enqueue(invalid);
+        client.Answers.Enqueue(invalid);
+        client.Answers.Enqueue(valid);
+        var seen = new RecordingRunObserver();
+
+        var result = await catalog.Tasks(client, seen).TranslateAsync(
+            "Hello {name}.", "English", "Russian", markdown, delivery,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(new string?[] { null, "qwen2.5-coder:14b", "qwen3.5:9b" },
+            client.Calls.Select(call => call.ModelOverride));
+        Assert.Equal("qwen3.5:9b", result.Model);
+        Assert.True(result.Validation.Passed);
+        Assert.Equal(TimeSpan.FromSeconds(6), result.Receipt!.QueueDuration);
+        Assert.Equal(TimeSpan.FromSeconds(9), result.Receipt.ExecutionDuration);
+        var expectedInput = client.Calls.Sum(call => TokenEstimator.ForText(call.Prompt));
+        var expectedOutput = 2 * TokenEstimator.ForText(invalid) + TokenEstimator.ForText(valid);
+        Assert.Equal(expectedInput + expectedOutput, result.LocalTokensProcessed);
+        var completion = Assert.Single(client.ExperimentCompletions);
+        Assert.Equal(ModelExecutionOutcome.StructuralFailure, completion.Outcome);
+        Assert.Equal(expectedInput, completion.Metrics.InputTokens);
+        Assert.Equal(expectedOutput, completion.Metrics.OutputTokens);
+        Assert.Equal(TimeSpan.FromSeconds(15), completion.Metrics.TotalDuration);
+        Assert.True(completion.Metrics.UsedFallback);
+        Assert.Equal(2, seen.Steps.OfType<TranslationRetrying>().Count());
+
+        var single = await catalog.Tasks(new FakeLocalModelClient { Answer = valid }).TranslateAsync(
+            "Hello {name}.", "English", "Russian", markdown, delivery,
+            TestContext.Current.CancellationToken);
+        Assert.Equal(single.SavedTokens, result.SavedTokens);
+        Assert.Equal(single.NetCloudContextTokensSaved, result.NetCloudContextTokensSaved);
+    }
+
+    [Fact]
+    public async Task Translation_exhausts_invalid_fallbacks_without_returning_their_text()
+    {
+        using var catalog = new TranslationCatalog(true, ["qwen2.5-coder:14b", "qwen3.5:9b"]);
+        var client = new FakeLocalModelClient { Answer = "Привет" };
+
+        await Assert.ThrowsAsync<InvalidDataException>(() => catalog.Tasks(client).TranslateAsync(
+            "Hello {name}.", "English", "Russian", true, TranslationDelivery.ToCaller,
+            TestContext.Current.CancellationToken));
+
+        Assert.Equal(3, client.Calls.Count);
+        Assert.Equal(ModelExecutionOutcome.StructuralFailure, Assert.Single(client.ExperimentCompletions).Outcome);
+    }
+
+    [Fact]
+    public async Task Translation_skips_duplicate_and_already_used_models()
+    {
+        using var catalog = new TranslationCatalog(true,
+            ["translategemma:12b", "qwen2.5-coder:14b", "qwen2.5-coder:14b", "qwen3.5:9b"]);
+        var client = new FakeLocalModelClient();
+        client.Answers.Enqueue("Привет");
+        client.Answers.Enqueue("Привет");
+        client.Answers.Enqueue("Привет {name}.");
+
+        var result = await catalog.Tasks(client).TranslateAsync(
+            "Hello {name}.", "English", "Russian", true, TranslationDelivery.ToCaller,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(new string?[] { null, "qwen2.5-coder:14b", "qwen3.5:9b" },
+            client.Calls.Select(call => call.ModelOverride));
+        Assert.Equal("qwen3.5:9b", result.Model);
+    }
+
+    [Fact]
+    public async Task Translation_does_not_repeat_a_fallback_already_selected_by_the_broker()
+    {
+        using var catalog = new TranslationCatalog(true, ["qwen3.5:9b", "qwen2.5-coder:14b"]);
+        var client = new FakeLocalModelClient { BrokerFailureOutcome = ModelExecutionOutcome.TechnicalFailure };
+        client.Answers.Enqueue("Привет");
+        client.Answers.Enqueue("Привет {name}.");
+
+        var result = await catalog.Tasks(client).TranslateAsync(
+            "Hello {name}.", "English", "Russian", true, TranslationDelivery.ToCaller,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(new string?[] { null, "qwen2.5-coder:14b" }, client.Calls.Select(call => call.ModelOverride));
+        Assert.Equal("qwen2.5-coder:14b", result.Model);
+        Assert.Equal(ModelExecutionOutcome.TechnicalFailure, Assert.Single(client.ExperimentCompletions).Outcome);
+    }
+
+    [Fact]
+    public async Task Translation_stops_when_all_fallback_entries_name_the_failed_primary_model()
+    {
+        using var catalog = new TranslationCatalog(true, ["translategemma:12b", "translategemma:12b"]);
+        var client = new FakeLocalModelClient { Answer = "Привет" };
+
+        await Assert.ThrowsAsync<InvalidDataException>(() => catalog.Tasks(client).TranslateAsync(
+            "Hello {name}.", "English", "Russian", true, TranslationDelivery.ToCaller,
+            TestContext.Current.CancellationToken));
+
+        Assert.Single(client.Calls);
+        Assert.False(Assert.Single(client.ExperimentCompletions).Metrics.UsedFallback);
+    }
+
+    [Fact]
+    public async Task An_empty_model_fallback_route_is_rejected_before_translation()
+    {
+        using var catalog = new TranslationCatalog(true, []);
+        var client = new FakeLocalModelClient();
+
+        await Assert.ThrowsAsync<InvalidDataException>(() => catalog.Tasks(client).TranslateAsync(
+            "Hello {name}.", "English", "Russian", true, TranslationDelivery.ToCaller,
+            TestContext.Current.CancellationToken));
+
+        Assert.Empty(client.Calls);
+    }
+
+    [Theory]
+    [InlineData(1, false)]
+    [InlineData(2, false)]
+    [InlineData(2, true)]
+    public async Task Translation_observes_cancellation_between_attempts(int cancelAfterCall, bool technicalFailure)
+    {
+        using var cancellation = new CancellationTokenSource();
+        using var catalog = new TranslationCatalog(true, ["qwen2.5-coder:14b", "qwen3.5:9b"]);
+        var client = new FakeLocalModelClient
+        {
+            RoutedAnswerFactory = (_, index) =>
+            {
+                if (index == cancelAfterCall)
+                {
+                    cancellation.Cancel();
+                    if (technicalFailure) throw new BrokerJobFailedException(Guid.NewGuid(), "ModelPreflightException");
+                }
+                return "Привет";
+            },
+        };
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => catalog.Tasks(client).TranslateAsync(
+            "Hello {name}.", "English", "Russian", true, TranslationDelivery.ToCaller, cancellation.Token));
+
+        Assert.Equal(cancelAfterCall, client.Calls.Count);
+        Assert.All(client.CallCancellationTokens, token => Assert.Equal(cancellation.Token, token));
+        Assert.Empty(client.ExperimentCompletions);
+    }
+
+    [Fact]
+    public async Task Cancellation_from_retry_progress_prevents_the_next_model_call()
+    {
+        using var cancellation = new CancellationTokenSource();
+        using var catalog = new TranslationCatalog(true, ["qwen2.5-coder:14b", "qwen3.5:9b"]);
+        var client = new FakeLocalModelClient { Answer = "Привет" };
+        var seen = new RecordingRunObserver
+        {
+            OnReport = step => { if (step is TranslationRetrying) cancellation.Cancel(); },
+        };
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => catalog.Tasks(client, seen).TranslateAsync(
+            "Hello {name}.", "English", "Russian", true, TranslationDelivery.ToCaller, cancellation.Token));
+
+        Assert.Single(client.Calls);
+    }
+
+    [Fact]
+    public async Task Completed_fragments_of_a_failed_fallback_remain_in_the_total()
+    {
+        using var catalog = new TranslationCatalog(true, ["qwen2.5-coder:14b", "qwen3.5:9b"]);
+        const string source = "Hello {name}.\n\n```\ncode\n```\n\nAfter.";
+        var answers = new Dictionary<int, string>
+        {
+            [1] = "Привет", [2] = "После.", [3] = "Привет {name}.",
+            [5] = "Привет {name}.", [6] = "После.",
+        };
+        var client = new FakeLocalModelClient
+        {
+            QueueDuration = TimeSpan.FromSeconds(2),
+            ExecutionDuration = TimeSpan.FromSeconds(3),
+            RoutedAnswerFactory = (_, index) => answers.TryGetValue(index, out var answer)
+                ? answer : throw new BrokerJobFailedException(Guid.NewGuid(), "ModelPreflightException"),
+        };
+
+        var result = await catalog.Tasks(client).TranslateAsync(
+            source, "English", "Russian", true, TranslationDelivery.ToCaller,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(6, client.Calls.Count);
+        Assert.Equal("qwen3.5:9b", result.Model);
+        Assert.Equal(TimeSpan.FromSeconds(10), result.Receipt!.QueueDuration);
+        Assert.Equal(TimeSpan.FromSeconds(15), result.Receipt.ExecutionDuration);
+        var completedInput = answers.Keys.Sum(index => TokenEstimator.ForText(client.Calls[index - 1].Prompt));
+        var completedOutput = answers.Values.Sum(TokenEstimator.ForText);
+        Assert.Equal(completedInput + completedOutput, result.LocalTokensProcessed);
+        Assert.Equal(TimeSpan.FromSeconds(25), Assert.Single(client.ExperimentCompletions).Metrics.TotalDuration);
+    }
+
+    [Theory]
     [InlineData(false, "en", "Use the same model catalog for the client and broker")]
     [InlineData(true, "en", "Use the same model catalog for the client and broker")]
     [InlineData(false, "ru", "Используйте один и тот же каталог моделей для клиента и брокера")]
@@ -175,8 +379,8 @@ public sealed class LocalTasksTests
             File.WriteAllText(Store.FilePath, System.Text.Json.JsonSerializer.Serialize(document, LocalAiJson.Strict));
         }
 
-        public LocalTasks Tasks(FakeLocalModelClient client) =>
-            new(client, new LogTriagePolicyStore(root), modelCatalog: Store);
+        public LocalTasks Tasks(FakeLocalModelClient client, ILocalRunObserver? observer = null) =>
+            new(client, new LogTriagePolicyStore(root), observer, modelCatalog: Store);
 
         public void Dispose() => Directory.Delete(root, recursive: true);
     }
@@ -943,6 +1147,12 @@ public sealed class LocalTasksTests
 
         public string Answer { get; init; } = "answer";
 
+        public TimeSpan QueueDuration { get; init; }
+
+        public TimeSpan ExecutionDuration { get; init; }
+
+        public List<CancellationToken> CallCancellationTokens { get; } = [];
+
         public ModelExecutionOutcome? BrokerFailureOutcome { get; init; }
 
         public Queue<string> Answers { get; } = [];
@@ -1001,6 +1211,7 @@ public sealed class LocalTasksTests
                     workflow?.WorkflowId);
                 Calls.Add(call);
                 Workflows.Add(workflow);
+                CallCancellationTokens.Add(cancellationToken);
                 if (modelOverride is not null &&
                     UnavailableOverrides.Contains(modelOverride))
                 {
@@ -1025,8 +1236,8 @@ public sealed class LocalTasksTests
                         "local-lm",
                         "chat",
                         modelOverride ?? "translategemma:12b",
-                        TimeSpan.Zero,
-                        TimeSpan.Zero,
+                        QueueDuration,
+                        ExecutionDuration,
                         prompt.Length,
                         prompt.Length / 4,
                         null,
@@ -1268,7 +1479,13 @@ public sealed class LocalTasksTests
     {
         public List<LocalRunStep> Steps { get; } = [];
 
-        public void Report(LocalRunStep step) => Steps.Add(step);
+        public Action<LocalRunStep>? OnReport { get; init; }
+
+        public void Report(LocalRunStep step)
+        {
+            Steps.Add(step);
+            OnReport?.Invoke(step);
+        }
     }
 
     private sealed record RoutedCall(
