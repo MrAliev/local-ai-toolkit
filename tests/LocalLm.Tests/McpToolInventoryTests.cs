@@ -16,6 +16,20 @@ namespace LocalLm.Tests;
 public sealed class McpToolInventoryTests
 {
     [Fact]
+    public void Every_exposed_tool_has_an_explicit_usage_reporting_policy()
+    {
+        var exposed = typeof(LocalLmTools).GetMethods(BindingFlags.Public | BindingFlags.Static)
+            .Select(method => method.GetCustomAttribute<McpServerToolAttribute>()?.Name)
+            .OfType<string>();
+        foreach (var name in exposed)
+        {
+            var policy = McpToolNames.LocalLmPolicies.SingleOrDefault(policy => policy.Name == name);
+            var usage = policy?.Usage;
+            Assert.True(usage is not null, $"MCP tool 'locallm/{name}' has no usage-reporting policy.");
+        }
+    }
+
+    [Fact]
     public void The_installer_tool_list_matches_what_this_server_exposes()
     {
         var exposed = typeof(LocalLmTools)
