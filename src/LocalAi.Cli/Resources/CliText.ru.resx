@@ -631,8 +631,8 @@
     <comment>Noun-first in Russian. UTC is named because the timestamps are UtcDateTime and a reader three hours ahead read the range as local and concluded the report was stale.</comment>
   </data>
   <data name="TelemetrySaved" xml:space="preserve">
-    <value>{0} облачных токенов чистыми, из {1} валовых ({2} потрачено на проверку)</value>
-    <comment>The three holes are token bands whose K and M suffix is a number's unit and stays invariant. Vocabulary from docs/overview.ru.md.</comment>
+    <value>Оценка экономии облачных токенов: {0} чистыми, {1} валовых ({2} на проверку)</value>
+    <comment>Signed point estimates; K and M stay invariant.</comment>
   </data>
   <data name="TelemetryUnreadable" xml:space="preserve">
     <value>Не прочитано записей {0}; в подсчётах ниже они не участвуют.</value>
