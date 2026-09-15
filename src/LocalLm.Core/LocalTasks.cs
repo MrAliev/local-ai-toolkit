@@ -786,11 +786,17 @@ public sealed class LocalTasks
             .Fallbacks.Distinct(StringComparer.Ordinal).ToArray();
         var profiles = Enumerable.Repeat(profile, modelStepCount).ToArray();
         var workflowId = Guid.NewGuid();
+        var attemptedModels = new HashSet<string>(StringComparer.Ordinal);
+        // Record each returned call immediately. A later fragment can fail without
+        // erasing the tokens and durations already spent on that attempt.
+        var allReceipts = new List<LocalUsageReceipt>();
+        var totalInputTokens = 0;
+        var totalOutputTokens = 0;
         async Task<TranslationAttempt> RunAttemptAsync(string? modelOverride)
         {
+            ct.ThrowIfCancellationRequested();
             var translated = new StringBuilder();
             var receipts = new List<LocalUsageReceipt>();
-            var inputTokens = 0;
             var outputTokens = 0;
             LocalUsageReceipt? lastReceipt = null;
             var modelStep = 0;
@@ -809,6 +815,7 @@ public sealed class LocalTasks
                 // Before the call rather than after it: the total is known before the
                 // first one, and it is the fact that decides whether the reader waits.
                 observer?.Report(new TranslatingFragment(modelStep + 1, modelStepCount));
+                ct.ThrowIfCancellationRequested();
                 var prompt =
                     $"Translate the following fragment from {sourceLanguage} to {targetLanguage}. " +
                     "Return only the translated fragment. Preserve Markdown structure, code, URLs, " +
@@ -853,9 +860,16 @@ public sealed class LocalTasks
                         LocalLmText.CatalogMismatchRecovery + " " + failure.FailureReason);
                 }
                 receipts.Add(result.Receipt);
-                inputTokens = checked(inputTokens + TokenEstimator.ForText(prompt));
-                outputTokens = checked(
-                    outputTokens + TokenEstimator.ForText(result.Value));
+                allReceipts.Add(result.Receipt);
+                attemptedModels.Add(result.Receipt.Routing?.SelectedModel ?? result.Receipt.Model);
+                if (result.Receipt.Routing?.ExperimentalModel is { } failedModel)
+                {
+                    attemptedModels.Add(failedModel);
+                }
+                totalInputTokens = checked(totalInputTokens + TokenEstimator.ForText(prompt));
+                var returnedTokens = TokenEstimator.ForText(result.Value);
+                totalOutputTokens = checked(totalOutputTokens + returnedTokens);
+                outputTokens = checked(outputTokens + returnedTokens);
                 translated
                     .Append(leadingLineBreaks)
                     .Append(result.Value.Trim('\r', '\n'))
@@ -864,19 +878,18 @@ public sealed class LocalTasks
                 modelStep++;
             }
 
+            ct.ThrowIfCancellationRequested();
             return new TranslationAttempt(
                 translated.ToString(),
                 lastReceipt
                     ?? throw new InvalidOperationException(
                         LocalLmText.TranslationNoReceipt),
                 Array.AsReadOnly(receipts.ToArray()),
-                inputTokens,
                 outputTokens);
         }
 
         var experimentalAttempt = await RunAttemptAsync(modelOverride: null);
         var attempt = experimentalAttempt;
-        var attempts = new List<TranslationAttempt> { experimentalAttempt };
         var validation = markdown
             ? TranslationValidator.ValidateMarkdown(source, attempt.Text)
             : TranslationValidator.ValidatePlain(source, attempt.Text);
@@ -891,29 +904,43 @@ public sealed class LocalTasks
             receipt => receipt.Routing?.UsedFallback == true);
         if (!validation.Passed)
         {
-            usedFallback = true;
-            for (var index = 0; index < fallbackModels.Length; index++)
+            BrokerJobFailedException? lastFailure = null;
+            foreach (var fallbackModel in fallbackModels)
             {
+                ct.ThrowIfCancellationRequested();
+                if (!attemptedModels.Add(fallbackModel))
+                {
+                    continue;
+                }
+                usedFallback = true;
                 try
                 {
                     // The counter is about to restart at 1, which without this line
                     // reads as a defect rather than as a second pass over the document.
                     observer?.Report(
-                        new TranslationRetrying(validation.Detail, fallbackModels[index]));
-                    attempt = await RunAttemptAsync(fallbackModels[index]);
-                    attempts.Add(attempt);
-                    break;
+                        new TranslationRetrying(validation.Detail, fallbackModel));
+                    attempt = await RunAttemptAsync(fallbackModel);
+                    lastFailure = null;
+                    validation = markdown
+                        ? TranslationValidator.ValidateMarkdown(source, attempt.Text)
+                        : TranslationValidator.ValidatePlain(source, attempt.Text);
+                    if (validation.Passed)
+                    {
+                        break;
+                    }
                 }
                 catch (BrokerJobFailedException failure) when (
-                    failure.FailureCode != "ModelCatalogMismatchException" &&
-                    index < fallbackModels.Length - 1)
+                    failure.FailureCode != "ModelCatalogMismatchException")
                 {
+                    lastFailure = failure;
                 }
             }
 
-            validation = markdown
-                ? TranslationValidator.ValidateMarkdown(source, attempt.Text)
-                : TranslationValidator.ValidatePlain(source, attempt.Text);
+            ct.ThrowIfCancellationRequested();
+            if (lastFailure is not null)
+            {
+                throw lastFailure;
+            }
         }
 
         // Computed once, here, because two readers want it: the telemetry record below and the
@@ -934,11 +961,6 @@ public sealed class LocalTasks
             .FirstOrDefault();
         if (experimentalModel is not null)
         {
-            var allReceipts = attempts
-                .SelectMany(candidate => candidate.Receipts)
-                .ToArray();
-            var totalInputTokens = attempts.Sum(candidate => candidate.InputTokens);
-            var totalOutputTokens = attempts.Sum(candidate => candidate.OutputTokens);
             await client.CompleteExperimentAsync(
                 workflowId,
                 profile,
@@ -970,13 +992,12 @@ public sealed class LocalTasks
                 LocalLmText.TranslationValidationFailed(validation.Detail));
         }
 
-        var everyCall = attempts.SelectMany(candidate => candidate.Receipts).ToArray();
         var receipt = attempt.Receipt with
         {
-            QueueDuration = everyCall.Aggregate(
+            QueueDuration = allReceipts.Aggregate(
                 TimeSpan.Zero,
                 (total, each) => total + each.QueueDuration),
-            ExecutionDuration = everyCall.Aggregate(
+            ExecutionDuration = allReceipts.Aggregate(
                 TimeSpan.Zero,
                 (total, each) => total + each.ExecutionDuration),
         };
@@ -989,8 +1010,7 @@ public sealed class LocalTasks
         return new LocalTranslationResult(
             answer,
             tokenMetrics.EstimatedCloudGenerationTokensSaved,
-            attempts.Sum(candidate =>
-                checked(candidate.InputTokens + candidate.OutputTokens)),
+            checked(totalInputTokens + totalOutputTokens),
             tokenMetrics.EstimatedNetCloudContextTokensSaved,
             model,
             validation,
@@ -1001,7 +1021,6 @@ public sealed class LocalTasks
         string Text,
         LocalUsageReceipt Receipt,
         IReadOnlyList<LocalUsageReceipt> Receipts,
-        int InputTokens,
         int OutputTokens);
 
     private sealed record TranslationWorkItem(
