@@ -80,7 +80,8 @@ public sealed record SearchEvaluationCase(
 
 public sealed record SearchEvaluationCorpus(
     int SchemaVersion,
-    IReadOnlyList<SearchEvaluationCase> Cases)
+    IReadOnlyList<SearchEvaluationCase> Cases,
+    IReadOnlyList<string>? ExcludedPaths = null)
 {
     private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
 

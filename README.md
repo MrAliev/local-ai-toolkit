@@ -108,6 +108,19 @@ still match multiple declarations are rejected rather than scored. Path-only tar
 continue to accept any hit in the specified file. These changes affect evaluation scoring;
 search ranking and the calibrated threshold remain unchanged.
 
+Evaluation corpora may include an optional `excludedPaths` list of repository-relative file
+paths and directory prefixes ending in `/`. These are literal paths, not globs; either slash
+style is accepted. When the `--cases` file is inside the repository, it is excluded
+automatically; list other reference material explicitly. Exclusions apply before both vector
+and lexical ranking. Normal search continues to include ordinary tests.
+
+Exclusion paths must stay inside the repository and must not cover a declared relevant
+target. Evaluation output records the source commit/tree and dirty-content hash separately
+from the indexed commit/tree, plus the index generation/model, corpus SHA-256, resolved
+annotations, search options, and effective exclusions. A run fails if its source snapshot,
+index generation, or annotations change while it is running. Reproducing a dirty run also
+requires retaining the uncommitted source files; a hash alone cannot restore them.
+
 **Not on the command line.** `lsp_open_document` and `lsp_close_document` take the text of an
 unsaved buffer — and in a shell there is no such buffer, so there is nothing to hand over.
 
