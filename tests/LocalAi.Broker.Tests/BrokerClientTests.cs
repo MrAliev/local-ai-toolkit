@@ -9,6 +9,7 @@ public sealed class BrokerClientTests
     [Fact]
     public async Task Embed_enqueues_starts_host_and_returns_typed_output()
     {
+        using var usage = new UsageCall(UsageSurface.Mcp, "codesearch", "search_code");
         using var fixture = new BrokerClientFixture();
         var request = LocalJobRequestFactory.CreateEmbed(
             "embed:test",
@@ -32,6 +33,10 @@ public sealed class BrokerClientTests
         Assert.Equal([1d, 2d], result.Value.Embeddings[0]);
         Assert.Equal(request.JobId, result.Receipt.JobId);
         Assert.Equal(1, fixture.Process.EnsureCalls);
+        await UsageEvidence.CollectAsync(usage);
+        var report = usage.Complete();
+        Assert.Equal([request.JobId], report.Identity.JobIds);
+        Assert.Equal("embed-model", Assert.Single(report.Models.Actual).Model);
     }
 
     [Fact]
@@ -61,6 +66,7 @@ public sealed class BrokerClientTests
     [Fact]
     public async Task Caller_cancellation_stops_waiting_without_cancelling_shared_job()
     {
+        using var usage = new UsageCall(UsageSurface.Mcp, "locallm", "local_models_status");
         using var fixture = new BrokerClientFixture();
         using var cancellation = new CancellationTokenSource();
         var request = LocalJobRequestFactory.CreateListModels(
@@ -79,6 +85,7 @@ public sealed class BrokerClientTests
             request.JobId,
             TestContext.Current.CancellationToken);
         Assert.Equal(LocalJobState.Queued, diagnostic!.State);
+        Assert.Equal([request.JobId], usage.Complete().Identity.JobIds);
     }
 
     [Fact]

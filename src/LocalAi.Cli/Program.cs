@@ -1,4 +1,5 @@
 using CodeSearch.Core.Embedding;
+using LocalAi.Broker;
 using LocalAi.Cli;
 using LocalAi.Cli.Resources;
 using LocalAi.Contracts;
@@ -40,36 +41,63 @@ InstallerCulture.FollowProcessCulture();
 // stack trace on the console and exit with 0xE0434352, which tells an operator nothing and tells
 // a hook or scheduled task even less. Failures now name themselves and pick an exit code that
 // distinguishes "try again later" from "this input will never work".
-try
+return await CliUsageReporting.RunAsync("localai", args, ModelResidencyPolicyStore.DefaultRuntimeRoot,
+    Console.Out, Console.Error, RunGuardedAsync);
+
+async Task<int> RunGuardedAsync(TextWriter output, TextWriter error)
 {
-    return await RunAsync(args, machineReadable);
-}
-catch (OperationCanceledException)
-{
-    return Failed("run_cancelled", CliText.RunCancelled, 130);
-}
-catch (EmbeddingUnavailableException exception)
-{
-    return Failed("broker_unavailable", exception.Message, 75);
-}
-catch (RepositorySyncBusyException exception)
-{
-    // The same "try again later" family as an unreachable embedder: the other run is doing
-    // this run's work, and a hook or script must be able to tell that from a real fault.
-    return Failed("sync_busy", exception.Message, 75);
-}
-catch (EmbeddingChunkException exception)
-{
-    return Failed("chunk_rejected", exception.Message, 65);
-}
-catch (Exception exception)
-{
-    // Type names and the inner chain, not just the message: a released binary once printed
-    // exactly "Dll was not found." — a bare DllNotFoundException's default message — and
-    // that one anonymous line cost five reproduction attempts without finding the cause
-    // (#139). An unexpected failure is precisely the one whose message cannot be trusted
-    // to identify itself.
-    return Failed("unexpected_failure", UnexpectedFailure.Describe(exception), 70);
+    var streams = new CommandStreams(output, error);
+    try
+    {
+        return await RunAsync(args, machineReadable, streams);
+    }
+    catch (OperationCanceledException)
+    {
+        return Failed("run_cancelled", CliText.RunCancelled, 130);
+    }
+    catch (EmbeddingUnavailableException exception)
+    {
+        return Failed("broker_unavailable", exception.Message, 75);
+    }
+    catch (RepositorySyncBusyException exception)
+    {
+        // The same "try again later" family as an unreachable embedder: the other run is doing
+        // this run's work, and a hook or script must be able to tell that from a real fault.
+        return Failed("sync_busy", exception.Message, 75);
+    }
+    catch (EmbeddingChunkException exception)
+    {
+        return Failed("chunk_rejected", exception.Message, 65);
+    }
+    catch (Exception exception)
+    {
+        // Type names and the inner chain, not just the message: a released binary once printed
+        // exactly "Dll was not found." — a bare DllNotFoundException's default message — and
+        // that one anonymous line cost five reproduction attempts without finding the cause
+        // (#139). An unexpected failure is precisely the one whose message cannot be trusted
+        // to identify itself.
+        return Failed("unexpected_failure", UnexpectedFailure.Describe(exception), 70);
+    }
+
+    int Failed(string code, string message, int exitCode)
+    {
+        if (exitCode == 130) UsageCall.Current?.Cancelled();
+        else UsageCall.Current?.Failed(code);
+        if (machineReadable)
+        {
+            streams.Out.WriteLine(MachineOutput.Refusal(
+                MachineOutput.Enveloped(args) ?? MachineOutput.Named(args),
+                code,
+                message));
+        }
+        else
+        {
+            streams.Error.WriteLine($"localai: {message}");
+        }
+
+        return exitCode;
+    }
+
 }
 
 // One refusal, two faces. The prose keeps the `localai:` prefix it has always had; the envelope
@@ -122,7 +150,7 @@ static string PrimarySource(IReadOnlyList<string> sources, string whenEmpty) =>
 /// around it. "Last change" is the record's own <c>UpdatedAtUtc</c> rather than a wall clock of
 /// our own, so a loop that starts mid-build inherits the build's history instead of resetting it.
 /// </summary>
-static async Task<int> FollowIndexBuildAsync(RepositoryStatus status, TimeSpan interval)
+static async Task<int> FollowIndexBuildAsync(RepositoryStatus status, TimeSpan interval, TextWriter followOutput)
 {
     var store = new LocalAi.Repository.RepositoryIndexProgressStore(FsPath.From(Path.Combine(
         Path.GetFullPath(ModelResidencyPolicyStore.DefaultRuntimeRoot),
@@ -143,8 +171,8 @@ static async Task<int> FollowIndexBuildAsync(RepositoryStatus status, TimeSpan i
                 : DateTimeOffset.UtcNow - progress.UpdatedAtUtc,
             RepoFollowCommand.DefaultStaleAfter,
             chunksSeen);
-        Console.WriteLine(step.Line);
-        Console.Out.Flush();
+        followOutput.WriteLine(step.Line);
+        followOutput.Flush();
         if (step.ExitCode is { } code)
         {
             return code;
@@ -157,40 +185,24 @@ static async Task<int> FollowIndexBuildAsync(RepositoryStatus status, TimeSpan i
 // `exit` defaults to 2, which is what a wrong command line has always been. It is passed only
 // where the command line was right and the machine refused — a file named with `--in` that could
 // not be opened, which exits 66 the way `--out` exits 73 when it cannot write.
-static int Refuse(string command, CommandRefusal refused, bool machine, int exit = 2)
+static async Task<int> RunAsync(string[] args, bool machineReadable, CommandStreams streams)
 {
-    if (machine)
+    int Refuse(string command, CommandRefusal refused, bool machine, int exit = 2)
     {
-        Console.WriteLine(
-            MachineOutput.Refusal(command, refused.Code, refused.Message));
-    }
-    else
-    {
-        Console.Error.WriteLine(refused.Message);
-    }
+        UsageCall.Current?.Refused(refused.Code);
+        if (machine)
+        {
+            streams.Out.WriteLine(
+                MachineOutput.Refusal(command, refused.Code, refused.Message));
+        }
+        else
+        {
+            streams.Error.WriteLine(refused.Message);
+        }
 
-    return exit;
-}
-
-int Failed(string code, string message, int exitCode)
-{
-    if (machineReadable)
-    {
-        Console.WriteLine(MachineOutput.Refusal(
-            MachineOutput.Enveloped(args) ?? MachineOutput.Named(args),
-            code,
-            message));
-    }
-    else
-    {
-        Console.Error.WriteLine($"localai: {message}");
+        return exit;
     }
 
-    return exitCode;
-}
-
-static async Task<int> RunAsync(string[] args, bool machineReadable)
-{
     if (MachineOutput.Requested(args))
     {
         if (MachineOutput.Enveloped(args) is null)
@@ -198,14 +210,14 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
             var named = MachineOutput.Named(args);
             if (named.Length == 0)
             {
-                Console.WriteLine(MachineOutput.Refusal(
+                streams.Out.WriteLine(MachineOutput.Refusal(
                     named,
                     "command_unknown",
                     CliUsage.Text));
                 return 2;
             }
 
-            Console.WriteLine(MachineOutput.Refusal(
+            streams.Out.WriteLine(MachineOutput.Refusal(
                 named,
                 "json_not_supported",
                 CliText.JsonNotSupported));
@@ -223,7 +235,7 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
             return Refuse("capabilities", refused, machineReadable);
         }
 
-        Console.WriteLine(MachineOutput.Answer("capabilities", MachineOutput.Capabilities()));
+        streams.Out.WriteLine(MachineOutput.Answer("capabilities", MachineOutput.Capabilities()));
         return 0;
     }
 
@@ -244,8 +256,8 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
         {
             return await ModelCommand.ExecuteProductionAsync(
                 modelArguments,
-                Console.Out,
-                cancellation.Token);
+                streams.Out,
+                cancellation.Token, streams.Error);
         }
         finally
         {
@@ -267,11 +279,11 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
         }
         catch (ArgumentException refusal)
         {
-            Console.Error.WriteLine(refusal.Message);
+            streams.Error.WriteLine(refusal.Message);
             return 2;
         }
 
-        Console.WriteLine(response.GetRawText());
+        streams.Out.WriteLine(response.GetRawText());
         return 0;
     }
 
@@ -279,7 +291,7 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
     // that have to answer Ctrl+C — an interrupted triage would otherwise exit with no envelope
     // and no line saying why.
     if (args is ["docs", .. var docsArguments])
-        return await Interruptible(token => DocumentationCommand.ExecuteAsync(docsArguments, CommandStreams.Standard, machineReadable, token));
+        return await Interruptible(token => DocumentationCommand.ExecuteAsync(docsArguments, streams, machineReadable, token));
 
     if (args is ["ask", .. var askArguments])
     {
@@ -301,7 +313,7 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
                 ask.Model,
                 inner),
             machineReadable,
-            token));
+            token, streams));
     }
 
     if (args is ["translate", .. var translateArguments])
@@ -341,7 +353,7 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
             if (!markdown && TranslateSource.IsMarkdown(document))
             {
                 markdown = true;
-                Console.Error.WriteLine(
+                streams.Error.WriteLine(
                     CliText.TranslateMarkdownAssumed(Path.GetFullPath(document)));
             }
         }
@@ -362,7 +374,7 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
             translate with { Markdown = markdown },
             source!,
             machineReadable,
-            token));
+            token, streams));
     }
 
     if (args is ["read-image", .. var imageArguments])
@@ -386,7 +398,7 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
                 image.Together,
                 inner),
             machineReadable,
-            token));
+            token, streams));
     }
 
     if (args is ["triage", .. var triageArguments])
@@ -427,7 +439,7 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
                 triage.Model,
                 inner),
             machineReadable,
-            token));
+            token, streams));
     }
 
     if (args is ["repo", "status", ..])
@@ -485,7 +497,7 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
         var status = RepoCommand.Status(
             commonDirectory,
             ModelResidencyPolicyStore.DefaultRuntimeRoot);
-        Console.WriteLine(machineReadable
+        streams.Out.WriteLine(machineReadable
             ? MachineOutput.Answer("repo status", RepoCommand.MachineStatus(status))
             : status.Message);
         if (!target.Follow)
@@ -495,10 +507,10 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
 
         // Unbuffered, one line per report: the caller is watching this stream while it runs, and
         // a line held in a buffer is the quiet minute the instruction block forbids.
-        Console.Out.Flush();
+        streams.Out.Flush();
         return await FollowIndexBuildAsync(
             status,
-            target.Interval ?? RepoCommand.DefaultFollowInterval);
+            target.Interval ?? RepoCommand.DefaultFollowInterval, streams.Out);
     }
 
     if (args is ["doctor", ..])
@@ -524,11 +536,11 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
             Environment.CurrentDirectory);
         if (machineReadable)
         {
-            Console.WriteLine(MachineOutput.Answer("doctor", DoctorCommand.Describe(report)));
+            streams.Out.WriteLine(MachineOutput.Answer("doctor", DoctorCommand.Describe(report)));
         }
         else
         {
-            Console.Out.Write(DoctorCommand.Render(report));
+            streams.Out.Write(DoctorCommand.Render(report));
         }
 
         return report.ExitCode;
@@ -536,17 +548,17 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
 
     if (args is ["policy", ..])
     {
-        return PolicyCommand.Execute(args.AsSpan(1).ToArray());
+        return PolicyCommand.Execute(args.AsSpan(1).ToArray(), ModelResidencyPolicyStore.DefaultRuntimeRoot, streams.Out, streams.Error);
     }
 
     if (args is ["update", ..])
     {
-        return await UpdateCommand.ExecuteAsync(args.AsSpan(1).ToArray());
+        return await UpdateCommand.ExecuteAsync(args.AsSpan(1).ToArray(), ModelResidencyPolicyStore.DefaultRuntimeRoot, streams.Out, streams.Error);
     }
 
     if (args is ["semantic", .. var semanticArguments])
     {
-        return SemanticNavigationCommand.Execute(semanticArguments, CommandStreams.Standard);
+        return SemanticNavigationCommand.Execute(semanticArguments, streams);
     }
 
     if (args is ["bootstrap", "--dry-run", ..])
@@ -557,11 +569,11 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
                 .GetCommonDirectoryAsync(Environment.CurrentDirectory),
             runtimeRoot,
             AppContext.BaseDirectory);
-        Console.WriteLine(CliText.BootstrapDryRun);
-        Console.WriteLine();
+        streams.Out.WriteLine(CliText.BootstrapDryRun);
+        streams.Out.WriteLine();
         foreach (var change in plan.Changes)
         {
-            Console.WriteLine(change);
+            streams.Out.WriteLine(change);
         }
 
         return 0;
@@ -583,7 +595,7 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
                 !int.TryParse(args[limitIndex + 1], out var parsedLimit) ||
                 parsedLimit < 0)
             {
-                Console.Error.WriteLine(CliText.SyncInlineLimitInvalid);
+                streams.Error.WriteLine(CliText.SyncInlineLimitInvalid);
                 return 64;
             }
 
@@ -591,16 +603,17 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
         }
         var result = await CodeSearchSyncCommand.ExecuteAsync(
             root,
-            Console.Error,
+            streams.Error,
             includeOverlays: !args.Contains("--base-only", StringComparer.Ordinal),
             requireSemantics: args.Contains("--require-semantics", StringComparer.Ordinal),
             refuseInlineOverFiles: inlineLimit);
         if (result.RefusedFiles is { } refused)
         {
+            UsageCall.Current?.Refused("inline_limit");
             // Exit code 0: the run did exactly what it was asked to do. A non-zero code would
             // read as a failed sync to every caller that checks one — the MCP tool prints
             // "sync failed with N", and a hook would mark the commit's refresh as broken.
-            Console.WriteLine(SyncRefusal.Line(
+            streams.Out.WriteLine(SyncRefusal.Line(
                 result.RepositoryId,
                 refused,
                 // Reached only when a limit was given: nothing refuses without one.
@@ -613,7 +626,7 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
         // addition. It goes here as well as in the prose line because the MCP caller — the
         // reader most likely to be deciding whether there is time to rebuild before searching —
         // is handed stdout and never sees stderr.
-        Console.WriteLine(
+        streams.Out.WriteLine(
             $"SYNCED repository={result.RepositoryId} generation={result.GenerationId} " +
             $"overlays={result.OverlaysBuilt}" +
             (result.WorktreesSkipped > 0
@@ -632,7 +645,7 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
         // read here so the command can be run against a document in a test.
         return AgentGateCommand.Execute(
             gateArguments,
-            CommandStreams.Standard,
+            streams,
             Console.In,
             Console.IsInputRedirected);
     }
@@ -644,7 +657,7 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
         // Console.IsInputRedirected is what tells a hook from a person who typed the name.
         return AgentWorktreeCommand.Execute(
             worktreeArguments,
-            CommandStreams.Standard,
+            streams,
             Console.In,
             Console.IsInputRedirected);
     }
@@ -655,7 +668,7 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
         // this never runs.
         return RepoPruneCommand.Execute(
             pruneArguments,
-            CommandStreams.Standard,
+            streams,
             ModelResidencyPolicyStore.DefaultRuntimeRoot);
     }
 
@@ -666,7 +679,7 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
         // the top-level usage, which used to omit this command entirely.
         if (hookArguments is not [var hookName, ..])
         {
-            Console.Error.WriteLine(CliText.HookEventMissing(LocalAi.Cli.CliUsage.Hook));
+            streams.Error.WriteLine(CliText.HookEventMissing(LocalAi.Cli.CliUsage.Hook));
             return 2;
         }
 
@@ -676,7 +689,7 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
             : Environment.CurrentDirectory;
         if (!HookCommand.IsDispatchedEvent(hookName))
         {
-            Console.Error.WriteLine(CliText.HookEventUnknown(
+            streams.Error.WriteLine(CliText.HookEventUnknown(
                 hookName,
                 LocalAi.Cli.CliUsage.HookEvents));
             return 2;
@@ -692,11 +705,11 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
             RepoPruneCommand.OnPostMerge(
                 root,
                 ModelResidencyPolicyStore.DefaultRuntimeRoot,
-                Console.Error);
+                streams.Error);
         }
 
-        var result = await CodeSearchSyncCommand.ExecuteAsync(root, Console.Error);
-        Console.Error.WriteLine(
+        var result = await CodeSearchSyncCommand.ExecuteAsync(root, streams.Error);
+        streams.Error.WriteLine(
             $"LocalAi index synchronized: generation={result.GenerationId}, " +
             $"overlays={result.OverlaysBuilt}" +
             (result.WorktreesSkipped > 0
@@ -722,7 +735,7 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
             // a block naming a bound the code does not apply would be a lie no parity test can
             // catch. Usage goes to standard error and exits 2, as `update` and `policy` do.
             var retention = new RuntimeRetentionPolicyStore(runtimeRoot).Read();
-            Console.Error.WriteLine(CliText.PruneUsage(
+            streams.Error.WriteLine(CliText.PruneUsage(
                 retention.InstalledVersions,
                 retention.GenerationsPerRepository,
                 runtimeRoot));
@@ -733,20 +746,21 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
         var report = PruneCommand.Execute(runtimeRoot, dryRun, DateTimeOffset.UtcNow);
         foreach (var line in report.Lines)
         {
-            Console.WriteLine(line);
+            streams.Out.WriteLine(line);
         }
 
-        Console.WriteLine(dryRun
+        streams.Out.WriteLine(dryRun
             ? CliText.PruneWouldReclaim(PruneCommand.Megabytes(report.BytesReclaimed))
             : CliText.PruneReclaimed(PruneCommand.Megabytes(report.BytesReclaimed)));
         return 0;
     }
 
-    if (args is ["telemetry", ..])
+    if (args is ["telemetry", .. var telemetryArguments])
     {
         return await TelemetryCommand.ExecuteAsync(
+            telemetryArguments,
             ModelResidencyPolicyStore.DefaultRuntimeRoot,
-            Console.Out);
+            streams);
     }
 
     if (args is ["hooks", "install", ..])
@@ -755,7 +769,7 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
             "LOCALAI_LAUNCHER_PATH");
         if (string.IsNullOrWhiteSpace(launcherPath))
         {
-            Console.Error.WriteLine(CliText.HooksLauncherRequired);
+            streams.Error.WriteLine(CliText.HooksLauncherRequired);
             return 2;
         }
 
@@ -779,11 +793,11 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
         {
             // A collision between the reader's own hook and a backup of an earlier one is
             // theirs to resolve, and the message says how. Exit 70 framed it as a fault.
-            Console.Error.WriteLine(blocked.Message);
+            streams.Error.WriteLine(blocked.Message);
             return 2;
         }
 
-        Console.WriteLine(CliText.HooksInstalled(
+        streams.Out.WriteLine(CliText.HooksInstalled(
             result.Installed.Count,
             result.HooksDirectory));
         if (result.Chained.Count > 0)
@@ -793,19 +807,19 @@ static async Task<int> RunAsync(string[] args, bool machineReadable)
             // carried the list and nothing read it. File names rather than the recorded paths:
             // `Chained` holds the path before the move, so printing it verbatim would name files
             // that no longer exist, in the directory the line above already named.
-            Console.WriteLine(CliText.HooksChained(
+            streams.Out.WriteLine(CliText.HooksChained(
                 LocalAi.Repository.GitHookLayout.ChainedSuffix,
                 string.Join(", ", result.Chained.Select(Path.GetFileName))));
         }
 
         if (result.InsideWorkingTree)
         {
-            Console.WriteLine(CliText.HooksExcluded);
+            streams.Out.WriteLine(CliText.HooksExcluded);
         }
 
         return 0;
     }
 
-    Console.Error.WriteLine(CliUsage.Text);
+    streams.Error.WriteLine(CliUsage.Text);
     return 2;
 }

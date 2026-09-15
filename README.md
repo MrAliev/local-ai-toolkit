@@ -187,9 +187,11 @@ than by your subscription.
 first. From there the agent decides for itself: it sees a "where does this live" question and
 reaches for `search_code` instead of opening files.
 
-**Token reporting is being migrated to a shared method.** LocalLm notices now use rounded
-point estimates, not uncalibrated percentage bands. A negative difference means delegation
-increased cloud token usage; zero does not explain why the counts are equal.
+**Runtime token reports use one shared record per call.** MCP tools and both CLIs emit a
+compact notice with separate signed cloud INPUT and OUTPUT savings. Without an explicit
+comparison scenario and supported profile, the value is `unknown`, not zero. Calibration
+remains tracked in #598; legacy numeric JSON fields are retained for compatibility and are
+not calibrated measurements.
 
 The shared method compares cloud input and output separately. It requires an explicit
 alternative reading scenario, source provenance, the complete returned payload, and a named
@@ -206,10 +208,26 @@ per call, and account for the complete returned volume. Multiple jobs in one cal
 multiply its savings. Incompatible comparison profiles are not summed. `localai prune`
 applies the telemetry retention policy to both attempts and final reports.
 
-Full runtime production of final call reports is tracked in #597; calibration and the common
-concise presentation remain in #598. Until those reports are wired through every surface,
-telemetry identifies jobs without a report and leaves their delivery and savings unknown.
-The current scalar notices are not calibrated measurements.
+MCP results carry schema-versioned data in `_meta["localai/usage"]`. Text tools include the
+notice outside untrusted-content boundaries; JSON tools keep their content unchanged and
+place the notice in metadata. Cancellation remains protocol cancellation. Supply a unique
+GUID in request `_meta["localai/callId"]` before starting a cancellable call, then retrieve
+the partial report with `localai telemetry --call-id <guid>`.
+
+CLI stdout keeps its existing text or JSON contract; the compact report goes to stderr.
+The installer's version-one `localai model` protocol permits no extra stderr records, so
+those reports are only persisted. Reports are stored at `%LOCALAPPDATA%\LocalAi\telemetry\usage`;
+they contain technical measurements and identifiers, never prompts or document contents.
+A storage failure preserves the command result and is reported separately where the protocol
+permits it.
+
+Response size counts the full serialized MCP result, including its notice and metadata,
+or all CLI stdout/stderr text in UTF-8. JSON-RPC framing is outside this boundary. The
+self-inclusive MCP calculation is bounded; nonconvergence produces an unknown size.
+Delivery records a completed file write or handoff to the output surface, not acknowledgement
+by a remote client. Missing measurements remain unknown; partial reports describe the
+evidence available at cancellation. An `index_memory_cache` hit describes cached index data
+and does not imply that inference was skipped.
 
 ### If something does not work the way you want
 
@@ -517,16 +535,9 @@ lai localai semantic implementations --path src/LocalAi.Broker.Core/DurableQueue
 lai localai ask "List the public members of this class, one per line." src/CodeSearch.Core/Chunking/GenericTextChunker.cs
 ```
 
-```
-🔧 Locally: qwen3.5:9b. Files processed: 1 — GenericTextChunker.cs. 9.4s (2.3s queued).
-   Saved negligibly few cloud tokens — under ~0.5K.
-
-public IEnumerable<Chunk> Split(string relPath, string content)
-```
-
-The first line is the product's own report: which model, how long, and how much of that was
-spent waiting in the queue. Here it says plainly that there was almost nothing to save — the
-file is small and was not worth delegating.
+The model's answer is written to stdout. A separate usage notice on stderr identifies the
+call and the models actually used, reports elapsed time, and shows cloud INPUT and OUTPUT
+token savings separately. Missing comparison evidence is reported as unknown.
 
 #### Triage a log
 

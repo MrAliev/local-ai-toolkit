@@ -645,6 +645,7 @@ public sealed class SearchService : IDisposable
         var cached = TryGetCached(indexPath);
         if (cached is not null)
         {
+            UsageCall.Current?.CacheHit("index_memory_cache");
             return cached;
         }
 

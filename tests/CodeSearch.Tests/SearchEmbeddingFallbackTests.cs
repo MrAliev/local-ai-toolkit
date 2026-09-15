@@ -183,6 +183,7 @@ public sealed class SearchEmbeddingFallbackTests : IDisposable
     [Fact]
     public async Task An_empty_result_still_says_why_it_is_empty()
     {
+        using var call = new UsageCall(UsageSurface.Mcp, "codesearch", "search_code");
         var response = await CodeSearchTools.SearchCode(
             ServiceThrowing(
                 new EmbeddingUnavailableException(
@@ -195,6 +196,7 @@ public sealed class SearchEmbeddingFallbackTests : IDisposable
 
         Assert.Contains("LEXICAL ONLY", response, StringComparison.Ordinal);
         Assert.NotEqual("No matches.", response);
+        Assert.Equal(UsageTechnicalOutcome.Succeeded, call.Complete().Outcome.Technical);
     }
 
     /// <summary>
@@ -219,6 +221,7 @@ public sealed class SearchEmbeddingFallbackTests : IDisposable
     [Fact]
     public async Task Cancellation_and_unrelated_failures_are_not_treated_as_unavailability()
     {
+        using var call = new UsageCall(UsageSurface.Mcp, "codesearch", "search_code");
         var cancellation = new OperationCanceledException("cancelled");
         var unrelated = new InvalidOperationException("bug");
 
@@ -249,6 +252,7 @@ public sealed class SearchEmbeddingFallbackTests : IDisposable
         // is not.
         Assert.Equal("search_code failed: InvalidOperationException: bug", mcpResponse);
         Assert.DoesNotContain("unavailable", mcpResponse, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(UsageTechnicalOutcome.Failed, call.Complete().Outcome.Technical);
     }
 
     [Fact]

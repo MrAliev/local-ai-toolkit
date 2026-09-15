@@ -1,4 +1,5 @@
 using System.Text;
+using LocalAi.Contracts;
 using LocalLm.Core.Resources;
 
 namespace LocalLm.Core;
@@ -85,6 +86,8 @@ public static class TranslateSource
             using var reader = new StreamReader(
                 stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
             text = reader.ReadToEnd();
+            UsageCall.Current?.Observe(UsageVolume.InputBytes, stream.Position);
+            UsageCall.Current?.Observe(UsageVolume.InputCharacters, text.Length);
         }
         catch (Exception failure) when (
             failure is IOException or UnauthorizedAccessException or NotSupportedException)

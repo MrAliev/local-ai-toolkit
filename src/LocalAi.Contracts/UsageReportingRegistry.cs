@@ -52,6 +52,8 @@ public static class UsageReportingRegistry
 
     private static IEnumerable<UsageOperation> Build()
     {
+        foreach (var component in new[] { "localai", "codesearch" })
+            yield return new(UsageSurface.Cli, component, "unknown_command", UsagePolicy.Administration);
         foreach (var (server, policies) in new[] { ("codesearch", McpToolNames.CodeSearchPolicies), ("locallm", McpToolNames.LocalLmPolicies) })
             foreach (var policy in policies)
                 yield return new(UsageSurface.Mcp, server, policy.Name, policy.Usage

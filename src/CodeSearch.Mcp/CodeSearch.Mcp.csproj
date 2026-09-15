@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CodeSearch.Core\CodeSearch.Core.csproj" />
+    <ProjectReference Include="..\LocalAi.Mcp\LocalAi.Mcp.csproj" />
   </ItemGroup>
 
   <Import Project="..\BrokerBinary.props" />

@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="ModelContextProtocol" Version="2.2.0" />
+    <ProjectReference Include="..\LocalAi.Broker.Core\LocalAi.Broker.Core.csproj" />
+  </ItemGroup>
+</Project>
