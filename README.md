@@ -186,20 +186,20 @@ than by your subscription.
 first. From there the agent decides for itself: it sees a "where does this live" question and
 reaches for `search_code` instead of opening files.
 
-**Every call prints what it saved.** Not at the end of the month and not on average — right
-there, with the answer:
+**Token reporting is being migrated to a shared method.** LocalLm notices now use rounded
+point estimates, not uncalibrated percentage bands. A negative difference means delegation
+increased cloud token usage; zero does not explain why the counts are equal.
 
-```
-🔧 Locally: qwen3.5:9b. Files processed: 1 — GenericTextChunker.cs. 9.4s (2.3s queued).
-   Saved negligibly few cloud tokens — under ~0.5K.
-```
+The shared method compares cloud input and output separately. It requires an explicit
+alternative reading scenario, source provenance, the complete returned payload, and a named
+tokenizer or vision profile. Previously retrieved text and overlapping chunks are not counted
+twice. Missing evidence produces `unknown` with a reason; unsupported image profiles do not
+fall back to a universal area formula.
 
-Here the product admits there was no saving: the file is small and was not worth delegating.
-That is the point — the figure is there so you see the truth, not so the tool looks good.
-
-The estimate is deliberately coarse and reported as a range rather than a number: Latin text
-and source code at about **4 characters per token**, Cyrillic at about **2.2**, an image at
-**width × height ÷ 750**.
+Existing numeric JSON fields and broker telemetry retain their compatibility formats.
+Complete runtime reporting and telemetry migration are tracked in #596 and #597; profile
+calibration and the common concise presentation are tracked in #598. The current scalar
+notices are not calibrated measurements, and not every tool reports the new contract yet.
 
 ### If something does not work the way you want
 

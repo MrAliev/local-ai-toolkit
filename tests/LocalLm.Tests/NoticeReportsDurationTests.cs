@@ -103,7 +103,7 @@ public sealed class NoticeReportsDurationTests
     {
         var notice = Result(TimeSpan.Zero, TimeSpan.FromSeconds(1), saved: 30_000).Notice;
 
-        Assert.Contains("Saved", notice, StringComparison.Ordinal);
+        Assert.Contains("Estimated cloud token savings:", notice, StringComparison.Ordinal);
         Assert.Contains("1.0 s", notice, StringComparison.Ordinal);
         Assert.Contains("qwen3", notice, StringComparison.Ordinal);
     }

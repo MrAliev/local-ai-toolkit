@@ -175,15 +175,17 @@
     <comment>Beside the model name, so a reader who stops after the first clause has seen it.</comment>
   </data>
   <data name="SavedAbout" xml:space="preserve">
-    <value>Saved {0} cloud tokens.</value>
-    <comment>0 is already a range such as ~15–18K.</comment>
+    <value>Estimated cloud token savings: {0}.</value>
+    <comment>0 is a point estimate such as ~15K.</comment>
   </data>
   <data name="SavedNegligible" xml:space="preserve">
     <value>Saved a negligible number of cloud tokens — under ~0.5K.</value>
   </data>
   <data name="SavedNothing" xml:space="preserve">
-    <value>Saved no cloud tokens: the answer is no shorter than the input.</value>
-    <comment>Zero is a correct answer, not a broken counter, so the sentence says why.</comment>
+    <value>Estimated change in cloud tokens: 0.</value>
+  </data>
+  <data name="CloudTokensIncreased" xml:space="preserve">
+    <value>Estimated increase in cloud tokens: {0}.</value>
   </data>
   <data name="SavingUnderHalfK" xml:space="preserve">
     <value>under ~0.5K</value>
@@ -263,7 +265,7 @@
     <value>Translation produced no model receipt.</value>
   </data>
   <data name="TranslationNotice" xml:space="preserve">
-    <value>🔧 Local: {0}{1}. Translation checked: {2}. {3}. Processed locally: {4} tokens; cloud generation saved: {5}; net cloud context reduced by {6}.</value>
+    <value>🔧 Local: {0}{1}. Translation checked: {2}. {3}. Estimated tokens processed locally: {4}; cloud generation savings: {5}; net cloud context savings: {6}.</value>
   </data>
   <data name="TranslationValidationFailed" xml:space="preserve">
     <value>Local translation failed structural validation after fallback: {0}.</value>

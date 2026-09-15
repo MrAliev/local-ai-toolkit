@@ -207,19 +207,19 @@ public sealed class TelemetryCommandTests : IDisposable
     }
 
     /// <summary>
-    /// The estimator works from characters and there is no live token counter anywhere in this
-    /// system. A total is a sum of estimates, which does not make it exact, so the report must
-    /// never print one as a figure.
+    /// Adding heuristic estimates does not calibrate them. The total remains explicitly
+    /// approximate and must not acquire an unsupported percentage interval.
     /// </summary>
     [Fact]
-    public async Task Token_savings_are_printed_as_a_band_and_never_as_the_total()
+    public async Task Token_savings_are_printed_as_a_point_estimate_without_an_invented_band()
     {
         await Write(Record() with { EstimatedNetCloudTokensSaved = 40_000 });
         await Write(Record() with { EstimatedNetCloudTokensSaved = 60_000 });
 
         var text = TelemetryCommand.Render(await Summarize(), _root);
 
-        Assert.Contains("–", text, StringComparison.Ordinal);
+        Assert.Contains("~100K", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("–", text, StringComparison.Ordinal);
         Assert.DoesNotContain("100000", text, StringComparison.Ordinal);
         Assert.DoesNotContain("100,000", text, StringComparison.Ordinal);
     }
