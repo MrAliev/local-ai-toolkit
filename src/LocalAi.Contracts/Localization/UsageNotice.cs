@@ -24,14 +24,19 @@ public static class UsageNotice
         report.Timings[UsageTiming.ElapsedMilliseconds] is { Value: { } ms }
             ? (ms / 1000d).ToString("0.###", CultureInfo.InvariantCulture) + " s"
             : Value(report.Timings[UsageTiming.ElapsedMilliseconds]),
-        Value(report.CloudTokens[UsageCloudTokens.InputSaved]), Value(report.CloudTokens[UsageCloudTokens.OutputSaved]));
+        Value(report.CloudTokens[UsageCloudTokens.InputSaved], report.Comparison.VisionProfile is null ? report.Comparison.TokenizerProfile : null),
+        Value(report.CloudTokens[UsageCloudTokens.OutputSaved], report.Comparison.TokenizerProfile));
 
-    private static string Value(UsageValue value) => value.Status switch
+    private static string Value(UsageValue value, string? profile = null) => value.Status switch
     {
         UsageValueStatus.Unknown => Catalogue.Format("UsageUnknownReason", value.Reason),
         UsageValueStatus.NotApplicable => Catalogue.Format("UsageNotApplicableReason", value.Reason),
+        UsageValueStatus.Estimated when profile == HeuristicCloudTokenProfile.Instance.TextProfileId =>
+            Catalogue.Format("UsageHeuristicValue", Signed(value.Value!.Value)),
         UsageValueStatus.Estimated => Catalogue.Format("UsageEstimatedValue", Signed(value.Value!.Value)),
-        _ => Signed(value.Value!.Value),
+        UsageValueStatus.Measured when !string.IsNullOrWhiteSpace(profile) && profile != HeuristicCloudTokenProfile.Instance.TextProfileId =>
+            Catalogue.Format("UsageTokenizerValue", Signed(value.Value!.Value), profile),
+        _ => Catalogue.Format("UsageMeasuredValue", Signed(value.Value!.Value)),
     };
     private static string Signed(long value) => value.ToString("+0;-0;0", CultureInfo.InvariantCulture);
 }
