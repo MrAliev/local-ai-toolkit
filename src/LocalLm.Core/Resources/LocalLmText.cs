@@ -279,6 +279,8 @@ public static class LocalLmText
     public static string CatalogMismatch(string client, string broker) =>
         Format(nameof(CatalogMismatch), client, broker);
 
+    public static string CatalogMismatchRecovery => Get(nameof(CatalogMismatchRecovery));
+
     public static string ModelNotConfiguredForTriage(string model) =>
         Format(nameof(ModelNotConfiguredForTriage), model);
 

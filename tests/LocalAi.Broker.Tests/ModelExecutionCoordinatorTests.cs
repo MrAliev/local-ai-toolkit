@@ -9,6 +9,73 @@ public sealed class ModelExecutionCoordinatorTests : IDisposable
         Path.GetTempPath(),
         "localai-coordinator-" + Guid.NewGuid().ToString("N"));
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_mismatched_workflow_catalog_is_rejected_before_loading_or_execution(bool modelOverride)
+    {
+        var runtime = new FakeRuntime();
+        var executions = 0;
+        var coordinator = Create(runtime, (_, _) =>
+        {
+            executions++;
+            return Task.FromResult(Result("must not run"));
+        });
+        var request = RoutedRequest(workflow: Workflow("client-new"));
+        if (modelOverride) request = LocalJobRequestFactory.ResolveRoutedChat(request, "qwen3.5:9b");
+
+        var error = await Assert.ThrowsAnyAsync<InvalidOperationException>(() => coordinator.ExecuteAsync(
+            request, Availability(), TestContext.Current.CancellationToken));
+
+        Assert.Equal("ModelCatalogMismatchException", error.GetType().Name);
+        Assert.Contains("client-new", error.Message, StringComparison.Ordinal);
+        Assert.Empty(runtime.Preflights);
+        Assert.Equal(0, executions);
+    }
+
+    [Fact]
+    public async Task A_prepared_selection_cannot_bypass_the_workflows_catalog_requirement()
+    {
+        var runtime = new FakeRuntime();
+        var executions = 0;
+        var coordinator = Create(runtime, (_, _) =>
+        {
+            executions++;
+            return Task.FromResult(Result("must not run"));
+        });
+        var selection = await coordinator.SelectAsync(RoutedRequest(), Availability(), TestContext.Current.CancellationToken);
+
+        await Assert.ThrowsAnyAsync<InvalidOperationException>(() => coordinator.ExecuteAsync(
+            RoutedRequest(workflow: Workflow("client-new")), Availability(), selection,
+            TestContext.Current.CancellationToken));
+
+        Assert.Empty(runtime.Preflights);
+        Assert.Equal(0, executions);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Matching_and_legacy_workflow_catalogs_survive_the_wire_and_execute(bool pinCatalog)
+    {
+        var version = pinCatalog ? ModelRoutingCatalog.LoadEmbedded().CatalogVersion : null;
+        var request = RoutedRequest(workflow: Workflow(version));
+        var json = JsonSerializer.Serialize(request, LocalAiJson.Strict);
+        var restored = JsonSerializer.Deserialize<LocalJobRequest>(json, LocalAiJson.Strict)!;
+        Assert.Equal(version, Assert.IsType<ChatJobPayload>(restored.Payload).Workflow!.CatalogVersion);
+        if (!pinCatalog) Assert.DoesNotContain("catalogVersion", json, StringComparison.OrdinalIgnoreCase);
+        var runtime = new FakeRuntime();
+        var coordinator = Create(runtime, (_, _) => Task.FromResult(Result("translated")));
+
+        var result = await coordinator.ExecuteAsync(restored, Availability(), TestContext.Current.CancellationToken);
+
+        Assert.Equal("translategemma:12b", result.Routing!.SelectedModel);
+        Assert.Single(runtime.Preflights);
+    }
+
+    private static LocalWorkflowHint Workflow(string? version) =>
+        new(Guid.NewGuid(), 0, 1, [LocalTaskProfile.PlainTranslation], true, version);
+
     [Fact]
     public async Task Cold_routed_chat_preflights_then_executes_the_same_immutable_selection()
     {

@@ -8,6 +8,179 @@ namespace LocalLm.Tests;
 
 public sealed class LocalTasksTests
 {
+    [Theory]
+    [InlineData(false, "en", "Use the same model catalog for the client and broker")]
+    [InlineData(true, "en", "Use the same model catalog for the client and broker")]
+    [InlineData(false, "ru", "Используйте один и тот же каталог моделей для клиента и брокера")]
+    [InlineData(true, "ru", "Используйте один и тот же каталог моделей для клиента и брокера")]
+    public async Task A_catalog_mismatch_stops_translation_without_trying_another_model(
+        bool duringFallback, string language, string recovery)
+    {
+        using var reading = TestCulture.Reading(language);
+        var client = new FakeLocalModelClient
+        {
+            RoutedAnswerFactory = (_, index) =>
+                duringFallback && index == 1 ? "Привет" : throw new BrokerJobFailedException(
+                    Guid.NewGuid(), "ModelCatalogMismatchException",
+                    "Local model catalog mismatch: client 'new', broker 'old'."),
+        };
+
+        var error = await Assert.ThrowsAsync<BrokerJobFailedException>(() => new LocalTasks(client).TranslateAsync(
+            "Hello {name}.", "English", "Russian", true, TranslationDelivery.ToCaller,
+            TestContext.Current.CancellationToken));
+
+        Assert.Equal(duringFallback ? 2 : 1, client.Calls.Count);
+        Assert.Equal("ModelCatalogMismatchException", error.FailureCode);
+        Assert.Contains(recovery, error.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(true, "qwen3.5:9b")]
+    [InlineData(false, "qwen2.5-coder:14b")]
+    public async Task Translation_uses_only_the_fallback_allowed_by_the_user_catalog(bool markdown, string fallback)
+    {
+        using var catalog = new TranslationCatalog(markdown, [fallback]);
+        var client = new FakeLocalModelClient();
+        client.Answers.Enqueue(markdown ? "Привет" : "Translate the following fragment from English to Russian.");
+        client.Answers.Enqueue("Привет {name}.");
+
+        var result = await catalog.Tasks(client).TranslateAsync(
+            "Hello {name}.", "English", "Russian", markdown, TranslationDelivery.ToCaller,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(new string?[] { null, fallback }, client.Calls.Select(call => call.ModelOverride));
+        Assert.Equal(fallback, result.Model);
+        Assert.True(result.Validation.Passed);
+    }
+
+    [Fact]
+    public async Task Translation_preserves_the_custom_fallback_order_when_a_model_is_unavailable()
+    {
+        using var catalog = new TranslationCatalog(true, ["qwen3.5:9b", "qwen2.5-coder:14b"]);
+        var client = new FakeLocalModelClient();
+        client.Answers.Enqueue("Привет");
+        client.Answers.Enqueue("Привет {name}.");
+        client.UnavailableOverrides.Add("qwen3.5:9b");
+
+        await catalog.Tasks(client).TranslateAsync(
+            "Hello {name}.", "English", "Russian", true, TranslationDelivery.ToCaller,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(new string?[] { null, "qwen3.5:9b", "qwen2.5-coder:14b" },
+            client.Calls.Select(call => call.ModelOverride));
+    }
+
+    [Fact]
+    public async Task Translation_keeps_its_catalog_snapshot_when_the_file_changes_during_inference()
+    {
+        using var catalog = new TranslationCatalog(true, ["qwen3.5:9b"]);
+        var expectedVersion = catalog.Store.Read().CatalogVersion;
+        var client = new FakeLocalModelClient
+        {
+            RoutedAnswerFactory = (_, index) =>
+            {
+                if (index == 1)
+                {
+                    catalog.Write(["qwen2.5-coder:14b"]);
+                    return "Привет";
+                }
+                return "Привет {name}.";
+            },
+        };
+
+        await catalog.Tasks(client).TranslateAsync(
+            "Hello {name}.", "English", "Russian", true, TranslationDelivery.ToCaller,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal("qwen3.5:9b", client.Calls[1].ModelOverride);
+        Assert.All(client.Workflows, workflow =>
+        {
+            var json = System.Text.Json.JsonSerializer.SerializeToElement(workflow);
+            Assert.True(json.TryGetProperty("CatalogVersion", out var version));
+            Assert.Equal(expectedVersion, version.GetString());
+        });
+    }
+
+    [Fact]
+    public async Task Every_translation_call_reads_a_fresh_catalog_snapshot()
+    {
+        using var catalog = new TranslationCatalog(true, ["qwen3.5:9b"]);
+        var client = new FakeLocalModelClient();
+        var tasks = catalog.Tasks(client);
+        client.Answers.Enqueue("Привет");
+        client.Answers.Enqueue("Привет {name}.");
+        await tasks.TranslateAsync("Hello {name}.", "English", "Russian", true,
+            TranslationDelivery.ToCaller, TestContext.Current.CancellationToken);
+        catalog.Write(["qwen2.5-coder:14b"]);
+        client.Answers.Enqueue("Привет");
+        client.Answers.Enqueue("Привет {name}.");
+        await tasks.TranslateAsync("Hello {name}.", "English", "Russian", true,
+            TranslationDelivery.ToCaller, TestContext.Current.CancellationToken);
+
+        Assert.Equal(new string?[] { null, "qwen3.5:9b", null, "qwen2.5-coder:14b" },
+            client.Calls.Select(call => call.ModelOverride));
+    }
+
+    [Fact]
+    public async Task The_primary_translation_request_carries_the_catalog_snapshot()
+    {
+        using var catalog = new TranslationCatalog(true, ["qwen3.5:9b"]);
+        var client = new FakeLocalModelClient { Answer = "Привет {name}." };
+        await catalog.Tasks(client).TranslateAsync("Hello {name}.", "English", "Russian", true,
+            TranslationDelivery.ToCaller, TestContext.Current.CancellationToken);
+
+        var json = System.Text.Json.JsonSerializer.SerializeToElement(Assert.Single(client.Workflows));
+        Assert.True(json.TryGetProperty("CatalogVersion", out var version));
+        Assert.Equal(catalog.Store.Read().CatalogVersion, version.GetString());
+    }
+
+    [Fact]
+    public async Task Translation_does_not_escape_the_catalog_when_all_its_fallbacks_are_unavailable()
+    {
+        using var catalog = new TranslationCatalog(true, ["qwen3.5:9b"]);
+        var client = new FakeLocalModelClient { Answer = "Привет" };
+        client.UnavailableOverrides.Add("qwen3.5:9b");
+
+        await Assert.ThrowsAsync<BrokerJobFailedException>(() => catalog.Tasks(client).TranslateAsync(
+            "Hello {name}.", "English", "Russian", true, TranslationDelivery.ToCaller,
+            TestContext.Current.CancellationToken));
+
+        Assert.Equal(new string?[] { null, "qwen3.5:9b" }, client.Calls.Select(call => call.ModelOverride));
+    }
+
+    private sealed class TranslationCatalog : IDisposable
+    {
+        private readonly string root = Path.Combine(Path.GetTempPath(), "localai-translation-catalog-" + Guid.NewGuid().ToString("N"));
+        private readonly bool markdown;
+        public ModelRoutingCatalogStore Store { get; }
+
+        public TranslationCatalog(bool markdown, string[] fallbacks)
+        {
+            this.markdown = markdown;
+            Store = new ModelRoutingCatalogStore(root);
+            Directory.CreateDirectory(Path.GetDirectoryName(Store.FilePath)!);
+            Write(fallbacks);
+        }
+
+        public void Write(string[] fallbacks)
+        {
+            var profile = markdown ? LocalTaskProfile.TechnicalTranslation : LocalTaskProfile.PlainTranslation;
+            var document = ModelRoutingCatalogResource.LoadDocument();
+            document = document with
+            {
+                Routes = document.Routes.Select(route => route.Profile == profile
+                    ? route with { Candidates = ["translategemma:12b"], Fallbacks = fallbacks }
+                    : route).ToArray(),
+            };
+            File.WriteAllText(Store.FilePath, System.Text.Json.JsonSerializer.Serialize(document, LocalAiJson.Strict));
+        }
+
+        public LocalTasks Tasks(FakeLocalModelClient client) =>
+            new(client, new LogTriagePolicyStore(root), modelCatalog: Store);
+
+        public void Dispose() => Directory.Delete(root, recursive: true);
+    }
+
     [Fact]
     public async Task Triage_uses_the_configured_route_and_the_same_catalog_identity_as_the_broker()
     {
@@ -789,6 +962,8 @@ public sealed class LocalTasksTests
 
         public List<RoutedCall> Calls { get; } = [];
 
+        public List<LocalWorkflowHint?> Workflows { get; } = [];
+
         public List<ExperimentCompletion> ExperimentCompletions { get; } = [];
 
         public Task<LocalJobResult<string>> ChatAsync(
@@ -825,6 +1000,7 @@ public sealed class LocalTasksTests
                     requestedContextTokens,
                     workflow?.WorkflowId);
                 Calls.Add(call);
+                Workflows.Add(workflow);
                 if (modelOverride is not null &&
                     UnavailableOverrides.Contains(modelOverride))
                 {
