@@ -64,7 +64,12 @@ public sealed record SearchQualityProfile(
 
 public sealed record SearchEvaluationTarget(
     string Path,
-    string? Symbol);
+    string? Symbol,
+    string? Signature = null,
+    string? Namespace = null)
+{
+    internal EvaluationDeclaration? Declaration { get; init; }
+}
 
 public sealed record SearchEvaluationCase(
     string Id,
@@ -129,11 +134,23 @@ public sealed record SearchEvaluationCorpus(
                     throw new InvalidDataException(
                         $"Evaluation case '{item.Id}' has a blank relevant path.");
                 }
+
+                if ((target.Signature is not null && string.IsNullOrWhiteSpace(target.Signature)) ||
+                    (string.IsNullOrWhiteSpace(target.Symbol) &&
+                     (target.Signature is not null || target.Namespace is not null)))
+                {
+                    throw new InvalidDataException(
+                        $"Evaluation case '{item.Id}' has declaration qualifiers without a symbol or a blank signature.");
+                }
             }
         }
     }
 
     public static void ValidateAgainstSource(
+        SearchEvaluationCorpus corpus,
+        string root) => _ = ResolveAgainstSource(corpus, root);
+
+    public static SearchEvaluationCorpus ResolveAgainstSource(
         SearchEvaluationCorpus corpus,
         string root)
     {
@@ -144,8 +161,10 @@ public sealed record SearchEvaluationCorpus(
             : StringComparison.Ordinal;
         var rootPrefix = root + Path.DirectorySeparatorChar;
 
+        var cases = new List<SearchEvaluationCase>();
         foreach (var item in corpus.Cases)
         {
+            var targets = new List<SearchEvaluationTarget>();
             foreach (var target in item.Relevant)
             {
                 var path = Path.GetFullPath(
@@ -160,6 +179,12 @@ public sealed record SearchEvaluationCorpus(
 
                 if (!string.IsNullOrWhiteSpace(target.Symbol))
                 {
+                    if (string.Equals(Path.GetExtension(path), ".cs", StringComparison.OrdinalIgnoreCase))
+                    {
+                        targets.Add(SearchEvaluationIdentity.Resolve(target, File.ReadAllText(path)));
+                        continue;
+                    }
+
                     var sourceName = target.Symbol.Split('.').Last();
                     if (!File.ReadAllText(path).Contains(
                             sourceName,
@@ -169,8 +194,14 @@ public sealed record SearchEvaluationCorpus(
                             $"Evaluation target symbol '{target.Symbol}' for '{item.Id}' is absent from '{target.Path}'.");
                     }
                 }
+
+                targets.Add(target);
             }
+
+            cases.Add(item with { Relevant = targets });
         }
+
+        return corpus with { Cases = cases };
     }
 
     private static JsonSerializerOptions CreateJsonOptions()
@@ -195,7 +226,10 @@ public sealed record SearchEvaluationHit(
     int SourceLines,
     float VectorScore = 0,
     double LexicalScore = 0,
-    double FusedScore = 0);
+    double FusedScore = 0,
+    string? Signature = null,
+    string? Namespace = null,
+    CodeSearch.Core.Chunking.ChunkKind? Kind = null);
 
 public sealed record SearchEvaluationObservation(
     string CaseId,
@@ -260,7 +294,10 @@ public static class SearchEvaluation
             CountSourceLines(hit.Snippet),
             hit.VectorScore,
             hit.LexicalScore,
-            hit.Score);
+            hit.Score,
+            hit.Signature,
+            hit.Namespace,
+            hit.Kind);
     }
 
     public static string RenderHit(SearchHit hit)
@@ -404,7 +441,13 @@ public static class SearchEvaluation
             NormalizePath(hit.Path),
             StringComparison.OrdinalIgnoreCase) &&
         (string.IsNullOrWhiteSpace(target.Symbol) ||
-         string.Equals(target.Symbol, hit.Symbol, StringComparison.Ordinal));
+         (string.Equals(target.Symbol, SearchEvaluationIdentity.CanonicalSymbol(hit.Symbol), StringComparison.Ordinal) &&
+          (target.Signature is null || string.Equals(target.Signature, hit.Signature, StringComparison.Ordinal)) &&
+          (target.Namespace is null || string.Equals(target.Namespace, hit.Namespace, StringComparison.Ordinal)) &&
+          (target.Declaration is not { } declaration ||
+           (hit.Kind == declaration.Kind &&
+            hit.StartLine >= declaration.StartLine && hit.EndLine <= declaration.EndLine &&
+            hit.StartLine <= hit.EndLine))));
 
     private static string NormalizePath(string path) =>
         path.Replace('\\', '/');
