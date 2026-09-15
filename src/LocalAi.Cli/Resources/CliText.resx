@@ -630,8 +630,8 @@ Everything named above is under {2}.</value>
     <comment>Noun-first in Russian. UTC is named because the timestamps are UtcDateTime and a reader three hours ahead read the range as local and concluded the report was stale.</comment>
   </data>
   <data name="TelemetrySaved" xml:space="preserve">
-    <value>{0} cloud tokens net, of {1} gross ({2} spent verifying)</value>
-    <comment>The three holes are token bands whose K and M suffix is a number's unit and stays invariant. Vocabulary from docs/overview.ru.md.</comment>
+    <value>Estimated cloud token savings: {0} net, {1} gross ({2} used for verification)</value>
+    <comment>Signed point estimates; K and M stay invariant.</comment>
   </data>
   <data name="TelemetryUnreadable" xml:space="preserve">
     <value>{0} record(s) could not be read and are not counted in anything below.</value>
