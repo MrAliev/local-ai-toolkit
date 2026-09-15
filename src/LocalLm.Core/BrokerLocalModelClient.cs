@@ -45,7 +45,8 @@ public sealed class BrokerLocalModelClient(IBrokerClient broker) : ILocalModelCl
                 modelOverride ?? profile.ToString(),
                 prompt,
                 system,
-                imagesBase64),
+                imagesBase64,
+                workflow?.CatalogVersion),
             priority,
             profile,
             prompt,
@@ -166,7 +167,8 @@ public sealed class BrokerLocalModelClient(IBrokerClient broker) : ILocalModelCl
         string model,
         string prompt,
         string? system,
-        IReadOnlyList<string>? imagesBase64)
+        IReadOnlyList<string>? imagesBase64,
+        string? catalogVersion = null)
     {
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         Append(hash, model);
@@ -175,6 +177,12 @@ public sealed class BrokerLocalModelClient(IBrokerClient broker) : ILocalModelCl
         foreach (var image in imagesBase64 ?? [])
         {
             Append(hash, image);
+        }
+
+        if (catalogVersion is not null)
+        {
+            Append(hash, "catalog-version");
+            Append(hash, catalogVersion);
         }
 
         return "local-lm:chat:" + Convert.ToHexString(hash.GetHashAndReset());

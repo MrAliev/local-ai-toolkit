@@ -73,10 +73,24 @@ public sealed class NoEligibleModelException(LocalTaskProfile profile)
     public LocalTaskProfile Profile { get; } = profile;
 }
 
+/// <summary>The workflow requires a different catalog than this broker loaded.</summary>
+public sealed class ModelCatalogMismatchException(string client, string broker)
+    : InvalidOperationException(
+        $"Local model catalog mismatch: client '{client}', broker '{broker}'.");
+
 public sealed class ModelRouter(ModelRoutingCatalog catalog)
 {
     private readonly ModelRoutingCatalog _catalog =
         catalog ?? throw new ArgumentNullException(nameof(catalog));
+
+    internal void RequireCatalogVersion(string? version)
+    {
+        if (version is not null &&
+            !string.Equals(version, _catalog.CatalogVersion, StringComparison.Ordinal))
+        {
+            throw new ModelCatalogMismatchException(version, _catalog.CatalogVersion);
+        }
+    }
 
     public ModelSelection? Select(
         ModelRoutingRequest request,
