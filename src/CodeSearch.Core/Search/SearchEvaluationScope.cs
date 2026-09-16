@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text.Json;
+using CodeSearch.Core.Resources;
 
 namespace CodeSearch.Core.Search;
 
@@ -27,8 +28,7 @@ public sealed record SearchEvaluationScope(int SchemaVersion, IReadOnlyList<stri
             {
                 if (SearchPathExclusions.Contains(paths, target.Path))
                 {
-                    throw new InvalidDataException(
-                        $"Evaluation target '{target.Path}' for '{item.Id}' is excluded from the candidate scope.");
+                    throw new InvalidDataException(IndexText.EvaluationTargetExcluded(target.Path, item.Id));
                 }
             }
         }
@@ -41,14 +41,13 @@ internal static class SearchPathExclusions
 {
     public static string[] Normalize(IReadOnlyList<string> paths) => paths.Select(path =>
     {
-        if (string.IsNullOrWhiteSpace(path)) throw new InvalidDataException("An excluded path must not be blank.");
+        if (string.IsNullOrWhiteSpace(path)) throw new InvalidDataException(IndexText.EvaluationExcludedPathBlank);
         var normalized = path.Replace('\\', '/');
         var segments = normalized.TrimEnd('/').Split('/');
         if (normalized.StartsWith('/') || normalized.Contains(':') || normalized.Contains('*') ||
             normalized.Contains('?') || segments.Any(part => part is "" or "." or ".."))
         {
-            throw new InvalidDataException(
-                $"Excluded path '{path}' must be a literal repository-relative file or directory prefix; globs and traversal are not supported.");
+            throw new InvalidDataException(IndexText.EvaluationExcludedPathInvalid(path));
         }
 
         return normalized;

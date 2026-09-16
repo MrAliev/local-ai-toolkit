@@ -292,4 +292,16 @@
     <value>Семантический overlay: файлов {0}, всё пересчитано относительно базового индекса.</value>
     <comment>Russian pair of SemanticOverlayFromBase. The wording for the base index is BuildOverlayDivergence's, so one concept keeps one spelling; the verb is impersonal, which agrees with nothing and so cannot disagree with an invariant number.</comment>
   </data>
+  <data name="EvaluationTargetExcluded" xml:space="preserve">
+    <value>Цель '{0}' для проверки '{1}' исключена из оценки.</value>
+  </data>
+  <data name="EvaluationExcludedPathBlank" xml:space="preserve">
+    <value>Путь исключения не должен быть пустым.</value>
+  </data>
+  <data name="EvaluationExcludedPathInvalid" xml:space="preserve">
+    <value>Недопустимый путь исключения '{0}'. Укажите путь относительно корня репозитория без подстановочных знаков, пустых компонентов, '.' и '..'; префиксы каталогов должны заканчиваться на '/'.</value>
+  </data>
+  <data name="EvaluationSnapshotChanged" xml:space="preserve">
+    <value>Во время оценки изменились исходный код, индекс или файл --cases. Повторите оценку, не изменяя их.</value>
+  </data>
 </root>

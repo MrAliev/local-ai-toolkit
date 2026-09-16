@@ -346,4 +346,14 @@ public static class IndexText
     public static string SnapshotChangedSnippet => Catalogue.Get(nameof(SnapshotChangedSnippet));
 
     public static string StaleRangeSnippet => Catalogue.Get(nameof(StaleRangeSnippet));
+
+    public static string EvaluationTargetExcluded(string path, string caseId) =>
+        Catalogue.Format(nameof(EvaluationTargetExcluded), path, caseId);
+
+    public static string EvaluationExcludedPathBlank => Catalogue.Get(nameof(EvaluationExcludedPathBlank));
+
+    public static string EvaluationExcludedPathInvalid(string path) =>
+        Catalogue.Format(nameof(EvaluationExcludedPathInvalid), path);
+
+    public static string EvaluationSnapshotChanged => Catalogue.Get(nameof(EvaluationSnapshotChanged));
 }

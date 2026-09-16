@@ -6,6 +6,7 @@ using System.Text.Json;
 using CodeSearch.Core.Chunking;
 using CodeSearch.Core.Embedding;
 using CodeSearch.Core.Indexing;
+using CodeSearch.Core.Resources;
 using LocalAi.Contracts.Localization;
 using LocalAi.Contracts.Security;
 using CodeSearch.Core.Search;
@@ -363,7 +364,7 @@ async Task<int> RunAsync(TextWriter stdout, TextWriter stderr)
             initialIndex.GenerationId != finalIndex.GenerationId ||
             corpusHash != Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(casesPath))))
         {
-            throw new InvalidDataException("Evaluation source, index, or annotations changed during the run; rerun on one fixed snapshot.");
+            throw new InvalidDataException(IndexText.EvaluationSnapshotChanged);
         }
 
         var output = new
