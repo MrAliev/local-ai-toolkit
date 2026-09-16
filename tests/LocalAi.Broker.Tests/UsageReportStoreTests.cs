@@ -27,6 +27,30 @@ public sealed class UsageReportStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task Readers_and_duplicate_writers_share_an_immutable_record_with_a_publication_handle()
+    {
+        var report = Report();
+        var store = new UsageReportStore(_root);
+        await store.WriteAsync(report, TestContext.Current.CancellationToken);
+        var path = Path.Combine(store.ReportsDirectory, $"{report.Identity.CallId:N}.json");
+
+        // DeleteOnClose requests DELETE access on Windows, as rename/publication does.
+        // Keep that handle open as a controlled barrier: ordinary File.ReadAllTextAsync
+        // denies its access even though the publisher explicitly permits readers.
+        await using var publication = new FileStream(path, FileMode.Open, FileAccess.Read,
+            FileShare.Read | FileShare.Delete, 4096, FileOptions.DeleteOnClose);
+        await store.WriteAsync(report, TestContext.Current.CancellationToken);
+        var loaded = await store.ReadAsync(report.Identity.CallId, TestContext.Current.CancellationToken);
+        Assert.NotNull(loaded);
+        Assert.Equal(UsageReportJson.Write(report), UsageReportJson.Write(loaded));
+        var summary = await store.ReadForReportAsync(TestContext.Current.CancellationToken);
+        Assert.Single(summary.Reports);
+        Assert.Equal(0, summary.Unreadable);
+        var changed = report with { Outcome = report.Outcome with { Technical = UsageTechnicalOutcome.Cancelled, TechnicalReason = "cancelled" } };
+        await Assert.ThrowsAsync<InvalidDataException>(() => store.WriteAsync(changed, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public async Task A_conflicting_final_report_cannot_replace_the_original()
     {
         var report = Report();
