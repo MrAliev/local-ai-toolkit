@@ -1,0 +1,11 @@
+Roslyn: Загружается C# из 'C:\Users\Mr.Aliev\AppData\Local\Temp\localai-snapshot-a4577875b2b54c1bb51c112c5b05c512\content\QualityCorpus.csproj'. Сначала восстанавливаются зависимости — не дольше 10 мин.
+Roslyn: Зависимости восстановлены за 0.7 с. Открываются проекты.
+Roslyn: Открыто проектов 1, за 0.9 с.
+Roslyn: Разобрано проектов 1, файлов 14, за 1.2 с.
+Просмотрено C:\Users\Mr.Aliev\AppData\Local\Temp\localai-snapshot-a4577875b2b54c1bb51c112c5b05c512\content: индексируемых файлов 15.
+Без изменений: 0. Новых или изменённых: 15.
+Файлов разобрано на чанки: 15; чанков для эмбеддинга: 39.
+Эмбеддинги: чанков 39/39 (5.6/с, осталось ~0.0 мин)
+Сохранено C:\Users\Mr.Aliev\AppData\Local\LocalAi\repositories\558d7adaff02ee147218fc8766193c500231ada99474dcce5c5fed3bf54ed40d\staging\5672f72e374b7f852c5dd3d77601b04a031e907ba7907ab6ec8aae52e3dd5834.2908f664e7e54b0187d4a1852941baa8.cidx: чанков 39, файлов 15, за 7.0 с.
+Синхронизация завершена за 15.0 с.
+Вызов 1fd972ea-3b5c-4d93-82ab-22acbac8ab0f | модели: qwen3-embedding:8b-q8_0 [offload_unknown] | длительность: 17.579 s | экономия облачных токенов: INPUT Неприменимо (administrative_operation); OUTPUT Неприменимо (administrative_operation).

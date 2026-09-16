@@ -1,0 +1,3 @@
+The model is working on 1 image(s): 4 s.
+The model is working on 1 image(s): 34 s.
+Call f5dd1da2-3b0c-4509-9b48-7683ec4280e9 | models: qwen3-vl:8b-instruct-q8_0 | elapsed: 58.565 s | cloud token savings: INPUT Unknown (comparison_scenario_unknown); OUTPUT Unknown (comparison_scenario_unknown).

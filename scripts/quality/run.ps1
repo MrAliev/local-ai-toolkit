@@ -43,8 +43,8 @@ function Invoke-Recorded([string] $Executable, [string[]] $Arguments, [string] $
     foreach ($argument in $Arguments) { $info.ArgumentList.Add($argument) }
     $stdoutPath = $Stem + '.stdout.log'
     $stderrPath = $Stem + '.stderr.log'
-    $stdout = [IO.File]::Create($stdoutPath)
-    $stderr = [IO.File]::Create($stderrPath)
+    $stdout = [IO.File]::Open($stdoutPath, [IO.FileMode]::Create, [IO.FileAccess]::Write, [IO.FileShare]::ReadWrite)
+    $stderr = [IO.File]::Open($stderrPath, [IO.FileMode]::Create, [IO.FileAccess]::Write, [IO.FileShare]::ReadWrite)
     $process = [Diagnostics.Process]::new()
     $process.StartInfo = $info
     $timer = [Diagnostics.Stopwatch]::StartNew()
@@ -53,8 +53,8 @@ function Invoke-Recorded([string] $Executable, [string[]] $Arguments, [string] $
         $outCopy = $process.StandardOutput.BaseStream.CopyToAsync($stdout)
         $errCopy = $process.StandardError.BaseStream.CopyToAsync($stderr)
         $process.WaitForExit()
-        $outCopy.GetAwaiter().GetResult()
-        $errCopy.GetAwaiter().GetResult()
+        $null = $outCopy.GetAwaiter().GetResult()
+        $null = $errCopy.GetAwaiter().GetResult()
         $timer.Stop()
         return [pscustomobject]@{ exitCode = $process.ExitCode; elapsedMs = $timer.ElapsedMilliseconds;
             stdout = $stdoutPath; stderr = $stderrPath; executable = $Executable; arguments = $Arguments }

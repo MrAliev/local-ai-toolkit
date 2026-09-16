@@ -85,6 +85,55 @@ public sealed class QualityCorpusReferencesTests
         Assert.Equal(new[] { "STAMP: OK", "STAMP: OK" }, repeated);
     }
 
+    [Fact]
+    public void Retained_baseline_matches_reference_hashes_and_recomputes_the_ocr_scores()
+    {
+        var references = Path.Combine(Root, "tests/CodeSearch.Tests/Fixtures/SearchEvaluation/independent");
+        var baseline = Path.Combine(references, "baseline-2026-09-16");
+        Assert.True(Directory.Exists(baseline), "The measured baseline must be retained with its provenance.");
+        using var run = JsonDocument.Parse(File.ReadAllText(Path.Combine(baseline, "run.json")));
+        Assert.True(run.RootElement.GetProperty("completed").GetBoolean());
+        Assert.Equal(0, run.RootElement.GetProperty("sourceStatus").GetArrayLength());
+        foreach (var name in new[] { "csharp", "typescript", "python", "mixed" })
+        {
+            using var result = JsonDocument.Parse(File.ReadAllText(Path.Combine(baseline, name + ".json")));
+            var data = result.RootElement;
+            Assert.Equal(Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(Path.Combine(references, name + ".json")))),
+                data.GetProperty("corpusSha256").GetString());
+            Assert.Equal(data.GetProperty("sourceCommit").GetString(), data.GetProperty("indexedCommit").GetString());
+            Assert.Equal(data.GetProperty("sourceTree").GetString(), data.GetProperty("indexedTree").GetString());
+            Assert.True(string.IsNullOrEmpty(data.GetProperty("dirtyHash").GetString()));
+            Assert.Equal(SearchEvaluationCorpus.Load(Path.Combine(references, name + ".json")).Cases.Count,
+                data.GetProperty("observations").GetArrayLength());
+            var sourcePaths = QualityCorpusSources.Files(name).Select(file => file.Path).ToHashSet(StringComparer.Ordinal);
+            foreach (var observation in data.GetProperty("observations").EnumerateArray())
+                foreach (var hit in observation.GetProperty("hits").EnumerateArray())
+                    Assert.Contains(hit.GetProperty("path").GetString()!.Replace('\\', '/'), sourcePaths);
+        }
+
+        var fixtures = Path.Combine(Root, "tests/Fixtures/OcrQuality");
+        using var manifest = JsonDocument.Parse(File.ReadAllText(Path.Combine(fixtures, "corpus.json")));
+        var cases = manifest.RootElement.GetProperty("cases").EnumerateArray().ToDictionary(item => item.GetProperty("id").GetString()!);
+        using var ocr = JsonDocument.Parse(File.ReadAllText(Path.Combine(baseline, "ocr.json")));
+        Assert.Equal(Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(Path.Combine(fixtures, "corpus.json")))),
+            ocr.RootElement.GetProperty("corpusSha256").GetString());
+        Assert.Equal(cases.Count, ocr.RootElement.GetProperty("cases").GetArrayLength());
+        foreach (var result in ocr.RootElement.GetProperty("cases").EnumerateArray())
+        {
+            var item = cases[result.GetProperty("id").GetString()!];
+            Assert.Equal(item.GetProperty("imageSha256").GetString(), result.GetProperty("imageSha256").GetString());
+            Assert.Equal(item.GetProperty("referenceSha256").GetString(), result.GetProperty("referenceSha256").GetString());
+            var fields = item.GetProperty("fields").EnumerateArray().Select(field =>
+                new OcrFieldReference(field.GetProperty("label").GetString()!, field.GetProperty("value").GetString()!)).ToArray();
+            var recorded = JsonSerializer.Deserialize<OcrQualityScore>(result.GetProperty("score").GetRawText())!;
+            var actual = result.GetProperty("response").GetProperty("data");
+            Assert.False(string.IsNullOrWhiteSpace(actual.GetProperty("model").GetString()));
+            Assert.Equal(recorded, OcrQualityScoring.Measure(
+                File.ReadAllText(Path.Combine(fixtures, item.GetProperty("reference").GetString()!)),
+                actual.GetProperty("answer").GetString(), recorded.TechnicalCompletion, fields, recorded.ElapsedMilliseconds));
+        }
+    }
+
     private static string Root
     {
         get

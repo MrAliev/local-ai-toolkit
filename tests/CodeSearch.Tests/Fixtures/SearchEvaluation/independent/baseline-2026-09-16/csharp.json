@@ -1,0 +1,1312 @@
+{
+  "schemaVersion": 1,
+  "mode": "profile",
+  "corpusSchemaVersion": 1,
+  "caseCount": 12,
+  "repository": "R:\\LocalAi\\publish\\quality-corpora\\baseline-2026-09-16\\sources\\csharp",
+  "generationId": "5672f72e374b7f852c5dd3d77601b04a031e907ba7907ab6ec8aae52e3dd5834",
+  "model": "qwen3-embedding:8b-q8_0",
+  "sourceCommit": "90e3d12e672f8bbc1abc5e954d921c72018d2475",
+  "sourceTree": "82e0693f141e6abc590366b8784c6ac8b93eb048",
+  "dirtyHash": null,
+  "indexedCommit": "90e3d12e672f8bbc1abc5e954d921c72018d2475",
+  "indexedTree": "82e0693f141e6abc590366b8784c6ac8b93eb048",
+  "corpusSha256": "a743ec5a963ac4b0ebd639bfafb63bbf4d3697650c9f16e65fa3b60fe174a330",
+  "candidateScope": {
+    "schemaVersion": 1,
+    "excludedPaths": [],
+    "method": "exclude_before_ranking_v1",
+    "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  "annotations": [
+    {
+      "id": "cs-weight-en",
+      "relevant": [
+        {
+          "path": "src/pricing/WeightPricing.cs",
+          "symbol": "WeightPricing.Quote",
+          "signature": "public static decimal Quote(decimal kilograms, bool oversized)",
+          "namespace": "Corpus.Pricing"
+        }
+      ]
+    },
+    {
+      "id": "cs-weight-ru",
+      "relevant": [
+        {
+          "path": "src/pricing/WeightPricing.cs",
+          "symbol": "WeightPricing.Quote",
+          "signature": "public static decimal Quote(decimal kilograms, bool oversized)",
+          "namespace": "Corpus.Pricing"
+        }
+      ]
+    },
+    {
+      "id": "cs-volume-en",
+      "relevant": [
+        {
+          "path": "src/pricing/VolumePricing.cs",
+          "symbol": "VolumePricing.Quote",
+          "signature": "public static decimal Quote(decimal length, decimal width, decimal height)",
+          "namespace": "Corpus.Pricing"
+        }
+      ]
+    },
+    {
+      "id": "cs-volume-ru",
+      "relevant": [
+        {
+          "path": "src/pricing/VolumePricing.cs",
+          "symbol": "VolumePricing.Quote",
+          "signature": "public static decimal Quote(decimal length, decimal width, decimal height)",
+          "namespace": "Corpus.Pricing"
+        }
+      ]
+    },
+    {
+      "id": "cs-retry-en",
+      "relevant": [
+        {
+          "path": "src/retries/RetrySchedule.cs",
+          "symbol": "RetrySchedule.GetDelaySeconds",
+          "signature": "public static int? GetDelaySeconds(int attempt, bool permanentFailure)",
+          "namespace": "Corpus.Retries"
+        }
+      ]
+    },
+    {
+      "id": "cs-retry-ru",
+      "relevant": [
+        {
+          "path": "src/retries/RetrySchedule.cs",
+          "symbol": "RetrySchedule.GetDelaySeconds",
+          "signature": "public static int? GetDelaySeconds(int attempt, bool permanentFailure)",
+          "namespace": "Corpus.Retries"
+        }
+      ]
+    },
+    {
+      "id": "cs-manifest-en",
+      "relevant": [
+        {
+          "path": "src/manifests/ManifestReader.cs",
+          "symbol": "ManifestReader.ValidateAllFields",
+          "signature": "public static IReadOnlyList\u003Cstring\u003E ValidateAllFields(string[] fields)",
+          "namespace": "Corpus.Manifests"
+        }
+      ]
+    },
+    {
+      "id": "cs-manifest-ru",
+      "relevant": [
+        {
+          "path": "src/manifests/ManifestReader.cs",
+          "symbol": "ManifestReader.ValidateAllFields",
+          "signature": "public static IReadOnlyList\u003Cstring\u003E ValidateAllFields(string[] fields)",
+          "namespace": "Corpus.Manifests"
+        }
+      ]
+    },
+    {
+      "id": "cs-invoice-en",
+      "relevant": [
+        {
+          "path": "src/features/InvoiceLookup.cs",
+          "symbol": "InvoiceLookup.FindByKey",
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features"
+        }
+      ]
+    },
+    {
+      "id": "cs-inventory-ru",
+      "relevant": [
+        {
+          "path": "src/features/InventoryLookup.cs",
+          "symbol": "InventoryLookup.FindByKey",
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features"
+        }
+      ]
+    },
+    {
+      "id": "absent-encryption-en",
+      "relevant": []
+    },
+    {
+      "id": "absent-migration-ru",
+      "relevant": []
+    }
+  ],
+  "searchOptions": {
+    "topK": 10,
+    "kind": null,
+    "pathContains": null,
+    "excludedPaths": [],
+    "maxPerFile": 3,
+    "snippetLines": 12,
+    "minVectorScore": 0.43,
+    "allowUncalibratedModelForEvaluation": false,
+    "allowLexicalFallbackWhenEmbeddingsUnavailable": false
+  },
+  "useQueryInstruction": true,
+  "qualityProfile": {
+    "model": "qwen3-embedding:8b-q8_0",
+    "minVectorScore": 0.43,
+    "corpusVersion": "schema1:sha256:d675331cb7008a67a7335c5a1f2aba85e382974b71b1473e34b9e4685f0d7a52",
+    "generationId": "399fcc0b53b35ede05dc64f1a84cbc3bfc6bf382bdd2de7d71f2f9dc1ae8debc",
+    "caseCount": 24,
+    "calibratedAtUtc": "2026-07-30T23:55:00+00:00",
+    "selectionRule": "Lowest conservative hundredth above every observed no-answer vector score (maximum 0.426) without excluding an observed relevant score (minimum 0.508); recall@10 is therefore not reduced by the floor."
+  },
+  "brokerQueueWait": "unavailable: embedding client does not expose receipt telemetry",
+  "tokenEstimator": {
+    "point": "ceil(responseCharacters / 4)",
+    "lowerBound": "ceil(responseCharacters / 6)",
+    "upperBound": "ceil(responseCharacters / 3)"
+  },
+  "metrics": {
+    "precisionAt5": 0.19999999999999998,
+    "recallAt10": 1,
+    "meanFirstRelevantRank": 1.4,
+    "noAnswerFalsePositiveRate": 0.5,
+    "responseCharacters": 29924,
+    "estimatedResponseTokens": 7481,
+    "estimatedResponseTokensLowerBound": 4988,
+    "estimatedResponseTokensUpperBound": 9975,
+    "sourceLines": 483,
+    "chunkReads": 74,
+    "fileReads": 48,
+    "elapsedMilliseconds": 52716.01409999999,
+    "brokerQueueWaitMilliseconds": null,
+    "responseTokenEstimatePolicy": {
+      "schemaVersion": 1,
+      "method": "utf16_characters_v1",
+      "rangeBasis": "heuristic_not_confidence_interval",
+      "pointDivisor": 4,
+      "lowerBoundDivisor": 6,
+      "upperBoundDivisor": 3
+    }
+  },
+  "observations": [
+    {
+      "caseId": "cs-weight-en",
+      "hits": [
+        {
+          "path": "src\\pricing\\WeightPricing.cs",
+          "symbol": "WeightPricing.Quote",
+          "startLine": 6,
+          "endLine": 11,
+          "responseCharacters": 395,
+          "sourceLines": 6,
+          "vectorScore": 0.6959874,
+          "lexicalScore": 3,
+          "fusedScore": 0.01639344262295082,
+          "signature": "public static decimal Quote(decimal kilograms, bool oversized)",
+          "namespace": "Corpus.Pricing",
+          "kind": 2
+        },
+        {
+          "path": "src\\pricing\\WeightPricing.cs",
+          "symbol": "WeightPricing",
+          "startLine": 3,
+          "endLine": 12,
+          "responseCharacters": 476,
+          "sourceLines": 10,
+          "vectorScore": 0.6681481,
+          "lexicalScore": 1,
+          "fusedScore": 0.016129032258064516,
+          "signature": "public static class WeightPricing",
+          "namespace": "Corpus.Pricing",
+          "kind": 1
+        },
+        {
+          "path": "QualityCorpus.csproj",
+          "symbol": "QualityCorpus.csproj",
+          "startLine": 1,
+          "endLine": 7,
+          "responseCharacters": 292,
+          "sourceLines": 7,
+          "vectorScore": 0.18581015,
+          "lexicalScore": 1,
+          "fusedScore": 0.015873015873015872,
+          "signature": "QualityCorpus.csproj:1-7",
+          "namespace": "",
+          "kind": 3
+        },
+        {
+          "path": "src\\pricing\\VolumePricing.cs",
+          "symbol": "VolumePricing",
+          "startLine": 3,
+          "endLine": 13,
+          "responseCharacters": 571,
+          "sourceLines": 11,
+          "vectorScore": 0.52264047,
+          "lexicalScore": 0,
+          "fusedScore": 0.015625,
+          "signature": "public static class VolumePricing",
+          "namespace": "Corpus.Pricing",
+          "kind": 1
+        },
+        {
+          "path": "src\\pricing\\VolumePricing.cs",
+          "symbol": "VolumePricing.Quote",
+          "startLine": 6,
+          "endLine": 12,
+          "responseCharacters": 502,
+          "sourceLines": 7,
+          "vectorScore": 0.51028454,
+          "lexicalScore": 0,
+          "fusedScore": 0.015384615384615385,
+          "signature": "public static decimal Quote(decimal length, decimal width, decimal height)",
+          "namespace": "Corpus.Pricing",
+          "kind": 2
+        }
+      ],
+      "elapsed": "00:00:04.1742132",
+      "brokerQueueWait": null
+    },
+    {
+      "caseId": "cs-weight-ru",
+      "hits": [
+        {
+          "path": "src\\pricing\\WeightPricing.cs",
+          "symbol": "WeightPricing",
+          "startLine": 3,
+          "endLine": 12,
+          "responseCharacters": 476,
+          "sourceLines": 10,
+          "vectorScore": 0.6342336,
+          "lexicalScore": 0,
+          "fusedScore": 0.01639344262295082,
+          "signature": "public static class WeightPricing",
+          "namespace": "Corpus.Pricing",
+          "kind": 1
+        },
+        {
+          "path": "src\\pricing\\WeightPricing.cs",
+          "symbol": "WeightPricing.Quote",
+          "startLine": 6,
+          "endLine": 11,
+          "responseCharacters": 395,
+          "sourceLines": 6,
+          "vectorScore": 0.63050973,
+          "lexicalScore": 0,
+          "fusedScore": 0.016129032258064516,
+          "signature": "public static decimal Quote(decimal kilograms, bool oversized)",
+          "namespace": "Corpus.Pricing",
+          "kind": 2
+        },
+        {
+          "path": "src\\pricing\\VolumePricing.cs",
+          "symbol": "VolumePricing",
+          "startLine": 3,
+          "endLine": 13,
+          "responseCharacters": 571,
+          "sourceLines": 11,
+          "vectorScore": 0.5042875,
+          "lexicalScore": 0,
+          "fusedScore": 0.015873015873015872,
+          "signature": "public static class VolumePricing",
+          "namespace": "Corpus.Pricing",
+          "kind": 1
+        },
+        {
+          "path": "src\\pricing\\VolumePricing.cs",
+          "symbol": "VolumePricing.Quote",
+          "startLine": 6,
+          "endLine": 12,
+          "responseCharacters": 502,
+          "sourceLines": 7,
+          "vectorScore": 0.48285303,
+          "lexicalScore": 0,
+          "fusedScore": 0.015625,
+          "signature": "public static decimal Quote(decimal length, decimal width, decimal height)",
+          "namespace": "Corpus.Pricing",
+          "kind": 2
+        }
+      ],
+      "elapsed": "00:00:04.5806711",
+      "brokerQueueWait": null
+    },
+    {
+      "caseId": "cs-volume-en",
+      "hits": [
+        {
+          "path": "src\\pricing\\VolumePricing.cs",
+          "symbol": "VolumePricing.Quote",
+          "startLine": 6,
+          "endLine": 12,
+          "responseCharacters": 502,
+          "sourceLines": 7,
+          "vectorScore": 0.6333441,
+          "lexicalScore": 0,
+          "fusedScore": 0.01639344262295082,
+          "signature": "public static decimal Quote(decimal length, decimal width, decimal height)",
+          "namespace": "Corpus.Pricing",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\WarehouseLookup.cs",
+          "symbol": "WarehouseLookup",
+          "startLine": 3,
+          "endLine": 15,
+          "responseCharacters": 507,
+          "sourceLines": 12,
+          "vectorScore": 0.41474375,
+          "lexicalScore": 3,
+          "fusedScore": 0.016129032258064516,
+          "signature": "public static class WarehouseLookup",
+          "namespace": "Corpus.Features",
+          "kind": 1
+        },
+        {
+          "path": "src\\pricing\\VolumePricing.cs",
+          "symbol": "VolumePricing",
+          "startLine": 3,
+          "endLine": 13,
+          "responseCharacters": 571,
+          "sourceLines": 11,
+          "vectorScore": 0.6204258,
+          "lexicalScore": 0,
+          "fusedScore": 0.015873015873015872,
+          "signature": "public static class VolumePricing",
+          "namespace": "Corpus.Pricing",
+          "kind": 1
+        },
+        {
+          "path": "src\\features\\WarehouseLookup.cs",
+          "symbol": "WarehouseLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9,
+          "responseCharacters": 345,
+          "sourceLines": 4,
+          "vectorScore": 0.33564362,
+          "lexicalScore": 3,
+          "fusedScore": 0.015625,
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\pricing\\WeightPricing.cs",
+          "symbol": "WeightPricing",
+          "startLine": 3,
+          "endLine": 12,
+          "responseCharacters": 476,
+          "sourceLines": 10,
+          "vectorScore": 0.59152293,
+          "lexicalScore": 0,
+          "fusedScore": 0.015384615384615385,
+          "signature": "public static class WeightPricing",
+          "namespace": "Corpus.Pricing",
+          "kind": 1
+        },
+        {
+          "path": "src\\features\\WarehouseLookup.cs",
+          "symbol": "WarehouseLookup.NormalizeLabel",
+          "startLine": 11,
+          "endLine": 14,
+          "responseCharacters": 232,
+          "sourceLines": 4,
+          "vectorScore": 0.34845936,
+          "lexicalScore": 3,
+          "fusedScore": 0.015151515151515152,
+          "signature": "public static string NormalizeLabel(string label)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\pricing\\WeightPricing.cs",
+          "symbol": "WeightPricing.Quote",
+          "startLine": 6,
+          "endLine": 11,
+          "responseCharacters": 395,
+          "sourceLines": 6,
+          "vectorScore": 0.5613197,
+          "lexicalScore": 0,
+          "fusedScore": 0.014925373134328358,
+          "signature": "public static decimal Quote(decimal kilograms, bool oversized)",
+          "namespace": "Corpus.Pricing",
+          "kind": 2
+        }
+      ],
+      "elapsed": "00:00:04.3521517",
+      "brokerQueueWait": null
+    },
+    {
+      "caseId": "cs-volume-ru",
+      "hits": [
+        {
+          "path": "src\\pricing\\VolumePricing.cs",
+          "symbol": "VolumePricing",
+          "startLine": 3,
+          "endLine": 13,
+          "responseCharacters": 571,
+          "sourceLines": 11,
+          "vectorScore": 0.64788836,
+          "lexicalScore": 0,
+          "fusedScore": 0.01639344262295082,
+          "signature": "public static class VolumePricing",
+          "namespace": "Corpus.Pricing",
+          "kind": 1
+        },
+        {
+          "path": "src\\pricing\\VolumePricing.cs",
+          "symbol": "VolumePricing.Quote",
+          "startLine": 6,
+          "endLine": 12,
+          "responseCharacters": 502,
+          "sourceLines": 7,
+          "vectorScore": 0.6323035,
+          "lexicalScore": 0,
+          "fusedScore": 0.016129032258064516,
+          "signature": "public static decimal Quote(decimal length, decimal width, decimal height)",
+          "namespace": "Corpus.Pricing",
+          "kind": 2
+        },
+        {
+          "path": "src\\pricing\\WeightPricing.cs",
+          "symbol": "WeightPricing",
+          "startLine": 3,
+          "endLine": 12,
+          "responseCharacters": 476,
+          "sourceLines": 10,
+          "vectorScore": 0.5592323,
+          "lexicalScore": 0,
+          "fusedScore": 0.015873015873015872,
+          "signature": "public static class WeightPricing",
+          "namespace": "Corpus.Pricing",
+          "kind": 1
+        },
+        {
+          "path": "src\\pricing\\WeightPricing.cs",
+          "symbol": "WeightPricing.Quote",
+          "startLine": 6,
+          "endLine": 11,
+          "responseCharacters": 395,
+          "sourceLines": 6,
+          "vectorScore": 0.51625234,
+          "lexicalScore": 0,
+          "fusedScore": 0.015625,
+          "signature": "public static decimal Quote(decimal kilograms, bool oversized)",
+          "namespace": "Corpus.Pricing",
+          "kind": 2
+        }
+      ],
+      "elapsed": "00:00:04.5456902",
+      "brokerQueueWait": null
+    },
+    {
+      "caseId": "cs-retry-en",
+      "hits": [
+        {
+          "path": "src\\retries\\RetrySchedule.cs",
+          "symbol": "RetrySchedule.GetDelaySeconds",
+          "startLine": 6,
+          "endLine": 11,
+          "responseCharacters": 401,
+          "sourceLines": 6,
+          "vectorScore": 0.7298151,
+          "lexicalScore": 11,
+          "fusedScore": 0.01639344262295082,
+          "signature": "public static int? GetDelaySeconds(int attempt, bool permanentFailure)",
+          "namespace": "Corpus.Retries",
+          "kind": 2
+        },
+        {
+          "path": "src\\retries\\RetrySchedule.cs",
+          "symbol": "RetrySchedule",
+          "startLine": 3,
+          "endLine": 12,
+          "responseCharacters": 478,
+          "sourceLines": 10,
+          "vectorScore": 0.7092462,
+          "lexicalScore": 6,
+          "fusedScore": 0.016129032258064516,
+          "signature": "public static class RetrySchedule",
+          "namespace": "Corpus.Retries",
+          "kind": 1
+        },
+        {
+          "path": "src\\features\\CatalogLookup.cs",
+          "symbol": "CatalogLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9,
+          "responseCharacters": 341,
+          "sourceLines": 4,
+          "vectorScore": 0.18141401,
+          "lexicalScore": 3,
+          "fusedScore": 0.015873015873015872,
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\CustomerLookup.cs",
+          "symbol": "CustomerLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9,
+          "responseCharacters": 343,
+          "sourceLines": 4,
+          "vectorScore": 0.18119052,
+          "lexicalScore": 3,
+          "fusedScore": 0.015625,
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\DiscountLookup.cs",
+          "symbol": "DiscountLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9,
+          "responseCharacters": 343,
+          "sourceLines": 4,
+          "vectorScore": 0.20982432,
+          "lexicalScore": 3,
+          "fusedScore": 0.015384615384615385,
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\InventoryLookup.cs",
+          "symbol": "InventoryLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9,
+          "responseCharacters": 345,
+          "sourceLines": 4,
+          "vectorScore": 0.18132424,
+          "lexicalScore": 3,
+          "fusedScore": 0.015151515151515152,
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\InvoiceLookup.cs",
+          "symbol": "InvoiceLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9,
+          "responseCharacters": 341,
+          "sourceLines": 4,
+          "vectorScore": 0.17468071,
+          "lexicalScore": 3,
+          "fusedScore": 0.014925373134328358,
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\PaymentLookup.cs",
+          "symbol": "PaymentLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9,
+          "responseCharacters": 341,
+          "sourceLines": 4,
+          "vectorScore": 0.17566378,
+          "lexicalScore": 3,
+          "fusedScore": 0.014705882352941176,
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\PricingLookup.cs",
+          "symbol": "PricingLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9,
+          "responseCharacters": 341,
+          "sourceLines": 4,
+          "vectorScore": 0.19905,
+          "lexicalScore": 3,
+          "fusedScore": 0.014492753623188406,
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\RefundLookup.cs",
+          "symbol": "RefundLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9,
+          "responseCharacters": 339,
+          "sourceLines": 4,
+          "vectorScore": 0.21738929,
+          "lexicalScore": 3,
+          "fusedScore": 0.014285714285714285,
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        }
+      ],
+      "elapsed": "00:00:04.7180025",
+      "brokerQueueWait": null
+    },
+    {
+      "caseId": "cs-retry-ru",
+      "hits": [
+        {
+          "path": "src\\retries\\RetrySchedule.cs",
+          "symbol": "RetrySchedule",
+          "startLine": 3,
+          "endLine": 12,
+          "responseCharacters": 478,
+          "sourceLines": 10,
+          "vectorScore": 0.63203996,
+          "lexicalScore": 0,
+          "fusedScore": 0.01639344262295082,
+          "signature": "public static class RetrySchedule",
+          "namespace": "Corpus.Retries",
+          "kind": 1
+        },
+        {
+          "path": "src\\retries\\RetrySchedule.cs",
+          "symbol": "RetrySchedule.GetDelaySeconds",
+          "startLine": 6,
+          "endLine": 11,
+          "responseCharacters": 401,
+          "sourceLines": 6,
+          "vectorScore": 0.60555375,
+          "lexicalScore": 0,
+          "fusedScore": 0.016129032258064516,
+          "signature": "public static int? GetDelaySeconds(int attempt, bool permanentFailure)",
+          "namespace": "Corpus.Retries",
+          "kind": 2
+        }
+      ],
+      "elapsed": "00:00:04.3793688",
+      "brokerQueueWait": null
+    },
+    {
+      "caseId": "cs-manifest-en",
+      "hits": [
+        {
+          "path": "src\\manifests\\ManifestReader.cs",
+          "symbol": "ManifestReader.ValidateAllFields",
+          "startLine": 7,
+          "endLine": 141,
+          "responseCharacters": 676,
+          "sourceLines": 12,
+          "vectorScore": 0.69288343,
+          "lexicalScore": 9,
+          "fusedScore": 0.01639344262295082,
+          "signature": "public static IReadOnlyList\u003Cstring\u003E ValidateAllFields(string[] fields)",
+          "namespace": "Corpus.Manifests",
+          "kind": 2
+        },
+        {
+          "path": "src\\manifests\\ManifestReader.cs",
+          "symbol": "ManifestReader",
+          "startLine": 3,
+          "endLine": 142,
+          "responseCharacters": 680,
+          "sourceLines": 12,
+          "vectorScore": 0.580994,
+          "lexicalScore": 4,
+          "fusedScore": 0.016129032258064516,
+          "signature": "public static class ManifestReader",
+          "namespace": "Corpus.Manifests",
+          "kind": 1
+        },
+        {
+          "path": "src\\features\\CatalogLookup.cs",
+          "symbol": "CatalogLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9,
+          "responseCharacters": 341,
+          "sourceLines": 4,
+          "vectorScore": 0.25405806,
+          "lexicalScore": 1,
+          "fusedScore": 0.015873015873015872,
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\CatalogLookup.cs",
+          "symbol": "CatalogLookup.NormalizeLabel",
+          "startLine": 11,
+          "endLine": 14,
+          "responseCharacters": 228,
+          "sourceLines": 4,
+          "vectorScore": 0.19804838,
+          "lexicalScore": 1,
+          "fusedScore": 0.015625,
+          "signature": "public static string NormalizeLabel(string label)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\CustomerLookup.cs",
+          "symbol": "CustomerLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9,
+          "responseCharacters": 343,
+          "sourceLines": 4,
+          "vectorScore": 0.24128404,
+          "lexicalScore": 1,
+          "fusedScore": 0.015384615384615385,
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\CustomerLookup.cs",
+          "symbol": "CustomerLookup.NormalizeLabel",
+          "startLine": 11,
+          "endLine": 14,
+          "responseCharacters": 230,
+          "sourceLines": 4,
+          "vectorScore": 0.18894702,
+          "lexicalScore": 1,
+          "fusedScore": 0.015151515151515152,
+          "signature": "public static string NormalizeLabel(string label)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\DiscountLookup.cs",
+          "symbol": "DiscountLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9,
+          "responseCharacters": 343,
+          "sourceLines": 4,
+          "vectorScore": 0.23301433,
+          "lexicalScore": 1,
+          "fusedScore": 0.014925373134328358,
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\DiscountLookup.cs",
+          "symbol": "DiscountLookup.NormalizeLabel",
+          "startLine": 11,
+          "endLine": 14,
+          "responseCharacters": 230,
+          "sourceLines": 4,
+          "vectorScore": 0.17966557,
+          "lexicalScore": 1,
+          "fusedScore": 0.014705882352941176,
+          "signature": "public static string NormalizeLabel(string label)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\InventoryLookup.cs",
+          "symbol": "InventoryLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9,
+          "responseCharacters": 345,
+          "sourceLines": 4,
+          "vectorScore": 0.2498296,
+          "lexicalScore": 1,
+          "fusedScore": 0.014492753623188406,
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\InventoryLookup.cs",
+          "symbol": "InventoryLookup.NormalizeLabel",
+          "startLine": 11,
+          "endLine": 14,
+          "responseCharacters": 232,
+          "sourceLines": 4,
+          "vectorScore": 0.19259188,
+          "lexicalScore": 1,
+          "fusedScore": 0.014285714285714285,
+          "signature": "public static string NormalizeLabel(string label)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        }
+      ],
+      "elapsed": "00:00:04.3901221",
+      "brokerQueueWait": null
+    },
+    {
+      "caseId": "cs-manifest-ru",
+      "hits": [
+        {
+          "path": "src\\manifests\\ManifestReader.cs",
+          "symbol": "ManifestReader.ValidateAllFields",
+          "startLine": 7,
+          "endLine": 141,
+          "responseCharacters": 676,
+          "sourceLines": 12,
+          "vectorScore": 0.6128589,
+          "lexicalScore": 0,
+          "fusedScore": 0.01639344262295082,
+          "signature": "public static IReadOnlyList\u003Cstring\u003E ValidateAllFields(string[] fields)",
+          "namespace": "Corpus.Manifests",
+          "kind": 2
+        },
+        {
+          "path": "src\\manifests\\ManifestReader.cs",
+          "symbol": "ManifestReader",
+          "startLine": 3,
+          "endLine": 142,
+          "responseCharacters": 680,
+          "sourceLines": 12,
+          "vectorScore": 0.5378715,
+          "lexicalScore": 0,
+          "fusedScore": 0.016129032258064516,
+          "signature": "public static class ManifestReader",
+          "namespace": "Corpus.Manifests",
+          "kind": 1
+        }
+      ],
+      "elapsed": "00:00:04.3857439",
+      "brokerQueueWait": null
+    },
+    {
+      "caseId": "cs-invoice-en",
+      "hits": [
+        {
+          "path": "src\\features\\InvoiceLookup.cs",
+          "symbol": "InvoiceLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9,
+          "responseCharacters": 341,
+          "sourceLines": 4,
+          "vectorScore": 0.6411938,
+          "lexicalScore": 12,
+          "fusedScore": 0.01639344262295082,
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\PaymentLookup.cs",
+          "symbol": "PaymentLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9,
+          "responseCharacters": 341,
+          "sourceLines": 4,
+          "vectorScore": 0.5315422,
+          "lexicalScore": 9,
+          "fusedScore": 0.016129032258064516,
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\InventoryLookup.cs",
+          "symbol": "InventoryLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9,
+          "responseCharacters": 345,
+          "sourceLines": 4,
+          "vectorScore": 0.5288966,
+          "lexicalScore": 9,
+          "fusedScore": 0.015873015873015872,
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\InvoiceLookup.cs",
+          "symbol": "InvoiceLookup",
+          "startLine": 3,
+          "endLine": 15,
+          "responseCharacters": 497,
+          "sourceLines": 12,
+          "vectorScore": 0.6742319,
+          "lexicalScore": 7,
+          "fusedScore": 0.015625,
+          "signature": "public static class InvoiceLookup",
+          "namespace": "Corpus.Features",
+          "kind": 1
+        },
+        {
+          "path": "src\\features\\CustomerLookup.cs",
+          "symbol": "CustomerLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9,
+          "responseCharacters": 343,
+          "sourceLines": 4,
+          "vectorScore": 0.5089076,
+          "lexicalScore": 9,
+          "fusedScore": 0.015384615384615385,
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\CatalogLookup.cs",
+          "symbol": "CatalogLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9,
+          "responseCharacters": 341,
+          "sourceLines": 4,
+          "vectorScore": 0.50026006,
+          "lexicalScore": 9,
+          "fusedScore": 0.015151515151515152,
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\ShipmentLookup.cs",
+          "symbol": "ShipmentLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9,
+          "responseCharacters": 343,
+          "sourceLines": 4,
+          "vectorScore": 0.5181775,
+          "lexicalScore": 9,
+          "fusedScore": 0.014925373134328358,
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\PaymentLookup.cs",
+          "symbol": "PaymentLookup",
+          "startLine": 3,
+          "endLine": 15,
+          "responseCharacters": 497,
+          "sourceLines": 12,
+          "vectorScore": 0.5472759,
+          "lexicalScore": 4,
+          "fusedScore": 0.014705882352941176,
+          "signature": "public static class PaymentLookup",
+          "namespace": "Corpus.Features",
+          "kind": 1
+        },
+        {
+          "path": "src\\features\\RefundLookup.cs",
+          "symbol": "RefundLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9,
+          "responseCharacters": 339,
+          "sourceLines": 4,
+          "vectorScore": 0.50719476,
+          "lexicalScore": 9,
+          "fusedScore": 0.014492753623188406,
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\InventoryLookup.cs",
+          "symbol": "InventoryLookup",
+          "startLine": 3,
+          "endLine": 15,
+          "responseCharacters": 507,
+          "sourceLines": 12,
+          "vectorScore": 0.53617924,
+          "lexicalScore": 4,
+          "fusedScore": 0.014285714285714285,
+          "signature": "public static class InventoryLookup",
+          "namespace": "Corpus.Features",
+          "kind": 1
+        }
+      ],
+      "elapsed": "00:00:04.2928134",
+      "brokerQueueWait": null
+    },
+    {
+      "caseId": "cs-inventory-ru",
+      "hits": [
+        {
+          "path": "src\\features\\InventoryLookup.cs",
+          "symbol": "InventoryLookup",
+          "startLine": 3,
+          "endLine": 15,
+          "responseCharacters": 507,
+          "sourceLines": 12,
+          "vectorScore": 0.5975534,
+          "lexicalScore": 3,
+          "fusedScore": 0.01639344262295082,
+          "signature": "public static class InventoryLookup",
+          "namespace": "Corpus.Features",
+          "kind": 1
+        },
+        {
+          "path": "src\\features\\InventoryLookup.cs",
+          "symbol": "InventoryLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9,
+          "responseCharacters": 345,
+          "sourceLines": 4,
+          "vectorScore": 0.5704529,
+          "lexicalScore": 3,
+          "fusedScore": 0.016129032258064516,
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\WarehouseLookup.cs",
+          "symbol": "WarehouseLookup",
+          "startLine": 3,
+          "endLine": 15,
+          "responseCharacters": 507,
+          "sourceLines": 12,
+          "vectorScore": 0.5511968,
+          "lexicalScore": 0,
+          "fusedScore": 0.015873015873015872,
+          "signature": "public static class WarehouseLookup",
+          "namespace": "Corpus.Features",
+          "kind": 1
+        },
+        {
+          "path": "src\\features\\InventoryLookup.cs",
+          "symbol": "InventoryLookup.NormalizeLabel",
+          "startLine": 11,
+          "endLine": 14,
+          "responseCharacters": 232,
+          "sourceLines": 4,
+          "vectorScore": 0.41470304,
+          "lexicalScore": 3,
+          "fusedScore": 0.015625,
+          "signature": "public static string NormalizeLabel(string label)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\WarehouseLookup.cs",
+          "symbol": "WarehouseLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9,
+          "responseCharacters": 345,
+          "sourceLines": 4,
+          "vectorScore": 0.54536986,
+          "lexicalScore": 0,
+          "fusedScore": 0.015384615384615385,
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\InvoiceLookup.cs",
+          "symbol": "InvoiceLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9,
+          "responseCharacters": 341,
+          "sourceLines": 4,
+          "vectorScore": 0.54025066,
+          "lexicalScore": 0,
+          "fusedScore": 0.015151515151515152,
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\InvoiceLookup.cs",
+          "symbol": "InvoiceLookup",
+          "startLine": 3,
+          "endLine": 15,
+          "responseCharacters": 497,
+          "sourceLines": 12,
+          "vectorScore": 0.53344834,
+          "lexicalScore": 0,
+          "fusedScore": 0.014925373134328358,
+          "signature": "public static class InvoiceLookup",
+          "namespace": "Corpus.Features",
+          "kind": 1
+        },
+        {
+          "path": "src\\features\\ShipmentLookup.cs",
+          "symbol": "ShipmentLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9,
+          "responseCharacters": 343,
+          "sourceLines": 4,
+          "vectorScore": 0.5158582,
+          "lexicalScore": 0,
+          "fusedScore": 0.014705882352941176,
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\ShipmentLookup.cs",
+          "symbol": "ShipmentLookup",
+          "startLine": 3,
+          "endLine": 15,
+          "responseCharacters": 502,
+          "sourceLines": 12,
+          "vectorScore": 0.5071727,
+          "lexicalScore": 0,
+          "fusedScore": 0.014492753623188406,
+          "signature": "public static class ShipmentLookup",
+          "namespace": "Corpus.Features",
+          "kind": 1
+        },
+        {
+          "path": "src\\features\\CatalogLookup.cs",
+          "symbol": "CatalogLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9,
+          "responseCharacters": 341,
+          "sourceLines": 4,
+          "vectorScore": 0.5013218,
+          "lexicalScore": 0,
+          "fusedScore": 0.014285714285714285,
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        }
+      ],
+      "elapsed": "00:00:04.3518454",
+      "brokerQueueWait": null
+    },
+    {
+      "caseId": "absent-encryption-en",
+      "hits": [
+        {
+          "path": "src\\features\\CatalogLookup.cs",
+          "symbol": "CatalogLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9,
+          "responseCharacters": 341,
+          "sourceLines": 4,
+          "vectorScore": 0.15341833,
+          "lexicalScore": 3,
+          "fusedScore": 0.01639344262295082,
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\CustomerLookup.cs",
+          "symbol": "CustomerLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9,
+          "responseCharacters": 343,
+          "sourceLines": 4,
+          "vectorScore": 0.16893253,
+          "lexicalScore": 3,
+          "fusedScore": 0.016129032258064516,
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\DiscountLookup.cs",
+          "symbol": "DiscountLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9,
+          "responseCharacters": 343,
+          "sourceLines": 4,
+          "vectorScore": 0.14035079,
+          "lexicalScore": 3,
+          "fusedScore": 0.015873015873015872,
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\InventoryLookup.cs",
+          "symbol": "InventoryLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9,
+          "responseCharacters": 345,
+          "sourceLines": 4,
+          "vectorScore": 0.16705063,
+          "lexicalScore": 3,
+          "fusedScore": 0.015625,
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\InvoiceLookup.cs",
+          "symbol": "InvoiceLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9,
+          "responseCharacters": 341,
+          "sourceLines": 4,
+          "vectorScore": 0.1660437,
+          "lexicalScore": 3,
+          "fusedScore": 0.015384615384615385,
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\PaymentLookup.cs",
+          "symbol": "PaymentLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9,
+          "responseCharacters": 341,
+          "sourceLines": 4,
+          "vectorScore": 0.15633593,
+          "lexicalScore": 3,
+          "fusedScore": 0.015151515151515152,
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\PricingLookup.cs",
+          "symbol": "PricingLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9,
+          "responseCharacters": 341,
+          "sourceLines": 4,
+          "vectorScore": 0.16567037,
+          "lexicalScore": 3,
+          "fusedScore": 0.014925373134328358,
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\RefundLookup.cs",
+          "symbol": "RefundLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9,
+          "responseCharacters": 339,
+          "sourceLines": 4,
+          "vectorScore": 0.1542654,
+          "lexicalScore": 3,
+          "fusedScore": 0.014705882352941176,
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\ShipmentLookup.cs",
+          "symbol": "ShipmentLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9,
+          "responseCharacters": 343,
+          "sourceLines": 4,
+          "vectorScore": 0.15744808,
+          "lexicalScore": 3,
+          "fusedScore": 0.014492753623188406,
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\WarehouseLookup.cs",
+          "symbol": "WarehouseLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9,
+          "responseCharacters": 345,
+          "sourceLines": 4,
+          "vectorScore": 0.16736954,
+          "lexicalScore": 3,
+          "fusedScore": 0.014285714285714285,
+          "signature": "public static string? FindByKey(IReadOnlyDictionary\u003Cstring, string\u003E records, string key)",
+          "namespace": "Corpus.Features",
+          "kind": 2
+        }
+      ],
+      "elapsed": "00:00:04.2062235",
+      "brokerQueueWait": null
+    },
+    {
+      "caseId": "absent-migration-ru",
+      "hits": [],
+      "elapsed": "00:00:04.3391683",
+      "brokerQueueWait": null
+    }
+  ]
+}
