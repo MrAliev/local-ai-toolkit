@@ -84,8 +84,8 @@ public sealed class BrokerProcess : IBrokerProcess
     }
 
     /// <summary>
-    /// The broker is a self-contained executable sitting next to its caller, so no system
-    /// .NET runtime is required to start it.
+    /// The broker executable sits next to its caller. Release packages contain a self-contained
+    /// broker; development builds copy its apphost and managed runtime files together.
     ///
     /// This deliberately avoids <c>Assembly.Location</c>: in a single-file publish that
     /// returns an empty string, which is exactly how the previous "dotnet &lt;dll&gt;" form

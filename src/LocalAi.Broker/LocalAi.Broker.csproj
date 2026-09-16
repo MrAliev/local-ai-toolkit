@@ -10,4 +10,15 @@
     <ProjectReference Include="..\LocalAi.Contracts\LocalAi.Contracts.csproj" />
   </ItemGroup>
 
+  <!-- Return only files owned by this build, rather than recursively including older RID
+       builds or publish directories below TargetDir. Preserve satellite/native subpaths. -->
+  <Target Name="GetBrokerDevelopmentFiles" DependsOnTargets="Build" Returns="@(BrokerDevelopmentOutput)">
+    <ItemGroup>
+      <BrokerDevelopmentOutput Include="@(FileWrites->'%(FullPath)')"
+                               Condition="$([System.String]::Copy('%(FileWrites.FullPath)').StartsWith('$(TargetDir)'))">
+        <BrokerRelativePath>$([MSBuild]::MakeRelative('$(TargetDir)', '%(FileWrites.FullPath)'))</BrokerRelativePath>
+      </BrokerDevelopmentOutput>
+    </ItemGroup>
+  </Target>
+
 </Project>
