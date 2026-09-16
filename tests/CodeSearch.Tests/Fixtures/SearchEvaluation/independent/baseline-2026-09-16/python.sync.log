@@ -1,0 +1,8 @@
+SCIP python: succeeded in 2.4s — SCIP output imported.
+Просмотрено C:\Users\Mr.Aliev\AppData\Local\Temp\localai-snapshot-96dbe49d7d134965834deac07a263b49\content: индексируемых файлов 13.
+Без изменений: 0. Новых или изменённых: 13.
+Файлов разобрано на чанки: 13; чанков для эмбеддинга: 41.
+Эмбеддинги: чанков 41/41 (21.5/с, осталось ~0.0 мин)
+Сохранено C:\Users\Mr.Aliev\AppData\Local\LocalAi\repositories\6af7ef3bc59826880c1bf43ac16081cf62c03e4a3b742d2a0b1c25c51c603f09\staging\a7b784323d5b9b9ae9eda4cbb31da09dfd26b74c40377c65e2311cf2fbb8e0a9.599779f687994b7e999d03edb27c68a5.cidx: чанков 41, файлов 13, за 2.0 с.
+Синхронизация завершена за 9.3 с.
+Вызов 37745b3e-6679-47a9-a4cc-ea79d0826dec | модели: qwen3-embedding:8b-q8_0 [offload_unknown] | длительность: 9.497 s | экономия облачных токенов: INPUT Неприменимо (administrative_operation); OUTPUT Неприменимо (administrative_operation).

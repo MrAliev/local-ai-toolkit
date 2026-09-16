@@ -1,0 +1,1382 @@
+{
+  "schemaVersion": 1,
+  "mode": "profile",
+  "corpusSchemaVersion": 1,
+  "caseCount": 12,
+  "repository": "R:\\LocalAi\\publish\\quality-corpora\\baseline-2026-09-16\\sources\\python",
+  "generationId": "a7b784323d5b9b9ae9eda4cbb31da09dfd26b74c40377c65e2311cf2fbb8e0a9",
+  "model": "qwen3-embedding:8b-q8_0",
+  "sourceCommit": "6494ade9fed6c95f484362894fbfe33f457bdd7e",
+  "sourceTree": "a593bcf93442763cf2978bd6ee8eef3762362040",
+  "dirtyHash": null,
+  "indexedCommit": "6494ade9fed6c95f484362894fbfe33f457bdd7e",
+  "indexedTree": "a593bcf93442763cf2978bd6ee8eef3762362040",
+  "corpusSha256": "929eedb50a557daa3609511dcbd77fcef9077f12ed1c42c66e6facf9166e75a5",
+  "candidateScope": {
+    "schemaVersion": 1,
+    "excludedPaths": [],
+    "method": "exclude_before_ranking_v1",
+    "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  "annotations": [
+    {
+      "id": "py-halfup-en",
+      "relevant": [
+        {
+          "path": "src/shared/lib/money.py",
+          "symbol": "to_minor_units",
+          "signature": null,
+          "namespace": null
+        }
+      ]
+    },
+    {
+      "id": "py-halfup-ru",
+      "relevant": [
+        {
+          "path": "src/shared/lib/money.py",
+          "symbol": "to_minor_units",
+          "signature": null,
+          "namespace": null
+        }
+      ]
+    },
+    {
+      "id": "py-even-en",
+      "relevant": [
+        {
+          "path": "src/shared/lib/currency_policy.py",
+          "symbol": "round_for_statistics",
+          "signature": null,
+          "namespace": null
+        }
+      ]
+    },
+    {
+      "id": "py-even-ru",
+      "relevant": [
+        {
+          "path": "src/shared/lib/currency_policy.py",
+          "symbol": "round_for_statistics",
+          "signature": null,
+          "namespace": null
+        }
+      ]
+    },
+    {
+      "id": "py-missing-en",
+      "relevant": [
+        {
+          "path": "src/shared/lib/manifest.py",
+          "symbol": "missing_fields",
+          "signature": null,
+          "namespace": null
+        }
+      ]
+    },
+    {
+      "id": "py-missing-ru",
+      "relevant": [
+        {
+          "path": "src/shared/lib/manifest.py",
+          "symbol": "missing_fields",
+          "signature": null,
+          "namespace": null
+        }
+      ]
+    },
+    {
+      "id": "py-accepted-en",
+      "relevant": [
+        {
+          "path": "src/shared/lib/manifest.py",
+          "symbol": "accepted_rows",
+          "signature": null,
+          "namespace": null
+        }
+      ]
+    },
+    {
+      "id": "py-accepted-ru",
+      "relevant": [
+        {
+          "path": "src/shared/lib/manifest.py",
+          "symbol": "accepted_rows",
+          "signature": null,
+          "namespace": null
+        }
+      ]
+    },
+    {
+      "id": "py-invoice-en",
+      "relevant": [
+        {
+          "path": "src/features/invoice_ledger.py",
+          "symbol": "total_invoice",
+          "signature": null,
+          "namespace": null
+        }
+      ]
+    },
+    {
+      "id": "py-inventory-ru",
+      "relevant": [
+        {
+          "path": "src/features/inventory_ledger.py",
+          "symbol": "find_inventory",
+          "signature": null,
+          "namespace": null
+        }
+      ]
+    },
+    {
+      "id": "absent-encryption-en",
+      "relevant": []
+    },
+    {
+      "id": "absent-migration-ru",
+      "relevant": []
+    }
+  ],
+  "searchOptions": {
+    "topK": 10,
+    "kind": null,
+    "pathContains": null,
+    "excludedPaths": [],
+    "maxPerFile": 3,
+    "snippetLines": 12,
+    "minVectorScore": 0.43,
+    "allowUncalibratedModelForEvaluation": false,
+    "allowLexicalFallbackWhenEmbeddingsUnavailable": false
+  },
+  "useQueryInstruction": true,
+  "qualityProfile": {
+    "model": "qwen3-embedding:8b-q8_0",
+    "minVectorScore": 0.43,
+    "corpusVersion": "schema1:sha256:d675331cb7008a67a7335c5a1f2aba85e382974b71b1473e34b9e4685f0d7a52",
+    "generationId": "399fcc0b53b35ede05dc64f1a84cbc3bfc6bf382bdd2de7d71f2f9dc1ae8debc",
+    "caseCount": 24,
+    "calibratedAtUtc": "2026-07-30T23:55:00+00:00",
+    "selectionRule": "Lowest conservative hundredth above every observed no-answer vector score (maximum 0.426) without excluding an observed relevant score (minimum 0.508); recall@10 is therefore not reduced by the floor."
+  },
+  "brokerQueueWait": "unavailable: embedding client does not expose receipt telemetry",
+  "tokenEstimator": {
+    "point": "ceil(responseCharacters / 4)",
+    "lowerBound": "ceil(responseCharacters / 6)",
+    "upperBound": "ceil(responseCharacters / 3)"
+  },
+  "metrics": {
+    "precisionAt5": 0.19999999999999998,
+    "recallAt10": 1,
+    "meanFirstRelevantRank": 1,
+    "noAnswerFalsePositiveRate": 0.5,
+    "responseCharacters": 25947,
+    "estimatedResponseTokens": 6487,
+    "estimatedResponseTokensLowerBound": 4325,
+    "estimatedResponseTokensUpperBound": 8649,
+    "sourceLines": 294,
+    "chunkReads": 79,
+    "fileReads": 54,
+    "elapsedMilliseconds": 52545.88410000001,
+    "brokerQueueWaitMilliseconds": null,
+    "responseTokenEstimatePolicy": {
+      "schemaVersion": 1,
+      "method": "utf16_characters_v1",
+      "rangeBasis": "heuristic_not_confidence_interval",
+      "pointDivisor": 4,
+      "lowerBoundDivisor": 6,
+      "upperBoundDivisor": 3
+    }
+  },
+  "observations": [
+    {
+      "caseId": "py-halfup-en",
+      "hits": [
+        {
+          "path": "src\\shared\\lib\\money.py",
+          "symbol": "to_minor_units",
+          "startLine": 8,
+          "endLine": 10,
+          "responseCharacters": 295,
+          "sourceLines": 3,
+          "vectorScore": 0.7805374,
+          "lexicalScore": 7,
+          "fusedScore": 0.01639344262295082,
+          "signature": "def to_minor_units(amount: Decimal) -\u003E int:",
+          "namespace": "src/shared/lib",
+          "kind": 2
+        },
+        {
+          "path": "src\\shared\\lib\\currency_policy.py",
+          "symbol": "round_for_statistics",
+          "startLine": 3,
+          "endLine": 5,
+          "responseCharacters": 325,
+          "sourceLines": 3,
+          "vectorScore": 0.66573185,
+          "lexicalScore": 3,
+          "fusedScore": 0.016129032258064516,
+          "signature": "def round_for_statistics(value: str) -\u003E Decimal:",
+          "namespace": "src/shared/lib",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\invoice_ledger.py",
+          "symbol": "total_invoice",
+          "startLine": 3,
+          "endLine": 6,
+          "responseCharacters": 380,
+          "sourceLines": 4,
+          "vectorScore": 0.46358198,
+          "lexicalScore": 4,
+          "fusedScore": 0.015873015873015872,
+          "signature": "def total_invoice(records: list[dict[str, str]]) -\u003E Decimal:",
+          "namespace": "src/features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\invoice_ledger.py",
+          "symbol": "invoice_ledger.py",
+          "startLine": 1,
+          "endLine": 2,
+          "responseCharacters": 133,
+          "sourceLines": 2,
+          "vectorScore": 0.46954226,
+          "lexicalScore": 3,
+          "fusedScore": 0.015625,
+          "signature": "src\\features\\invoice_ledger.py:1-2",
+          "namespace": "src/features",
+          "kind": 3
+        },
+        {
+          "path": "src\\shared\\lib\\money.py",
+          "symbol": "money.py",
+          "startLine": 1,
+          "endLine": 7,
+          "responseCharacters": 218,
+          "sourceLines": 7,
+          "vectorScore": 0.5994441,
+          "lexicalScore": 2,
+          "fusedScore": 0.015384615384615385,
+          "signature": "src\\shared\\lib\\money.py:1-7",
+          "namespace": "src/shared/lib",
+          "kind": 3
+        },
+        {
+          "path": "src\\shared\\lib\\currency_policy.py",
+          "symbol": "currency_policy.py",
+          "startLine": 1,
+          "endLine": 2,
+          "responseCharacters": 157,
+          "sourceLines": 2,
+          "vectorScore": 0.62740844,
+          "lexicalScore": 1,
+          "fusedScore": 0.015151515151515152,
+          "signature": "src\\shared\\lib\\currency_policy.py:1-2",
+          "namespace": "src/shared/lib",
+          "kind": 3
+        },
+        {
+          "path": "src\\shared\\lib\\money.py",
+          "symbol": "MoneyLedger",
+          "startLine": 13,
+          "endLine": 23,
+          "responseCharacters": 393,
+          "sourceLines": 11,
+          "vectorScore": 0.47811103,
+          "lexicalScore": 1,
+          "fusedScore": 0.014925373134328358,
+          "signature": "class MoneyLedger:",
+          "namespace": "src/shared/lib",
+          "kind": 1
+        },
+        {
+          "path": "src\\features\\invoice_ledger.py",
+          "symbol": "find_invoice",
+          "startLine": 8,
+          "endLine": 10,
+          "responseCharacters": 374,
+          "sourceLines": 3,
+          "vectorScore": 0.26987934,
+          "lexicalScore": 3,
+          "fusedScore": 0.014705882352941176,
+          "signature": "def find_invoice(records: list[dict[str, str]], key: str) -\u003E dict[str, str] | None:",
+          "namespace": "src/features",
+          "kind": 2
+        },
+        {
+          "path": "src\\shared\\lib\\currency_policy.py",
+          "symbol": "sum_report_values",
+          "startLine": 7,
+          "endLine": 9,
+          "responseCharacters": 315,
+          "sourceLines": 3,
+          "vectorScore": 0.4559523,
+          "lexicalScore": 0,
+          "fusedScore": 0.014285714285714285,
+          "signature": "def sum_report_values(values: list[str]) -\u003E Decimal:",
+          "namespace": "src/shared/lib",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\catalog_ledger.py",
+          "symbol": "total_catalog",
+          "startLine": 3,
+          "endLine": 6,
+          "responseCharacters": 380,
+          "sourceLines": 4,
+          "vectorScore": 0.39945412,
+          "lexicalScore": 1,
+          "fusedScore": 0.014084507042253521,
+          "signature": "def total_catalog(records: list[dict[str, str]]) -\u003E Decimal:",
+          "namespace": "src/features",
+          "kind": 2
+        }
+      ],
+      "elapsed": "00:00:04.0274902",
+      "brokerQueueWait": null
+    },
+    {
+      "caseId": "py-halfup-ru",
+      "hits": [
+        {
+          "path": "src\\shared\\lib\\money.py",
+          "symbol": "to_minor_units",
+          "startLine": 8,
+          "endLine": 10,
+          "responseCharacters": 295,
+          "sourceLines": 3,
+          "vectorScore": 0.6945829,
+          "lexicalScore": 0,
+          "fusedScore": 0.01639344262295082,
+          "signature": "def to_minor_units(amount: Decimal) -\u003E int:",
+          "namespace": "src/shared/lib",
+          "kind": 2
+        },
+        {
+          "path": "src\\shared\\lib\\currency_policy.py",
+          "symbol": "round_for_statistics",
+          "startLine": 3,
+          "endLine": 5,
+          "responseCharacters": 325,
+          "sourceLines": 3,
+          "vectorScore": 0.6279971,
+          "lexicalScore": 0,
+          "fusedScore": 0.016129032258064516,
+          "signature": "def round_for_statistics(value: str) -\u003E Decimal:",
+          "namespace": "src/shared/lib",
+          "kind": 2
+        },
+        {
+          "path": "src\\shared\\lib\\currency_policy.py",
+          "symbol": "currency_policy.py",
+          "startLine": 1,
+          "endLine": 2,
+          "responseCharacters": 157,
+          "sourceLines": 2,
+          "vectorScore": 0.61797273,
+          "lexicalScore": 0,
+          "fusedScore": 0.015873015873015872,
+          "signature": "src\\shared\\lib\\currency_policy.py:1-2",
+          "namespace": "src/shared/lib",
+          "kind": 3
+        },
+        {
+          "path": "src\\shared\\lib\\money.py",
+          "symbol": "money.py",
+          "startLine": 1,
+          "endLine": 7,
+          "responseCharacters": 218,
+          "sourceLines": 7,
+          "vectorScore": 0.60341066,
+          "lexicalScore": 0,
+          "fusedScore": 0.015625,
+          "signature": "src\\shared\\lib\\money.py:1-7",
+          "namespace": "src/shared/lib",
+          "kind": 3
+        },
+        {
+          "path": "src\\shared\\lib\\money.py",
+          "symbol": "MoneyLedger",
+          "startLine": 13,
+          "endLine": 23,
+          "responseCharacters": 393,
+          "sourceLines": 11,
+          "vectorScore": 0.5539837,
+          "lexicalScore": 0,
+          "fusedScore": 0.015384615384615385,
+          "signature": "class MoneyLedger:",
+          "namespace": "src/shared/lib",
+          "kind": 1
+        },
+        {
+          "path": "src\\shared\\lib\\currency_policy.py",
+          "symbol": "sum_report_values",
+          "startLine": 7,
+          "endLine": 9,
+          "responseCharacters": 315,
+          "sourceLines": 3,
+          "vectorScore": 0.5385064,
+          "lexicalScore": 0,
+          "fusedScore": 0.015151515151515152,
+          "signature": "def sum_report_values(values: list[str]) -\u003E Decimal:",
+          "namespace": "src/shared/lib",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\payment_ledger.py",
+          "symbol": "total_payment",
+          "startLine": 3,
+          "endLine": 6,
+          "responseCharacters": 380,
+          "sourceLines": 4,
+          "vectorScore": 0.52015316,
+          "lexicalScore": 0,
+          "fusedScore": 0.014705882352941176,
+          "signature": "def total_payment(records: list[dict[str, str]]) -\u003E Decimal:",
+          "namespace": "src/features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\payment_ledger.py",
+          "symbol": "payment_ledger.py",
+          "startLine": 1,
+          "endLine": 2,
+          "responseCharacters": 133,
+          "sourceLines": 2,
+          "vectorScore": 0.51749784,
+          "lexicalScore": 0,
+          "fusedScore": 0.014492753623188406,
+          "signature": "src\\features\\payment_ledger.py:1-2",
+          "namespace": "src/features",
+          "kind": 3
+        },
+        {
+          "path": "src\\features\\pricing_ledger.py",
+          "symbol": "total_pricing",
+          "startLine": 3,
+          "endLine": 6,
+          "responseCharacters": 380,
+          "sourceLines": 4,
+          "vectorScore": 0.49726826,
+          "lexicalScore": 0,
+          "fusedScore": 0.014084507042253521,
+          "signature": "def total_pricing(records: list[dict[str, str]]) -\u003E Decimal:",
+          "namespace": "src/features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\customer_ledger.py",
+          "symbol": "total_customer",
+          "startLine": 3,
+          "endLine": 6,
+          "responseCharacters": 385,
+          "sourceLines": 4,
+          "vectorScore": 0.49638715,
+          "lexicalScore": 0,
+          "fusedScore": 0.013888888888888888,
+          "signature": "def total_customer(records: list[dict[str, str]]) -\u003E Decimal:",
+          "namespace": "src/features",
+          "kind": 2
+        }
+      ],
+      "elapsed": "00:00:04.5615544",
+      "brokerQueueWait": null
+    },
+    {
+      "caseId": "py-even-en",
+      "hits": [
+        {
+          "path": "src\\shared\\lib\\currency_policy.py",
+          "symbol": "round_for_statistics",
+          "startLine": 3,
+          "endLine": 5,
+          "responseCharacters": 325,
+          "sourceLines": 3,
+          "vectorScore": 0.8166121,
+          "lexicalScore": 8,
+          "fusedScore": 0.01639344262295082,
+          "signature": "def round_for_statistics(value: str) -\u003E Decimal:",
+          "namespace": "src/shared/lib",
+          "kind": 2
+        },
+        {
+          "path": "src\\shared\\lib\\money.py",
+          "symbol": "to_minor_units",
+          "startLine": 8,
+          "endLine": 10,
+          "responseCharacters": 295,
+          "sourceLines": 3,
+          "vectorScore": 0.71504426,
+          "lexicalScore": 1,
+          "fusedScore": 0.016129032258064516,
+          "signature": "def to_minor_units(amount: Decimal) -\u003E int:",
+          "namespace": "src/shared/lib",
+          "kind": 2
+        },
+        {
+          "path": "src\\shared\\lib\\currency_policy.py",
+          "symbol": "currency_policy.py",
+          "startLine": 1,
+          "endLine": 2,
+          "responseCharacters": 157,
+          "sourceLines": 2,
+          "vectorScore": 0.6702291,
+          "lexicalScore": 2,
+          "fusedScore": 0.015873015873015872,
+          "signature": "src\\shared\\lib\\currency_policy.py:1-2",
+          "namespace": "src/shared/lib",
+          "kind": 3
+        },
+        {
+          "path": "src\\shared\\lib\\currency_policy.py",
+          "symbol": "sum_report_values",
+          "startLine": 7,
+          "endLine": 9,
+          "responseCharacters": 315,
+          "sourceLines": 3,
+          "vectorScore": 0.52275014,
+          "lexicalScore": 3,
+          "fusedScore": 0.015625,
+          "signature": "def sum_report_values(values: list[str]) -\u003E Decimal:",
+          "namespace": "src/shared/lib",
+          "kind": 2
+        },
+        {
+          "path": "src\\shared\\lib\\money.py",
+          "symbol": "money.py",
+          "startLine": 1,
+          "endLine": 7,
+          "responseCharacters": 218,
+          "sourceLines": 7,
+          "vectorScore": 0.6234545,
+          "lexicalScore": 1,
+          "fusedScore": 0.015384615384615385,
+          "signature": "src\\shared\\lib\\money.py:1-7",
+          "namespace": "src/shared/lib",
+          "kind": 3
+        },
+        {
+          "path": "src\\shared\\lib\\money.py",
+          "symbol": "MoneyLedger",
+          "startLine": 13,
+          "endLine": 23,
+          "responseCharacters": 393,
+          "sourceLines": 11,
+          "vectorScore": 0.5023869,
+          "lexicalScore": 0,
+          "fusedScore": 0.015151515151515152,
+          "signature": "class MoneyLedger:",
+          "namespace": "src/shared/lib",
+          "kind": 1
+        },
+        {
+          "path": "src\\features\\refund_ledger.py",
+          "symbol": "refund_ledger.py",
+          "startLine": 1,
+          "endLine": 2,
+          "responseCharacters": 130,
+          "sourceLines": 2,
+          "vectorScore": 0.45289114,
+          "lexicalScore": 0,
+          "fusedScore": 0.014705882352941176,
+          "signature": "src\\features\\refund_ledger.py:1-2",
+          "namespace": "src/features",
+          "kind": 3
+        },
+        {
+          "path": "src\\features\\pricing_ledger.py",
+          "symbol": "pricing_ledger.py",
+          "startLine": 1,
+          "endLine": 2,
+          "responseCharacters": 133,
+          "sourceLines": 2,
+          "vectorScore": 0.44372272,
+          "lexicalScore": 0,
+          "fusedScore": 0.014492753623188406,
+          "signature": "src\\features\\pricing_ledger.py:1-2",
+          "namespace": "src/features",
+          "kind": 3
+        },
+        {
+          "path": "src\\features\\payment_ledger.py",
+          "symbol": "payment_ledger.py",
+          "startLine": 1,
+          "endLine": 2,
+          "responseCharacters": 133,
+          "sourceLines": 2,
+          "vectorScore": 0.4425767,
+          "lexicalScore": 0,
+          "fusedScore": 0.014285714285714285,
+          "signature": "src\\features\\payment_ledger.py:1-2",
+          "namespace": "src/features",
+          "kind": 3
+        },
+        {
+          "path": "src\\features\\invoice_ledger.py",
+          "symbol": "invoice_ledger.py",
+          "startLine": 1,
+          "endLine": 2,
+          "responseCharacters": 133,
+          "sourceLines": 2,
+          "vectorScore": 0.43601084,
+          "lexicalScore": 0,
+          "fusedScore": 0.014084507042253521,
+          "signature": "src\\features\\invoice_ledger.py:1-2",
+          "namespace": "src/features",
+          "kind": 3
+        }
+      ],
+      "elapsed": "00:00:04.4255151",
+      "brokerQueueWait": null
+    },
+    {
+      "caseId": "py-even-ru",
+      "hits": [
+        {
+          "path": "src\\shared\\lib\\currency_policy.py",
+          "symbol": "round_for_statistics",
+          "startLine": 3,
+          "endLine": 5,
+          "responseCharacters": 325,
+          "sourceLines": 3,
+          "vectorScore": 0.76484287,
+          "lexicalScore": 0,
+          "fusedScore": 0.01639344262295082,
+          "signature": "def round_for_statistics(value: str) -\u003E Decimal:",
+          "namespace": "src/shared/lib",
+          "kind": 2
+        },
+        {
+          "path": "src\\shared\\lib\\money.py",
+          "symbol": "to_minor_units",
+          "startLine": 8,
+          "endLine": 10,
+          "responseCharacters": 295,
+          "sourceLines": 3,
+          "vectorScore": 0.625853,
+          "lexicalScore": 0,
+          "fusedScore": 0.016129032258064516,
+          "signature": "def to_minor_units(amount: Decimal) -\u003E int:",
+          "namespace": "src/shared/lib",
+          "kind": 2
+        },
+        {
+          "path": "src\\shared\\lib\\currency_policy.py",
+          "symbol": "currency_policy.py",
+          "startLine": 1,
+          "endLine": 2,
+          "responseCharacters": 157,
+          "sourceLines": 2,
+          "vectorScore": 0.60566723,
+          "lexicalScore": 0,
+          "fusedScore": 0.015873015873015872,
+          "signature": "src\\shared\\lib\\currency_policy.py:1-2",
+          "namespace": "src/shared/lib",
+          "kind": 3
+        },
+        {
+          "path": "src\\shared\\lib\\money.py",
+          "symbol": "money.py",
+          "startLine": 1,
+          "endLine": 7,
+          "responseCharacters": 218,
+          "sourceLines": 7,
+          "vectorScore": 0.5570575,
+          "lexicalScore": 0,
+          "fusedScore": 0.015625,
+          "signature": "src\\shared\\lib\\money.py:1-7",
+          "namespace": "src/shared/lib",
+          "kind": 3
+        },
+        {
+          "path": "src\\shared\\lib\\currency_policy.py",
+          "symbol": "sum_report_values",
+          "startLine": 7,
+          "endLine": 9,
+          "responseCharacters": 315,
+          "sourceLines": 3,
+          "vectorScore": 0.5561278,
+          "lexicalScore": 0,
+          "fusedScore": 0.015384615384615385,
+          "signature": "def sum_report_values(values: list[str]) -\u003E Decimal:",
+          "namespace": "src/shared/lib",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\catalog_ledger.py",
+          "symbol": "total_catalog",
+          "startLine": 3,
+          "endLine": 6,
+          "responseCharacters": 380,
+          "sourceLines": 4,
+          "vectorScore": 0.51112974,
+          "lexicalScore": 0,
+          "fusedScore": 0.015151515151515152,
+          "signature": "def total_catalog(records: list[dict[str, str]]) -\u003E Decimal:",
+          "namespace": "src/features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\warehouse_ledger.py",
+          "symbol": "total_warehouse",
+          "startLine": 3,
+          "endLine": 6,
+          "responseCharacters": 390,
+          "sourceLines": 4,
+          "vectorScore": 0.51038265,
+          "lexicalScore": 0,
+          "fusedScore": 0.014925373134328358,
+          "signature": "def total_warehouse(records: list[dict[str, str]]) -\u003E Decimal:",
+          "namespace": "src/features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\pricing_ledger.py",
+          "symbol": "total_pricing",
+          "startLine": 3,
+          "endLine": 6,
+          "responseCharacters": 380,
+          "sourceLines": 4,
+          "vectorScore": 0.50596666,
+          "lexicalScore": 0,
+          "fusedScore": 0.014705882352941176,
+          "signature": "def total_pricing(records: list[dict[str, str]]) -\u003E Decimal:",
+          "namespace": "src/features",
+          "kind": 2
+        },
+        {
+          "path": "src\\shared\\lib\\money.py",
+          "symbol": "MoneyLedger",
+          "startLine": 13,
+          "endLine": 23,
+          "responseCharacters": 393,
+          "sourceLines": 11,
+          "vectorScore": 0.5000001,
+          "lexicalScore": 0,
+          "fusedScore": 0.014492753623188406,
+          "signature": "class MoneyLedger:",
+          "namespace": "src/shared/lib",
+          "kind": 1
+        },
+        {
+          "path": "src\\features\\shipment_ledger.py",
+          "symbol": "total_shipment",
+          "startLine": 3,
+          "endLine": 6,
+          "responseCharacters": 385,
+          "sourceLines": 4,
+          "vectorScore": 0.49909118,
+          "lexicalScore": 0,
+          "fusedScore": 0.014285714285714285,
+          "signature": "def total_shipment(records: list[dict[str, str]]) -\u003E Decimal:",
+          "namespace": "src/features",
+          "kind": 2
+        }
+      ],
+      "elapsed": "00:00:04.2249756",
+      "brokerQueueWait": null
+    },
+    {
+      "caseId": "py-missing-en",
+      "hits": [
+        {
+          "path": "src\\shared\\lib\\manifest.py",
+          "symbol": "missing_fields",
+          "startLine": 1,
+          "endLine": 3,
+          "responseCharacters": 367,
+          "sourceLines": 3,
+          "vectorScore": 0.63665056,
+          "lexicalScore": 6,
+          "fusedScore": 0.01639344262295082,
+          "signature": "def missing_fields(row: dict[str, str], required: list[str]) -\u003E list[str]:",
+          "namespace": "src/shared/lib",
+          "kind": 2
+        },
+        {
+          "path": "src\\shared\\lib\\manifest.py",
+          "symbol": "accepted_rows",
+          "startLine": 5,
+          "endLine": 7,
+          "responseCharacters": 398,
+          "sourceLines": 3,
+          "vectorScore": 0.55909604,
+          "lexicalScore": 3,
+          "fusedScore": 0.016129032258064516,
+          "signature": "def accepted_rows(rows: list[dict[str, str]], required: list[str]) -\u003E list[dict[str, str]]:",
+          "namespace": "src/shared/lib",
+          "kind": 2
+        }
+      ],
+      "elapsed": "00:00:04.4635812",
+      "brokerQueueWait": null
+    },
+    {
+      "caseId": "py-missing-ru",
+      "hits": [
+        {
+          "path": "src\\shared\\lib\\manifest.py",
+          "symbol": "missing_fields",
+          "startLine": 1,
+          "endLine": 3,
+          "responseCharacters": 367,
+          "sourceLines": 3,
+          "vectorScore": 0.6659567,
+          "lexicalScore": 0,
+          "fusedScore": 0.01639344262295082,
+          "signature": "def missing_fields(row: dict[str, str], required: list[str]) -\u003E list[str]:",
+          "namespace": "src/shared/lib",
+          "kind": 2
+        },
+        {
+          "path": "src\\shared\\lib\\manifest.py",
+          "symbol": "accepted_rows",
+          "startLine": 5,
+          "endLine": 7,
+          "responseCharacters": 398,
+          "sourceLines": 3,
+          "vectorScore": 0.6137737,
+          "lexicalScore": 0,
+          "fusedScore": 0.016129032258064516,
+          "signature": "def accepted_rows(rows: list[dict[str, str]], required: list[str]) -\u003E list[dict[str, str]]:",
+          "namespace": "src/shared/lib",
+          "kind": 2
+        }
+      ],
+      "elapsed": "00:00:04.6749814",
+      "brokerQueueWait": null
+    },
+    {
+      "caseId": "py-accepted-en",
+      "hits": [
+        {
+          "path": "src\\shared\\lib\\manifest.py",
+          "symbol": "accepted_rows",
+          "startLine": 5,
+          "endLine": 7,
+          "responseCharacters": 398,
+          "sourceLines": 3,
+          "vectorScore": 0.75744903,
+          "lexicalScore": 7,
+          "fusedScore": 0.01639344262295082,
+          "signature": "def accepted_rows(rows: list[dict[str, str]], required: list[str]) -\u003E list[dict[str, str]]:",
+          "namespace": "src/shared/lib",
+          "kind": 2
+        },
+        {
+          "path": "src\\shared\\lib\\manifest.py",
+          "symbol": "missing_fields",
+          "startLine": 1,
+          "endLine": 3,
+          "responseCharacters": 367,
+          "sourceLines": 3,
+          "vectorScore": 0.6403215,
+          "lexicalScore": 3,
+          "fusedScore": 0.016129032258064516,
+          "signature": "def missing_fields(row: dict[str, str], required: list[str]) -\u003E list[str]:",
+          "namespace": "src/shared/lib",
+          "kind": 2
+        },
+        {
+          "path": "src\\shared\\lib\\currency_policy.py",
+          "symbol": "sum_report_values",
+          "startLine": 7,
+          "endLine": 9,
+          "responseCharacters": 315,
+          "sourceLines": 3,
+          "vectorScore": 0.17402819,
+          "lexicalScore": 1,
+          "fusedScore": 0.015873015873015872,
+          "signature": "def sum_report_values(values: list[str]) -\u003E Decimal:",
+          "namespace": "src/shared/lib",
+          "kind": 2
+        }
+      ],
+      "elapsed": "00:00:04.4700643",
+      "brokerQueueWait": null
+    },
+    {
+      "caseId": "py-accepted-ru",
+      "hits": [
+        {
+          "path": "src\\shared\\lib\\manifest.py",
+          "symbol": "accepted_rows",
+          "startLine": 5,
+          "endLine": 7,
+          "responseCharacters": 398,
+          "sourceLines": 3,
+          "vectorScore": 0.66329896,
+          "lexicalScore": 0,
+          "fusedScore": 0.01639344262295082,
+          "signature": "def accepted_rows(rows: list[dict[str, str]], required: list[str]) -\u003E list[dict[str, str]]:",
+          "namespace": "src/shared/lib",
+          "kind": 2
+        },
+        {
+          "path": "src\\shared\\lib\\manifest.py",
+          "symbol": "missing_fields",
+          "startLine": 1,
+          "endLine": 3,
+          "responseCharacters": 367,
+          "sourceLines": 3,
+          "vectorScore": 0.59869814,
+          "lexicalScore": 0,
+          "fusedScore": 0.016129032258064516,
+          "signature": "def missing_fields(row: dict[str, str], required: list[str]) -\u003E list[str]:",
+          "namespace": "src/shared/lib",
+          "kind": 2
+        }
+      ],
+      "elapsed": "00:00:04.4264452",
+      "brokerQueueWait": null
+    },
+    {
+      "caseId": "py-invoice-en",
+      "hits": [
+        {
+          "path": "src\\features\\invoice_ledger.py",
+          "symbol": "total_invoice",
+          "startLine": 3,
+          "endLine": 6,
+          "responseCharacters": 380,
+          "sourceLines": 4,
+          "vectorScore": 0.81754,
+          "lexicalScore": 11,
+          "fusedScore": 0.01639344262295082,
+          "signature": "def total_invoice(records: list[dict[str, str]]) -\u003E Decimal:",
+          "namespace": "src/features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\catalog_ledger.py",
+          "symbol": "total_catalog",
+          "startLine": 3,
+          "endLine": 6,
+          "responseCharacters": 380,
+          "sourceLines": 4,
+          "vectorScore": 0.7128754,
+          "lexicalScore": 8,
+          "fusedScore": 0.016129032258064516,
+          "signature": "def total_catalog(records: list[dict[str, str]]) -\u003E Decimal:",
+          "namespace": "src/features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\customer_ledger.py",
+          "symbol": "total_customer",
+          "startLine": 3,
+          "endLine": 6,
+          "responseCharacters": 385,
+          "sourceLines": 4,
+          "vectorScore": 0.7165929,
+          "lexicalScore": 8,
+          "fusedScore": 0.015873015873015872,
+          "signature": "def total_customer(records: list[dict[str, str]]) -\u003E Decimal:",
+          "namespace": "src/features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\payment_ledger.py",
+          "symbol": "total_payment",
+          "startLine": 3,
+          "endLine": 6,
+          "responseCharacters": 380,
+          "sourceLines": 4,
+          "vectorScore": 0.7260151,
+          "lexicalScore": 8,
+          "fusedScore": 0.015625,
+          "signature": "def total_payment(records: list[dict[str, str]]) -\u003E Decimal:",
+          "namespace": "src/features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\pricing_ledger.py",
+          "symbol": "total_pricing",
+          "startLine": 3,
+          "endLine": 6,
+          "responseCharacters": 380,
+          "sourceLines": 4,
+          "vectorScore": 0.7233843,
+          "lexicalScore": 8,
+          "fusedScore": 0.015384615384615385,
+          "signature": "def total_pricing(records: list[dict[str, str]]) -\u003E Decimal:",
+          "namespace": "src/features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\discount_ledger.py",
+          "symbol": "total_discount",
+          "startLine": 3,
+          "endLine": 6,
+          "responseCharacters": 385,
+          "sourceLines": 4,
+          "vectorScore": 0.6804682,
+          "lexicalScore": 8,
+          "fusedScore": 0.015151515151515152,
+          "signature": "def total_discount(records: list[dict[str, str]]) -\u003E Decimal:",
+          "namespace": "src/features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\inventory_ledger.py",
+          "symbol": "total_inventory",
+          "startLine": 3,
+          "endLine": 6,
+          "responseCharacters": 390,
+          "sourceLines": 4,
+          "vectorScore": 0.69579816,
+          "lexicalScore": 8,
+          "fusedScore": 0.014925373134328358,
+          "signature": "def total_inventory(records: list[dict[str, str]]) -\u003E Decimal:",
+          "namespace": "src/features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\warehouse_ledger.py",
+          "symbol": "total_warehouse",
+          "startLine": 3,
+          "endLine": 6,
+          "responseCharacters": 390,
+          "sourceLines": 4,
+          "vectorScore": 0.69859767,
+          "lexicalScore": 8,
+          "fusedScore": 0.014705882352941176,
+          "signature": "def total_warehouse(records: list[dict[str, str]]) -\u003E Decimal:",
+          "namespace": "src/features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\refund_ledger.py",
+          "symbol": "total_refund",
+          "startLine": 3,
+          "endLine": 6,
+          "responseCharacters": 375,
+          "sourceLines": 4,
+          "vectorScore": 0.67302245,
+          "lexicalScore": 8,
+          "fusedScore": 0.014492753623188406,
+          "signature": "def total_refund(records: list[dict[str, str]]) -\u003E Decimal:",
+          "namespace": "src/features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\shipment_ledger.py",
+          "symbol": "total_shipment",
+          "startLine": 3,
+          "endLine": 6,
+          "responseCharacters": 385,
+          "sourceLines": 4,
+          "vectorScore": 0.68007505,
+          "lexicalScore": 8,
+          "fusedScore": 0.014285714285714285,
+          "signature": "def total_shipment(records: list[dict[str, str]]) -\u003E Decimal:",
+          "namespace": "src/features",
+          "kind": 2
+        }
+      ],
+      "elapsed": "00:00:04.2736823",
+      "brokerQueueWait": null
+    },
+    {
+      "caseId": "py-inventory-ru",
+      "hits": [
+        {
+          "path": "src\\features\\inventory_ledger.py",
+          "symbol": "find_inventory",
+          "startLine": 8,
+          "endLine": 10,
+          "responseCharacters": 384,
+          "sourceLines": 3,
+          "vectorScore": 0.73800135,
+          "lexicalScore": 3,
+          "fusedScore": 0.01639344262295082,
+          "signature": "def find_inventory(records: list[dict[str, str]], key: str) -\u003E dict[str, str] | None:",
+          "namespace": "src/features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\inventory_ledger.py",
+          "symbol": "total_inventory",
+          "startLine": 3,
+          "endLine": 6,
+          "responseCharacters": 390,
+          "sourceLines": 4,
+          "vectorScore": 0.43077385,
+          "lexicalScore": 3,
+          "fusedScore": 0.016129032258064516,
+          "signature": "def total_inventory(records: list[dict[str, str]]) -\u003E Decimal:",
+          "namespace": "src/features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\invoice_ledger.py",
+          "symbol": "find_invoice",
+          "startLine": 8,
+          "endLine": 10,
+          "responseCharacters": 374,
+          "sourceLines": 3,
+          "vectorScore": 0.6457887,
+          "lexicalScore": 0,
+          "fusedScore": 0.015873015873015872,
+          "signature": "def find_invoice(records: list[dict[str, str]], key: str) -\u003E dict[str, str] | None:",
+          "namespace": "src/features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\warehouse_ledger.py",
+          "symbol": "find_warehouse",
+          "startLine": 8,
+          "endLine": 10,
+          "responseCharacters": 384,
+          "sourceLines": 3,
+          "vectorScore": 0.63627774,
+          "lexicalScore": 0,
+          "fusedScore": 0.015625,
+          "signature": "def find_warehouse(records: list[dict[str, str]], key: str) -\u003E dict[str, str] | None:",
+          "namespace": "src/features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\inventory_ledger.py",
+          "symbol": "inventory_ledger.py",
+          "startLine": 1,
+          "endLine": 2,
+          "responseCharacters": 139,
+          "sourceLines": 2,
+          "vectorScore": 0.40844625,
+          "lexicalScore": 3,
+          "fusedScore": 0.015384615384615385,
+          "signature": "src\\features\\inventory_ledger.py:1-2",
+          "namespace": "src/features",
+          "kind": 3
+        },
+        {
+          "path": "src\\features\\shipment_ledger.py",
+          "symbol": "find_shipment",
+          "startLine": 8,
+          "endLine": 10,
+          "responseCharacters": 379,
+          "sourceLines": 3,
+          "vectorScore": 0.60218155,
+          "lexicalScore": 0,
+          "fusedScore": 0.015151515151515152,
+          "signature": "def find_shipment(records: list[dict[str, str]], key: str) -\u003E dict[str, str] | None:",
+          "namespace": "src/features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\catalog_ledger.py",
+          "symbol": "find_catalog",
+          "startLine": 8,
+          "endLine": 10,
+          "responseCharacters": 374,
+          "sourceLines": 3,
+          "vectorScore": 0.6006139,
+          "lexicalScore": 0,
+          "fusedScore": 0.014925373134328358,
+          "signature": "def find_catalog(records: list[dict[str, str]], key: str) -\u003E dict[str, str] | None:",
+          "namespace": "src/features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\pricing_ledger.py",
+          "symbol": "find_pricing",
+          "startLine": 8,
+          "endLine": 10,
+          "responseCharacters": 374,
+          "sourceLines": 3,
+          "vectorScore": 0.54647917,
+          "lexicalScore": 0,
+          "fusedScore": 0.014705882352941176,
+          "signature": "def find_pricing(records: list[dict[str, str]], key: str) -\u003E dict[str, str] | None:",
+          "namespace": "src/features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\payment_ledger.py",
+          "symbol": "find_payment",
+          "startLine": 8,
+          "endLine": 10,
+          "responseCharacters": 374,
+          "sourceLines": 3,
+          "vectorScore": 0.541626,
+          "lexicalScore": 0,
+          "fusedScore": 0.014492753623188406,
+          "signature": "def find_payment(records: list[dict[str, str]], key: str) -\u003E dict[str, str] | None:",
+          "namespace": "src/features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\customer_ledger.py",
+          "symbol": "find_customer",
+          "startLine": 8,
+          "endLine": 10,
+          "responseCharacters": 379,
+          "sourceLines": 3,
+          "vectorScore": 0.5391355,
+          "lexicalScore": 0,
+          "fusedScore": 0.014285714285714285,
+          "signature": "def find_customer(records: list[dict[str, str]], key: str) -\u003E dict[str, str] | None:",
+          "namespace": "src/features",
+          "kind": 2
+        }
+      ],
+      "elapsed": "00:00:04.3081607",
+      "brokerQueueWait": null
+    },
+    {
+      "caseId": "absent-encryption-en",
+      "hits": [
+        {
+          "path": "src\\features\\catalog_ledger.py",
+          "symbol": "find_catalog",
+          "startLine": 8,
+          "endLine": 10,
+          "responseCharacters": 374,
+          "sourceLines": 3,
+          "vectorScore": 0.14936559,
+          "lexicalScore": 2,
+          "fusedScore": 0.01639344262295082,
+          "signature": "def find_catalog(records: list[dict[str, str]], key: str) -\u003E dict[str, str] | None:",
+          "namespace": "src/features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\customer_ledger.py",
+          "symbol": "find_customer",
+          "startLine": 8,
+          "endLine": 10,
+          "responseCharacters": 379,
+          "sourceLines": 3,
+          "vectorScore": 0.1634852,
+          "lexicalScore": 2,
+          "fusedScore": 0.016129032258064516,
+          "signature": "def find_customer(records: list[dict[str, str]], key: str) -\u003E dict[str, str] | None:",
+          "namespace": "src/features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\discount_ledger.py",
+          "symbol": "find_discount",
+          "startLine": 8,
+          "endLine": 10,
+          "responseCharacters": 379,
+          "sourceLines": 3,
+          "vectorScore": 0.13263136,
+          "lexicalScore": 2,
+          "fusedScore": 0.015873015873015872,
+          "signature": "def find_discount(records: list[dict[str, str]], key: str) -\u003E dict[str, str] | None:",
+          "namespace": "src/features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\inventory_ledger.py",
+          "symbol": "find_inventory",
+          "startLine": 8,
+          "endLine": 10,
+          "responseCharacters": 384,
+          "sourceLines": 3,
+          "vectorScore": 0.16584918,
+          "lexicalScore": 2,
+          "fusedScore": 0.015625,
+          "signature": "def find_inventory(records: list[dict[str, str]], key: str) -\u003E dict[str, str] | None:",
+          "namespace": "src/features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\invoice_ledger.py",
+          "symbol": "find_invoice",
+          "startLine": 8,
+          "endLine": 10,
+          "responseCharacters": 374,
+          "sourceLines": 3,
+          "vectorScore": 0.15577236,
+          "lexicalScore": 2,
+          "fusedScore": 0.015384615384615385,
+          "signature": "def find_invoice(records: list[dict[str, str]], key: str) -\u003E dict[str, str] | None:",
+          "namespace": "src/features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\payment_ledger.py",
+          "symbol": "find_payment",
+          "startLine": 8,
+          "endLine": 10,
+          "responseCharacters": 374,
+          "sourceLines": 3,
+          "vectorScore": 0.1370805,
+          "lexicalScore": 2,
+          "fusedScore": 0.015151515151515152,
+          "signature": "def find_payment(records: list[dict[str, str]], key: str) -\u003E dict[str, str] | None:",
+          "namespace": "src/features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\pricing_ledger.py",
+          "symbol": "find_pricing",
+          "startLine": 8,
+          "endLine": 10,
+          "responseCharacters": 374,
+          "sourceLines": 3,
+          "vectorScore": 0.15723363,
+          "lexicalScore": 2,
+          "fusedScore": 0.014925373134328358,
+          "signature": "def find_pricing(records: list[dict[str, str]], key: str) -\u003E dict[str, str] | None:",
+          "namespace": "src/features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\refund_ledger.py",
+          "symbol": "find_refund",
+          "startLine": 8,
+          "endLine": 10,
+          "responseCharacters": 369,
+          "sourceLines": 3,
+          "vectorScore": 0.15090261,
+          "lexicalScore": 2,
+          "fusedScore": 0.014705882352941176,
+          "signature": "def find_refund(records: list[dict[str, str]], key: str) -\u003E dict[str, str] | None:",
+          "namespace": "src/features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\shipment_ledger.py",
+          "symbol": "find_shipment",
+          "startLine": 8,
+          "endLine": 10,
+          "responseCharacters": 379,
+          "sourceLines": 3,
+          "vectorScore": 0.14940484,
+          "lexicalScore": 2,
+          "fusedScore": 0.014492753623188406,
+          "signature": "def find_shipment(records: list[dict[str, str]], key: str) -\u003E dict[str, str] | None:",
+          "namespace": "src/features",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\warehouse_ledger.py",
+          "symbol": "find_warehouse",
+          "startLine": 8,
+          "endLine": 10,
+          "responseCharacters": 384,
+          "sourceLines": 3,
+          "vectorScore": 0.15634415,
+          "lexicalScore": 2,
+          "fusedScore": 0.014285714285714285,
+          "signature": "def find_warehouse(records: list[dict[str, str]], key: str) -\u003E dict[str, str] | None:",
+          "namespace": "src/features",
+          "kind": 2
+        }
+      ],
+      "elapsed": "00:00:04.3689440",
+      "brokerQueueWait": null
+    },
+    {
+      "caseId": "absent-migration-ru",
+      "hits": [],
+      "elapsed": "00:00:04.3204897",
+      "brokerQueueWait": null
+    }
+  ]
+}
