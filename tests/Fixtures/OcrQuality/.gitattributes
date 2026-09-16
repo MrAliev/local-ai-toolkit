@@ -1,0 +1,4 @@
+*.txt text eol=lf
+*.json text eol=lf
+*.png binary
+*.py text eol=lf
