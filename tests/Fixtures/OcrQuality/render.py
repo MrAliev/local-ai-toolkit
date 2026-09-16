@@ -71,7 +71,7 @@ def main():
             "image": image_path.name, "reference": text_path.name, "width": width, "height": height,
             "fontPixels": pixels, "imageSha256": sha256(image_path), "referenceSha256": sha256(text_path),
             "lineBoxes": bounds, "fields": fields})
-    (arguments.output / "corpus.json").write_text(json.dumps(corpus, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    (arguments.output / "corpus.json").write_text(json.dumps(corpus, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
     print(f"Rendered {len(corpus['cases'])} OCR reference pages; all text boxes fit.")
 
 
