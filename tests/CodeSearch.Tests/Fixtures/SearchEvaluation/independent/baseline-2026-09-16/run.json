@@ -1,0 +1,507 @@
+{
+  "schemaVersion": 1,
+  "startedUtc": "2026-09-16T10:25:31.6293873Z",
+  "mode": "All",
+  "sourceCommit": "40cf87a8ee0f1e631f74f1b9c93783bab71a5b0a",
+  "sourceStatus": [],
+  "platform": "Microsoft Windows 10.0.26200",
+  "runtime": ".NET 10.0.9",
+  "processorCount": 32,
+  "localAi": [
+    {
+      "file": "CodeSearch.Core.dll",
+      "version": "0.0.0.0",
+      "sha256": "0c77164910a3dcf95795eb04fb468a666dfdc273d5559746bb305ebe93de78ab"
+    },
+    {
+      "file": "ExCSS.dll",
+      "version": "4.3.1.0",
+      "sha256": "6b166e638181eba3150f0d10379d1cc8362af6dfd518e9e9e194aa9a746293c2"
+    },
+    {
+      "file": "HarfBuzzSharp.dll",
+      "version": "14.2.0",
+      "sha256": "a28c70688886f87519211a4c9b0536284266070d15ea4ca09ba54a342e47bfb0"
+    },
+    {
+      "file": "Humanizer.dll",
+      "version": "2.14.1.48190",
+      "sha256": "d6853075547d7e303efd60354d911a2ff18edba582cda2fa59d91a2e5dcf9e98"
+    },
+    {
+      "file": "LocalAi.Broker.Client.dll",
+      "version": "0.0.0.0",
+      "sha256": "804b48919f21244d5dc906b8a4c642126845a937091a93597381f0e0cf10e28e"
+    },
+    {
+      "file": "LocalAi.Broker.Core.dll",
+      "version": "0.0.0.0",
+      "sha256": "992c0e474eec5cc30b8921f315f21127730eb96307ffa0c3f0ee8a76cc1f1051"
+    },
+    {
+      "file": "LocalAi.Broker.dll",
+      "version": "0.0.0.0",
+      "sha256": "6eeb5aae6263ecf4e48221606a7fe1b6572add2b0e1451df253c161382c41424"
+    },
+    {
+      "file": "LocalAi.Contracts.dll",
+      "version": "0.0.0.0",
+      "sha256": "fdb7de985e68b6445ebac03cd8eb15cfbffbfbe3297155d2a9bd278ce2f5934f"
+    },
+    {
+      "file": "localai.dll",
+      "version": "0.0.0.0",
+      "sha256": "133e490551f972556a5dacd5c36db59d62d9e89ea8e397aeeccd22fb9ae2e020"
+    },
+    {
+      "file": "LocalAi.Documentation.dll",
+      "version": "0.0.0.0",
+      "sha256": "a46d5e4a721a34b9c2c96342336d263c31204463778705761b639ad04eb6960d"
+    },
+    {
+      "file": "localai.exe",
+      "version": "0.0.0.0",
+      "sha256": "473c8a498a7e8a834bd43ef84e282b6b39df553b7d372273483f1cfffe0a0b27"
+    },
+    {
+      "file": "LocalAi.Installer.Core.dll",
+      "version": "0.0.0.0",
+      "sha256": "847caec15e9bfec1d8e28fa72eb55e20b80c51e90edc61b1213d9512751c9ed5"
+    },
+    {
+      "file": "LocalAi.Repository.dll",
+      "version": "0.0.0.0",
+      "sha256": "1ce29622b41a18d19476319d60e5947bb82b2790ce56cbba3d9240fcb1f3dc37"
+    },
+    {
+      "file": "LocalLm.Core.dll",
+      "version": "0.0.0.0",
+      "sha256": "470d5d5fcbfe1cfb92eccf37c5634e4ab1414f8314238b0fb81103556522a871"
+    },
+    {
+      "file": "Markdig.dll",
+      "version": "1.3.2.0",
+      "sha256": "6231c6a7216466cbe7fdeab7463a30ed29275cf90042ba64b49e1205d45e7eb5"
+    },
+    {
+      "file": "Microsoft.Build.Locator.dll",
+      "version": "1.11.2.35241",
+      "sha256": "c156417f9e587a1d565b85e2ebcea70a075e9e13a2091a9900d611630a3ad0aa"
+    },
+    {
+      "file": "Microsoft.CodeAnalysis.CSharp.dll",
+      "version": "5.900.26.35703",
+      "sha256": "fc571a6647ac45b0b0dc1866b795529bb2eeb93adf9be97fcd5903cf482f700a"
+    },
+    {
+      "file": "Microsoft.CodeAnalysis.CSharp.Workspaces.dll",
+      "version": "5.900.26.35703",
+      "sha256": "af851edb8f0c128cbfa32be81596381eb2c806e4a961b50b47825536f3fb36d9"
+    },
+    {
+      "file": "Microsoft.CodeAnalysis.dll",
+      "version": "5.900.26.35703",
+      "sha256": "55618d457128eec582017545b8929ebf195669003b6ec737110f9519e1711d28"
+    },
+    {
+      "file": "Microsoft.CodeAnalysis.ExternalAccess.RazorCompiler.dll",
+      "version": "5.900.26.35703",
+      "sha256": "cb8488466374b4669c0a46efe42f64a3a6a214fc903e4e50a5d2afa60976e0d1"
+    },
+    {
+      "file": "Microsoft.CodeAnalysis.Workspaces.dll",
+      "version": "5.900.26.35703",
+      "sha256": "e405cbe085bb8f1a3fcc7308af0dc6c5b3be495196046a1840607b17babe13a0"
+    },
+    {
+      "file": "Microsoft.CodeAnalysis.Workspaces.MSBuild.Contracts.dll",
+      "version": "5.900.26.35703",
+      "sha256": "aab9f64e81c15885c7d9e8872a632e246b5581aeb6874684f23fb8d1a5a26229"
+    },
+    {
+      "file": "Microsoft.CodeAnalysis.Workspaces.MSBuild.dll",
+      "version": "5.900.26.35703",
+      "sha256": "2987cf1f571bc5930ee57b01f34586c4f3752c4c32cf857aef162fcc4f10feee"
+    },
+    {
+      "file": "Microsoft.Extensions.DependencyInjection.Abstractions.dll",
+      "version": "10.0.125.57005",
+      "sha256": "278e44ff99650cfc2b9062f7eb08f7b952871b19a2462047c65a0984e52a759a"
+    },
+    {
+      "file": "Microsoft.Extensions.DependencyInjection.dll",
+      "version": "10.0.125.57005",
+      "sha256": "068e92316da6c34203bddfed7121735f874ed86446654e0986aa6bee95ab85d3"
+    },
+    {
+      "file": "Microsoft.Extensions.Logging.Abstractions.dll",
+      "version": "10.0.125.57005",
+      "sha256": "34b41688a7eaf30f579669353391dc36183a2d4e0a1e06ac7f4c693671c6e72b"
+    },
+    {
+      "file": "Microsoft.Extensions.Logging.dll",
+      "version": "10.0.125.57005",
+      "sha256": "a9080cdb5e0131ddc648776b3540ed8723b557627b05d520b494bc33ca697f35"
+    },
+    {
+      "file": "Microsoft.Extensions.Options.dll",
+      "version": "10.0.125.57005",
+      "sha256": "651266b70634a34e5e9e4b73d8f9238264431ee34a38a089bf4777cd0943da4a"
+    },
+    {
+      "file": "Microsoft.Extensions.Primitives.dll",
+      "version": "10.0.125.57005",
+      "sha256": "3a11081a4d453ae68b7a0a8cbfcd3d8b71dac58d7826b8610a6c1112b164a063"
+    },
+    {
+      "file": "Microsoft.VisualStudio.SolutionPersistence.dll",
+      "version": "1.0.52.6595",
+      "sha256": "a1150f4a162d9c9992b6e99b2949e2de092017182264218b7b5666ceebbc16d4"
+    },
+    {
+      "file": "MigraDoc.DocumentObjectModel.dll",
+      "version": "6.2.4.7675",
+      "sha256": "aadc27f13d06e4a30815e4ce5720a7296038851a7bfc3d1b8a4363af609d1d3e"
+    },
+    {
+      "file": "MigraDoc.Rendering.dll",
+      "version": "6.2.4.7675",
+      "sha256": "718e550a83d11b267152c76ae76c273d99bc351a9e3dcc4a325f0c09d4b6b29d"
+    },
+    {
+      "file": "MigraDoc.RtfRendering.dll",
+      "version": "6.2.4.7675",
+      "sha256": "e4b6446828b5bee6238e77ce7433df1182132e018c9488f2d05874ee56174f7e"
+    },
+    {
+      "file": "PdfSharp.BarCodes.dll",
+      "version": "6.2.4.7675",
+      "sha256": "bafc4175afaef8629c6122cab01e90c8f8cdf72e2b957d328c42229d12d02fdd"
+    },
+    {
+      "file": "PdfSharp.Charting.dll",
+      "version": "6.2.4.7675",
+      "sha256": "fce1973d6474160e736112b215410244310f47983853fd5afd776086a7392469"
+    },
+    {
+      "file": "PdfSharp.Cryptography.dll",
+      "version": "6.2.4.7675",
+      "sha256": "25fc17414785592ca4cdc5efd93f2a9c245812a97cb66b986a63112f61552944"
+    },
+    {
+      "file": "PdfSharp.dll",
+      "version": "6.2.4.7675",
+      "sha256": "1a77754d9b06c077f339eb33c0cdef28927ae8ee46ecca84e7874b15dabc85a1"
+    },
+    {
+      "file": "PdfSharp.Quality.dll",
+      "version": "6.2.4.7675",
+      "sha256": "3f88ec2601d13607ec81a8f7cbc14bd710ff10e2730626ffece48c86098df0d1"
+    },
+    {
+      "file": "PdfSharp.Shared.dll",
+      "version": "6.2.4.7675",
+      "sha256": "4b21196cf18cb3b971ec02d1f66f2da0d98d77aa5ed5767754f5de2cf36cb737"
+    },
+    {
+      "file": "PdfSharp.Snippets.dll",
+      "version": "6.2.4.7675",
+      "sha256": "b8191aac4339b25dd54be0bc61206b873c69a4d0150ea9f16fdcecfc0f1907a4"
+    },
+    {
+      "file": "PdfSharp.System.dll",
+      "version": "6.2.4.7675",
+      "sha256": "5e8dc5ed655d223be9f9b5b3dfecadb607b00e695c34c60aac4e037af9e557e6"
+    },
+    {
+      "file": "PdfSharp.WPFonts.dll",
+      "version": "6.2.4.7675",
+      "sha256": "35a3ae0d7ee749e77a6db7c938ac2c41684d50a792b069e3a3723e9fdd6aafd3"
+    },
+    {
+      "file": "PDFtoImage.dll",
+      "version": "5.4.0.0",
+      "sha256": "ad36738c7f9431adfb1cf3e2e683226ff5ec0e437cb4ef92144c36e0df200ad7"
+    },
+    {
+      "file": "ShimSkiaSharp.dll",
+      "version": "5.2.3.0",
+      "sha256": "d5a801cafed66c273ab251194909621858ec4e6cd4d600363f2764300c408b34"
+    },
+    {
+      "file": "SkiaSharp.dll",
+      "version": "4.150.1.0",
+      "sha256": "948b5569f2bcd47d4511a465091dbd00bf941ee0f8f3c495d511f5a2ff0703ca"
+    },
+    {
+      "file": "Svg.Animation.dll",
+      "version": "5.2.3.0",
+      "sha256": "945e0bdda45810077f1c0466f1b24673d695e7b670a0f3b7069f6a5ff19425fe"
+    },
+    {
+      "file": "Svg.Custom.dll",
+      "version": "5.2.3.0",
+      "sha256": "2d7c63d988eac3777bbe9dbc690d5529c6bfca0a1f0357719d2e6c5458902bbd"
+    },
+    {
+      "file": "Svg.Model.dll",
+      "version": "5.2.3.0",
+      "sha256": "4c9a9c65745ce5e1b404942caaa922f693ad2004a0fd0448cc7e3c6dfd4f3ed3"
+    },
+    {
+      "file": "Svg.SceneGraph.dll",
+      "version": "5.2.3.0",
+      "sha256": "010776d45585cae94394c1219ac6fa587968b85ddac317b91ead31656ff30e22"
+    },
+    {
+      "file": "Svg.Skia.dll",
+      "version": "5.2.3.0",
+      "sha256": "52b6abd42cf1c2f757bea5d6a60a7e2d5a0f11fca379bed91aa2cad5a8cdfdea"
+    },
+    {
+      "file": "System.Composition.AttributedModel.dll",
+      "version": "10.0.125.57005",
+      "sha256": "75a980d33643c4d053246e4cd2a26d17ce6892d609bbf99ad6d9fc43cfbf79a7"
+    },
+    {
+      "file": "System.Composition.Convention.dll",
+      "version": "10.0.125.57005",
+      "sha256": "e97f2e6b99f9801d752042419b55ab2da7faa6f3350dcb91d030f7ede0425cae"
+    },
+    {
+      "file": "System.Composition.Hosting.dll",
+      "version": "10.0.125.57005",
+      "sha256": "dbd0a3c9fe826e5fa87c616aa345a563cc5e79a563193caf4356767a097e2343"
+    },
+    {
+      "file": "System.Composition.Runtime.dll",
+      "version": "10.0.125.57005",
+      "sha256": "65db10e03408098984916ce2a004d38f272a6c677f6fae5b2a4397537f5040b8"
+    },
+    {
+      "file": "System.Composition.TypedParts.dll",
+      "version": "10.0.125.57005",
+      "sha256": "48497c3d1c37b0b9e98179105679ce143d425332aac9d070d74787675f4a8870"
+    },
+    {
+      "file": "System.Numerics.Tensors.dll",
+      "version": "10.0.1126.37416",
+      "sha256": "79ce5c54adaf9bac5ab11638cd832ae15d991585b03ae1abb3c25b502bd7edee"
+    },
+    {
+      "file": "System.Security.Cryptography.Pkcs.dll",
+      "version": "8.0.1024.46610",
+      "sha256": "e2352938ed4f664f770a5c98ef067cb145304456d014d2c311d725c95c8a21a9"
+    }
+  ],
+  "codeSearch": [
+    {
+      "file": "CodeSearch.Core.dll",
+      "version": "0.0.0.0",
+      "sha256": "f2df063b3adc7fb38efa10a950b1a70b52ee0ca29630c02f22208623f0eaadbc"
+    },
+    {
+      "file": "codesearch.dll",
+      "version": "0.0.0.0",
+      "sha256": "62ca0ee8390dd9118553a4ea6618413e79d81a9bdbdc589e975d1c97a472044c"
+    },
+    {
+      "file": "codesearch.exe",
+      "version": "0.0.0.0",
+      "sha256": "38580a76815aead6b615dbd89310d10eaaed583126e48b10affb622a056c2601"
+    },
+    {
+      "file": "Humanizer.dll",
+      "version": "2.14.1.48190",
+      "sha256": "d6853075547d7e303efd60354d911a2ff18edba582cda2fa59d91a2e5dcf9e98"
+    },
+    {
+      "file": "LocalAi.Broker.Client.dll",
+      "version": "0.0.0.0",
+      "sha256": "b77f8ed32462f5933eacdb1a7f72e7783bb46deedc6324665816b908de731ec1"
+    },
+    {
+      "file": "LocalAi.Broker.Core.dll",
+      "version": "0.0.0.0",
+      "sha256": "e4cbefec21f9ced19c6df88aa976d97d991214a2411789199af48299c570b231"
+    },
+    {
+      "file": "LocalAi.Broker.dll",
+      "version": "0.0.0.0",
+      "sha256": "a67fcec06f0d2b8bb8d762fa9308fa9aaa52f1b0dae6025dad54ace64298df2a"
+    },
+    {
+      "file": "LocalAi.Contracts.dll",
+      "version": "0.0.0.0",
+      "sha256": "fc923160b483d765fce70e289f666e995c6872b310b59fe014d086a5c8df2b29"
+    },
+    {
+      "file": "LocalAi.Repository.dll",
+      "version": "0.0.0.0",
+      "sha256": "87f0ac74912e5a12328ec3f09ac8e5e301b85d5d4eaf982809baee7203c81afd"
+    },
+    {
+      "file": "Microsoft.Build.Locator.dll",
+      "version": "1.11.2.35241",
+      "sha256": "c156417f9e587a1d565b85e2ebcea70a075e9e13a2091a9900d611630a3ad0aa"
+    },
+    {
+      "file": "Microsoft.CodeAnalysis.CSharp.dll",
+      "version": "5.900.26.35703",
+      "sha256": "fc571a6647ac45b0b0dc1866b795529bb2eeb93adf9be97fcd5903cf482f700a"
+    },
+    {
+      "file": "Microsoft.CodeAnalysis.CSharp.Workspaces.dll",
+      "version": "5.900.26.35703",
+      "sha256": "af851edb8f0c128cbfa32be81596381eb2c806e4a961b50b47825536f3fb36d9"
+    },
+    {
+      "file": "Microsoft.CodeAnalysis.dll",
+      "version": "5.900.26.35703",
+      "sha256": "55618d457128eec582017545b8929ebf195669003b6ec737110f9519e1711d28"
+    },
+    {
+      "file": "Microsoft.CodeAnalysis.ExternalAccess.RazorCompiler.dll",
+      "version": "5.900.26.35703",
+      "sha256": "cb8488466374b4669c0a46efe42f64a3a6a214fc903e4e50a5d2afa60976e0d1"
+    },
+    {
+      "file": "Microsoft.CodeAnalysis.Workspaces.dll",
+      "version": "5.900.26.35703",
+      "sha256": "e405cbe085bb8f1a3fcc7308af0dc6c5b3be495196046a1840607b17babe13a0"
+    },
+    {
+      "file": "Microsoft.CodeAnalysis.Workspaces.MSBuild.Contracts.dll",
+      "version": "5.900.26.35703",
+      "sha256": "aab9f64e81c15885c7d9e8872a632e246b5581aeb6874684f23fb8d1a5a26229"
+    },
+    {
+      "file": "Microsoft.CodeAnalysis.Workspaces.MSBuild.dll",
+      "version": "5.900.26.35703",
+      "sha256": "2987cf1f571bc5930ee57b01f34586c4f3752c4c32cf857aef162fcc4f10feee"
+    },
+    {
+      "file": "Microsoft.Extensions.DependencyInjection.Abstractions.dll",
+      "version": "10.0.125.57005",
+      "sha256": "278e44ff99650cfc2b9062f7eb08f7b952871b19a2462047c65a0984e52a759a"
+    },
+    {
+      "file": "Microsoft.Extensions.DependencyInjection.dll",
+      "version": "10.0.125.57005",
+      "sha256": "068e92316da6c34203bddfed7121735f874ed86446654e0986aa6bee95ab85d3"
+    },
+    {
+      "file": "Microsoft.Extensions.Logging.Abstractions.dll",
+      "version": "10.0.125.57005",
+      "sha256": "34b41688a7eaf30f579669353391dc36183a2d4e0a1e06ac7f4c693671c6e72b"
+    },
+    {
+      "file": "Microsoft.Extensions.Logging.dll",
+      "version": "10.0.125.57005",
+      "sha256": "a9080cdb5e0131ddc648776b3540ed8723b557627b05d520b494bc33ca697f35"
+    },
+    {
+      "file": "Microsoft.Extensions.Options.dll",
+      "version": "10.0.125.57005",
+      "sha256": "651266b70634a34e5e9e4b73d8f9238264431ee34a38a089bf4777cd0943da4a"
+    },
+    {
+      "file": "Microsoft.Extensions.Primitives.dll",
+      "version": "10.0.125.57005",
+      "sha256": "3a11081a4d453ae68b7a0a8cbfcd3d8b71dac58d7826b8610a6c1112b164a063"
+    },
+    {
+      "file": "Microsoft.VisualStudio.SolutionPersistence.dll",
+      "version": "1.0.52.6595",
+      "sha256": "a1150f4a162d9c9992b6e99b2949e2de092017182264218b7b5666ceebbc16d4"
+    },
+    {
+      "file": "System.Composition.AttributedModel.dll",
+      "version": "10.0.125.57005",
+      "sha256": "75a980d33643c4d053246e4cd2a26d17ce6892d609bbf99ad6d9fc43cfbf79a7"
+    },
+    {
+      "file": "System.Composition.Convention.dll",
+      "version": "10.0.125.57005",
+      "sha256": "e97f2e6b99f9801d752042419b55ab2da7faa6f3350dcb91d030f7ede0425cae"
+    },
+    {
+      "file": "System.Composition.Hosting.dll",
+      "version": "10.0.125.57005",
+      "sha256": "dbd0a3c9fe826e5fa87c616aa345a563cc5e79a563193caf4356767a097e2343"
+    },
+    {
+      "file": "System.Composition.Runtime.dll",
+      "version": "10.0.125.57005",
+      "sha256": "65db10e03408098984916ce2a004d38f272a6c677f6fae5b2a4397537f5040b8"
+    },
+    {
+      "file": "System.Composition.TypedParts.dll",
+      "version": "10.0.125.57005",
+      "sha256": "48497c3d1c37b0b9e98179105679ce143d425332aac9d070d74787675f4a8870"
+    },
+    {
+      "file": "System.Numerics.Tensors.dll",
+      "version": "10.0.1126.37416",
+      "sha256": "79ce5c54adaf9bac5ab11638cd832ae15d991585b03ae1abb3c25b502bd7edee"
+    }
+  ],
+  "brokerBefore": [
+    {
+      "processId": 25796,
+      "path": "C:\\Users\\Mr.Aliev\\AppData\\Local\\LocalAi\\bin\\versions\\17385b2a6070\\LocalAi.Broker.exe",
+      "binaries": [
+        {
+          "file": "libHarfBuzzSharp.dll",
+          "version": null,
+          "sha256": "3e47dcf6e42ada1ada2202bfbab1a804c0c98eddd6989145e27af6588fed90af"
+        },
+        {
+          "file": "libSkiaSharp.dll",
+          "version": null,
+          "sha256": "c8770c219e0d3cd9bb119fad46f2d00ae1855b11315816e86e909e3332826212"
+        },
+        {
+          "file": "LocalAi.Broker.exe",
+          "version": "0.2.1.0",
+          "sha256": "0daf4ccc374c02f56042ac21067b015b91af115a3d1603c2b1c38bfe214ce165"
+        },
+        {
+          "file": "pdfium.dll",
+          "version": "152.0.7961.0",
+          "sha256": "d3d9f4b7c9dabe3363f30779c5c3c715c47332749fa590e4b4a2b8b6780cb1c4"
+        }
+      ]
+    }
+  ],
+  "brokerAfter": [
+    {
+      "processId": 25796,
+      "path": "C:\\Users\\Mr.Aliev\\AppData\\Local\\LocalAi\\bin\\versions\\17385b2a6070\\LocalAi.Broker.exe",
+      "binaries": [
+        {
+          "file": "libHarfBuzzSharp.dll",
+          "version": null,
+          "sha256": "3e47dcf6e42ada1ada2202bfbab1a804c0c98eddd6989145e27af6588fed90af"
+        },
+        {
+          "file": "libSkiaSharp.dll",
+          "version": null,
+          "sha256": "c8770c219e0d3cd9bb119fad46f2d00ae1855b11315816e86e909e3332826212"
+        },
+        {
+          "file": "LocalAi.Broker.exe",
+          "version": "0.2.1.0",
+          "sha256": "0daf4ccc374c02f56042ac21067b015b91af115a3d1603c2b1c38bfe214ce165"
+        },
+        {
+          "file": "pdfium.dll",
+          "version": "152.0.7961.0",
+          "sha256": "d3d9f4b7c9dabe3363f30779c5c3c715c47332749fa590e4b4a2b8b6780cb1c4"
+        }
+      ]
+    }
+  ],
+  "completed": true,
+  "finishedUtc": "2026-09-16T10:34:51.7596478Z"
+}

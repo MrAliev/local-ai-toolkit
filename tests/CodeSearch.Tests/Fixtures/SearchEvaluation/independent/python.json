@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "id": "py-halfup-en",
+      "query": "Convert an invoice amount into whole cents using half-up rounding",
+      "category": "en-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/shared/lib/money.py",
+          "symbol": "to_minor_units"
+        }
+      ]
+    },
+    {
+      "id": "py-halfup-ru",
+      "query": "Где сумма счёта переводится в целое число копеек с округлением половины вверх?",
+      "category": "ru-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/shared/lib/money.py",
+          "symbol": "to_minor_units"
+        }
+      ]
+    },
+    {
+      "id": "py-even-en",
+      "query": "Round a statistical monetary value to two decimals using ties-to-even",
+      "category": "en-neighbour",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/shared/lib/currency_policy.py",
+          "symbol": "round_for_statistics"
+        }
+      ]
+    },
+    {
+      "id": "py-even-ru",
+      "query": "Где применяется банковское округление для статистического отчёта?",
+      "category": "ru-neighbour",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/shared/lib/currency_policy.py",
+          "symbol": "round_for_statistics"
+        }
+      ]
+    },
+    {
+      "id": "py-missing-en",
+      "query": "Collect required columns that are absent or contain only spaces, preserving their declared order",
+      "category": "en-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/shared/lib/manifest.py",
+          "symbol": "missing_fields"
+        }
+      ]
+    },
+    {
+      "id": "py-missing-ru",
+      "query": "Как найти пустые обязательные поля строки в порядке объявления столбцов?",
+      "category": "ru-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/shared/lib/manifest.py",
+          "symbol": "missing_fields"
+        }
+      ]
+    },
+    {
+      "id": "py-accepted-en",
+      "query": "Keep only manifest rows whose required columns are all populated",
+      "category": "en-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/shared/lib/manifest.py",
+          "symbol": "accepted_rows"
+        }
+      ]
+    },
+    {
+      "id": "py-accepted-ru",
+      "query": "Где строки с незаполненными обязательными полями исключаются из результата?",
+      "category": "ru-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/shared/lib/manifest.py",
+          "symbol": "accepted_rows"
+        }
+      ]
+    },
+    {
+      "id": "py-invoice-en",
+      "query": "Sum invoice amounts with exact decimal arithmetic while excluding cancelled records",
+      "category": "en-neighbour",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/features/invoice_ledger.py",
+          "symbol": "total_invoice"
+        }
+      ]
+    },
+    {
+      "id": "py-inventory-ru",
+      "query": "Где найти первую запись inventory по её идентификатору?",
+      "category": "ru-neighbour",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/features/inventory_ledger.py",
+          "symbol": "find_inventory"
+        }
+      ]
+    },
+    {
+      "id": "absent-encryption-en",
+      "query": "Rotate the AES encryption key and re-encrypt stored files",
+      "category": "en-no-answer",
+      "noAnswer": true,
+      "relevant": []
+    },
+    {
+      "id": "absent-migration-ru",
+      "query": "Где выполняется откат миграции схемы базы данных?",
+      "category": "ru-no-answer",
+      "noAnswer": true,
+      "relevant": []
+    }
+  ]
+}

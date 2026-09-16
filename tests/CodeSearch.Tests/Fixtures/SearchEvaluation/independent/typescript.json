@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "id": "ts-token-en",
+      "query": "Save the current browser authentication credential in a cookie",
+      "category": "en-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/shared/auth/tokenStorage.ts",
+          "symbol": "storeAccessToken"
+        }
+      ]
+    },
+    {
+      "id": "ts-token-ru",
+      "query": "Где при выходе из учётной записи удаляется токен браузера?",
+      "category": "ru-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/shared/auth/tokenStorage.ts",
+          "symbol": "clearAccessToken"
+        }
+      ]
+    },
+    {
+      "id": "ts-retry-en",
+      "query": "Decide if a failed HTTP request may be retried based on status and attempt count",
+      "category": "en-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/shared/api/retryPolicy.ts",
+          "symbol": "shouldRetryRequest"
+        }
+      ]
+    },
+    {
+      "id": "ts-retry-ru",
+      "query": "Где задержка повторного HTTP-запроса ограничивается восемью секундами?",
+      "category": "ru-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/shared/api/retryPolicy.ts",
+          "symbol": "backoffDelayMilliseconds"
+        }
+      ]
+    },
+    {
+      "id": "ts-menu-en",
+      "query": "Filter a nested navigation tree according to granted permissions",
+      "category": "en-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/shared/access/menuVisibility.ts",
+          "symbol": "visibleMenu"
+        }
+      ]
+    },
+    {
+      "id": "ts-menu-ru",
+      "query": "Как убрать из меню разделы, к которым у пользователя нет доступа?",
+      "category": "ru-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/shared/access/menuVisibility.ts",
+          "symbol": "visibleMenu"
+        }
+      ]
+    },
+    {
+      "id": "ts-empty-en",
+      "query": "Render a memoized placeholder when a filtered table has no records",
+      "category": "en-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/shared/ui/EmptyState.tsx",
+          "symbol": "EmptyState"
+        }
+      ]
+    },
+    {
+      "id": "ts-empty-ru",
+      "query": "Какой компонент показывает подсказку для пустого списка?",
+      "category": "ru-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/shared/ui/EmptyState.tsx",
+          "symbol": "EmptyState"
+        }
+      ]
+    },
+    {
+      "id": "ts-invoice-en",
+      "query": "Locate the API object that lists, creates, updates and removes invoice records",
+      "category": "en-neighbour",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/features/invoice/api/invoice.api.ts",
+          "symbol": "invoiceApi"
+        }
+      ]
+    },
+    {
+      "id": "ts-inventory-ru",
+      "query": "Где хук загружает и сортирует список inventory по имени?",
+      "category": "ru-neighbour",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/features/inventory/model/useInventory.ts",
+          "symbol": "useInventoryList"
+        }
+      ]
+    },
+    {
+      "id": "absent-encryption-en",
+      "query": "Rotate the AES encryption key and re-encrypt stored files",
+      "category": "en-no-answer",
+      "noAnswer": true,
+      "relevant": []
+    },
+    {
+      "id": "absent-migration-ru",
+      "query": "Где выполняется откат миграции схемы базы данных?",
+      "category": "ru-no-answer",
+      "noAnswer": true,
+      "relevant": []
+    }
+  ]
+}

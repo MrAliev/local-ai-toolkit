@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "measurementBoundary": "Small synthetic regression corpora, not representative product quality or isolated model throughput.",
+  "sourceCommit": "40cf87a8ee0f1e631f74f1b9c93783bab71a5b0a",
+  "brokerBuild": "17385b2a6070",
+  "search": {
+    "caseCount": 70,
+    "distinctQueries": 34,
+    "mixedCorpusRepeatsLanguagePositives": true,
+    "precisionAt5Ceiling": 0.2,
+    "outsideSourceHits": 0,
+    "brokerQueueTiming": "unavailable",
+    "residency": "offload_unknown",
+    "thresholdUnchanged": 0.43
+  },
+  "ocr": {
+    "requestedModel": "glm-ocr:bf16",
+    "actualModelInAllFourResponses": "qwen3-vl:8b-instruct-q8_0",
+    "reasonForModelDifference": "not established by this measurement",
+    "normalization": "Unicode NFC, LF line endings and outer whitespace only; repeated lines are preserved.",
+    "fieldAccuracy": "Exact case-sensitive annotated label/value occurrences, not general semantic understanding.",
+    "longRussianDifferences": [
+      { "reference": "A U+0041", "actual": "А U+0410", "count": 10 },
+      { "reference": "B U+0042", "actual": "В U+0412", "count": 11 },
+      { "reference": "C U+0043", "actual": "С U+0421", "count": 11 }
+    ],
+    "captureMetadata": "The original invocation records contain two empty PowerShell task-result objects followed by the invocation object. These original arrays are retained. The runner was subsequently corrected; answer strings, quality scores and timings were not rewritten."
+  },
+  "timingNotes": "Wall time includes command startup, routing, queueing and execution. A model-inventory request overlapped this run; no additional generative task was started during measurement. Search queue timing is unavailable. OCR queue/run fields are retained as reported and are not a full end-to-end decomposition.",
+  "modelManifestNotes": "Manifest hashes identify files observed in the local model store, not an attestation of weights loaded by the backend.",
+  "tokenSavings": "Search evaluation is administrative and has no applicable savings. OCR receipts report comparison_scenario_unknown for both cloud input and output tokens."
+}

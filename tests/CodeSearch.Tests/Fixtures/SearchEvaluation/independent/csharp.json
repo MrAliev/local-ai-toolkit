@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "id": "cs-weight-en",
+      "query": "Calculate the parcel delivery charge using kilograms and an extra fee for large parcels",
+      "category": "en-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/pricing/WeightPricing.cs",
+          "symbol": "WeightPricing.Quote"
+        }
+      ]
+    },
+    {
+      "id": "cs-weight-ru",
+      "query": "Где рассчитывается доставка по весу с надбавкой за негабарит?",
+      "category": "ru-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/pricing/WeightPricing.cs",
+          "symbol": "WeightPricing.Quote"
+        }
+      ]
+    },
+    {
+      "id": "cs-volume-en",
+      "query": "Compute warehouse storage cost from three dimensions instead of mass",
+      "category": "en-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/pricing/VolumePricing.cs",
+          "symbol": "VolumePricing.Quote"
+        }
+      ]
+    },
+    {
+      "id": "cs-volume-ru",
+      "query": "Как получить стоимость хранения по объёму помещения?",
+      "category": "ru-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/pricing/VolumePricing.cs",
+          "symbol": "VolumePricing.Quote"
+        }
+      ]
+    },
+    {
+      "id": "cs-retry-en",
+      "query": "Find the retry delay that suppresses permanent errors and caps temporary failures at sixty seconds",
+      "category": "en-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/retries/RetrySchedule.cs",
+          "symbol": "RetrySchedule.GetDelaySeconds"
+        }
+      ]
+    },
+    {
+      "id": "cs-retry-ru",
+      "query": "Где повторные попытки прекращаются при постоянной ошибке?",
+      "category": "ru-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/retries/RetrySchedule.cs",
+          "symbol": "RetrySchedule.GetDelaySeconds"
+        }
+      ]
+    },
+    {
+      "id": "cs-manifest-en",
+      "query": "Return every missing column in a thirty-two-field manifest instead of stopping at the first error",
+      "category": "en-long-method",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/manifests/ManifestReader.cs",
+          "symbol": "ManifestReader.ValidateAllFields"
+        }
+      ]
+    },
+    {
+      "id": "cs-manifest-ru",
+      "query": "Найти проверку всех 32 полей накладной, которая собирает сразу все ошибки",
+      "category": "ru-long-method",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/manifests/ManifestReader.cs",
+          "symbol": "ManifestReader.ValidateAllFields"
+        }
+      ]
+    },
+    {
+      "id": "cs-invoice-en",
+      "query": "Find an invoice label using its stable record key",
+      "category": "en-neighbour",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/features/InvoiceLookup.cs",
+          "symbol": "InvoiceLookup.FindByKey"
+        }
+      ]
+    },
+    {
+      "id": "cs-inventory-ru",
+      "query": "Где найти название складского остатка inventory по ключу записи?",
+      "category": "ru-neighbour",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/features/InventoryLookup.cs",
+          "symbol": "InventoryLookup.FindByKey"
+        }
+      ]
+    },
+    {
+      "id": "absent-encryption-en",
+      "query": "Rotate the AES encryption key and re-encrypt stored files",
+      "category": "en-no-answer",
+      "noAnswer": true,
+      "relevant": []
+    },
+    {
+      "id": "absent-migration-ru",
+      "query": "Где выполняется откат миграции схемы базы данных?",
+      "category": "ru-no-answer",
+      "noAnswer": true,
+      "relevant": []
+    }
+  ]
+}
