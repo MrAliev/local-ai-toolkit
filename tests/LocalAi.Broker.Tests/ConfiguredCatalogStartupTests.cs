@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
+using System.Xml.Linq;
 using LocalAi.Broker.Client;
 using LocalAi.Contracts;
 
@@ -13,6 +14,87 @@ public sealed class ConfiguredCatalogStartupTests
     [Fact]
     public Task The_broker_process_uses_the_catalog_from_its_runtime_directory() =>
         RunScenarioAsync(NewRoot(), ["fixture/custom:latest"]);
+
+    [Fact]
+    public async Task A_development_consumer_can_cold_start_its_copied_broker_and_complete_a_status_request()
+    {
+        var repository = new DirectoryInfo(AppContext.BaseDirectory);
+        while (repository is not null && !File.Exists(Path.Combine(repository.FullName, "LocalAi.slnx")))
+            repository = repository.Parent;
+        Assert.NotNull(repository);
+
+        var consumer = Path.Combine(Path.GetTempPath(), "localai-development-consumer-" + Guid.NewGuid().ToString("N"));
+        var unrelatedDirectoryName = "unrelated-output-" + Guid.NewGuid().ToString("N");
+        var unrelatedOutput = Path.Combine(repository.FullName, "src", "LocalAi.Broker", "bin", "Release", "net10.0", unrelatedDirectoryName);
+        Directory.CreateDirectory(unrelatedOutput);
+        File.WriteAllText(Path.Combine(unrelatedOutput, "unrelated.txt"), "Not an output of this build.");
+        Directory.CreateDirectory(consumer);
+        var succeeded = false;
+        try
+        {
+            // This consumer deliberately has no assembly reference to the broker or its libraries.
+            // Only the real development-copy target can supply what its apphost needs to run.
+            var project = Path.Combine(consumer, "Consumer.csproj");
+            new XDocument(new XElement("Project", new XAttribute("Sdk", "Microsoft.NET.Sdk"),
+                new XElement("PropertyGroup", new XElement("TargetFramework", "net10.0")),
+                new XElement("Import", new XAttribute("Project", Path.Combine(repository.FullName, "src", "BrokerBinary.props")))))
+                .Save(project);
+            var start = new ProcessStartInfo("dotnet")
+            {
+                WorkingDirectory = consumer,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardError = true,
+                RedirectStandardOutput = true,
+            };
+            foreach (var argument in new[] { "build", project, "--configuration", "Release", "--nologo" })
+                start.ArgumentList.Add(argument);
+            Assert.Equal(0, await RunToExitAsync(start, Path.Combine(consumer, "test-build.log")));
+            Assert.False(File.Exists(Path.Combine(consumer, "bin", "Release", "net10.0", unrelatedDirectoryName, "unrelated.txt")));
+
+            var executable = Path.Combine(consumer, "bin", "Release", "net10.0", "LocalAi.Broker.exe");
+            // Fail immediately if the managed entry point cannot load, rather than waiting for
+            // the readiness budget of a process whose apphost already exited.
+            var help = new ProcessStartInfo(executable)
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardError = true,
+                RedirectStandardOutput = true,
+            };
+            help.ArgumentList.Add("--help");
+            Assert.Equal(2, await RunToExitAsync(help, Path.Combine(consumer, "test-entry-point.log")));
+
+            await RunScenarioAsync(Path.Combine(consumer, "runtime"), ["fixture/custom:latest"], executable);
+            succeeded = true;
+        }
+        finally
+        {
+            File.Delete(Path.Combine(unrelatedOutput, "unrelated.txt"));
+            Directory.Delete(unrelatedOutput);
+            if (succeeded) Directory.Delete(consumer, recursive: true);
+            else TestContext.Current.TestOutputHelper?.WriteLine("Development build diagnostics retained at " + consumer);
+        }
+    }
+
+    private static async Task<int> RunToExitAsync(ProcessStartInfo start, string logPath)
+    {
+        using var process = Process.Start(start)!;
+        // Teardown must retain both streams even if the test is cancelled.
+        var error = process.StandardError.ReadToEndAsync(CancellationToken.None);
+        var output = process.StandardOutput.ReadToEndAsync(CancellationToken.None);
+        try
+        {
+            await process.WaitForExitAsync(TestContext.Current.CancellationToken);
+        }
+        finally
+        {
+            if (!process.HasExited) process.Kill(entireProcessTree: true);
+            await process.WaitForExitAsync(CancellationToken.None);
+            File.WriteAllText(logPath, await error + await output);
+        }
+        return process.ExitCode;
+    }
 
     [Fact]
     public async Task A_failed_scenario_keeps_process_output_and_queue_evidence()
@@ -40,7 +122,7 @@ public sealed class ConfiguredCatalogStartupTests
     private static string NewRoot() =>
         Path.Combine(Path.GetTempPath(), "localai-catalog-startup-" + Guid.NewGuid().ToString("N"));
 
-    private static async Task RunScenarioAsync(string root, string[] expectedMissing)
+    private static async Task RunScenarioAsync(string root, string[] expectedMissing, string? executable = null)
     {
         // Only a hang guard: startup and one local status request have no timing assertion.
         using var guard = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
@@ -67,7 +149,7 @@ public sealed class ConfiguredCatalogStartupTests
             };
             Directory.CreateDirectory(Path.GetDirectoryName(store.FilePath)!);
             File.WriteAllText(store.FilePath, JsonSerializer.Serialize(document, LocalAiJson.Strict));
-            var executable = Path.Combine(AppContext.BaseDirectory, "LocalAi.Broker.exe");
+            executable ??= Path.Combine(AppContext.BaseDirectory, "LocalAi.Broker.exe");
             var start = new ProcessStartInfo(executable)
             {
                 UseShellExecute = false,
