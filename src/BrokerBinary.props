@@ -7,8 +7,11 @@
        installed layout, so it has to be copied here. This used to happen by accident: the
        client referenced the broker's Exe project, which dragged its apphost into every
        dependent output and also caused NETSDK1152 on RID specific publishes. That reference
-       is gone; the copy is declared here on purpose, takes only the executable, and is
-       skipped during publish so the packaged layout stays under the layout contract. -->
+       is gone; the copy is declared here on purpose. A framework-dependent apphost needs
+       its assembly, runtime configuration, dependency manifest and runtime dependencies,
+       including satellite assemblies. Copy the broker's own build outputs, preserving
+       relative paths. These are development output files, not ResolvedFileToPublish items;
+       the release package continues to supply its separately published broker. -->
 
   <ItemGroup>
     <ProjectReference Include="$(MSBuildThisFileDirectory)LocalAi.Broker\LocalAi.Broker.csproj"
@@ -16,21 +19,18 @@
                       Private="false" />
   </ItemGroup>
 
-  <Target Name="CopyBrokerExecutableForDevelopment" AfterTargets="Build">
+  <Target Name="CopyBrokerRuntimeForDevelopment" AfterTargets="Build">
     <MSBuild Projects="$(MSBuildThisFileDirectory)LocalAi.Broker\LocalAi.Broker.csproj"
-             Targets="GetTargetPath"
+             Targets="GetBrokerDevelopmentFiles"
              Properties="Configuration=$(Configuration)">
-      <Output TaskParameter="TargetOutputs" ItemName="BrokerTargetAssembly" />
+      <Output TaskParameter="TargetOutputs" ItemName="BrokerDevelopmentFiles" />
     </MSBuild>
 
-    <ItemGroup>
-      <BrokerExecutable Include="@(BrokerTargetAssembly->'%(RootDir)%(Directory)%(Filename).exe')" />
-    </ItemGroup>
-
-    <Copy SourceFiles="@(BrokerExecutable)"
-          DestinationFolder="$(OutDir)"
-          SkipUnchangedFiles="true"
-          Condition="Exists('%(BrokerExecutable.FullPath)')" />
+    <Copy SourceFiles="@(BrokerDevelopmentFiles)"
+          DestinationFiles="@(BrokerDevelopmentFiles->'$(OutDir)%(BrokerRelativePath)')"
+          SkipUnchangedFiles="true">
+      <Output TaskParameter="CopiedFiles" ItemName="FileWrites" />
+    </Copy>
   </Target>
 
 </Project>
