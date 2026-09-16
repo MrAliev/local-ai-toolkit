@@ -11,6 +11,8 @@ public sealed record SearchOptions
     public int TopK { get; init; } = 10;
     public ChunkKind? Kind { get; init; }
     public string? PathContains { get; init; }
+    /// <summary>Literal repository-relative files or directory prefixes, excluded before either signal is ranked.</summary>
+    public IReadOnlyList<string> ExcludedPaths { get; init; } = [];
 
     /// <summary>
     /// Caps hits from any one file. Without it a single large service class can take every slot
@@ -170,9 +172,15 @@ public static class SearchEngine
         var pathFilter = string.IsNullOrWhiteSpace(options.PathContains)
             ? null
             : NormalizeSeparators(options.PathContains);
+        var exclusions = SearchPathExclusions.Normalize(options.ExcludedPaths);
         var candidates = new List<int>(index.ChunkCount);
         for (var i = 0; i < index.ChunkCount; i++)
         {
+            if (SearchPathExclusions.Contains(exclusions, index.PathOf(i)))
+            {
+                continue;
+            }
+
             if (options.Kind is { } kind && index.ChunkAt(i).Kind != kind)
             {
                 continue;
