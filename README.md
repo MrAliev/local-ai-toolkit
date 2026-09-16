@@ -121,6 +121,14 @@ annotations, search options, and effective exclusions. A run fails if its source
 index generation, or annotations change while it is running. Reproducing a dirty run also
 requires retaining the uncommitted source files; a hash alone cannot restore them.
 
+The [retained candidate-scope baseline](tests/CodeSearch.Tests/Fixtures/SearchEvaluation/baseline-candidate-scope-2026-09-16.json)
+records Recall@10 72.2%, Precision@5 13.3%, and a 100% false-positive rate on six no-answer
+cases. With one annotated target for each of the 18 answerable queries, Precision@5 has a
+20% ceiling. These figures describe this 24-case corpus, not overall product quality;
+thresholds remain unchanged. Concurrent broker work and unavailable queue/residency
+telemetry make its timings unsuitable as an isolated performance benchmark. Independent
+corpora and recalibration are tracked in [#601](https://github.com/MrAliev/local-ai-toolkit/issues/601).
+
 **Not on the command line.** `lsp_open_document` and `lsp_close_document` take the text of an
 unsaved buffer — and in a shell there is no such buffer, so there is nothing to hand over.
 

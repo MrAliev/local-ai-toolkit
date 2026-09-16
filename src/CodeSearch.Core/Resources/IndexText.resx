@@ -292,4 +292,16 @@
     <value>Semantic overlay: {0} files, all recomputed against the base index.</value>
     <comment>The other route, printed for the reason the first one is: without it, the absence of the layered line cannot be told from the line not being reached. Says the base index rather than the whole solution because two routes end here - narrowed by project but measured against the base generation, and not narrowed at all - and what separates those two is already on screen in RoslynOpened's project count. No token for which of the six causes it was; none of them changes what the reader does next.</comment>
   </data>
+  <data name="EvaluationTargetExcluded" xml:space="preserve">
+    <value>Target '{0}' in case '{1}' is excluded from evaluation.</value>
+  </data>
+  <data name="EvaluationExcludedPathBlank" xml:space="preserve">
+    <value>An excluded path must not be blank.</value>
+  </data>
+  <data name="EvaluationExcludedPathInvalid" xml:space="preserve">
+    <value>Invalid excluded path '{0}'. Use a repository-relative path with no wildcards, empty segments, '.' or '..'; directory prefixes must end in '/'.</value>
+  </data>
+  <data name="EvaluationSnapshotChanged" xml:space="preserve">
+    <value>Source, index, or --cases file changed during evaluation. Rerun without changing them.</value>
+  </data>
 </root>

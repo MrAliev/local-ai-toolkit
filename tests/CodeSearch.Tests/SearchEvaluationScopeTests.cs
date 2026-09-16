@@ -1,11 +1,40 @@
 using CodeSearch.Core.Chunking;
 using CodeSearch.Core.Indexing;
 using CodeSearch.Core.Search;
+using System.Globalization;
 
 namespace CodeSearch.Tests;
 
 public sealed class SearchEvaluationScopeTests
 {
+    [Theory]
+    [InlineData("en-US", "An excluded path must not be blank.", "Invalid excluded path '../outside/'.", "Target 'references/answer.cs' in case 'example' is excluded from evaluation.")]
+    [InlineData("ru-RU", "Путь исключения не должен быть пустым.", "Недопустимый путь исключения '../outside/'.", "Цель 'references/answer.cs' для проверки 'example' исключена из оценки.")]
+    public void Scope_errors_follow_the_reader_language_and_preserve_paths_and_case_ids(
+        string culture, string blankMessage, string invalidPrefix, string targetMessage)
+    {
+        var previous = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
+            var root = Path.GetTempPath();
+            var corpusPath = Path.Combine(root, "cases.json");
+            var corpus = new SearchEvaluationCorpus(1, [new("none", "query", "test", true, [])], [""]);
+            Assert.Equal(blankMessage, Assert.Throws<InvalidDataException>(
+                () => SearchEvaluationScope.Create(root, corpusPath, corpus)).Message);
+            Assert.StartsWith(invalidPrefix, Assert.Throws<InvalidDataException>(
+                () => SearchEvaluationScope.Create(root, corpusPath, corpus with { ExcludedPaths = ["../outside/"] })).Message);
+            var hiddenTarget = new SearchEvaluationCorpus(1,
+                [new("example", "query", "test", false, [new("references/answer.cs", "Answer")])], ["references/"]);
+            Assert.Equal(targetMessage, Assert.Throws<InvalidDataException>(
+                () => SearchEvaluationScope.Create(root, corpusPath, hiddenTarget)).Message);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = previous;
+        }
+    }
+
     [Fact]
     public void Scope_excludes_its_own_corpus_and_explicit_reference_material_without_excluding_all_tests()
     {
