@@ -21,7 +21,7 @@ public sealed class UsageReportStore(string runtimeRoot)
     {
         if (callId == Guid.Empty) throw new ArgumentException("A call ID is required.", nameof(callId));
         var path = Path.Combine(ReportsDirectory, $"{callId:N}.json");
-        try { return UsageReportJson.Read(await File.ReadAllTextAsync(path, cancellationToken)); }
+        try { return UsageReportJson.Read(await TelemetryFile.ReadAsync(path, cancellationToken)); }
         catch (FileNotFoundException) { return null; }
         catch (DirectoryNotFoundException) { return null; }
     }
@@ -33,7 +33,7 @@ public sealed class UsageReportStore(string runtimeRoot)
         var unreadable = 0;
         foreach (var path in Directory.EnumerateFiles(ReportsDirectory, "*.json").Order(StringComparer.Ordinal))
         {
-            try { reports.Add(UsageReportJson.Read(await File.ReadAllTextAsync(path, cancellationToken))); }
+            try { reports.Add(UsageReportJson.Read(await TelemetryFile.ReadAsync(path, cancellationToken))); }
             catch (Exception exception) when (exception is IOException or JsonException or UnauthorizedAccessException or InvalidDataException)
             { unreadable++; }
         }
@@ -43,6 +43,17 @@ public sealed class UsageReportStore(string runtimeRoot)
 
 internal static class TelemetryFile
 {
+    internal static async Task<string> ReadAsync(string path, CancellationToken cancellationToken)
+    {
+        // Final records are immutable. Share rename/delete access with an atomic publisher,
+        // but never share writes to the opened record. The handle keeps these bytes readable
+        // if the directory entry moves while a duplicate publisher is comparing its result.
+        await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read,
+            FileShare.Read | FileShare.Delete, 4096, FileOptions.Asynchronous | FileOptions.SequentialScan);
+        using var reader = new StreamReader(stream, Encoding.UTF8);
+        return await reader.ReadToEndAsync(cancellationToken);
+    }
+
     // A retry may repeat the same final observation. A different observation with the same ID
     // is a conflict, never a replacement or another result to add to the total.
     internal static async Task WriteOnceAsync(string destination, string json, CancellationToken cancellationToken)
@@ -70,7 +81,7 @@ internal static class TelemetryFile
 
     private static async Task RequireSameAsync(string path, string json, CancellationToken cancellationToken)
     {
-        using var existing = JsonDocument.Parse(await File.ReadAllTextAsync(path, cancellationToken));
+        using var existing = JsonDocument.Parse(await ReadAsync(path, cancellationToken));
         using var proposed = JsonDocument.Parse(json);
         if (!JsonElement.DeepEquals(existing.RootElement, proposed.RootElement))
             throw new InvalidDataException("A different final telemetry record already exists for this identity.");
