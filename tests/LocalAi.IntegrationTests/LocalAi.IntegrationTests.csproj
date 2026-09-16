@@ -18,6 +18,8 @@
     <Compile Include="..\Shared\FixturePrerequisite.cs" Link="FixturePrerequisite.cs" />
     <Compile Include="..\Shared\SyntheticFrontendRepository.cs" Link="SyntheticFrontendRepository.cs" />
     <Compile Include="..\Shared\TemporaryDirectory.cs" Link="TemporaryDirectory.cs" />
+    <Compile Include="..\..\scripts\quality\OcrQualityScoring.cs" Link="Quality\OcrQualityScoring.cs" />
+    <Compile Include="..\..\scripts\quality\QualityCorpusSources.cs" Link="Quality\QualityCorpusSources.cs" />
   </ItemGroup>
 
   <ItemGroup>
