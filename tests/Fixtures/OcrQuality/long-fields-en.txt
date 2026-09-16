@@ -1,0 +1,42 @@
+WAREHOUSE CHECK
+Batch: EN-2026-0916
+Location: North depot
+Date: 2026-09-16
+Status: READY
+
+ITEM 01: P001 | Quantity 2 | Zone B
+ITEM 02: P002 | Quantity 3 | Zone C
+ITEM 03: P003 | Quantity 4 | Zone A
+ITEM 04: P004 | Quantity 5 | Zone B
+ITEM 05: P005 | Quantity 1 | Zone C
+ITEM 06: P006 | Quantity 2 | Zone A
+ITEM 07: P007 | Quantity 3 | Zone B
+ITEM 08: P008 | Quantity 4 | Zone C
+ITEM 09: P009 | Quantity 5 | Zone A
+ITEM 10: P010 | Quantity 1 | Zone B
+ITEM 11: P011 | Quantity 2 | Zone C
+ITEM 12: P012 | Quantity 3 | Zone A
+ITEM 13: P013 | Quantity 4 | Zone B
+ITEM 14: P014 | Quantity 5 | Zone C
+ITEM 15: P015 | Quantity 1 | Zone A
+ITEM 16: P016 | Quantity 2 | Zone B
+ITEM 17: P017 | Quantity 3 | Zone C
+ITEM 18: P018 | Quantity 4 | Zone A
+ITEM 19: P019 | Quantity 5 | Zone B
+ITEM 20: P020 | Quantity 1 | Zone C
+ITEM 21: P021 | Quantity 2 | Zone A
+ITEM 22: P022 | Quantity 3 | Zone B
+ITEM 23: P023 | Quantity 4 | Zone C
+ITEM 24: P024 | Quantity 5 | Zone A
+ITEM 25: P025 | Quantity 1 | Zone B
+ITEM 26: P026 | Quantity 2 | Zone C
+ITEM 27: P027 | Quantity 3 | Zone A
+ITEM 28: P028 | Quantity 4 | Zone B
+ITEM 29: P029 | Quantity 5 | Zone C
+ITEM 30: P030 | Quantity 1 | Zone A
+ITEM 31: P031 | Quantity 2 | Zone B
+ITEM 32: P032 | Quantity 3 | Zone C
+
+TOTAL ITEMS: 32
+Verifier: ANTON
+END OF REPORT

@@ -1,0 +1,1326 @@
+{
+  "schemaVersion": 1,
+  "mode": "profile",
+  "corpusSchemaVersion": 1,
+  "caseCount": 12,
+  "repository": "R:\\LocalAi\\publish\\quality-corpora\\baseline-2026-09-16\\sources\\typescript",
+  "generationId": "25720485c14c741cb480d2a008434be84563ec48af2e347a6f95d14f81d9cf6d",
+  "model": "qwen3-embedding:8b-q8_0",
+  "sourceCommit": "f501dbbb8734c3ea417381a464d7767ec2862493",
+  "sourceTree": "42d62e3402cb18d872833b2467dd6364c1d86242",
+  "dirtyHash": null,
+  "indexedCommit": "f501dbbb8734c3ea417381a464d7767ec2862493",
+  "indexedTree": "42d62e3402cb18d872833b2467dd6364c1d86242",
+  "corpusSha256": "e49b37390e631f6d6e99952dfda8139bc7c632bd3de955396d8888db7bcb3110",
+  "candidateScope": {
+    "schemaVersion": 1,
+    "excludedPaths": [],
+    "method": "exclude_before_ranking_v1",
+    "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  "annotations": [
+    {
+      "id": "ts-token-en",
+      "relevant": [
+        {
+          "path": "src/shared/auth/tokenStorage.ts",
+          "symbol": "storeAccessToken",
+          "signature": null,
+          "namespace": null
+        }
+      ]
+    },
+    {
+      "id": "ts-token-ru",
+      "relevant": [
+        {
+          "path": "src/shared/auth/tokenStorage.ts",
+          "symbol": "clearAccessToken",
+          "signature": null,
+          "namespace": null
+        }
+      ]
+    },
+    {
+      "id": "ts-retry-en",
+      "relevant": [
+        {
+          "path": "src/shared/api/retryPolicy.ts",
+          "symbol": "shouldRetryRequest",
+          "signature": null,
+          "namespace": null
+        }
+      ]
+    },
+    {
+      "id": "ts-retry-ru",
+      "relevant": [
+        {
+          "path": "src/shared/api/retryPolicy.ts",
+          "symbol": "backoffDelayMilliseconds",
+          "signature": null,
+          "namespace": null
+        }
+      ]
+    },
+    {
+      "id": "ts-menu-en",
+      "relevant": [
+        {
+          "path": "src/shared/access/menuVisibility.ts",
+          "symbol": "visibleMenu",
+          "signature": null,
+          "namespace": null
+        }
+      ]
+    },
+    {
+      "id": "ts-menu-ru",
+      "relevant": [
+        {
+          "path": "src/shared/access/menuVisibility.ts",
+          "symbol": "visibleMenu",
+          "signature": null,
+          "namespace": null
+        }
+      ]
+    },
+    {
+      "id": "ts-empty-en",
+      "relevant": [
+        {
+          "path": "src/shared/ui/EmptyState.tsx",
+          "symbol": "EmptyState",
+          "signature": null,
+          "namespace": null
+        }
+      ]
+    },
+    {
+      "id": "ts-empty-ru",
+      "relevant": [
+        {
+          "path": "src/shared/ui/EmptyState.tsx",
+          "symbol": "EmptyState",
+          "signature": null,
+          "namespace": null
+        }
+      ]
+    },
+    {
+      "id": "ts-invoice-en",
+      "relevant": [
+        {
+          "path": "src/features/invoice/api/invoice.api.ts",
+          "symbol": "invoiceApi",
+          "signature": null,
+          "namespace": null
+        }
+      ]
+    },
+    {
+      "id": "ts-inventory-ru",
+      "relevant": [
+        {
+          "path": "src/features/inventory/model/useInventory.ts",
+          "symbol": "useInventoryList",
+          "signature": null,
+          "namespace": null
+        }
+      ]
+    },
+    {
+      "id": "absent-encryption-en",
+      "relevant": []
+    },
+    {
+      "id": "absent-migration-ru",
+      "relevant": []
+    }
+  ],
+  "searchOptions": {
+    "topK": 10,
+    "kind": null,
+    "pathContains": null,
+    "excludedPaths": [],
+    "maxPerFile": 3,
+    "snippetLines": 12,
+    "minVectorScore": 0.43,
+    "allowUncalibratedModelForEvaluation": false,
+    "allowLexicalFallbackWhenEmbeddingsUnavailable": false
+  },
+  "useQueryInstruction": true,
+  "qualityProfile": {
+    "model": "qwen3-embedding:8b-q8_0",
+    "minVectorScore": 0.43,
+    "corpusVersion": "schema1:sha256:d675331cb7008a67a7335c5a1f2aba85e382974b71b1473e34b9e4685f0d7a52",
+    "generationId": "399fcc0b53b35ede05dc64f1a84cbc3bfc6bf382bdd2de7d71f2f9dc1ae8debc",
+    "caseCount": 24,
+    "calibratedAtUtc": "2026-07-30T23:55:00+00:00",
+    "selectionRule": "Lowest conservative hundredth above every observed no-answer vector score (maximum 0.426) without excluding an observed relevant score (minimum 0.508); recall@10 is therefore not reduced by the floor."
+  },
+  "brokerQueueWait": "unavailable: embedding client does not expose receipt telemetry",
+  "tokenEstimator": {
+    "point": "ceil(responseCharacters / 4)",
+    "lowerBound": "ceil(responseCharacters / 6)",
+    "upperBound": "ceil(responseCharacters / 3)"
+  },
+  "metrics": {
+    "precisionAt5": 0.19999999999999998,
+    "recallAt10": 1,
+    "meanFirstRelevantRank": 1.2,
+    "noAnswerFalsePositiveRate": 0.5,
+    "responseCharacters": 23092,
+    "estimatedResponseTokens": 5773,
+    "estimatedResponseTokensLowerBound": 3849,
+    "estimatedResponseTokensUpperBound": 7698,
+    "sourceLines": 391,
+    "chunkReads": 75,
+    "fileReads": 42,
+    "elapsedMilliseconds": 51730.9201,
+    "brokerQueueWaitMilliseconds": null,
+    "responseTokenEstimatePolicy": {
+      "schemaVersion": 1,
+      "method": "utf16_characters_v1",
+      "rangeBasis": "heuristic_not_confidence_interval",
+      "pointDivisor": 4,
+      "lowerBoundDivisor": 6,
+      "upperBoundDivisor": 3
+    }
+  },
+  "observations": [
+    {
+      "caseId": "ts-token-en",
+      "hits": [
+        {
+          "path": "src\\shared\\auth\\cookies.ts",
+          "symbol": "writeCookie",
+          "startLine": 1,
+          "endLine": 4,
+          "responseCharacters": 384,
+          "sourceLines": 4,
+          "vectorScore": 0.5575852,
+          "lexicalScore": 3,
+          "fusedScore": 0.01639344262295082,
+          "signature": "export function writeCookie(name: string, value: string, seconds: number): void {",
+          "namespace": "src/shared/auth",
+          "kind": 2
+        },
+        {
+          "path": "src\\shared\\auth\\tokenStorage.ts",
+          "symbol": "storeAccessToken",
+          "startLine": 10,
+          "endLine": 12,
+          "responseCharacters": 289,
+          "sourceLines": 3,
+          "vectorScore": 0.57722414,
+          "lexicalScore": 1,
+          "fusedScore": 0.016129032258064516,
+          "signature": "export function storeAccessToken(token: string, lifetimeSeconds: number): void {",
+          "namespace": "src/shared/auth",
+          "kind": 2
+        },
+        {
+          "path": "src\\shared\\auth\\tokenStorage.ts",
+          "symbol": "tokenStorage.ts",
+          "startLine": 1,
+          "endLine": 9,
+          "responseCharacters": 442,
+          "sourceLines": 9,
+          "vectorScore": 0.60414696,
+          "lexicalScore": 1,
+          "fusedScore": 0.015873015873015872,
+          "signature": "src\\shared\\auth\\tokenStorage.ts:1-9",
+          "namespace": "src/shared/auth",
+          "kind": 3
+        },
+        {
+          "path": "src\\shared\\auth\\cookies.ts",
+          "symbol": "readCookie",
+          "startLine": 6,
+          "endLine": 10,
+          "responseCharacters": 365,
+          "sourceLines": 5,
+          "vectorScore": 0.4879303,
+          "lexicalScore": 3,
+          "fusedScore": 0.015625,
+          "signature": "export function readCookie(name: string): string | null {",
+          "namespace": "src/shared/auth",
+          "kind": 2
+        },
+        {
+          "path": "src\\shared\\auth\\tokenStorage.ts",
+          "symbol": "clearAccessToken",
+          "startLine": 18,
+          "endLine": 20,
+          "responseCharacters": 196,
+          "sourceLines": 3,
+          "vectorScore": 0.5262634,
+          "lexicalScore": 1,
+          "fusedScore": 0.015384615384615385,
+          "signature": "export function clearAccessToken(): void {",
+          "namespace": "src/shared/auth",
+          "kind": 2
+        }
+      ],
+      "elapsed": "00:00:04.1013440",
+      "brokerQueueWait": null
+    },
+    {
+      "caseId": "ts-token-ru",
+      "hits": [
+        {
+          "path": "src\\shared\\auth\\tokenStorage.ts",
+          "symbol": "clearAccessToken",
+          "startLine": 18,
+          "endLine": 20,
+          "responseCharacters": 196,
+          "sourceLines": 3,
+          "vectorScore": 0.60940295,
+          "lexicalScore": 0,
+          "fusedScore": 0.01639344262295082,
+          "signature": "export function clearAccessToken(): void {",
+          "namespace": "src/shared/auth",
+          "kind": 2
+        },
+        {
+          "path": "src\\shared\\auth\\tokenStorage.ts",
+          "symbol": "tokenStorage.ts",
+          "startLine": 1,
+          "endLine": 9,
+          "responseCharacters": 442,
+          "sourceLines": 9,
+          "vectorScore": 0.58142304,
+          "lexicalScore": 0,
+          "fusedScore": 0.016129032258064516,
+          "signature": "src\\shared\\auth\\tokenStorage.ts:1-9",
+          "namespace": "src/shared/auth",
+          "kind": 3
+        },
+        {
+          "path": "src\\shared\\auth\\tokenStorage.ts",
+          "symbol": "storeAccessToken",
+          "startLine": 10,
+          "endLine": 12,
+          "responseCharacters": 289,
+          "sourceLines": 3,
+          "vectorScore": 0.5172906,
+          "lexicalScore": 0,
+          "fusedScore": 0.015873015873015872,
+          "signature": "export function storeAccessToken(token: string, lifetimeSeconds: number): void {",
+          "namespace": "src/shared/auth",
+          "kind": 2
+        },
+        {
+          "path": "src\\shared\\auth\\cookies.ts",
+          "symbol": "writeCookie",
+          "startLine": 1,
+          "endLine": 4,
+          "responseCharacters": 384,
+          "sourceLines": 4,
+          "vectorScore": 0.44545186,
+          "lexicalScore": 0,
+          "fusedScore": 0.015384615384615385,
+          "signature": "export function writeCookie(name: string, value: string, seconds: number): void {",
+          "namespace": "src/shared/auth",
+          "kind": 2
+        },
+        {
+          "path": "src\\shared\\auth\\cookies.ts",
+          "symbol": "readCookie",
+          "startLine": 6,
+          "endLine": 10,
+          "responseCharacters": 365,
+          "sourceLines": 5,
+          "vectorScore": 0.4417358,
+          "lexicalScore": 0,
+          "fusedScore": 0.015151515151515152,
+          "signature": "export function readCookie(name: string): string | null {",
+          "namespace": "src/shared/auth",
+          "kind": 2
+        }
+      ],
+      "elapsed": "00:00:04.7352164",
+      "brokerQueueWait": null
+    },
+    {
+      "caseId": "ts-retry-en",
+      "hits": [
+        {
+          "path": "src\\shared\\api\\retryPolicy.ts",
+          "symbol": "shouldRetryRequest",
+          "startLine": 8,
+          "endLine": 14,
+          "responseCharacters": 337,
+          "sourceLines": 7,
+          "vectorScore": 0.75945485,
+          "lexicalScore": 7,
+          "fusedScore": 0.01639344262295082,
+          "signature": "export function shouldRetryRequest(status: number, attempt: number): boolean {",
+          "namespace": "src/shared/api",
+          "kind": 2
+        },
+        {
+          "path": "src\\shared\\api\\retryPolicy.ts",
+          "symbol": "retryPolicy.ts",
+          "startLine": 1,
+          "endLine": 7,
+          "responseCharacters": 384,
+          "sourceLines": 7,
+          "vectorScore": 0.67304367,
+          "lexicalScore": 4,
+          "fusedScore": 0.016129032258064516,
+          "signature": "src\\shared\\api\\retryPolicy.ts:1-7",
+          "namespace": "src/shared/api",
+          "kind": 3
+        },
+        {
+          "path": "src\\shared\\api\\retryPolicy.ts",
+          "symbol": "backoffDelayMilliseconds",
+          "startLine": 16,
+          "endLine": 18,
+          "responseCharacters": 262,
+          "sourceLines": 3,
+          "vectorScore": 0.5581224,
+          "lexicalScore": 2,
+          "fusedScore": 0.015873015873015872,
+          "signature": "export function backoffDelayMilliseconds(attempt: number): number {",
+          "namespace": "src/shared/api",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\discount\\api\\discount.api.ts",
+          "symbol": "discountApi",
+          "startLine": 4,
+          "endLine": 11,
+          "responseCharacters": 526,
+          "sourceLines": 8,
+          "vectorScore": 0.22073767,
+          "lexicalScore": 4,
+          "fusedScore": 0.015625,
+          "signature": "export const discountApi = {",
+          "namespace": "src/features/discount/api",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\discount\\api\\discount.api.ts",
+          "symbol": "discount.api.ts",
+          "startLine": 1,
+          "endLine": 3,
+          "responseCharacters": 237,
+          "sourceLines": 3,
+          "vectorScore": 0.26191252,
+          "lexicalScore": 4,
+          "fusedScore": 0.015384615384615385,
+          "signature": "src\\features\\discount\\api\\discount.api.ts:1-3",
+          "namespace": "src/features/discount/api",
+          "kind": 3
+        },
+        {
+          "path": "src\\features\\discount\\lib\\formatDiscount.ts",
+          "symbol": "formatDiscount",
+          "startLine": 5,
+          "endLine": 11,
+          "responseCharacters": 300,
+          "sourceLines": 7,
+          "vectorScore": 0.15109774,
+          "lexicalScore": 3,
+          "fusedScore": 0.015151515151515152,
+          "signature": "export function formatDiscount(value: Discount | null): string {",
+          "namespace": "src/features/discount/lib",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\discount\\lib\\formatDiscount.ts",
+          "symbol": "formatDiscount.ts",
+          "startLine": 1,
+          "endLine": 4,
+          "responseCharacters": 207,
+          "sourceLines": 4,
+          "vectorScore": 0.16949683,
+          "lexicalScore": 3,
+          "fusedScore": 0.014925373134328358,
+          "signature": "src\\features\\discount\\lib\\formatDiscount.ts:1-4",
+          "namespace": "src/features/discount/lib",
+          "kind": 3
+        },
+        {
+          "path": "src\\features\\discount\\model\\discount.types.ts",
+          "symbol": "Discount",
+          "startLine": 1,
+          "endLine": 5,
+          "responseCharacters": 184,
+          "sourceLines": 5,
+          "vectorScore": 0.16838023,
+          "lexicalScore": 3,
+          "fusedScore": 0.014705882352941176,
+          "signature": "export interface Discount {",
+          "namespace": "src/features/discount/model",
+          "kind": 1
+        },
+        {
+          "path": "src\\features\\discount\\model\\discount.types.ts",
+          "symbol": "DiscountFilter",
+          "startLine": 7,
+          "endLine": 7,
+          "responseCharacters": 233,
+          "sourceLines": 1,
+          "vectorScore": 0.18582058,
+          "lexicalScore": 3,
+          "fusedScore": 0.014492753623188406,
+          "signature": "export type DiscountFilter = Partial\u003CPick\u003CDiscount, \u0027name\u0027 | \u0027archived\u0027\u003E\u003E;",
+          "namespace": "src/features/discount/model",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\discount\\model\\useDiscount.ts",
+          "symbol": "useDiscountList",
+          "startLine": 6,
+          "endLine": 12,
+          "responseCharacters": 399,
+          "sourceLines": 7,
+          "vectorScore": 0.18297963,
+          "lexicalScore": 3,
+          "fusedScore": 0.014285714285714285,
+          "signature": "export function useDiscountList(page: number) {",
+          "namespace": "src/features/discount/model",
+          "kind": 2
+        }
+      ],
+      "elapsed": "00:00:04.4123041",
+      "brokerQueueWait": null
+    },
+    {
+      "caseId": "ts-retry-ru",
+      "hits": [
+        {
+          "path": "src\\shared\\api\\retryPolicy.ts",
+          "symbol": "backoffDelayMilliseconds",
+          "startLine": 16,
+          "endLine": 18,
+          "responseCharacters": 262,
+          "sourceLines": 3,
+          "vectorScore": 0.6680126,
+          "lexicalScore": 0,
+          "fusedScore": 0.01639344262295082,
+          "signature": "export function backoffDelayMilliseconds(attempt: number): number {",
+          "namespace": "src/shared/api",
+          "kind": 2
+        },
+        {
+          "path": "src\\shared\\api\\retryPolicy.ts",
+          "symbol": "retryPolicy.ts",
+          "startLine": 1,
+          "endLine": 7,
+          "responseCharacters": 384,
+          "sourceLines": 7,
+          "vectorScore": 0.6374744,
+          "lexicalScore": 0,
+          "fusedScore": 0.016129032258064516,
+          "signature": "src\\shared\\api\\retryPolicy.ts:1-7",
+          "namespace": "src/shared/api",
+          "kind": 3
+        },
+        {
+          "path": "src\\shared\\api\\retryPolicy.ts",
+          "symbol": "shouldRetryRequest",
+          "startLine": 8,
+          "endLine": 14,
+          "responseCharacters": 337,
+          "sourceLines": 7,
+          "vectorScore": 0.6051526,
+          "lexicalScore": 0,
+          "fusedScore": 0.015873015873015872,
+          "signature": "export function shouldRetryRequest(status: number, attempt: number): boolean {",
+          "namespace": "src/shared/api",
+          "kind": 2
+        }
+      ],
+      "elapsed": "00:00:04.3738214",
+      "brokerQueueWait": null
+    },
+    {
+      "caseId": "ts-menu-en",
+      "hits": [
+        {
+          "path": "src\\shared\\access\\menuVisibility.ts",
+          "symbol": "visibleMenu",
+          "startLine": 9,
+          "endLine": 13,
+          "responseCharacters": 422,
+          "sourceLines": 5,
+          "vectorScore": 0.6683505,
+          "lexicalScore": 3,
+          "fusedScore": 0.01639344262295082,
+          "signature": "export function visibleMenu(nodes: MenuNode[], granted: Permission[]): MenuNode[] {",
+          "namespace": "src/shared/access",
+          "kind": 2
+        },
+        {
+          "path": "src\\shared\\access\\menuVisibility.ts",
+          "symbol": "isGranted",
+          "startLine": 15,
+          "endLine": 17,
+          "responseCharacters": 287,
+          "sourceLines": 3,
+          "vectorScore": 0.60105026,
+          "lexicalScore": 3,
+          "fusedScore": 0.016129032258064516,
+          "signature": "function isGranted(node: MenuNode, granted: Permission[]): boolean {",
+          "namespace": "src/shared/access",
+          "kind": 2
+        },
+        {
+          "path": "src\\shared\\access\\menuVisibility.ts",
+          "symbol": "menuVisibility.ts",
+          "startLine": 1,
+          "endLine": 8,
+          "responseCharacters": 439,
+          "sourceLines": 8,
+          "vectorScore": 0.5424996,
+          "lexicalScore": 1,
+          "fusedScore": 0.015873015873015872,
+          "signature": "src\\shared\\access\\menuVisibility.ts:1-8",
+          "namespace": "src/shared/access",
+          "kind": 3
+        },
+        {
+          "path": "src\\features\\catalog\\model\\catalog.types.ts",
+          "symbol": "CatalogFilter",
+          "startLine": 7,
+          "endLine": 7,
+          "responseCharacters": 226,
+          "sourceLines": 1,
+          "vectorScore": 0.32990816,
+          "lexicalScore": 3,
+          "fusedScore": 0.015625,
+          "signature": "export type CatalogFilter = Partial\u003CPick\u003CCatalog, \u0027name\u0027 | \u0027archived\u0027\u003E\u003E;",
+          "namespace": "src/features/catalog/model",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\customer\\model\\customer.types.ts",
+          "symbol": "CustomerFilter",
+          "startLine": 7,
+          "endLine": 7,
+          "responseCharacters": 233,
+          "sourceLines": 1,
+          "vectorScore": 0.30727196,
+          "lexicalScore": 3,
+          "fusedScore": 0.015384615384615385,
+          "signature": "export type CustomerFilter = Partial\u003CPick\u003CCustomer, \u0027name\u0027 | \u0027archived\u0027\u003E\u003E;",
+          "namespace": "src/features/customer/model",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\discount\\model\\discount.types.ts",
+          "symbol": "DiscountFilter",
+          "startLine": 7,
+          "endLine": 7,
+          "responseCharacters": 233,
+          "sourceLines": 1,
+          "vectorScore": 0.31537437,
+          "lexicalScore": 3,
+          "fusedScore": 0.015151515151515152,
+          "signature": "export type DiscountFilter = Partial\u003CPick\u003CDiscount, \u0027name\u0027 | \u0027archived\u0027\u003E\u003E;",
+          "namespace": "src/features/discount/model",
+          "kind": 2
+        },
+        {
+          "path": "src\\shared\\access\\types.ts",
+          "symbol": "MenuNode",
+          "startLine": 3,
+          "endLine": 8,
+          "responseCharacters": 198,
+          "sourceLines": 6,
+          "vectorScore": 0.5160101,
+          "lexicalScore": 0,
+          "fusedScore": 0.014925373134328358,
+          "signature": "export interface MenuNode {",
+          "namespace": "src/shared/access",
+          "kind": 1
+        },
+        {
+          "path": "src\\features\\inventory\\model\\inventory.types.ts",
+          "symbol": "InventoryFilter",
+          "startLine": 7,
+          "endLine": 7,
+          "responseCharacters": 240,
+          "sourceLines": 1,
+          "vectorScore": 0.32177246,
+          "lexicalScore": 3,
+          "fusedScore": 0.014705882352941176,
+          "signature": "export type InventoryFilter = Partial\u003CPick\u003CInventory, \u0027name\u0027 | \u0027archived\u0027\u003E\u003E;",
+          "namespace": "src/features/inventory/model",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\invoice\\model\\invoice.types.ts",
+          "symbol": "InvoiceFilter",
+          "startLine": 7,
+          "endLine": 7,
+          "responseCharacters": 226,
+          "sourceLines": 1,
+          "vectorScore": 0.2913972,
+          "lexicalScore": 3,
+          "fusedScore": 0.014492753623188406,
+          "signature": "export type InvoiceFilter = Partial\u003CPick\u003CInvoice, \u0027name\u0027 | \u0027archived\u0027\u003E\u003E;",
+          "namespace": "src/features/invoice/model",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\payment\\model\\payment.types.ts",
+          "symbol": "PaymentFilter",
+          "startLine": 7,
+          "endLine": 7,
+          "responseCharacters": 226,
+          "sourceLines": 1,
+          "vectorScore": 0.30341867,
+          "lexicalScore": 3,
+          "fusedScore": 0.014285714285714285,
+          "signature": "export type PaymentFilter = Partial\u003CPick\u003CPayment, \u0027name\u0027 | \u0027archived\u0027\u003E\u003E;",
+          "namespace": "src/features/payment/model",
+          "kind": 2
+        }
+      ],
+      "elapsed": "00:00:03.8828378",
+      "brokerQueueWait": null
+    },
+    {
+      "caseId": "ts-menu-ru",
+      "hits": [
+        {
+          "path": "src\\shared\\access\\menuVisibility.ts",
+          "symbol": "visibleMenu",
+          "startLine": 9,
+          "endLine": 13,
+          "responseCharacters": 422,
+          "sourceLines": 5,
+          "vectorScore": 0.617038,
+          "lexicalScore": 0,
+          "fusedScore": 0.01639344262295082,
+          "signature": "export function visibleMenu(nodes: MenuNode[], granted: Permission[]): MenuNode[] {",
+          "namespace": "src/shared/access",
+          "kind": 2
+        },
+        {
+          "path": "src\\shared\\access\\menuVisibility.ts",
+          "symbol": "menuVisibility.ts",
+          "startLine": 1,
+          "endLine": 8,
+          "responseCharacters": 439,
+          "sourceLines": 8,
+          "vectorScore": 0.5968445,
+          "lexicalScore": 0,
+          "fusedScore": 0.016129032258064516,
+          "signature": "src\\shared\\access\\menuVisibility.ts:1-8",
+          "namespace": "src/shared/access",
+          "kind": 3
+        },
+        {
+          "path": "src\\shared\\access\\menuVisibility.ts",
+          "symbol": "isGranted",
+          "startLine": 15,
+          "endLine": 17,
+          "responseCharacters": 287,
+          "sourceLines": 3,
+          "vectorScore": 0.5432665,
+          "lexicalScore": 0,
+          "fusedScore": 0.015873015873015872,
+          "signature": "function isGranted(node: MenuNode, granted: Permission[]): boolean {",
+          "namespace": "src/shared/access",
+          "kind": 2
+        },
+        {
+          "path": "src\\shared\\access\\types.ts",
+          "symbol": "MenuNode",
+          "startLine": 3,
+          "endLine": 8,
+          "responseCharacters": 198,
+          "sourceLines": 6,
+          "vectorScore": 0.52593327,
+          "lexicalScore": 0,
+          "fusedScore": 0.015625,
+          "signature": "export interface MenuNode {",
+          "namespace": "src/shared/access",
+          "kind": 1
+        }
+      ],
+      "elapsed": "00:00:04.2789858",
+      "brokerQueueWait": null
+    },
+    {
+      "caseId": "ts-empty-en",
+      "hits": [
+        {
+          "path": "src\\shared\\ui\\EmptyState.tsx",
+          "symbol": "EmptyState.tsx [2/2]",
+          "startLine": 7,
+          "endLine": 11,
+          "responseCharacters": 256,
+          "sourceLines": 5,
+          "vectorScore": 0.70077914,
+          "lexicalScore": 2,
+          "fusedScore": 0.01639344262295082,
+          "signature": "src\\shared\\ui\\EmptyState.tsx:7-11",
+          "namespace": "src/shared/ui",
+          "kind": 3
+        },
+        {
+          "path": "src\\shared\\ui\\EmptyState.tsx",
+          "symbol": "EmptyState",
+          "startLine": 12,
+          "endLine": 23,
+          "responseCharacters": 420,
+          "sourceLines": 12,
+          "vectorScore": 0.606839,
+          "lexicalScore": 0,
+          "fusedScore": 0.016129032258064516,
+          "signature": "export const EmptyState = memo(({ title, hint }: EmptyStateProps) =\u003E {",
+          "namespace": "src/shared/ui",
+          "kind": 2
+        },
+        {
+          "path": "src\\shared\\ui\\EmptyState.tsx",
+          "symbol": "EmptyState.tsx [1/2]",
+          "startLine": 1,
+          "endLine": 2,
+          "responseCharacters": 134,
+          "sourceLines": 2,
+          "vectorScore": 0.49146807,
+          "lexicalScore": 0,
+          "fusedScore": 0.015873015873015872,
+          "signature": "src\\shared\\ui\\EmptyState.tsx:1-2",
+          "namespace": "src/shared/ui",
+          "kind": 3
+        }
+      ],
+      "elapsed": "00:00:04.2879372",
+      "brokerQueueWait": null
+    },
+    {
+      "caseId": "ts-empty-ru",
+      "hits": [
+        {
+          "path": "src\\shared\\ui\\EmptyState.tsx",
+          "symbol": "EmptyState",
+          "startLine": 12,
+          "endLine": 23,
+          "responseCharacters": 420,
+          "sourceLines": 12,
+          "vectorScore": 0.6915462,
+          "lexicalScore": 0,
+          "fusedScore": 0.01639344262295082,
+          "signature": "export const EmptyState = memo(({ title, hint }: EmptyStateProps) =\u003E {",
+          "namespace": "src/shared/ui",
+          "kind": 2
+        },
+        {
+          "path": "src\\shared\\ui\\EmptyState.tsx",
+          "symbol": "EmptyState.tsx [2/2]",
+          "startLine": 7,
+          "endLine": 11,
+          "responseCharacters": 256,
+          "sourceLines": 5,
+          "vectorScore": 0.6772053,
+          "lexicalScore": 0,
+          "fusedScore": 0.016129032258064516,
+          "signature": "src\\shared\\ui\\EmptyState.tsx:7-11",
+          "namespace": "src/shared/ui",
+          "kind": 3
+        },
+        {
+          "path": "src\\shared\\ui\\EmptyState.tsx",
+          "symbol": "EmptyStateProps",
+          "startLine": 3,
+          "endLine": 6,
+          "responseCharacters": 157,
+          "sourceLines": 4,
+          "vectorScore": 0.6493212,
+          "lexicalScore": 0,
+          "fusedScore": 0.015873015873015872,
+          "signature": "interface EmptyStateProps {",
+          "namespace": "src/shared/ui",
+          "kind": 1
+        },
+        {
+          "path": "src\\features\\catalog\\ui\\CatalogCard.tsx",
+          "symbol": "CatalogCard",
+          "startLine": 10,
+          "endLine": 22,
+          "responseCharacters": 485,
+          "sourceLines": 12,
+          "vectorScore": 0.4671353,
+          "lexicalScore": 0,
+          "fusedScore": 0.015384615384615385,
+          "signature": "export const CatalogCard = memo(({ value, onOpen }: CatalogCardProps) =\u003E {",
+          "namespace": "src/features/catalog/ui",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\inventory\\ui\\InventoryCard.tsx",
+          "symbol": "InventoryCard",
+          "startLine": 10,
+          "endLine": 22,
+          "responseCharacters": 499,
+          "sourceLines": 12,
+          "vectorScore": 0.4587716,
+          "lexicalScore": 0,
+          "fusedScore": 0.015151515151515152,
+          "signature": "export const InventoryCard = memo(({ value, onOpen }: InventoryCardProps) =\u003E {",
+          "namespace": "src/features/inventory/ui",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\warehouse\\ui\\WarehouseCard.tsx",
+          "symbol": "WarehouseCard",
+          "startLine": 10,
+          "endLine": 22,
+          "responseCharacters": 499,
+          "sourceLines": 12,
+          "vectorScore": 0.43667275,
+          "lexicalScore": 0,
+          "fusedScore": 0.014925373134328358,
+          "signature": "export const WarehouseCard = memo(({ value, onOpen }: WarehouseCardProps) =\u003E {",
+          "namespace": "src/features/warehouse/ui",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\inventory\\lib\\formatInventory.ts",
+          "symbol": "formatInventory",
+          "startLine": 5,
+          "endLine": 11,
+          "responseCharacters": 307,
+          "sourceLines": 7,
+          "vectorScore": 0.43362886,
+          "lexicalScore": 0,
+          "fusedScore": 0.014705882352941176,
+          "signature": "export function formatInventory(value: Inventory | null): string {",
+          "namespace": "src/features/inventory/lib",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\inventory\\ui\\InventoryCard.tsx",
+          "symbol": "InventoryCard.tsx",
+          "startLine": 1,
+          "endLine": 4,
+          "responseCharacters": 221,
+          "sourceLines": 4,
+          "vectorScore": 0.43353963,
+          "lexicalScore": 0,
+          "fusedScore": 0.014492753623188406,
+          "signature": "src\\features\\inventory\\ui\\InventoryCard.tsx:1-4",
+          "namespace": "src/features/inventory/ui",
+          "kind": 3
+        },
+        {
+          "path": "src\\features\\catalog\\model\\useCatalog.ts",
+          "symbol": "useCatalogList",
+          "startLine": 6,
+          "endLine": 12,
+          "responseCharacters": 392,
+          "sourceLines": 7,
+          "vectorScore": 0.431326,
+          "lexicalScore": 0,
+          "fusedScore": 0.014285714285714285,
+          "signature": "export function useCatalogList(page: number) {",
+          "namespace": "src/features/catalog/model",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\catalog\\ui\\CatalogCard.tsx",
+          "symbol": "CatalogCard.tsx",
+          "startLine": 1,
+          "endLine": 4,
+          "responseCharacters": 207,
+          "sourceLines": 4,
+          "vectorScore": 0.4306009,
+          "lexicalScore": 0,
+          "fusedScore": 0.014084507042253521,
+          "signature": "src\\features\\catalog\\ui\\CatalogCard.tsx:1-4",
+          "namespace": "src/features/catalog/ui",
+          "kind": 3
+        }
+      ],
+      "elapsed": "00:00:04.0159985",
+      "brokerQueueWait": null
+    },
+    {
+      "caseId": "ts-invoice-en",
+      "hits": [
+        {
+          "path": "src\\features\\invoice\\api\\invoice.api.ts",
+          "symbol": "invoiceApi",
+          "startLine": 4,
+          "endLine": 11,
+          "responseCharacters": 510,
+          "sourceLines": 8,
+          "vectorScore": 0.7146168,
+          "lexicalScore": 6,
+          "fusedScore": 0.01639344262295082,
+          "signature": "export const invoiceApi = {",
+          "namespace": "src/features/invoice/api",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\invoice\\api\\invoice.api.ts",
+          "symbol": "invoice.api.ts",
+          "startLine": 1,
+          "endLine": 3,
+          "responseCharacters": 230,
+          "sourceLines": 3,
+          "vectorScore": 0.68286264,
+          "lexicalScore": 6,
+          "fusedScore": 0.016129032258064516,
+          "signature": "src\\features\\invoice\\api\\invoice.api.ts:1-3",
+          "namespace": "src/features/invoice/api",
+          "kind": 3
+        },
+        {
+          "path": "src\\features\\invoice\\model\\useInvoice.ts",
+          "symbol": "useInvoiceList",
+          "startLine": 6,
+          "endLine": 12,
+          "responseCharacters": 392,
+          "sourceLines": 7,
+          "vectorScore": 0.5838367,
+          "lexicalScore": 4,
+          "fusedScore": 0.015873015873015872,
+          "signature": "export function useInvoiceList(page: number) {",
+          "namespace": "src/features/invoice/model",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\invoice\\model\\useInvoice.ts",
+          "symbol": "useInvoice.ts",
+          "startLine": 1,
+          "endLine": 5,
+          "responseCharacters": 262,
+          "sourceLines": 5,
+          "vectorScore": 0.5916917,
+          "lexicalScore": 4,
+          "fusedScore": 0.015625,
+          "signature": "src\\features\\invoice\\model\\useInvoice.ts:1-5",
+          "namespace": "src/features/invoice/model",
+          "kind": 3
+        },
+        {
+          "path": "src\\features\\invoice\\model\\invoice.types.ts",
+          "symbol": "Invoice",
+          "startLine": 1,
+          "endLine": 5,
+          "responseCharacters": 179,
+          "sourceLines": 5,
+          "vectorScore": 0.5980765,
+          "lexicalScore": 3,
+          "fusedScore": 0.015384615384615385,
+          "signature": "export interface Invoice {",
+          "namespace": "src/features/invoice/model",
+          "kind": 1
+        },
+        {
+          "path": "src\\features\\inventory\\api\\inventory.api.ts",
+          "symbol": "inventoryApi",
+          "startLine": 4,
+          "endLine": 11,
+          "responseCharacters": 542,
+          "sourceLines": 8,
+          "vectorScore": 0.5272626,
+          "lexicalScore": 3,
+          "fusedScore": 0.015151515151515152,
+          "signature": "export const inventoryApi = {",
+          "namespace": "src/features/inventory/api",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\invoice\\lib\\formatInvoice.ts",
+          "symbol": "formatInvoice.ts",
+          "startLine": 1,
+          "endLine": 4,
+          "responseCharacters": 200,
+          "sourceLines": 4,
+          "vectorScore": 0.5284355,
+          "lexicalScore": 3,
+          "fusedScore": 0.014925373134328358,
+          "signature": "src\\features\\invoice\\lib\\formatInvoice.ts:1-4",
+          "namespace": "src/features/invoice/lib",
+          "kind": 3
+        },
+        {
+          "path": "src\\features\\invoice\\ui\\InvoiceCard.tsx",
+          "symbol": "InvoiceCardProps",
+          "startLine": 5,
+          "endLine": 8,
+          "responseCharacters": 187,
+          "sourceLines": 4,
+          "vectorScore": 0.53322744,
+          "lexicalScore": 3,
+          "fusedScore": 0.014705882352941176,
+          "signature": "interface InvoiceCardProps {",
+          "namespace": "src/features/invoice/ui",
+          "kind": 1
+        },
+        {
+          "path": "src\\features\\invoice\\lib\\formatInvoice.ts",
+          "symbol": "formatInvoice",
+          "startLine": 5,
+          "endLine": 11,
+          "responseCharacters": 293,
+          "sourceLines": 7,
+          "vectorScore": 0.4999501,
+          "lexicalScore": 3,
+          "fusedScore": 0.014492753623188406,
+          "signature": "export function formatInvoice(value: Invoice | null): string {",
+          "namespace": "src/features/invoice/lib",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\customer\\api\\customer.api.ts",
+          "symbol": "customerApi",
+          "startLine": 4,
+          "endLine": 11,
+          "responseCharacters": 526,
+          "sourceLines": 8,
+          "vectorScore": 0.44864345,
+          "lexicalScore": 3,
+          "fusedScore": 0.014285714285714285,
+          "signature": "export const customerApi = {",
+          "namespace": "src/features/customer/api",
+          "kind": 2
+        }
+      ],
+      "elapsed": "00:00:04.2762234",
+      "brokerQueueWait": null
+    },
+    {
+      "caseId": "ts-inventory-ru",
+      "hits": [
+        {
+          "path": "src\\features\\inventory\\model\\useInventory.ts",
+          "symbol": "useInventoryList",
+          "startLine": 6,
+          "endLine": 12,
+          "responseCharacters": 406,
+          "sourceLines": 7,
+          "vectorScore": 0.701887,
+          "lexicalScore": 3,
+          "fusedScore": 0.01639344262295082,
+          "signature": "export function useInventoryList(page: number) {",
+          "namespace": "src/features/inventory/model",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\inventory\\lib\\formatInventory.ts",
+          "symbol": "formatInventory.ts",
+          "startLine": 1,
+          "endLine": 4,
+          "responseCharacters": 214,
+          "sourceLines": 4,
+          "vectorScore": 0.54377955,
+          "lexicalScore": 3,
+          "fusedScore": 0.016129032258064516,
+          "signature": "src\\features\\inventory\\lib\\formatInventory.ts:1-4",
+          "namespace": "src/features/inventory/lib",
+          "kind": 3
+        },
+        {
+          "path": "src\\features\\inventory\\api\\inventory.api.ts",
+          "symbol": "inventoryApi",
+          "startLine": 4,
+          "endLine": 11,
+          "responseCharacters": 542,
+          "sourceLines": 8,
+          "vectorScore": 0.53411305,
+          "lexicalScore": 3,
+          "fusedScore": 0.015873015873015872,
+          "signature": "export const inventoryApi = {",
+          "namespace": "src/features/inventory/api",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\inventory\\model\\useInventory.ts",
+          "symbol": "byName",
+          "startLine": 14,
+          "endLine": 16,
+          "responseCharacters": 246,
+          "sourceLines": 3,
+          "vectorScore": 0.67031384,
+          "lexicalScore": 2,
+          "fusedScore": 0.015625,
+          "signature": "function byName(left: Inventory, right: Inventory): number {",
+          "namespace": "src/features/inventory/model",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\inventory\\lib\\formatInventory.ts",
+          "symbol": "formatInventory",
+          "startLine": 5,
+          "endLine": 11,
+          "responseCharacters": 307,
+          "sourceLines": 7,
+          "vectorScore": 0.53314406,
+          "lexicalScore": 3,
+          "fusedScore": 0.015384615384615385,
+          "signature": "export function formatInventory(value: Inventory | null): string {",
+          "namespace": "src/features/inventory/lib",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\inventory\\model\\inventory.types.ts",
+          "symbol": "Inventory",
+          "startLine": 1,
+          "endLine": 5,
+          "responseCharacters": 189,
+          "sourceLines": 5,
+          "vectorScore": 0.53418195,
+          "lexicalScore": 3,
+          "fusedScore": 0.015151515151515152,
+          "signature": "export interface Inventory {",
+          "namespace": "src/features/inventory/model",
+          "kind": 1
+        },
+        {
+          "path": "src\\features\\inventory\\model\\useInventory.ts",
+          "symbol": "useInventory.ts",
+          "startLine": 1,
+          "endLine": 5,
+          "responseCharacters": 280,
+          "sourceLines": 5,
+          "vectorScore": 0.5209327,
+          "lexicalScore": 3,
+          "fusedScore": 0.014925373134328358,
+          "signature": "src\\features\\inventory\\model\\useInventory.ts:1-5",
+          "namespace": "src/features/inventory/model",
+          "kind": 3
+        },
+        {
+          "path": "src\\features\\inventory\\api\\inventory.api.ts",
+          "symbol": "inventory.api.ts",
+          "startLine": 1,
+          "endLine": 3,
+          "responseCharacters": 244,
+          "sourceLines": 3,
+          "vectorScore": 0.49063903,
+          "lexicalScore": 3,
+          "fusedScore": 0.014705882352941176,
+          "signature": "src\\features\\inventory\\api\\inventory.api.ts:1-3",
+          "namespace": "src/features/inventory/api",
+          "kind": 3
+        },
+        {
+          "path": "src\\features\\inventory\\model\\inventory.types.ts",
+          "symbol": "InventoryFilter",
+          "startLine": 7,
+          "endLine": 7,
+          "responseCharacters": 240,
+          "sourceLines": 1,
+          "vectorScore": 0.500037,
+          "lexicalScore": 3,
+          "fusedScore": 0.014492753623188406,
+          "signature": "export type InventoryFilter = Partial\u003CPick\u003CInventory, \u0027name\u0027 | \u0027archived\u0027\u003E\u003E;",
+          "namespace": "src/features/inventory/model",
+          "kind": 2
+        },
+        {
+          "path": "src\\features\\inventory\\ui\\InventoryCard.tsx",
+          "symbol": "InventoryCard.tsx",
+          "startLine": 1,
+          "endLine": 4,
+          "responseCharacters": 221,
+          "sourceLines": 4,
+          "vectorScore": 0.50649244,
+          "lexicalScore": 3,
+          "fusedScore": 0.014285714285714285,
+          "signature": "src\\features\\inventory\\ui\\InventoryCard.tsx:1-4",
+          "namespace": "src/features/inventory/ui",
+          "kind": 3
+        }
+      ],
+      "elapsed": "00:00:04.2825483",
+      "brokerQueueWait": null
+    },
+    {
+      "caseId": "absent-encryption-en",
+      "hits": [
+        {
+          "path": "src\\shared\\access\\types.ts",
+          "symbol": "MenuNode",
+          "startLine": 3,
+          "endLine": 8,
+          "responseCharacters": 198,
+          "sourceLines": 6,
+          "vectorScore": 0.14960936,
+          "lexicalScore": 1,
+          "fusedScore": 0.01639344262295082,
+          "signature": "export interface MenuNode {",
+          "namespace": "src/shared/access",
+          "kind": 1
+        },
+        {
+          "path": "src\\shared\\auth\\tokenStorage.ts",
+          "symbol": "storeAccessToken",
+          "startLine": 10,
+          "endLine": 12,
+          "responseCharacters": 289,
+          "sourceLines": 3,
+          "vectorScore": 0.23631853,
+          "lexicalScore": 1,
+          "fusedScore": 0.016129032258064516,
+          "signature": "export function storeAccessToken(token: string, lifetimeSeconds: number): void {",
+          "namespace": "src/shared/auth",
+          "kind": 2
+        },
+        {
+          "path": "src\\shared\\auth\\tokenStorage.ts",
+          "symbol": "readAccessToken",
+          "startLine": 14,
+          "endLine": 16,
+          "responseCharacters": 210,
+          "sourceLines": 3,
+          "vectorScore": 0.19627605,
+          "lexicalScore": 1,
+          "fusedScore": 0.015873015873015872,
+          "signature": "export function readAccessToken(): string | null {",
+          "namespace": "src/shared/auth",
+          "kind": 2
+        },
+        {
+          "path": "src\\shared\\auth\\tokenStorage.ts",
+          "symbol": "clearAccessToken",
+          "startLine": 18,
+          "endLine": 20,
+          "responseCharacters": 196,
+          "sourceLines": 3,
+          "vectorScore": 0.23662135,
+          "lexicalScore": 1,
+          "fusedScore": 0.015625,
+          "signature": "export function clearAccessToken(): void {",
+          "namespace": "src/shared/auth",
+          "kind": 2
+        },
+        {
+          "path": "src\\shared\\ui\\EmptyState.tsx",
+          "symbol": "EmptyState.tsx [2/2]",
+          "startLine": 7,
+          "endLine": 11,
+          "responseCharacters": 256,
+          "sourceLines": 5,
+          "vectorScore": 0.14318699,
+          "lexicalScore": 1,
+          "fusedScore": 0.015151515151515152,
+          "signature": "src\\shared\\ui\\EmptyState.tsx:7-11",
+          "namespace": "src/shared/ui",
+          "kind": 3
+        }
+      ],
+      "elapsed": "00:00:04.6676986",
+      "brokerQueueWait": null
+    },
+    {
+      "caseId": "absent-migration-ru",
+      "hits": [],
+      "elapsed": "00:00:04.4160046",
+      "brokerQueueWait": null
+    }
+  ]
+}

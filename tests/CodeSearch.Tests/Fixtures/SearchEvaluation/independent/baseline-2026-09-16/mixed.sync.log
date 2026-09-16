@@ -1,0 +1,14 @@
+Roslyn: Загружается C# из 'C:\Users\Mr.Aliev\AppData\Local\Temp\localai-snapshot-6f4520fcb2364dd594d8bbf5dc26fc83\content\QualityCorpus.csproj'. Сначала восстанавливаются зависимости — не дольше 10 мин.
+Roslyn: Зависимости восстановлены за 0.7 с. Открываются проекты.
+Roslyn: Открыто проектов 1, за 0.9 с.
+Roslyn: Разобрано проектов 1, файлов 14, за 1.4 с.
+SCIP typescript: succeeded in 0.9s — SCIP output imported.
+SCIP python: succeeded in 2.5s — SCIP output imported.
+Просмотрено C:\Users\Mr.Aliev\AppData\Local\Temp\localai-snapshot-6f4520fcb2364dd594d8bbf5dc26fc83\content: индексируемых файлов 87.
+Без изменений: 0. Новых или изменённых: 87.
+Файлов разобрано на чанки: 87; чанков для эмбеддинга: 227.
+Эмбеддинги: чанков 128/227 (13.1/с, осталось ~0.1 мин)
+Эмбеддинги: чанков 227/227 (17.5/с, осталось ~0.0 мин)
+Сохранено C:\Users\Mr.Aliev\AppData\Local\LocalAi\repositories\8704d4a325e0f73735090dceff459b018f93e6121150621cd87d60c712cf095a\staging\1364bc2a1d1891bae169bc138d397cc633055e64e824193014fd010383fd364b.806c18b49bd947c4bf307303b9251ae3.cidx: чанков 227, файлов 87, за 13.1 с.
+Синхронизация завершена за 25.1 с.
+Вызов f38cea2c-ddc0-4084-87ac-4b243058e1ff | модели: qwen3-embedding:8b-q8_0 [offload_unknown] | длительность: 25.224 s | экономия облачных токенов: INPUT Неприменимо (administrative_operation); OUTPUT Неприменимо (administrative_operation).

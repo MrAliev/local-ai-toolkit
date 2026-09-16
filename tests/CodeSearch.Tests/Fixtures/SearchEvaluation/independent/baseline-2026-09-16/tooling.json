@@ -1,0 +1,26 @@
+{
+  "collectedUtc": "2026-09-16T10:31:05.2528058Z",
+  "node": "v20.20.2",
+  "typeScriptIndexer": "0.4.0",
+  "pythonIndexer": "0.6.6",
+  "models": [
+    {
+      "name": "qwen3-embedding:8b-q8_0",
+      "manifestSha256": "9704fd987c12aa746934ea9f99dc85527c83c6e4b98b3a10b94689332ee866bb",
+      "manifestLastWriteUtc": "2026-07-27T19:42:27.6355322Z",
+      "evidence": "Local model-store manifest observed during the run; not a loaded-weight attestation."
+    },
+    {
+      "name": "glm-ocr:bf16",
+      "manifestSha256": "6effedd0dc8aec66ad86c94b8099395376e212f22c87a9d7147c422f7e447be4",
+      "manifestLastWriteUtc": "2026-09-08T23:18:03.8562127Z",
+      "evidence": "Local model-store manifest observed during the run; not a loaded-weight attestation."
+    },
+    {
+      "name": "qwen3-vl:8b-instruct-q8_0",
+      "manifestSha256": "eff3eb825b322d4ffb85695e5a15cfe00b4d994d3c336f13dc867d8743b00245",
+      "manifestLastWriteUtc": "2026-07-27T20:38:09.5814396Z",
+      "evidence": "Local model-store manifest observed after the run; not a loaded-weight attestation."
+    }
+  ]
+}

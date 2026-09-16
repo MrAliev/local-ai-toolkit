@@ -1,0 +1,9 @@
+SCIP typescript: succeeded in 0.9s — SCIP output imported.
+Просмотрено C:\Users\Mr.Aliev\AppData\Local\Temp\localai-snapshot-f7aff723fbde4f9e9bf33e099a3cf48a\content: индексируемых файлов 59.
+Без изменений: 0. Новых или изменённых: 59.
+Файлов разобрано на чанки: 59; чанков для эмбеддинга: 147.
+Эмбеддинги: чанков 128/147 (21.0/с, осталось ~0.0 мин)
+Эмбеддинги: чанков 147/147 (24.1/с, осталось ~0.0 мин)
+Сохранено C:\Users\Mr.Aliev\AppData\Local\LocalAi\repositories\280883ac7f529c22f379bbdd6e1fb27a9fbb7d12b2ab566c73124d9840d3e20d\staging\25720485c14c741cb480d2a008434be84563ec48af2e347a6f95d14f81d9cf6d.713d99430af74a71a974629db30c4542.cidx: чанков 147, файлов 59, за 6.2 с.
+Синхронизация завершена за 12.0 с.
+Вызов 6a68f084-38be-422a-8dbf-b488f6683efd | модели: qwen3-embedding:8b-q8_0 [offload_unknown] | длительность: 12.177 s | экономия облачных токенов: INPUT Неприменимо (administrative_operation); OUTPUT Неприменимо (administrative_operation).

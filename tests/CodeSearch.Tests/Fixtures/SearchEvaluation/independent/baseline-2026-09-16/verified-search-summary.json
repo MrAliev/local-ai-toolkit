@@ -1,0 +1,50 @@
+[
+  {
+    "corpus": "csharp",
+    "positives": 10,
+    "positivesFound": 10,
+    "negatives": 2,
+    "falsePositives": 1,
+    "recallAt10": 1,
+    "precisionAt5": 0.19999999999999998,
+    "negativeFalsePositiveRate": 0.5,
+    "trackedSourceFiles": 16,
+    "outsideSourceHits": 0
+  },
+  {
+    "corpus": "typescript",
+    "positives": 10,
+    "positivesFound": 10,
+    "negatives": 2,
+    "falsePositives": 1,
+    "recallAt10": 1,
+    "precisionAt5": 0.19999999999999998,
+    "negativeFalsePositiveRate": 0.5,
+    "trackedSourceFiles": 60,
+    "outsideSourceHits": 0
+  },
+  {
+    "corpus": "python",
+    "positives": 10,
+    "positivesFound": 10,
+    "negatives": 2,
+    "falsePositives": 1,
+    "recallAt10": 1,
+    "precisionAt5": 0.19999999999999998,
+    "negativeFalsePositiveRate": 0.5,
+    "trackedSourceFiles": 14,
+    "outsideSourceHits": 0
+  },
+  {
+    "corpus": "mixed",
+    "positives": 30,
+    "positivesFound": 29,
+    "negatives": 4,
+    "falsePositives": 2,
+    "recallAt10": 0.9666666666666667,
+    "precisionAt5": 0.1933333333333334,
+    "negativeFalsePositiveRate": 0.5,
+    "trackedSourceFiles": 88,
+    "outsideSourceHits": 0
+  }
+]

@@ -1,0 +1,236 @@
+{
+  "schemaVersion": 1,
+  "modelRequested": "glm-ocr:bf16",
+  "question": "Transcribe all text exactly, preserving line breaks and repeated lines. Return only the transcription in the original language.",
+  "corpusSha256": "9333d9973e1cec40b6cc710bc38ec791c250a82fbdcff0c0a1bec50684a01419",
+  "cases": [
+    {
+      "id": "short-repeated-en",
+      "language": "en",
+      "length": "short",
+      "imageSha256": "499cac150e31b00223a18473241545c8586b4f7139c768445acbf2651e7c7920",
+      "referenceSha256": "47bf67ff0ff718c726870c08abc0b713e671a429ec51281f8fd00c004237393a",
+      "score": {
+        "TechnicalCompletion": true,
+        "HasOutput": true,
+        "CharacterErrorRate": 0.0,
+        "WordErrorRate": 0.0,
+        "ReferenceLineCount": 2,
+        "OutputLineCount": 2,
+        "FieldLabelRecall": 1.0,
+        "FieldValueAccuracy": 1.0,
+        "ElapsedMilliseconds": 58686
+      },
+      "response": {
+        "schema": 1,
+        "command": "read-image",
+        "ok": true,
+        "data": {
+          "answer": "STAMP: OK\nSTAMP: OK",
+          "origin": "read-image:R:\\worktrees\\LocalAi\\codex-quality-corpora\\tests\\Fixtures\\OcrQuality\\short-repeated-en.png",
+          "model": "qwen3-vl:8b-instruct-q8_0",
+          "residency": "None",
+          "queuedMs": 2269,
+          "ranMs": 52821,
+          "savedTokensEstimate": 355,
+          "truncated": false
+        }
+      },
+      "parseError": null,
+      "invocation": [
+        {},
+        {},
+        {
+          "exitCode": 0,
+          "elapsedMs": 58686,
+          "stdout": "R:\\LocalAi\\publish\\quality-corpora\\baseline-2026-09-16\\results\\ocr\\short-repeated-en.stdout.log",
+          "stderr": "R:\\LocalAi\\publish\\quality-corpora\\baseline-2026-09-16\\results\\ocr\\short-repeated-en.stderr.log",
+          "executable": "R:\\worktrees\\LocalAi\\codex-quality-corpora\\src\\LocalAi.Cli\\bin\\Release\\net10.0\\localai.exe",
+          "arguments": [
+            "read-image",
+            "Transcribe all text exactly, preserving line breaks and repeated lines. Return only the transcription in the original language.",
+            "R:\\worktrees\\LocalAi\\codex-quality-corpora\\tests\\Fixtures\\OcrQuality\\short-repeated-en.png",
+            "--profile",
+            "Ocr",
+            "--model",
+            "glm-ocr:bf16",
+            "--language",
+            "en",
+            "--json"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "short-fields-ru",
+      "language": "ru",
+      "length": "short",
+      "imageSha256": "e7e7ae9e0b1cbd5d9a89586a6dddd36f25ecd69afdfed70d4032cc4a3a1c61c5",
+      "referenceSha256": "c17fef8d3b576de0a62b7f41bce9d998562d9d2e05faa43f62f386586bbc674a",
+      "score": {
+        "TechnicalCompletion": true,
+        "HasOutput": true,
+        "CharacterErrorRate": 0.0,
+        "WordErrorRate": 0.0,
+        "ReferenceLineCount": 2,
+        "OutputLineCount": 2,
+        "FieldLabelRecall": 1.0,
+        "FieldValueAccuracy": 1.0,
+        "ElapsedMilliseconds": 37420
+      },
+      "response": {
+        "schema": 1,
+        "command": "read-image",
+        "ok": true,
+        "data": {
+          "answer": "КОД: 42\nСТАТУС: ГОТОВО",
+          "origin": "read-image:R:\\worktrees\\LocalAi\\codex-quality-corpora\\tests\\Fixtures\\OcrQuality\\short-fields-ru.png",
+          "model": "qwen3-vl:8b-instruct-q8_0",
+          "residency": "None",
+          "queuedMs": 2263,
+          "ranMs": 31864,
+          "savedTokensEstimate": 350,
+          "truncated": false
+        }
+      },
+      "parseError": null,
+      "invocation": [
+        {},
+        {},
+        {
+          "exitCode": 0,
+          "elapsedMs": 37420,
+          "stdout": "R:\\LocalAi\\publish\\quality-corpora\\baseline-2026-09-16\\results\\ocr\\short-fields-ru.stdout.log",
+          "stderr": "R:\\LocalAi\\publish\\quality-corpora\\baseline-2026-09-16\\results\\ocr\\short-fields-ru.stderr.log",
+          "executable": "R:\\worktrees\\LocalAi\\codex-quality-corpora\\src\\LocalAi.Cli\\bin\\Release\\net10.0\\localai.exe",
+          "arguments": [
+            "read-image",
+            "Transcribe all text exactly, preserving line breaks and repeated lines. Return only the transcription in the original language.",
+            "R:\\worktrees\\LocalAi\\codex-quality-corpora\\tests\\Fixtures\\OcrQuality\\short-fields-ru.png",
+            "--profile",
+            "Ocr",
+            "--model",
+            "glm-ocr:bf16",
+            "--language",
+            "en",
+            "--json"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "long-fields-en",
+      "language": "en",
+      "length": "long",
+      "imageSha256": "44b642be2dcaae2b55b2ad44797c14738477f776f1f5148f5472ebd64d782eaa",
+      "referenceSha256": "ed87f960e6b5328911a7cd81256883abab07e10212fe46ca956492c1c33894b1",
+      "score": {
+        "TechnicalCompletion": true,
+        "HasOutput": true,
+        "CharacterErrorRate": 0.0,
+        "WordErrorRate": 0.0,
+        "ReferenceLineCount": 40,
+        "OutputLineCount": 40,
+        "FieldLabelRecall": 1.0,
+        "FieldValueAccuracy": 1.0,
+        "ElapsedMilliseconds": 35103
+      },
+      "response": {
+        "schema": 1,
+        "command": "read-image",
+        "ok": true,
+        "data": {
+          "answer": "WAREHOUSE CHECK\nBatch: EN-2026-0916\nLocation: North depot\nDate: 2026-09-16\nStatus: READY\n\nITEM 01: P001 | Quantity 2 | Zone B\nITEM 02: P002 | Quantity 3 | Zone C\nITEM 03: P003 | Quantity 4 | Zone A\nITEM 04: P004 | Quantity 5 | Zone B\nITEM 05: P005 | Quantity 1 | Zone C\nITEM 06: P006 | Quantity 2 | Zone A\nITEM 07: P007 | Quantity 3 | Zone B\nITEM 08: P008 | Quantity 4 | Zone C\nITEM 09: P009 | Quantity 5 | Zone A\nITEM 10: P010 | Quantity 1 | Zone B\nITEM 11: P011 | Quantity 2 | Zone C\nITEM 12: P012 | Quantity 3 | Zone A\nITEM 13: P013 | Quantity 4 | Zone B\nITEM 14: P014 | Quantity 5 | Zone C\nITEM 15: P015 | Quantity 1 | Zone A\nITEM 16: P016 | Quantity 2 | Zone B\nITEM 17: P017 | Quantity 3 | Zone C\nITEM 18: P018 | Quantity 4 | Zone A\nITEM 19: P019 | Quantity 5 | Zone B\nITEM 20: P020 | Quantity 1 | Zone C\nITEM 21: P021 | Quantity 2 | Zone A\nITEM 22: P022 | Quantity 3 | Zone B\nITEM 23: P023 | Quantity 4 | Zone C\nITEM 24: P024 | Quantity 5 | Zone A\nITEM 25: P025 | Quantity 1 | Zone B\nITEM 26: P026 | Quantity 2 | Zone C\nITEM 27: P027 | Quantity 3 | Zone A\nITEM 28: P028 | Quantity 4 | Zone B\nITEM 29: P029 | Quantity 5 | Zone C\nITEM 30: P030 | Quantity 1 | Zone A\nITEM 31: P031 | Quantity 2 | Zone B\nITEM 32: P032 | Quantity 3 | Zone C\n\nTOTAL ITEMS: 32\nVerifier: ANTON\nEND OF REPORT",
+          "origin": "read-image:R:\\worktrees\\LocalAi\\codex-quality-corpora\\tests\\Fixtures\\OcrQuality\\long-fields-en.png",
+          "model": "qwen3-vl:8b-instruct-q8_0",
+          "residency": "None",
+          "queuedMs": 2307,
+          "ranMs": 29163,
+          "savedTokensEstimate": 2718,
+          "truncated": false
+        }
+      },
+      "parseError": null,
+      "invocation": [
+        {},
+        {},
+        {
+          "exitCode": 0,
+          "elapsedMs": 35103,
+          "stdout": "R:\\LocalAi\\publish\\quality-corpora\\baseline-2026-09-16\\results\\ocr\\long-fields-en.stdout.log",
+          "stderr": "R:\\LocalAi\\publish\\quality-corpora\\baseline-2026-09-16\\results\\ocr\\long-fields-en.stderr.log",
+          "executable": "R:\\worktrees\\LocalAi\\codex-quality-corpora\\src\\LocalAi.Cli\\bin\\Release\\net10.0\\localai.exe",
+          "arguments": [
+            "read-image",
+            "Transcribe all text exactly, preserving line breaks and repeated lines. Return only the transcription in the original language.",
+            "R:\\worktrees\\LocalAi\\codex-quality-corpora\\tests\\Fixtures\\OcrQuality\\long-fields-en.png",
+            "--profile",
+            "Ocr",
+            "--model",
+            "glm-ocr:bf16",
+            "--language",
+            "en",
+            "--json"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "long-fields-ru",
+      "language": "ru",
+      "length": "long",
+      "imageSha256": "349b90d1acae8499f484315e0ea940b2c6bb2ab9e7bebe294d03d8d3ff6726ed",
+      "referenceSha256": "2cd6c1699bddb5204340b11607051ec975cffddf796b2da4368cfcf59a9fcf00",
+      "score": {
+        "TechnicalCompletion": true,
+        "HasOutput": true,
+        "CharacterErrorRate": 0.022176022176022176,
+        "WordErrorRate": 0.10491803278688525,
+        "ReferenceLineCount": 40,
+        "OutputLineCount": 40,
+        "FieldLabelRecall": 1.0,
+        "FieldValueAccuracy": 0.5714285714285714,
+        "ElapsedMilliseconds": 42179
+      },
+      "response": {
+        "schema": 1,
+        "command": "read-image",
+        "ok": true,
+        "data": {
+          "answer": "СВЕРКА СКЛАДА\nПартия: RU-2026-0916\nСклад: Северный\nДата: 2026-09-16\nСтатус: ГОТОВО\n\nПОЗИЦИЯ 01: P001 | Количество 2 | Зона В\nПОЗИЦИЯ 02: P002 | Количество 3 | Зона С\nПОЗИЦИЯ 03: P003 | Количество 4 | Зона А\nПОЗИЦИЯ 04: P004 | Количество 5 | Зона В\nПОЗИЦИЯ 05: P005 | Количество 1 | Зона С\nПОЗИЦИЯ 06: P006 | Количество 2 | Зона А\nПОЗИЦИЯ 07: P007 | Количество 3 | Зона В\nПОЗИЦИЯ 08: P008 | Количество 4 | Зона С\nПОЗИЦИЯ 09: P009 | Количество 5 | Зона А\nПОЗИЦИЯ 10: P010 | Количество 1 | Зона В\nПОЗИЦИЯ 11: P011 | Количество 2 | Зона С\nПОЗИЦИЯ 12: P012 | Количество 3 | Зона А\nПОЗИЦИЯ 13: P013 | Количество 4 | Зона В\nПОЗИЦИЯ 14: P014 | Количество 5 | Зона С\nПОЗИЦИЯ 15: P015 | Количество 1 | Зона А\nПОЗИЦИЯ 16: P016 | Количество 2 | Зона В\nПОЗИЦИЯ 17: P017 | Количество 3 | Зона С\nПОЗИЦИЯ 18: P018 | Количество 4 | Зона А\nПОЗИЦИЯ 19: P019 | Количество 5 | Зона В\nПОЗИЦИЯ 20: P020 | Количество 1 | Зона С\nПОЗИЦИЯ 21: P021 | Количество 2 | Зона А\nПОЗИЦИЯ 22: P022 | Количество 3 | Зона В\nПОЗИЦИЯ 23: P023 | Количество 4 | Зона С\nПОЗИЦИЯ 24: P024 | Количество 5 | Зона А\nПОЗИЦИЯ 25: P025 | Количество 1 | Зона В\nПОЗИЦИЯ 26: P026 | Количество 2 | Зона С\nПОЗИЦИЯ 27: P027 | Количество 3 | Зона А\nПОЗИЦИЯ 28: P028 | Количество 4 | Зона В\nПОЗИЦИЯ 29: P029 | Количество 5 | Зона С\nПОЗИЦИЯ 30: P030 | Количество 1 | Зона А\nПОЗИЦИЯ 31: P031 | Количество 2 | Зона В\nПОЗИЦИЯ 32: P032 | Количество 3 | Зона С\n\nВСЕГО ПОЗИЦИЙ: 32\nПроверил: АНТОН\nКОНЕЦ ОТЧЕТА",
+          "origin": "read-image:R:\\worktrees\\LocalAi\\codex-quality-corpora\\tests\\Fixtures\\OcrQuality\\long-fields-ru.png",
+          "model": "qwen3-vl:8b-instruct-q8_0",
+          "residency": "None",
+          "queuedMs": 2284,
+          "ranMs": 36568,
+          "savedTokensEstimate": 2405,
+          "truncated": false
+        }
+      },
+      "parseError": null,
+      "invocation": [
+        {},
+        {},
+        {
+          "exitCode": 0,
+          "elapsedMs": 42179,
+          "stdout": "R:\\LocalAi\\publish\\quality-corpora\\baseline-2026-09-16\\results\\ocr\\long-fields-ru.stdout.log",
+          "stderr": "R:\\LocalAi\\publish\\quality-corpora\\baseline-2026-09-16\\results\\ocr\\long-fields-ru.stderr.log",
+          "executable": "R:\\worktrees\\LocalAi\\codex-quality-corpora\\src\\LocalAi.Cli\\bin\\Release\\net10.0\\localai.exe",
+          "arguments": [
+            "read-image",
+            "Transcribe all text exactly, preserving line breaks and repeated lines. Return only the transcription in the original language.",
+            "R:\\worktrees\\LocalAi\\codex-quality-corpora\\tests\\Fixtures\\OcrQuality\\long-fields-ru.png",
+            "--profile",
+            "Ocr",
+            "--model",
+            "glm-ocr:bf16",
+            "--language",
+            "en",
+            "--json"
+          ]
+        }
+      ]
+    }
+  ]
+}
