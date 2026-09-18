@@ -230,7 +230,7 @@ public static class PageLabels
         "Could not save this choice. It applies only until the installer closes.",
         "Не удалось сохранить выбор. Он действует только до закрытия установщика.");
 
-    /// <summary><c>{0}</c> is the operating system's own message, in whatever language it wrote.</summary>
+    /// <summary><c>{0}</c> is the exception's own message, untranslated.</summary>
     public static string PreferencesNotSavedReason => InstallerCulture.Pick("Reason: {0}", "Причина: {0}");
 
     // --- The removal wizard -------------------------------------------------------------

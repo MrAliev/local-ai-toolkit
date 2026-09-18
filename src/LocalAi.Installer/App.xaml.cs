@@ -17,8 +17,6 @@ public partial class App : Application
 
     private InstallerThemeSwitch? themes;
 
-    private InstallerPresentation? presentation;
-
     public App() =>
         InstallerWindowsEnvironment.EnsureValidWindowsDirectory();
 
@@ -27,9 +25,6 @@ public partial class App : Application
     /// caption is drawn by the desktop manager and has to be told separately.
     /// </summary>
     public static InstallerThemeSwitch? Themes => (Current as App)?.themes;
-
-    /// <summary>The one language and theme every window shows. Null only where no App runs, as in tests.</summary>
-    public static InstallerPresentation? Presentation => (Current as App)?.presentation;
 
     /// <summary>
     /// Whether this command line asks for removal. Case-insensitive, and accepts the
@@ -61,11 +56,13 @@ public partial class App : Application
         // screen somebody is looking at while they wait.
         themes = new InstallerThemeSwitch(Resources, preferences.ReadTheme());
         themes.Apply();
-        presentation = new InstallerPresentation(preferences, themes.Choose);
+        // One for the process, handed from window to window, so a choice made in any of them is
+        // the one every other shows.
+        var presentation = new InstallerPresentation(preferences, themes.Choose);
 
         Window window = IsUninstallRequested(e.Args)
-            ? new UninstallWindow()
-            : new StartWindow();
+            ? new UninstallWindow(presentation)
+            : new StartWindow(presentation);
         MainWindow = window;
         window.Show();
     }

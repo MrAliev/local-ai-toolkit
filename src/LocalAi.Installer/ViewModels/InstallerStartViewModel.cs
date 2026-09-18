@@ -99,7 +99,7 @@ public sealed class InstallerStartViewModel : ObservableObject
         // Rooted where the caller said its state lives. Defaulting to the real profile even
         // when the rest of the view model was redirected let the test suite rewrite the
         // language of the installer actually installed on the machine, once per run.
-        Presentation = presentation ?? App.Presentation ?? new InstallerPresentation(
+        Presentation = presentation ?? new InstallerPresentation(
             preferencesStore ?? new InstallerPreferencesStore(
                 Path.Combine(root, RemovalMatrix.JournalDirectoryName)));
         existing = (inspector ?? new ExistingLocalAiInspector(new SystemFileSystemProbe()))
@@ -113,11 +113,15 @@ public sealed class InstallerStartViewModel : ObservableObject
         }
 
         SelectTheOnlyErrandIfThereIsOne();
-        // Not detached: this screen lives as long as the process, hidden while a wizard runs.
-        Presentation.LanguageChanged += (_, _) => Repaint();
+        Presentation.LanguageChanged += OnLanguageChanged;
     }
 
     public InstallerPresentation Presentation { get; }
+
+    /// <summary>For the window to call once closed; the shared settings outlive it.</summary>
+    public void DetachPresentation() => Presentation.LanguageChanged -= OnLanguageChanged;
+
+    private void OnLanguageChanged(object? sender, EventArgs e) => Repaint();
 
     public ObservableCollection<StartActionOption> Actions { get; } = [];
 

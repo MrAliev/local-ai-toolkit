@@ -88,6 +88,13 @@ public sealed class InstallerPreferencesStore(string directory)
     /// <summary>Why the last write did not reach the disk, or null when it did.</summary>
     public string? WriteFailure { get; private set; }
 
+    /// <summary>What the next launch would show, read from disk rather than from this run's memory.</summary>
+    public (InstallerLanguage Language, InstallerTheme Theme) OnDisk(CultureInfo culture)
+    {
+        var fresh = new InstallerPreferencesStore(directory);
+        return (fresh.ReadLanguage(culture), fresh.ReadTheme());
+    }
+
     public bool WriteLanguage(InstallerLanguage language) =>
         Save(Load() with { Language = language.ToString() });
 

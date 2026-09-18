@@ -66,13 +66,16 @@ public sealed class InstallerPresentationTests : IDisposable
     [Fact]
     public void A_language_that_cannot_be_remembered_still_applies_and_says_so()
     {
-        var presentation = new InstallerPresentation(Unwritable());
+        var store = Unwritable();
+        var presentation = new InstallerPresentation(store);
 
         presentation.ChooseLanguage(InstallerLanguage.Russian);
 
         Assert.Equal(InstallerLanguage.Russian, InstallerCulture.Current);
         Assert.True(presentation.HasWriteFailure);
         Assert.False(string.IsNullOrWhiteSpace(presentation.WriteFailureNotice));
+        Assert.True(presentation.HasWriteFailureReason);
+        Assert.Contains(store.WriteFailure!, presentation.WriteFailureReason, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -104,6 +107,30 @@ public sealed class InstallerPresentationTests : IDisposable
 
         Assert.False(presentation.HasWriteFailure);
         Assert.Null(presentation.WriteFailureNotice);
+    }
+
+    /// <summary>
+    /// The notice says the next launch will not remember the choice. A write that failed while the
+    /// file already held that very choice loses nothing, and saying otherwise would be untrue.
+    /// </summary>
+    [Fact]
+    public void A_failed_write_the_disk_already_agrees_with_is_not_a_complaint()
+    {
+        var directory = root.Combine("preferences");
+        Directory.CreateDirectory(directory);
+        var file = Path.Combine(directory, "ui-preferences.json");
+        File.WriteAllText(file, "{\"schemaVersion\":1,\"language\":\"English\",\"theme\":null}");
+        var presentation = new InstallerPresentation(new InstallerPreferencesStore(directory));
+
+        // Readable but not writable: every write fails with a sharing violation.
+        using (new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            presentation.ChooseLanguage(InstallerLanguage.Russian);
+            Assert.True(presentation.HasWriteFailure);
+
+            presentation.ChooseLanguage(InstallerLanguage.English);
+            Assert.False(presentation.HasWriteFailure);
+        }
     }
 
     /// <summary>The notice is text on screen, so it follows the language like everything else.</summary>

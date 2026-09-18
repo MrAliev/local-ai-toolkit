@@ -1,4 +1,8 @@
+using System.Reflection;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using LocalAi.Installer.Core;
+using LocalAi.Installer.ViewModels;
 
 namespace LocalAi.Installer.Tests;
 
@@ -26,5 +30,41 @@ public sealed class PanelOnEveryScreenTests
             panel.Ancestors(),
             ancestor => ancestor.Name.LocalName == "ScrollViewer");
         Assert.Equal("{Binding Presentation}", (string?)panel.Attribute("DataContext"));
+    }
+
+    /// <summary>
+    /// A broken binding is silent, so the panel's paths are resolved against what it is bound to.
+    /// It has no item templates: every path starts at the presentation.
+    /// </summary>
+    [Fact]
+    public void Every_binding_on_the_panel_names_a_member_of_the_presentation()
+    {
+        var missing = Regex
+            .Matches(InstallerMarkup.Read("PreferencesBar.xaml"), @"\{Binding\s+(?<path>[A-Za-z0-9_]+)")
+            .Select(match => match.Groups["path"].Value)
+            .Where(path => typeof(InstallerPresentation).GetProperty(
+                path,
+                BindingFlags.Public | BindingFlags.Instance) is null)
+            .ToList();
+
+        Assert.Empty(missing);
+    }
+
+    /// <summary>The code behind parses each control's Tag; one that no longer parses does nothing when clicked.</summary>
+    [Fact]
+    public void Every_choice_on_the_panel_names_a_real_language_or_theme()
+    {
+        var elements = XDocument.Parse(InstallerMarkup.Read("PreferencesBar.xaml")).Descendants().ToList();
+        var languages = elements
+            .Where(element => element.Name.LocalName == "Button")
+            .Select(element => element.Attribute("Tag")?.Value ?? string.Empty)
+            .ToList();
+        var themes = elements
+            .Where(element => element.Name.LocalName == "RadioButton")
+            .Select(element => element.Attribute("Tag")?.Value ?? string.Empty)
+            .ToList();
+
+        Assert.Equal(Enum.GetNames<InstallerLanguage>().Order(), languages.Order());
+        Assert.Equal(Enum.GetNames<InstallerTheme>().Order(), themes.Order());
     }
 }

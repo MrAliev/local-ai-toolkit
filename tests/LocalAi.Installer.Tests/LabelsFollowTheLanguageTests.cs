@@ -48,6 +48,26 @@ public sealed class LabelsFollowTheLanguageTests
             string.Join(Environment.NewLine, frozen));
     }
 
+    /// <summary>A text binding read once keeps the language its window opened with.</summary>
+    [Theory]
+    [InlineData("MainWindow.xaml")]
+    [InlineData("UninstallWindow.xaml")]
+    [InlineData("StartWindow.xaml")]
+    [InlineData("PreferencesBar.xaml")]
+    public void No_text_is_bound_only_once(string file)
+    {
+        var once = File.ReadLines(Path.Combine(InstallerMarkup.Directory, file))
+            .Select((line, index) => (line, number: index + 1))
+            .Where(entry => entry.line.Contains("Mode=OneTime", StringComparison.Ordinal))
+            .Select(entry => $"{file}:{entry.number}  {entry.line.Trim()}")
+            .ToList();
+
+        Assert.True(
+            once.Count == 0,
+            "Bound once, when the window loaded:" + Environment.NewLine +
+            string.Join(Environment.NewLine, once));
+    }
+
     [Fact]
     public void Every_label_the_markup_binds_to_exists()
     {

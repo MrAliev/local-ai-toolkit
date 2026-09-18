@@ -49,6 +49,12 @@ public sealed class LanguageSwitchKeepsTheRunTests : IDisposable
         };
         wizard.Package.SourceFolder = root.Combine("release");
         wizard.Residency.Policy = ModelResidencyPolicy.AllowCpu;
+        wizard.Models.IsChooseExact = true;
+        var model = wizard.Models.CatalogModels[^1];
+        wizard.Models.SelectedModel = model;
+        var context = wizard.Models.AvailableContexts[^1];
+        wizard.Models.SelectedContext = context;
+        wizard.Agents.SetChoice("codex", AgentChoice.McpOnly);
         WalkToTheReview(wizard);
         wizard.SetReviewConfirmed(true);
         var englishTitle = wizard.StepTitle;
@@ -62,6 +68,10 @@ public sealed class LanguageSwitchKeepsTheRunTests : IDisposable
         Assert.True(wizard.CanRun);
         Assert.Equal(root.Combine("release"), wizard.Package.SourceFolder);
         Assert.Equal(ModelResidencyPolicy.AllowCpu, wizard.Residency.Policy);
+        Assert.True(wizard.Models.IsChooseExact);
+        Assert.Same(model, wizard.Models.SelectedModel);
+        Assert.Equal(context, wizard.Models.SelectedContext);
+        Assert.Equal(AgentChoice.McpOnly, wizard.Agents.Agents.Single(agent => agent.Agent == "codex").Choice);
         Assert.Equal(0, detections);
         Assert.Equal(0, feed.Calls);
         Assert.NotEqual(englishTitle, wizard.StepTitle);
@@ -119,6 +129,33 @@ public sealed class LanguageSwitchKeepsTheRunTests : IDisposable
             name => InstallerPresentationTests.Announces(name, nameof(ResidencyPageViewModel.Warning)));
         Assert.NotEqual(english, wizard.Residency.Warning);
         Assert.Equal(ModelResidencyPolicy.AllowCpu, wizard.Residency.Policy);
+    }
+
+    [Fact]
+    public void Every_page_behind_the_wizard_is_told()
+    {
+        var presentation = Presentation();
+        var wizard = new InstallerWizardViewModel(presentation: presentation);
+        var pages = new ObservableObject[]
+        {
+            wizard.Diagnose, wizard.Dependencies, wizard.Package, wizard.Models,
+            wizard.Residency, wizard.Agents, wizard.Review, wizard.Finish,
+        };
+        var told = new HashSet<ObservableObject>();
+        foreach (var page in pages)
+        {
+            page.PropertyChanged += (_, e) =>
+            {
+                if (string.IsNullOrEmpty(e.PropertyName))
+                {
+                    told.Add(page);
+                }
+            };
+        }
+
+        presentation.ChooseLanguage(InstallerLanguage.Russian);
+
+        Assert.Empty(pages.Where(page => !told.Contains(page)).Select(page => page.GetType().Name));
     }
 
     /// <summary>
@@ -237,6 +274,26 @@ public sealed class LanguageSwitchKeepsTheRunTests : IDisposable
         Assert.Contains(
             announced,
             name => InstallerPresentationTests.Announces(name, nameof(InstallerStartViewModel.Headline)));
+    }
+
+    /// <summary>
+    /// The start window closes for good when a clean reinstall hands over to the installation
+    /// wizard, so its view model is let go like a wizard's.
+    /// </summary>
+    [Fact]
+    public void A_start_screen_that_has_been_let_go_no_longer_follows()
+    {
+        var presentation = Presentation();
+        var start = new InstallerStartViewModel(
+            machine.LocalAppData,
+            readInstalledVersion: () => new InstalledVersion("467ed5f0f9bf", "0.1.51"),
+            presentation: presentation);
+        var row = start.Actions[0];
+        start.DetachPresentation();
+
+        presentation.ChooseLanguage(InstallerLanguage.Russian);
+
+        Assert.Same(row, start.Actions[0]);
     }
 
     /// <summary>Every window binds its panel to the one object the others change.</summary>

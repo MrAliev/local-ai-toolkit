@@ -74,7 +74,7 @@ public sealed class UninstallWizardViewModel : ObservableObject
         bool canReturnToStart = false,
         InstallerPresentation? presentation = null)
     {
-        Presentation = presentation ?? App.Presentation ?? new InstallerPresentation();
+        Presentation = presentation ?? new InstallerPresentation();
         Presentation.LanguageChanged += OnLanguageChanged;
         OffersInstallAfterwards = offersInstallAfterwards;
         this.canReturnToStart = canReturnToStart;

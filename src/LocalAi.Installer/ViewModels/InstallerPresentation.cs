@@ -1,3 +1,4 @@
+using System.Globalization;
 using LocalAi.Installer.Core;
 
 namespace LocalAi.Installer.ViewModels;
@@ -77,6 +78,13 @@ public sealed class InstallerPresentation(
         OnPropertyChanged(string.Empty);
     }
 
+    /// <summary>
+    /// The notice says the next launch will not show this choice, so it rests on what the next
+    /// launch would read, not on whether this write failed.
+    /// </summary>
     private void Remember(bool written, InstallerPreferencesStore target) =>
-        writeFailure = written ? null : target.WriteFailure ?? string.Empty;
+        writeFailure = written ||
+            target.OnDisk(CultureInfo.CurrentUICulture) == (InstallerCulture.Current, Theme)
+            ? null
+            : target.WriteFailure ?? string.Empty;
 }

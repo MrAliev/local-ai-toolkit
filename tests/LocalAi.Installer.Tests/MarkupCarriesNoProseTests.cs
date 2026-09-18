@@ -12,8 +12,8 @@ namespace LocalAi.Installer.Tests;
 /// the removal window's own Title was none of those — so the window carrying a fully translated
 /// page was still called "Remove LocalAi" in the task bar.
 ///
-/// AutomationProperties.Name is deliberately not swept: the start screen carries one per
-/// language, each shown only while the other language is active.
+/// AutomationProperties.Name is deliberately not swept: the language panel on every window carries
+/// one per language, each shown only while the other language is active.
 /// </summary>
 public sealed class MarkupCarriesNoProseTests
 {

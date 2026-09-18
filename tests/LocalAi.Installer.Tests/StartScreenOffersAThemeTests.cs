@@ -6,8 +6,8 @@ using LocalAi.TestFixtures;
 namespace LocalAi.Installer.Tests;
 
 /// <summary>
-/// The theme is chosen where the language is chosen, for the same reason: the start screen is
-/// the first thing anybody sees, and both wizards behind it read the answer at construction.
+/// The theme is chosen beside the language, on the panel every window carries, and every window
+/// shares the one choice.
 ///
 /// "System" is the default and is not a third colour scheme — it means the installer keeps
 /// following Windows, including a change made while it is open. Somebody who has already told

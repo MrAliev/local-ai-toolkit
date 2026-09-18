@@ -72,7 +72,7 @@
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                 <TextBlock Text="English" FontWeight="SemiBold" VerticalAlignment="Center"
                            Visibility="{Binding IsEnglish, Converter={StaticResource BoolToVisibility}}" />
-                <Button Content="English" Style="{StaticResource LanguageLink}"
+                <Button x:Name="ToEnglish" Content="English" Style="{StaticResource LanguageLink}"
                         AutomationProperties.Name="Switch the installer to English"
                         VerticalAlignment="Center"
                         Tag="English" Click="OnChooseLanguage"
@@ -81,7 +81,7 @@
                            VerticalAlignment="Center" />
                 <TextBlock Text="Русский" FontWeight="SemiBold" VerticalAlignment="Center"
                            Visibility="{Binding IsRussian, Converter={StaticResource BoolToVisibility}}" />
-                <Button Content="Русский" Style="{StaticResource LanguageLink}"
+                <Button x:Name="ToRussian" Content="Русский" Style="{StaticResource LanguageLink}"
                         AutomationProperties.Name="Переключить установщик на русский"
                         VerticalAlignment="Center"
                         Tag="Russian" Click="OnChooseLanguage"

@@ -170,7 +170,7 @@
 
         <!-- The 2px inset keeps the focus ring, drawn at Margin="-2", off the scroll edge. -->
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-            <ItemsControl ItemsSource="{Binding Actions}" Margin="2,2,2,0"
+            <ItemsControl x:Name="Errands" ItemsSource="{Binding Actions}" Margin="2,2,2,0"
                           KeyboardNavigation.DirectionalNavigation="Cycle"
                           AutomationProperties.Name="{Binding ActionsGroupName}"
                           PreviewKeyDown="OnErrandKeyDown">

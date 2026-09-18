@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 using LocalAi.Installer.Core;
 using LocalAi.Installer.ViewModels;
 
@@ -10,13 +11,22 @@ public partial class PreferencesBar : UserControl
 {
     public PreferencesBar() => InitializeComponent();
 
+    /// <summary>
+    /// The link pressed turns into plain text, so focus goes to the other one rather than to nowhere.
+    /// </summary>
     private void OnChooseLanguage(object sender, RoutedEventArgs e)
     {
         if (DataContext is InstallerPresentation presentation &&
-            sender is Button { Tag: string name } &&
+            sender is Button { Tag: string name } link &&
             Enum.TryParse<InstallerLanguage>(name, out var language))
         {
+            var hadFocus = link.IsKeyboardFocused;
             presentation.ChooseLanguage(language);
+            if (hadFocus)
+            {
+                var other = ReferenceEquals(link, ToRussian) ? ToEnglish : ToRussian;
+                Dispatcher.BeginInvoke(() => other.Focus(), DispatcherPriority.Input);
+            }
         }
     }
 

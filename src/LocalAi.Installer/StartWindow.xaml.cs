@@ -3,6 +3,8 @@ using System.Windows.Controls;
 using LocalAi.Installer.ViewModels;
 using System.Linq;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace LocalAi.Installer;
 
@@ -13,14 +15,16 @@ namespace LocalAi.Installer;
 /// </summary>
 public partial class StartWindow : Window
 {
-    private readonly InstallerStartViewModel viewModel = new();
+    private readonly InstallerStartViewModel viewModel;
 
-    public StartWindow()
+    public StartWindow(InstallerPresentation presentation)
     {
+        viewModel = new InstallerStartViewModel(presentation: presentation);
         InitializeComponent();
         // The caption is the desktop manager's, not the palette's.
         DarkCaption.Follow(this);
         DataContext = viewModel;
+        Closed += (_, _) => viewModel.DetachPresentation();
     }
 
     private void OnChooseErrand(object sender, RoutedEventArgs e)
@@ -74,15 +78,18 @@ public partial class StartWindow : Window
         {
             // The errand travels with the window: an update that asks every question an
             // install asks is a wizard that did not hear the answer already given (#257).
-            StartChoice.Install or StartChoice.UpdateOrRepair => new MainWindow(choice, canReturnToStart: true),
+            StartChoice.Install or StartChoice.UpdateOrRepair =>
+                new MainWindow(viewModel.Presentation, choice, canReturnToStart: true),
             // The removal half opens on the reinstall-friendly row and offers the install half
             // when it finishes; two deliberate wizards, because the install has prerequisites
             // and a release choice of its own to confirm.
             StartChoice.CleanReinstall => new UninstallWindow(
+                viewModel.Presentation,
                 InstallerStartViewModel.PresetFor(choice),
                 offersInstallAfterwards: true,
                 canReturnToStart: true),
             _ => new UninstallWindow(
+                viewModel.Presentation,
                 InstallerStartViewModel.PresetFor(choice),
                 canReturnToStart: true),
         });
@@ -91,10 +98,10 @@ public partial class StartWindow : Window
     private void OnClose(object sender, RoutedEventArgs e) => Close();
 
     /// <summary>
-    /// Hidden rather than closed, so Back from the wizard's first page finds this screen
-    /// exactly as it was left — the errand still chosen, the language and theme untouched.
-    /// Rebuilding it instead would mean carrying that state out and back through a
-    /// constructor, and losing whatever was forgotten.
+    /// Hidden rather than closed, so Back from the wizard's first page finds the errand still
+    /// chosen, in whatever language and theme the wizard was left in. Rebuilding it instead
+    /// would mean carrying that state out and back through a constructor, and losing whatever
+    /// was forgotten.
     ///
     /// A wizard closed any other way — the caption's X, Cancel, a finished run — takes this
     /// screen with it, or the process would linger behind an invisible window.
@@ -114,6 +121,9 @@ public partial class StartWindow : Window
                 Application.Current.MainWindow = this;
                 Show();
                 Activate();
+                // A language chosen in the wizard rebuilt the rows, and the one focus was on went
+                // with them.
+                Dispatcher.BeginInvoke(FocusChosenErrand, DispatcherPriority.Input);
             }
             else
             {
@@ -124,5 +134,16 @@ public partial class StartWindow : Window
         Application.Current.MainWindow = window;
         window.Show();
         Hide();
+    }
+
+    private void FocusChosenErrand()
+    {
+        if (viewModel.Actions.FirstOrDefault(option => option.IsSelected) is { } chosen &&
+            Errands.ItemContainerGenerator.ContainerFromItem(chosen) is DependencyObject container &&
+            VisualTreeHelper.GetChildrenCount(container) > 0 &&
+            VisualTreeHelper.GetChild(container, 0) is RadioButton row)
+        {
+            row.Focus();
+        }
     }
 }
