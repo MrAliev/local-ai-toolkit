@@ -184,7 +184,7 @@ public sealed class LanguageSwitchKeepsTheRunTests : IDisposable
         var wizard = await Removal(presentation);
         Assert.True(await wizard.MoveNextAsync(TestContext.Current.CancellationToken));
         wizard.IsConfirmed = true;
-        var preview = wizard.PreviewText;
+        var planned = wizard.PreviewText.Split('\n').Length;
         Assert.True(wizard.CanRun);
         var announced = new List<string?>();
         wizard.PropertyChanged += (_, e) => announced.Add(e.PropertyName);
@@ -194,7 +194,7 @@ public sealed class LanguageSwitchKeepsTheRunTests : IDisposable
         Assert.Equal(UninstallPage.Confirm, wizard.CurrentPage);
         Assert.True(wizard.IsConfirmed);
         Assert.True(wizard.CanRun);
-        Assert.Same(preview, wizard.PreviewText);
+        Assert.Equal(planned, wizard.PreviewText.Split('\n').Length);
         Assert.Equal("Готово к удалению", wizard.StepTitle);
         Assert.Equal("Что удалить", wizard.StepList[0].Title);
         Assert.Contains(

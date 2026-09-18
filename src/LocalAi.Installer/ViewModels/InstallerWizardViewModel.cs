@@ -191,21 +191,51 @@ public sealed class InstallerWizardViewModel : ObservableObject
 
     private RunMark pathMark = RunMark.None;
 
-    private string? pathDetail;
+    private enum PathOutcome
+    {
+        Added,
+        AlreadyThere,
+        Failed,
+    }
+
+    private PathOutcome? pathOutcome;
     private bool wasCancelled;
     private bool hasInitialized;
     private int progress;
-    private string progressText = "Ready";
+
+    /// <summary>A resting state, worded when read; null while a step's own text is showing.</summary>
+    private ProgressWord? progressWord = ProgressWord.Ready;
+    private string progressText = string.Empty;
     private string? runLogMessage;
-    private string? unexpectedError;
+    private Exception? unexpected;
     private EnvironmentDiagnosis? environmentDiagnosis;
     private CatalogRecommendation lastRecommendation = CatalogRecommendation.Empty;
     private string? resolvedTag;
-    private string? packageOutcome;
+
+    private enum PackageOutcomeKind
+    {
+        NoRelease,
+        Refused,
+        Result,
+    }
+
+    /// <summary>What the package step ended in, kept as facts so the finish row can be reworded.</summary>
+    private sealed record PackageOutcome(
+        PackageOutcomeKind Kind,
+        LocalAiPackageInstallStatus Status = default,
+        string? Version = null,
+        string? Reason = null);
+
+    private PackageOutcome? packageOutcome;
     private bool packageInstalled;
     private InstallerRunJournal? runJournal;
     private InstallerRunJournal? interruptedJournal;
-    private string? interruptedRunNotice;
+
+    /// <summary>What rolling back the interrupted run reported, shown in the notice's place.</summary>
+    private string? rollbackNotice;
+
+    /// <summary>The counts the finish rows were built from, so they can be built again.</summary>
+    private (int Requested, int Installed, int Failed)? finished;
 
     /// <summary>
     /// <paramref name="readInstalledVersion"/> is how the rail learns which version is on this
@@ -297,13 +327,23 @@ public sealed class InstallerWizardViewModel : ObservableObject
     {
         RebuildSteps();
         AnnounceEverything();
-        diagnose.AnnounceEverything();
-        dependencies.AnnounceEverything();
+        diagnose.Relabel();
+        dependencies.Relabel();
         package.AnnounceEverything();
-        models.AnnounceEverything();
+        models.Relabel();
         residency.AnnounceEverything();
-        agents.AnnounceEverything();
+        agents.Relabel();
         review.AnnounceEverything();
+        foreach (var row in ModelRuns)
+        {
+            row.Relabel();
+        }
+
+        if (finished is { } counts)
+        {
+            BuildFinishResults(counts.Requested, counts.Installed, counts.Failed);
+        }
+
         finish.AnnounceEverything();
     }
 
@@ -495,7 +535,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
 
     public int Progress => progress;
 
-    public string ProgressText => progressText;
+    public string ProgressText => progressWord is { } word ? ProgressWords.Text(word) : progressText;
 
     public string? RunLog => runLogMessage;
 
@@ -513,9 +553,16 @@ public sealed class InstallerWizardViewModel : ObservableObject
 
     public bool HasInterruptedRun => interruptedJournal is not null;
 
-    public string? UnexpectedError => unexpectedError;
+    public string? UnexpectedError => unexpected is null
+        ? null
+        : string.Format(
+            InstallerCulture.Pick(
+                "Unexpected error: {0}: {1}",
+                "Непредвиденная ошибка: {0}: {1}"),
+            unexpected.GetType().Name,
+            unexpected.Message);
 
-    public bool HasUnexpectedError => unexpectedError is not null;
+    public bool HasUnexpectedError => unexpected is not null;
 
     /// <summary>
     /// The sink for exceptions that would otherwise escape an async void entry point — a
@@ -525,19 +572,16 @@ public sealed class InstallerWizardViewModel : ObservableObject
     /// </summary>
     public void ReportUnexpectedError(Exception exception)
     {
-        unexpectedError = string.Format(
-            InstallerCulture.Pick(
-                "Unexpected error: {0}: {1}",
-                "Непредвиденная ошибка: {0}: {1}"),
-            exception.GetType().Name,
-            exception.Message);
+        unexpected = exception;
         OnPropertyChanged(nameof(UnexpectedError));
         OnPropertyChanged(nameof(HasUnexpectedError));
     }
 
-    public string? InterruptedRunNotice => interruptedRunNotice;
+    public string? InterruptedRunNotice => interruptedJournal is { } journal
+        ? BuildInterruptedRunNotice(journal.Snapshot)
+        : rollbackNotice;
 
-    public bool HasInterruptedRunNotice => !string.IsNullOrWhiteSpace(interruptedRunNotice);
+    public bool HasInterruptedRunNotice => !string.IsNullOrWhiteSpace(InterruptedRunNotice);
 
     public int CurrentPageIndex => StepIndex(CurrentPage);
 
@@ -729,9 +773,6 @@ public sealed class InstallerWizardViewModel : ObservableObject
             interruptedJournal = null;
         }
 
-        interruptedRunNotice = interruptedJournal is { } journal
-            ? BuildInterruptedRunNotice(journal.Snapshot)
-            : null;
         RefreshAll();
     }
 
@@ -811,7 +852,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             }
 
             interruptedJournal = null;
-            interruptedRunNotice = null;
+            rollbackNotice = null;
         }
 
         CurrentPage = Adjacent(CurrentPage, forward: true);
@@ -907,8 +948,9 @@ public sealed class InstallerWizardViewModel : ObservableObject
         ModelRuns.Clear();
         OnPropertyChanged(nameof(HasModelRuns));
         finish.Results.Clear();
+        finished = null;
         pathMark = RunMark.None;
-        pathDetail = null;
+        pathOutcome = null;
         CurrentPage = InstallerPage.Progress;
         RefreshAll();
 
@@ -928,7 +970,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 // The same rows as a real run, all of them saying nothing was attempted — which
                 // is what a dry run did.
                 BuildFinishResults(requested, successfulActions, failedActions);
-                SetProgress(100, InstallerCulture.Pick("Completed", "Завершено"));
+                SetProgress(100, ProgressWord.Completed);
                 isComplete = true;
                 CurrentPage = InstallerPage.Finish;
                 return true;
@@ -1053,11 +1095,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 skippedActions,
                 failedActions));
             BuildFinishResults(requested, successfulActions, failedActions);
-            SetProgress(
-                100,
-                hasRunError
-                    ? InstallerCulture.Pick("Failed", "Ошибка")
-                    : InstallerCulture.Pick("Completed", "Завершено"));
+            SetProgress(100, hasRunError ? ProgressWord.Failed : ProgressWord.Completed);
             isComplete = !hasRunError;
             JournalFinish(hasRunError
                 ? InstallerRunOutcome.Failed
@@ -1076,7 +1114,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             wasCancelled = true;
             hasRunError = true;
             isComplete = false;
-            SetProgress(progress, InstallerCulture.Pick("Cancelled", "Отменено"));
+            SetProgress(progress, ProgressWord.Cancelled);
             AppendLog(report, RunResults.Tally(
                 requested,
                 successfulActions,
@@ -1094,7 +1132,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             AppendRollbackAvailability(report);
             hasRunError = true;
             isComplete = false;
-            SetProgress(100, InstallerCulture.Pick("Failed", "Ошибка"));
+            SetProgress(100, ProgressWord.Failed);
             AppendLog(report, RunResults.Tally(
                 requested,
                 successfulActions,
@@ -1287,7 +1325,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         // The journal now carries a rollback outcome, so it is no longer "interrupted" and
         // the next start will not ask about it. The notice space shows the result instead.
         interruptedJournal = null;
-        interruptedRunNotice = rollbackReport;
+        rollbackNotice = rollbackReport;
         RefreshAll();
     }
 
@@ -1345,7 +1383,16 @@ public sealed class InstallerWizardViewModel : ObservableObject
     public void SetProgress(int value, string message)
     {
         progress = Math.Clamp(value, 0, 100);
+        progressWord = null;
         progressText = message;
+        OnPropertyChanged(nameof(Progress));
+        OnPropertyChanged(nameof(ProgressText));
+    }
+
+    private void SetProgress(int value, ProgressWord word)
+    {
+        progress = Math.Clamp(value, 0, 100);
+        progressWord = word;
         OnPropertyChanged(nameof(Progress));
         OnPropertyChanged(nameof(ProgressText));
     }
@@ -2013,21 +2060,44 @@ public sealed class InstallerWizardViewModel : ObservableObject
     /// </summary>
     private void BuildFinishResults(int requested, int installed, int failed)
     {
+        finished = (requested, installed, failed);
         SettleModelRuns(wasCancelled);
         finish.Results.Clear();
-        finish.Results.Add(RunResults.Package(packageOutcome, packageInstalled));
+        finish.Results.Add(RunResults.Package(PackageOutcomeText(), packageInstalled));
         finish.Results.Add(RunResults.Prerequisites(requested, installed, failed));
         finish.Results.Add(RunResults.Models(ModelRuns));
         finish.Results.Add(RunResults.Clients(configuredAgents));
-        if (pathMark != RunMark.None || pathDetail is not null)
+        if (pathMark != RunMark.None || pathOutcome is not null)
         {
-            finish.Results.Add(RunResults.PathEntry(
-                pathMark,
-                pathDetail ?? PageLabels.ResultNotAttempted));
+            finish.Results.Add(RunResults.PathEntry(pathMark, pathOutcome switch
+            {
+                PathOutcome.Added => InstallerCulture.Pick(
+                    "added for this account",
+                    "добавлен для этой учётной записи"),
+                PathOutcome.AlreadyThere => InstallerCulture.Pick("already there", "уже был прописан"),
+                PathOutcome.Failed => InstallerCulture.Pick("could not be updated", "не удалось изменить"),
+                _ => PageLabels.ResultNotAttempted,
+            }));
         }
 
         finish.NextSteps = RunResults.NextSteps(configuredAgents);
     }
+
+    private string? PackageOutcomeText() => packageOutcome switch
+    {
+        null => null,
+        { Kind: PackageOutcomeKind.NoRelease } => InstallerCulture.Pick(
+            "not installed, no verified release was selected",
+            "не установлен, проверенный релиз не выбран"),
+        { Kind: PackageOutcomeKind.Refused } refused => string.Format(
+            InstallerCulture.Pick("not installed — {0}", "не установлен — {0}"),
+            refused.Reason),
+        var result when packageInstalled => string.Format(
+            InstallerCulture.Pick("{0}, version {1}", "{0}, версия {1}"),
+            PackageOutcomeName(result.Status),
+            result.Version),
+        var result => $"{PackageOutcomeName(result.Status)} — {result.Reason}".TrimEnd(' ', '—'),
+    };
 
     private async Task RefreshEnvironmentDiagnosticsAsync(CancellationToken cancellationToken)
     {
@@ -2054,14 +2124,10 @@ public sealed class InstallerWizardViewModel : ObservableObject
         // The card the rule is about, named the way the machine reports it. The one the
         // recommendation weighs against is the one with the most dedicated video memory, so
         // that is the one the group names.
-        var weighed = diagnosis.Gpu.Adapters
+        residency.WeighedAdapter = diagnosis.Gpu.Adapters
             .Where(adapter => !adapter.IsSoftware)
             .OrderByDescending(adapter => adapter.DedicatedLocalBytes)
             .FirstOrDefault();
-        residency.AdapterFound = weighed is null
-            ? string.Empty
-            : InstallerCulture.Pick("Found: ", "Найден: ") +
-                GpuAdapterDisplay.Describe(weighed);
         agents.ApplyDetection(diagnosis.Agents);
         await RefreshRecommendationAsync(diagnosis, cancellationToken);
 
@@ -2466,11 +2532,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         {
             var added = LauncherPathRegistration.Register(directory);
             pathMark = RunMark.Done;
-            pathDetail = added
-                ? InstallerCulture.Pick(
-                    "added for this account",
-                    "добавлен для этой учётной записи")
-                : InstallerCulture.Pick("already there", "уже был прописан");
+            pathOutcome = added ? PathOutcome.Added : PathOutcome.AlreadyThere;
             AppendLog(
                 report,
                 added
@@ -2488,9 +2550,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         {
             JournalFail(step, exception.Message);
             pathMark = RunMark.Failed;
-            pathDetail = InstallerCulture.Pick(
-                "could not be updated",
-                "не удалось изменить");
+            pathOutcome = PathOutcome.Failed;
             AppendLog(
                 report,
                 $"PATH: could not be updated ({exception.Message}). LocalAi is installed and the " +
@@ -2512,9 +2572,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             // Not a skip: installing the package is the entire point of this wizard. Returning
             // quietly here let the run finish as "Installation complete" while nothing had been
             // installed at all, which is the one outcome worse than a visible failure.
-            packageOutcome = InstallerCulture.Pick(
-                "not installed, no verified release was selected",
-                "не установлен, проверенный релиз не выбран");
+            packageOutcome = new(PackageOutcomeKind.NoRelease);
             AppendLog(
                 report,
                 "LocalAi package: no verified release was selected, so nothing was installed. " +
@@ -2651,9 +2709,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             // defect. It is caught here so the advice can name the directory and say what is
             // in it, and so the run still finishes its own reporting instead of aborting.
             packageInstalled = false;
-            packageOutcome = string.Format(
-                InstallerCulture.Pick("not installed — {0}", "не установлен — {0}"),
-                exception.Message);
+            packageOutcome = new(PackageOutcomeKind.Refused, Reason: exception.Message);
             AppendLog(report, $"LocalAi package: {exception.Message}");
             var layout = InstallationLayout.CreateDefault();
             var advice = InstallationFailureAdvice.ForLayoutFailure(
@@ -2683,12 +2739,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         // result.Status is an enum name. It used to be printed straight into the summary a
         // person reads — "ImmutableConflict" — which is the same defect the review page fixed
         // for the residency policy, one page further on.
-        packageOutcome = result.Installed
-            ? string.Format(
-                InstallerCulture.Pick("{0}, version {1}", "{0}, версия {1}"),
-                PackageOutcomeName(result.Status),
-                result.Version)
-            : $"{PackageOutcomeName(result.Status)} — {result.Reason}".TrimEnd(' ', '—');
+        packageOutcome = new(PackageOutcomeKind.Result, result.Status, result.Version, result.Reason);
         AppendLog(
             report,
             result.Installed

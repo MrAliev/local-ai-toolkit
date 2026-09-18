@@ -46,16 +46,38 @@ public sealed class UninstallWizardViewModel : ObservableObject
     private bool isComplete;
     private bool hasRunError;
     private bool hasLoaded;
-    private string? blockingNotice;
-    private string? unexpectedError;
-    private string previewText = string.Empty;
-    private string keepNotice = string.Empty;
-    private string summary = string.Empty;
-    private string report = string.Empty;
+
+    private enum Blocked
+    {
+        AnotherRun,
+        NothingInstalled,
+    }
+
+    private Blocked? blocked;
+    private Exception? unexpected;
     private int progress;
-    private string progressText = "Ready";
+
+    /// <summary>A resting state, worded when read; null while a step's own text is showing.</summary>
+    private ProgressWord? progressWord = ProgressWord.Ready;
+    private string progressText = string.Empty;
     private UninstallPlan? confirmedPlan;
     private CancellationTokenSource? runCancellation;
+
+    private enum RunEnd
+    {
+        NotRun,
+        Finished,
+        Cancelled,
+        Refused,
+        Failed,
+    }
+
+    /// <summary>How the run ended and what it left, kept as facts so the finish page can be reworded.</summary>
+    private RunEnd runEnd;
+    private UninstallPlan? ranPlan;
+    private UninstallOutcome? outcome;
+    private string? refusal;
+    private Exception? failure;
 
     /// <summary>
     /// <paramml name="preset"/> is where the page opens: a clean reinstall arrives here on the
@@ -242,15 +264,37 @@ public sealed class UninstallWizardViewModel : ObservableObject
     /// Why this wizard will not do anything: another run holds the live lock, or there is no
     /// installation here to remove. Both are answers, not errors.
     /// </summary>
-    public string? BlockingNotice => blockingNotice;
+    public string? BlockingNotice => blocked switch
+    {
+        Blocked.AnotherRun => InstallerCulture.Pick(
+            "Another LocalAi installer or uninstaller is running on this computer. " +
+            "Finish it first, then start this one again.",
+            "На этом компьютере уже работает установщик или деинсталлятор " +
+            "LocalAi. Сначала завершите его, потом запустите этот заново."),
+        Blocked.NothingInstalled => string.Format(
+            InstallerCulture.Pick(
+                "There is no LocalAi installation at {0} to remove. Client registrations " +
+                "and Git hooks, if any are left, are listed by the documentation.",
+                "В {0} нет установки LocalAi, которую можно удалить. Регистрации " +
+                "клиентов и хуки Git, если что-то осталось, перечислены в документации."),
+            layout.Root),
+        _ => null,
+    };
 
-    public bool IsBlocked => blockingNotice is not null;
+    public bool IsBlocked => blocked is not null;
 
-    public string? UnexpectedError => unexpectedError;
+    public string? UnexpectedError => unexpected is null
+        ? null
+        : string.Format(
+            InstallerCulture.Pick(
+                "Unexpected error: {0}: {1}",
+                "Непредвиденная ошибка: {0}: {1}"),
+            unexpected.GetType().Name,
+            unexpected.Message);
 
-    public bool HasUnexpectedError => unexpectedError is not null;
+    public bool HasUnexpectedError => unexpected is not null;
 
-    public string PreviewText => previewText;
+    public string PreviewText => confirmedPlan?.PreviewText ?? string.Empty;
 
     /// <summary>
     /// What this run deliberately leaves alone, said before the list rather than inside it.
@@ -262,17 +306,37 @@ public sealed class UninstallWizardViewModel : ObservableObject
     /// choosing a clean reinstall can still tick one, and this sentence must not then be a
     /// lie. Empty when it does not apply.
     /// </summary>
-    public string KeepNotice => keepNotice;
+    public string KeepNotice => confirmedPlan is { } plan
+        ? BuildKeepNotice(plan.Selection)
+        : string.Empty;
 
-    public bool HasKeepNotice => keepNotice.Length > 0;
+    public bool HasKeepNotice => KeepNotice.Length > 0;
 
-    public string Summary => summary;
+    public string Summary => runEnd switch
+    {
+        RunEnd.Finished => BuildSummary(outcome!),
+        RunEnd.Cancelled => InstallerCulture.Pick(
+            "Cancelled. Whatever had already been removed stays removed — the report " +
+            "below and the journal say what that was.",
+            "Отменено. Всё, что уже было удалено, удалённым и осталось — " +
+            "что именно, скажут отчёт ниже и журнал."),
+        RunEnd.Refused => refusal ?? string.Empty,
+        RunEnd.Failed => string.Format(
+            InstallerCulture.Pick("Removal failed: {0}", "Удаление не удалось: {0}"),
+            failure?.Message),
+        _ => string.Empty,
+    };
 
-    public string Report => report;
+    public string Report => runEnd switch
+    {
+        RunEnd.Finished => BuildReport(ranPlan!, outcome!),
+        RunEnd.Refused => InstallerCulture.Pick("Nothing was removed.", "Ничего не удалено."),
+        _ => string.Empty,
+    };
 
     public int Progress => progress;
 
-    public string ProgressText => progressText;
+    public string ProgressText => progressWord is { } word ? ProgressWords.Text(word) : progressText;
 
     public bool IsRunning => isRunning;
 
@@ -385,24 +449,14 @@ public sealed class UninstallWizardViewModel : ObservableObject
         {
             // The two must not meet in the middle: one wizard writing the runtime while
             // another removes it leaves a tree neither of them describes.
-            blockingNotice = InstallerCulture.Pick(
-                "Another LocalAi installer or uninstaller is running on this computer. " +
-                "Finish it first, then start this one again.",
-                "На этом компьютере уже работает установщик или деинсталлятор " +
-                "LocalAi. Сначала завершите его, потом запустите этот заново.");
+            blocked = Blocked.AnotherRun;
             RefreshAll();
             return;
         }
 
         if (!Directory.Exists(layout.Root))
         {
-            blockingNotice = string.Format(
-                InstallerCulture.Pick(
-                    "There is no LocalAi installation at {0} to remove. Client registrations " +
-                    "and Git hooks, if any are left, are listed by the documentation.",
-                    "В {0} нет установки LocalAi, которую можно удалить. Регистрации " +
-                    "клиентов и хуки Git, если что-то осталось, перечислены в документации."),
-                layout.Root);
+            blocked = Blocked.NothingInstalled;
             RefreshAll();
             return;
         }
@@ -435,8 +489,6 @@ public sealed class UninstallWizardViewModel : ObservableObject
             Selection(),
             cancellationToken,
             installationFollows: OffersInstallAfterwards);
-        previewText = confirmedPlan.PreviewText;
-        keepNotice = BuildKeepNotice(confirmedPlan.Selection);
         OnPropertyChanged(nameof(PreviewText));
         OnPropertyChanged(nameof(KeepNotice));
         OnPropertyChanged(nameof(HasKeepNotice));
@@ -497,58 +549,47 @@ public sealed class UninstallWizardViewModel : ObservableObject
             0,
             InstallerCulture.Pick("Asking LocalAi to stop…", "Прошу LocalAi остановиться…"));
 
-        var log = new StringBuilder();
         InstallerRunJournal? journal = null;
         try
         {
             journal = InstallerRunJournal.Start(LogDirectory);
-            var outcome = await new UninstallRunner(layout, processRunner)
+            var result = await new UninstallRunner(layout, processRunner)
                 .ApplyAsync(
                     plan,
                     journal,
                     linked.Token,
                     new Progress<UninstallProgress>(step =>
                         SetProgress(step.Percent, step.Text)));
-            hasRunError = !outcome.Succeeded;
-            isComplete = outcome.Succeeded;
-            journal.Finish(outcome.Succeeded
+            hasRunError = !result.Succeeded;
+            isComplete = result.Succeeded;
+            journal.Finish(result.Succeeded
                 ? InstallerRunOutcome.Completed
                 : InstallerRunOutcome.Failed);
-            summary = BuildSummary(outcome);
-            report = BuildReport(plan, outcome, log);
-            SetProgress(
-                100,
-                outcome.Succeeded
-                    ? InstallerCulture.Pick("Completed", "Завершено")
-                    : InstallerCulture.Pick(
-                        "Finished with problems",
-                        "Завершено с проблемами"));
+            ranPlan = plan;
+            outcome = result;
+            runEnd = RunEnd.Finished;
+            SetProgress(100, result.Succeeded ? ProgressWord.Completed : ProgressWord.FinishedWithProblems);
             CurrentPage = UninstallPage.Finish;
-            return outcome.Succeeded;
+            return result.Succeeded;
         }
         catch (OperationCanceledException)
         {
             journal?.Finish(InstallerRunOutcome.Cancelled);
             hasRunError = true;
-            summary = InstallerCulture.Pick(
-                "Cancelled. Whatever had already been removed stays removed — the report " +
-                "below and the journal say what that was.",
-                "Отменено. Всё, что уже было удалено, удалённым и осталось — " +
-                "что именно, скажут отчёт ниже и журнал.");
-            report = log.ToString();
-            SetProgress(progress, InstallerCulture.Pick("Cancelled", "Отменено"));
+            runEnd = RunEnd.Cancelled;
+            SetProgress(progress, ProgressWord.Cancelled);
             CurrentPage = UninstallPage.Finish;
             return false;
         }
-        catch (UninstallRefusedException refusal)
+        catch (UninstallRefusedException refused)
         {
             // The run stopped before touching anything, which is the one failure worth
             // stating as its own outcome: the machine is exactly as it was.
             journal?.Finish(InstallerRunOutcome.Failed);
             hasRunError = true;
-            summary = refusal.Message;
-            report = InstallerCulture.Pick("Nothing was removed.", "Ничего не удалено.");
-            SetProgress(100, InstallerCulture.Pick("Refused", "Отказано"));
+            runEnd = RunEnd.Refused;
+            refusal = refused.Message;
+            SetProgress(100, ProgressWord.Refused);
             CurrentPage = UninstallPage.Finish;
             return false;
         }
@@ -556,11 +597,9 @@ public sealed class UninstallWizardViewModel : ObservableObject
         {
             journal?.Finish(InstallerRunOutcome.Failed);
             hasRunError = true;
-            summary = string.Format(
-                InstallerCulture.Pick("Removal failed: {0}", "Удаление не удалось: {0}"),
-                exception.Message);
-            report = log.ToString();
-            SetProgress(100, InstallerCulture.Pick("Failed", "Ошибка"));
+            runEnd = RunEnd.Failed;
+            failure = exception;
+            SetProgress(100, ProgressWord.Failed);
             CurrentPage = UninstallPage.Finish;
             return false;
         }
@@ -575,12 +614,7 @@ public sealed class UninstallWizardViewModel : ObservableObject
 
     public void ReportUnexpectedError(Exception exception)
     {
-        unexpectedError = string.Format(
-            InstallerCulture.Pick(
-                "Unexpected error: {0}: {1}",
-                "Непредвиденная ошибка: {0}: {1}"),
-            exception.GetType().Name,
-            exception.Message);
+        unexpected = exception;
         OnPropertyChanged(nameof(UnexpectedError));
         OnPropertyChanged(nameof(HasUnexpectedError));
     }
@@ -699,15 +733,13 @@ public sealed class UninstallWizardViewModel : ObservableObject
         return summary.ToString();
     }
 
-    private string BuildReport(
-        UninstallPlan plan,
-        UninstallOutcome outcome,
-        StringBuilder log)
+    private static string BuildReport(UninstallPlan plan, UninstallOutcome outcome)
     {
         // Unlike the installation run's report, this one is never written to a file: it is
         // bound to a read-only box on the finish page and nothing else. There is no English
         // journal for it to match, and its own "Kept:" lines already carry text the planner
         // translated — so leaving the labels English produced half a sentence in each language.
+        var log = new StringBuilder();
         foreach (var path in outcome.RemovedPaths)
         {
             log.AppendLine(InstallerCulture.Pick("Removed ", "Удалено ") + path);
@@ -745,7 +777,16 @@ public sealed class UninstallWizardViewModel : ObservableObject
     private void SetProgress(int value, string text)
     {
         progress = value;
+        progressWord = null;
         progressText = text;
+        OnPropertyChanged(nameof(Progress));
+        OnPropertyChanged(nameof(ProgressText));
+    }
+
+    private void SetProgress(int value, ProgressWord word)
+    {
+        progress = value;
+        progressWord = word;
         OnPropertyChanged(nameof(Progress));
         OnPropertyChanged(nameof(ProgressText));
     }
@@ -798,7 +839,7 @@ public sealed class UninstallWizardViewModel : ObservableObject
                      nameof(IsUninstallVisible), nameof(CancelButtonText), nameof(Summary),
                      nameof(Report), nameof(BlockingNotice), nameof(IsBlocked),
                      nameof(CanContinueToInstall), nameof(KeepNotice),
-                     nameof(HasKeepNotice),
+                     nameof(HasKeepNotice), nameof(PreviewText),
                  })
         {
             OnPropertyChanged(name);

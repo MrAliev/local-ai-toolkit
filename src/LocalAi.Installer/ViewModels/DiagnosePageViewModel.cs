@@ -16,6 +16,18 @@ public sealed class DiagnosePageViewModel : ObservableObject
     private bool hasUsableAdapter;
     private bool hasGitHubSignIn;
     private bool isChecking = true;
+    private EnvironmentDiagnosis? loaded;
+
+    /// <summary>The same findings in the language chosen now; nothing is probed again.</summary>
+    internal void Relabel()
+    {
+        if (loaded is { } diagnosis)
+        {
+            Load(diagnosis);
+        }
+
+        AnnounceEverything();
+    }
 
     public ObservableCollection<EnvironmentCheck> Checks { get; } = [];
 
@@ -89,6 +101,7 @@ public sealed class DiagnosePageViewModel : ObservableObject
     {
         ArgumentNullException.ThrowIfNull(diagnosis);
 
+        loaded = diagnosis;
         Checks.Clear();
         Checks.Add(new EnvironmentCheck(
             InstallerCulture.Pick("Operating system", "Операционная система"),
