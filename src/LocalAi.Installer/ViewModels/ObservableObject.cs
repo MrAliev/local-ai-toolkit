@@ -20,4 +20,10 @@ public abstract class ObservableObject : INotifyPropertyChanged
 
     protected void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+    /// <summary>
+    /// Every binding on this object reads again — for a language switch, where the text changed
+    /// and nothing it was computed from did.
+    /// </summary>
+    internal void AnnounceEverything() => OnPropertyChanged(string.Empty);
 }

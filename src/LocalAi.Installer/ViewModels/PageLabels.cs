@@ -4,11 +4,9 @@ namespace LocalAi.Installer.ViewModels;
 
 /// <summary>
 /// The labels written directly into the markup — group headers, radio buttons, the sentence
-/// under each option, the navigation buttons.
-///
-/// Markup cannot ask which language was chosen, so the choice is made here and the markup binds
-/// with <c>{x:Static}</c>. That resolves once, when the window is loaded, which is exactly when
-/// it should: the language is settled on the start screen before either wizard window exists.
+/// under each option, the navigation buttons. The markup reads them with <c>{vm:Label}</c>, which
+/// follows a language changed on any screen; <c>{x:Static}</c> would keep the one the window
+/// opened with.
 ///
 /// Everything that varies with what the run is doing lives in <see cref="WizardText"/> or in the
 /// page view model that owns it. This class only holds text that is the same on every run.
@@ -219,12 +217,21 @@ public static class PageLabels
         "Choose what to do",
         "Выберите, что сделать");
 
-    // --- The theme control, on the start screen beside the language ------------------
+    // --- Language and theme, on every screen -------------------------------------------
+    public static string ThemeLabel => InstallerCulture.Pick("Theme", "Тема");
+
     public static string ThemeSystem => InstallerCulture.Pick("System", "Системная");
 
     public static string ThemeLight => InstallerCulture.Pick("Light", "Светлая");
 
     public static string ThemeDark => InstallerCulture.Pick("Dark", "Тёмная");
+
+    public static string PreferencesNotSaved => InstallerCulture.Pick(
+        "Could not save this choice. It applies only until the installer closes.",
+        "Не удалось сохранить выбор. Он действует только до закрытия установщика.");
+
+    /// <summary><c>{0}</c> is the exception's own message, untranslated.</summary>
+    public static string PreferencesNotSavedReason => InstallerCulture.Pick("Reason: {0}", "Причина: {0}");
 
     // --- The removal wizard -------------------------------------------------------------
     public static string RemoveLocalAi => InstallerCulture.Pick(

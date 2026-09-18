@@ -56,10 +56,13 @@ public partial class App : Application
         // screen somebody is looking at while they wait.
         themes = new InstallerThemeSwitch(Resources, preferences.ReadTheme());
         themes.Apply();
+        // One for the process, handed from window to window, so a choice made in any of them is
+        // the one every other shows.
+        var presentation = new InstallerPresentation(preferences, themes.Choose);
 
         Window window = IsUninstallRequested(e.Args)
-            ? new UninstallWindow()
-            : new StartWindow();
+            ? new UninstallWindow(presentation)
+            : new StartWindow(presentation);
         MainWindow = window;
         window.Show();
     }

@@ -12,9 +12,15 @@ public partial class MainWindow : Window, IReturnsToStart
 {
     private readonly InstallerWizardViewModel viewModel;
 
-    public MainWindow(StartChoice mode = StartChoice.Install, bool canReturnToStart = false)
+    public MainWindow(
+        InstallerPresentation presentation,
+        StartChoice mode = StartChoice.Install,
+        bool canReturnToStart = false)
     {
-        viewModel = new InstallerWizardViewModel(mode, canReturnToStart: canReturnToStart)
+        viewModel = new InstallerWizardViewModel(
+            mode,
+            canReturnToStart: canReturnToStart,
+            presentation: presentation)
         {
             EnableDependencyActions = true,
         };
@@ -30,6 +36,7 @@ public partial class MainWindow : Window, IReturnsToStart
         };
         DataContext = viewModel;
         viewModel.CloseRequested += (_, _) => Close();
+        Closed += (_, _) => viewModel.DetachPresentation();
     }
 
     // Both async void handlers route unexpected exceptions into the view model's error

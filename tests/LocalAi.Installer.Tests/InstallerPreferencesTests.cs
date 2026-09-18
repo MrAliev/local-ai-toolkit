@@ -140,6 +140,32 @@ public sealed class InstallerPreferencesTests : IDisposable
         Assert.Equal(InstallerTheme.Dark, store.ReadTheme());
     }
 
+    /// <summary>
+    /// Not failing is not the same as not saying. A write that never reached the disk is still
+    /// honoured for this run, and whoever asked is told why the next run will not remember it.
+    /// </summary>
+    [Fact]
+    public void A_write_that_did_not_reach_the_disk_says_so()
+    {
+        Directory.CreateDirectory(_root);
+        var blocker = Path.Combine(_root, "not-a-directory");
+        File.WriteAllText(blocker, string.Empty);
+        var store = new InstallerPreferencesStore(Path.Combine(blocker, "preferences"));
+
+        Assert.False(store.WriteLanguage(InstallerLanguage.Russian));
+        Assert.False(string.IsNullOrWhiteSpace(store.WriteFailure));
+        Assert.Equal(InstallerLanguage.Russian, store.ReadLanguage(new CultureInfo("en-US")));
+    }
+
+    [Fact]
+    public void A_write_that_reached_the_disk_has_nothing_to_say()
+    {
+        var store = new InstallerPreferencesStore(_root);
+
+        Assert.True(store.WriteTheme(InstallerTheme.Dark));
+        Assert.Null(store.WriteFailure);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root))

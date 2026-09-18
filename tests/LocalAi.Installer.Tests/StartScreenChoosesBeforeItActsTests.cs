@@ -99,7 +99,7 @@ public sealed class StartScreenChoosesBeforeItActsTests : IDisposable
         var start = Installed();
         start.Select(StartChoice.CleanReinstall);
 
-        start.ChooseLanguage(InstallerLanguage.Russian);
+        start.Presentation.ChooseLanguage(InstallerLanguage.Russian);
 
         Assert.Equal(StartChoice.CleanReinstall, start.Selected);
         Assert.True(start.Option(StartChoice.CleanReinstall).IsSelected);

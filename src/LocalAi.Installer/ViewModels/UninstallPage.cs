@@ -26,9 +26,9 @@ public sealed class RemovalRow(RemovalItem item) : ObservableObject
 
     public RemovalItem Item { get; } = item;
 
-    public string Title { get; } = RemovalMatrix.Title(item);
+    public string Title => RemovalMatrix.Title(Item);
 
-    public string Note { get; } = RemovalMatrix.Note(item);
+    public string Note => RemovalMatrix.Note(Item);
 
     public bool IsSelected
     {

@@ -2,6 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:LocalAi.Installer.ViewModels"
+        xmlns:local="clr-namespace:LocalAi.Installer"
         Background="{DynamicResource WindowFill}"
         Foreground="{DynamicResource TextPrimary}"
         Icon="pack://application:,,,/Resources/localai.ico"
@@ -163,14 +164,21 @@
             </StackPanel>
         </Border>
 
-        <Grid Grid.Column="1" Margin="20,16,20,12">
+        <!-- Top margin 20, as on the rail, so the panel lines up with the product name. -->
+        <Grid Grid.Column="1" Margin="20,20,20,12">
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <StackPanel Grid.Row="0" Margin="0,0,0,12">
+            <!-- In the content column rather than across the window, so the rail keeps the
+                 product name at its top; outside the scroll area, so it is on every page. -->
+            <local:PreferencesBar Grid.Row="0" Margin="0,0,0,12"
+                                  DataContext="{Binding Presentation}" />
+
+            <StackPanel Grid.Row="1" Margin="0,0,0,12">
                 <TextBlock Text="{Binding StepTitle}" Style="{StaticResource PageTitle}" />
                 <TextBlock Text="{Binding StepDescription}" Style="{StaticResource Muted}" Margin="0,4,0,0" />
                 <TextBlock Text="{Binding StepStatus}" Style="{StaticResource Muted}" FontSize="11" Margin="0,6,0,0" />
@@ -181,7 +189,7 @@
                 </Border>
             </StackPanel>
 
-            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
                 <Grid>
                     <!-- System check -->
                     <StackPanel>
@@ -199,7 +207,7 @@
                                     Visibility="{Binding Diagnose.IsChecking, Converter={StaticResource BoolToVisibility}}">
                             <!-- The lead above already says what is happening; this is the
                                  detail line under the spinner. -->
-                            <TextBlock Text="{x:Static vm:PageLabels.Probing}"
+                            <TextBlock Text="{vm:Label Probing}"
                                        Style="{StaticResource Muted}" Margin="0,0,0,10" />
                             <ProgressBar IsIndeterminate="True" Height="4" Width="280" HorizontalAlignment="Left" />
                         </StackPanel>
@@ -256,11 +264,11 @@
                              wrote down anywhere else; this is where they get offered back. -->
                         <StackPanel Margin="0,14,0,0"
                                     Visibility="{Binding HasInterruptedRunNotice, Converter={StaticResource BoolToVisibility}}">
-                            <TextBlock Text="{x:Static vm:PageLabels.InterruptedRun}" FontWeight="SemiBold" Margin="0,0,0,4" />
+                            <TextBlock Text="{vm:Label InterruptedRun}" FontWeight="SemiBold" Margin="0,0,0,4" />
                             <TextBox Text="{Binding InterruptedRunNotice, Mode=OneWay}"
                                      IsReadOnly="True" TextWrapping="Wrap" MaxHeight="160"
                                      VerticalScrollBarVisibility="Auto" Background="{DynamicResource WarnFill}" />
-                            <Button Content="{x:Static vm:PageLabels.RollBackPreviousRun}"
+                            <Button Content="{vm:Label RollBackPreviousRun}"
                                     Command="{Binding RollbackPreviousRunCommand}"
                                     HorizontalAlignment="Left" Margin="0,8,0,0" Padding="12,4"
                                     Visibility="{Binding HasInterruptedRun, Converter={StaticResource BoolToVisibility}}" />
@@ -304,7 +312,7 @@
                                             <TextBlock Text="{Binding RequirementText, Mode=OneWay}"
                                                        Style="{StaticResource Muted}" FontSize="11"
                                                        TextWrapping="Wrap" Margin="0,2,0,0" />
-                                            <TextBlock Text="{x:Static vm:PageLabels.NoAutomatedInstaller}"
+                                            <TextBlock Text="{vm:Label NoAutomatedInstaller}"
                                                        FontSize="11" Margin="0,2,0,0">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock" BasedOn="{StaticResource Muted}">
@@ -337,14 +345,14 @@
                                 </Style.Triggers>
                             </Style>
                         </StackPanel.Style>
-                        <TextBlock Text="{x:Static vm:PageLabels.VersionToInstall}" />
+                        <TextBlock Text="{vm:Label VersionToInstall}" />
                         <TextBox Text="{Binding Package.ReleaseVersion, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  Width="280" Height="24" HorizontalAlignment="Left" Margin="0,4,0,2" />
                         <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,0,0,8"
-                                   Text="{x:Static vm:PageLabels.VersionHint}" />
-                        <TextBlock Text="{x:Static vm:PageLabels.InstallFromFolder}" Margin="0,4,0,0" />
+                                   Text="{vm:Label VersionHint}" />
+                        <TextBlock Text="{vm:Label InstallFromFolder}" Margin="0,4,0,0" />
                         <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,2,0,4"
-                                   Text="{x:Static vm:PageLabels.FolderHint}" />
+                                   Text="{vm:Label FolderHint}" />
                         <!-- Stretched rather than Width="480": a fixed width for a path is a clip
                              waiting for a deeper directory. The picker is here because typing the
                              path by hand was the only way to use this box. -->
@@ -355,11 +363,11 @@
                             </Grid.ColumnDefinitions>
                             <TextBox Grid.Column="0" Height="24"
                                      Text="{Binding Package.SourceFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                            <Button Grid.Column="1" Content="{x:Static vm:PageLabels.BrowseForFolder}"
+                            <Button Grid.Column="1" Content="{vm:Label BrowseForFolder}"
                                     MinWidth="96" Padding="12,0" Height="24" Margin="8,0,0,0"
                                     Click="OnBrowseForReleaseFolder" />
                         </Grid>
-                        <Button Content="{x:Static vm:PageLabels.CheckAgain}" MinWidth="140" Padding="12,0" Height="26" HorizontalAlignment="Left"
+                        <Button Content="{vm:Label CheckAgain}" MinWidth="140" Padding="12,0" Height="26" HorizontalAlignment="Left"
                                 IsEnabled="{Binding Package.CanCheck}"
                                 Click="OnPackageCheckRelease" />
                         <TextBlock Text="{Binding Package.StatusText}" Style="{StaticResource Muted}" Margin="0,10,0,0" />
@@ -380,7 +388,7 @@
                             </Style>
                         </StackPanel.Style>
 
-                        <TextBlock Text="{x:Static vm:PageLabels.VideoMemory}" FontWeight="SemiBold" Margin="0,0,0,6" />
+                        <TextBlock Text="{vm:Label VideoMemory}" FontWeight="SemiBold" Margin="0,0,0,6" />
                         <TextBlock Text="{Binding Residency.AdapterFound}"
                                    Style="{StaticResource Muted}" FontSize="11" Margin="0,0,0,8"
                                    Visibility="{Binding Residency.HasAdapterFound, Converter={StaticResource BoolToVisibility}}" />
@@ -395,8 +403,8 @@
                         <RadioButton GroupName="Residency" Margin="0,0,0,10"
                                      IsChecked="{Binding Residency.IsRequireFullVram, Mode=TwoWay}">
                             <StackPanel>
-                                <TextBlock Text="{x:Static vm:PageLabels.RequireFullVram}" TextWrapping="Wrap" />
-                                <TextBlock Text="{x:Static vm:PageLabels.RequireFullVramHint}"
+                                <TextBlock Text="{vm:Label RequireFullVram}" TextWrapping="Wrap" />
+                                <TextBlock Text="{vm:Label RequireFullVramHint}"
                                            Style="{StaticResource Muted}" FontSize="11"
                                            TextWrapping="Wrap" Margin="0,2,0,0" />
                             </StackPanel>
@@ -404,8 +412,8 @@
                         <RadioButton GroupName="Residency" Margin="0,0,0,10"
                                      IsChecked="{Binding Residency.IsAllowPartialOffload, Mode=TwoWay}">
                             <StackPanel>
-                                <TextBlock Text="{x:Static vm:PageLabels.AllowPartialOffload}" TextWrapping="Wrap" />
-                                <TextBlock Text="{x:Static vm:PageLabels.AllowPartialOffloadHint}"
+                                <TextBlock Text="{vm:Label AllowPartialOffload}" TextWrapping="Wrap" />
+                                <TextBlock Text="{vm:Label AllowPartialOffloadHint}"
                                            Style="{StaticResource Muted}" FontSize="11"
                                            TextWrapping="Wrap" Margin="0,2,0,0" />
                             </StackPanel>
@@ -413,8 +421,8 @@
                         <RadioButton GroupName="Residency" Margin="0,0,0,10"
                                      IsChecked="{Binding Residency.IsAllowCpu, Mode=TwoWay}">
                             <StackPanel>
-                                <TextBlock Text="{x:Static vm:PageLabels.AllowCpu}" TextWrapping="Wrap" />
-                                <TextBlock Text="{x:Static vm:PageLabels.AllowCpuHint}"
+                                <TextBlock Text="{vm:Label AllowCpu}" TextWrapping="Wrap" />
+                                <TextBlock Text="{vm:Label AllowCpuHint}"
                                            Style="{StaticResource Muted}" FontSize="11"
                                            TextWrapping="Wrap" Margin="0,2,0,0" />
                             </StackPanel>
@@ -428,13 +436,13 @@
                                        Style="{StaticResource WarningText}" TextWrapping="Wrap" />
                         </Border>
 
-                        <TextBlock Text="{x:Static vm:PageLabels.LocalModels}" FontWeight="SemiBold" Margin="0,16,0,6" />
+                        <TextBlock Text="{vm:Label LocalModels}" FontWeight="SemiBold" Margin="0,16,0,6" />
                         <!-- The anchor: it restates the rule inside the group the rule governs,
                              so the dependency stays legible once the radios have scrolled away,
                              and its count moves the moment the rule does. -->
                         <TextBlock Text="{Binding Models.RuleSummary}"
                                    Style="{StaticResource Muted}" FontSize="11" Margin="0,0,0,8" />
-                        <RadioButton GroupName="ModelMode" Content="{x:Static vm:PageLabels.ChooseAutomatically}"
+                        <RadioButton GroupName="ModelMode" Content="{vm:Label ChooseAutomatically}"
                                      IsChecked="{Binding Models.IsAutomatic, Mode=TwoWay}" Margin="0,0,0,4" />
                         <StackPanel Margin="23,0,0,10"
                                     Visibility="{Binding Models.IsAutomatic, Converter={StaticResource BoolToVisibility}}">
@@ -448,11 +456,11 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </StackPanel>
-                        <RadioButton GroupName="ModelMode" Content="{x:Static vm:PageLabels.ChooseExactly}"
+                        <RadioButton GroupName="ModelMode" Content="{vm:Label ChooseExactly}"
                                      IsChecked="{Binding Models.IsChooseExact, Mode=TwoWay}" Margin="0,0,0,4" />
                         <StackPanel Margin="23,0,0,10"
                                     Visibility="{Binding Models.IsChooseExact, Converter={StaticResource BoolToVisibility}}">
-                            <TextBlock Text="{x:Static vm:PageLabels.Model}" />
+                            <TextBlock Text="{vm:Label Model}" />
                             <!-- ItemTemplate, not DisplayMemberPath. The closed box draws
                                  SelectionBoxItemTemplate, which ComboBox computes from
                                  ItemTemplate and never from DisplayMemberPath: with the path
@@ -471,16 +479,16 @@
                                     </DataTemplate>
                                 </ComboBox.ItemTemplate>
                             </ComboBox>
-                            <TextBlock Text="{x:Static vm:PageLabels.ContextSize}" />
+                            <TextBlock Text="{vm:Label ContextSize}" />
                             <ComboBox ItemsSource="{Binding Models.AvailableContexts}"
                                       SelectedItem="{Binding Models.SelectedContext, Mode=TwoWay}"
                                       MaxWidth="160" HorizontalAlignment="Left" Height="24" Margin="0,4,0,6" />
-                            <TextBlock Text="{x:Static vm:PageLabels.ContextSizeHint}"
+                            <TextBlock Text="{vm:Label ContextSizeHint}"
                                        Style="{StaticResource Muted}" FontSize="11" />
                         </StackPanel>
-                        <RadioButton GroupName="ModelMode" Content="{x:Static vm:PageLabels.SkipModelSetup}"
+                        <RadioButton GroupName="ModelMode" Content="{vm:Label SkipModelSetup}"
                                      IsChecked="{Binding Models.IsSkip, Mode=TwoWay}" Margin="0,0,0,4" />
-                        <TextBlock Text="{x:Static vm:PageLabels.SkipModelSetupHint}"
+                        <TextBlock Text="{vm:Label SkipModelSetupHint}"
                                    Style="{StaticResource Muted}" TextWrapping="Wrap" FontSize="11" Margin="23,0,0,0"
                                    Visibility="{Binding Models.IsSkip, Converter={StaticResource BoolToVisibility}}" />
                     </StackPanel>
@@ -548,7 +556,7 @@
                                              consents on the confirm page. -->
                                         <StackPanel Margin="0,8,0,0"
                                                     Visibility="{Binding HasTextSearchGate, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
-                                            <CheckBox Content="{x:Static vm:PageLabels.RefuseTextSearch}"
+                                            <CheckBox Content="{vm:Label RefuseTextSearch}"
                                                       IsChecked="{Binding DataContext.Agents.RefusesTextSearch, RelativeSource={RelativeSource AncestorType=Window}, Mode=TwoWay}"
                                                       IsEnabled="{Binding DataContext.Agents.CanRefuseTextSearch, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}" />
                                             <TextBlock Text="{Binding DataContext.Agents.TextSearchHint, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
@@ -578,11 +586,11 @@
                         <!-- Two questions, two buttons, in review-box row order: the release
                              is the first row, the settings are the rest. -->
                         <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                            <Button Content="{x:Static vm:PageLabels.ChooseARelease}"
+                            <Button Content="{vm:Label ChooseARelease}"
                                     Command="{Binding RevealReleaseCommand}"
                                     Padding="12,4" Margin="0,0,8,0"
                                     Visibility="{Binding IsReleaseFolded, Converter={StaticResource BoolToVisibility}}" />
-                            <Button Content="{x:Static vm:PageLabels.ChangeSettings}"
+                            <Button Content="{vm:Label ChangeSettings}"
                                     Command="{Binding RevealSettingsCommand}"
                                     Padding="12,4"
                                     Visibility="{Binding AreSettingsFolded, Converter={StaticResource BoolToVisibility}}" />
@@ -597,13 +605,13 @@
                         <Border BorderBrush="{DynamicResource Divider}" BorderThickness="1" CornerRadius="3"
                                 Padding="10,8" Margin="0,14,0,0">
                             <StackPanel>
-                                <TextBlock Text="{x:Static vm:PageLabels.AfterThisInstallation}" FontWeight="SemiBold"
+                                <TextBlock Text="{vm:Label AfterThisInstallation}" FontWeight="SemiBold"
                                            Margin="0,0,0,6" />
-                                <CheckBox Content="{x:Static vm:PageLabels.EnableUpdateCheck}"
+                                <CheckBox Content="{vm:Label EnableUpdateCheck}"
                                           IsChecked="{Binding Review.EnableUpdateCheck, Mode=TwoWay}" />
                                 <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,6,0,0"
-                                           Text="{x:Static vm:PageLabels.UpdateCheckHint}" />
-                                <TextBlock Text="{Binding Review.UpdateCheckDisclosure, Mode=OneTime}"
+                                           Text="{vm:Label UpdateCheckHint}" />
+                                <TextBlock Text="{Binding Review.UpdateCheckDisclosure, Mode=OneWay}"
                                            Style="{StaticResource Muted}" Margin="0,6,0,0" />
                             </StackPanel>
                         </Border>
@@ -628,7 +636,7 @@
                              sentence for all of it never said which one the run was on. Hidden
                              entirely when there are none: a heading over no rows is a question
                              about an absence. -->
-                        <TextBlock Text="{x:Static vm:PageLabels.LocalModels}" FontWeight="SemiBold"
+                        <TextBlock Text="{vm:Label LocalModels}" FontWeight="SemiBold"
                                    Margin="0,16,0,6"
                                    Visibility="{Binding HasModelRuns, Converter={StaticResource BoolToVisibility}}" />
                         <ScrollViewer MaxHeight="180" VerticalScrollBarVisibility="Auto"
@@ -661,7 +669,7 @@
                             </ItemsControl>
                         </ScrollViewer>
 
-                        <TextBlock Text="{x:Static vm:PageLabels.Log}" Margin="0,14,0,4" FontWeight="SemiBold" />
+                        <TextBlock Text="{vm:Label Log}" Margin="0,14,0,4" FontWeight="SemiBold" />
                         <TextBox Text="{Binding Finish.Progress, Mode=OneWay}"
                                  IsReadOnly="True" TextWrapping="Wrap" Height="120"
                                  TextChanged="OnLogTextChanged"
@@ -711,7 +719,7 @@
 
                         <!-- The one question somebody has here, and it was a log line under
                              eighty others in a box that did not scroll to it. -->
-                        <TextBlock Text="{x:Static vm:PageLabels.WhatToDoNext}" FontWeight="SemiBold"
+                        <TextBlock Text="{vm:Label WhatToDoNext}" FontWeight="SemiBold"
                                    Margin="0,14,0,4"
                                    Visibility="{Binding Finish.HasNextSteps, Converter={StaticResource BoolToVisibility}}" />
                         <TextBlock Text="{Binding Finish.NextSteps}" TextWrapping="Wrap"
@@ -728,14 +736,14 @@
                             <TextBox Grid.Column="0" Text="{Binding Finish.ReportPath, Mode=OneWay}"
                                      IsReadOnly="True" BorderThickness="0" Background="Transparent"
                                      Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" />
-                            <Button Grid.Column="1" Content="{x:Static vm:PageLabels.OpenReportFolder}"
+                            <Button Grid.Column="1" Content="{vm:Label OpenReportFolder}"
                                     Padding="12,4" Margin="8,0,0,0" Click="OnOpenReportFolder" />
                         </Grid>
 
                         <!-- A run that went wrong opens its log; a run that went right folds it.
                              Nothing that failed is hidden either way, because every failure is
                              also a row above. -->
-                        <Expander Header="{x:Static vm:PageLabels.Log}" Margin="0,14,0,0"
+                        <Expander Header="{vm:Label Log}" Margin="0,14,0,0"
                                   IsExpanded="{Binding HasRunError, Mode=OneWay}">
                             <TextBox Text="{Binding Finish.Progress, Mode=OneWay}"
                                      IsReadOnly="True" TextWrapping="Wrap" Height="180" Margin="0,6,0,0"
@@ -744,12 +752,12 @@
                         </Expander>
                         <!-- Only after a failed or cancelled run with reversible effects:
                              rollback is a recovery, not an uninstaller for a good run. -->
-                        <Button Content="{x:Static vm:PageLabels.RollBackChanges}"
+                        <Button Content="{vm:Label RollBackChanges}"
                                 Command="{Binding RollbackCommand}"
                                 HorizontalAlignment="Left" Margin="0,10,0,0" Padding="12,4"
                                 Visibility="{Binding CanRollback, Converter={StaticResource BoolToVisibility}}" />
                         <StackPanel Visibility="{Binding Finish.HasRollbackReport, Converter={StaticResource BoolToVisibility}}">
-                            <TextBlock Text="{x:Static vm:PageLabels.Rollback}" Margin="0,12,0,4" FontWeight="SemiBold" />
+                            <TextBlock Text="{vm:Label Rollback}" Margin="0,12,0,4" FontWeight="SemiBold" />
                             <TextBox Text="{Binding Finish.RollbackReport, Mode=OneWay}"
                                      IsReadOnly="True" TextWrapping="Wrap" Height="140"
                                      VerticalScrollBarVisibility="Auto" Background="{DynamicResource Surface}" />
@@ -759,11 +767,11 @@
             </ScrollViewer>
 
             <!-- Navigation stays in place for the whole wizard; only availability changes. -->
-            <Border Grid.Row="2" BorderBrush="{DynamicResource Divider}" BorderThickness="0,1,0,0" Padding="0,10,0,0" Margin="0,10,0,0">
+            <Border Grid.Row="3" BorderBrush="{DynamicResource Divider}" BorderThickness="0,1,0,0" Padding="0,10,0,0" Margin="0,10,0,0">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Content="{x:Static vm:PageLabels.Back}" Style="{StaticResource NavButton}"
+                    <Button Content="{vm:Label Back}" Style="{StaticResource NavButton}"
                             Command="{Binding BackCommand}" />
-                    <Button Content="{x:Static vm:PageLabels.Next}" Style="{StaticResource NavButton}"
+                    <Button Content="{vm:Label Next}" Style="{StaticResource NavButton}"
                             Command="{Binding NextCommand}"
                             Visibility="{Binding IsNextVisible, Converter={StaticResource BoolToVisibility}}" />
                     <Button Content="{Binding ActionText}" Style="{StaticResource NavButton}" IsDefault="True"

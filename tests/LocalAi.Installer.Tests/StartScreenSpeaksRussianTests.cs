@@ -100,9 +100,10 @@ public sealed class StartScreenSpeaksRussianTests : IDisposable
         var announced = new List<string>();
         start.PropertyChanged += (_, e) => announced.Add(e.PropertyName ?? string.Empty);
 
-        start.ChooseLanguage(InstallerLanguage.Russian);
+        start.Presentation.ChooseLanguage(InstallerLanguage.Russian);
 
-        Assert.Contains(nameof(InstallerStartViewModel.Headline), announced);
+        Assert.Contains(announced, name => InstallerPresentationTests.Announces(
+            name, nameof(InstallerStartViewModel.Headline)));
         Assert.Contains("установлен на этом компьютере.", start.Headline, StringComparison.Ordinal);
         Assert.Equal("Установить LocalAi", start.Option(StartChoice.Install).Title);
     }
@@ -121,7 +122,7 @@ public sealed class StartScreenSpeaksRussianTests : IDisposable
     {
         var start = Start("0.1.51");
 
-        start.ChooseLanguage(InstallerLanguage.Russian);
+        start.Presentation.ChooseLanguage(InstallerLanguage.Russian);
 
         Assert.True(
             File.Exists(Path.Combine(
