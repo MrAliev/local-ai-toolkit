@@ -219,8 +219,11 @@ public sealed class InstallerWizardViewModel : ObservableObject
         Func<string?>? readInstalledVersion = null,
         IReleaseFeed? releaseFeed = null,
         bool canReturnToStart = false,
-        Func<CancellationToken, Task<EnvironmentDiagnosis>>? detectEnvironment = null)
+        Func<CancellationToken, Task<EnvironmentDiagnosis>>? detectEnvironment = null,
+        InstallerPresentation? presentation = null)
     {
+        Presentation = presentation ?? new InstallerPresentation();
+        Presentation.LanguageChanged += OnLanguageChanged;
         this.canReturnToStart = canReturnToStart;
         feedForTests = releaseFeed;
         this.readInstalledVersion = readInstalledVersion ?? (() => InstalledVersionReader
@@ -279,6 +282,30 @@ public sealed class InstallerWizardViewModel : ObservableObject
     }
 
     public event EventHandler? CloseRequested;
+
+    public InstallerPresentation Presentation { get; }
+
+    /// <summary>For the window to call once closed; the shared settings outlive it.</summary>
+    public void DetachPresentation() => Presentation.LanguageChanged -= OnLanguageChanged;
+
+    /// <summary>
+    /// Words only: no check, release lookup or detection runs again, and no page, answer or consent
+    /// moves; the review reads the client files and PATH as on any refresh. Text a page already
+    /// built from a result — a check's name, a finish row — keeps its language.
+    /// </summary>
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        RebuildSteps();
+        AnnounceEverything();
+        diagnose.AnnounceEverything();
+        dependencies.AnnounceEverything();
+        package.AnnounceEverything();
+        models.AnnounceEverything();
+        residency.AnnounceEverything();
+        agents.AnnounceEverything();
+        review.AnnounceEverything();
+        finish.AnnounceEverything();
+    }
 
     public bool EnableDependencyActions { get; set; }
 

@@ -14,6 +14,7 @@ public partial class UninstallWindow : Window, IReturnsToStart
     private readonly UninstallWizardViewModel viewModel;
 
     public UninstallWindow(
+        InstallerPresentation presentation,
         RemovalPreset preset = RemovalPreset.FullUninstall,
         bool offersInstallAfterwards = false,
         bool canReturnToStart = false)
@@ -21,7 +22,8 @@ public partial class UninstallWindow : Window, IReturnsToStart
         viewModel = new UninstallWizardViewModel(
             preset,
             offersInstallAfterwards,
-            canReturnToStart: canReturnToStart);
+            canReturnToStart: canReturnToStart,
+            presentation: presentation);
         InitializeComponent();
         // The caption is the desktop manager's, not the palette's.
         DarkCaption.Follow(this);
@@ -34,12 +36,13 @@ public partial class UninstallWindow : Window, IReturnsToStart
         };
         DataContext = viewModel;
         viewModel.CloseRequested += (_, _) => Close();
+        Closed += (_, _) => viewModel.DetachPresentation();
         viewModel.InstallRequested += (_, _) =>
         {
             // The errand travels: without it the install half of a clean reinstall runs
             // as a plain install, and the two strings written for this path — the window
             // title and the consent line — were unreachable.
-            var installer = new MainWindow(StartChoice.CleanReinstall);
+            var installer = new MainWindow(viewModel.Presentation, StartChoice.CleanReinstall);
             Application.Current.MainWindow = installer;
             installer.Show();
             Close();

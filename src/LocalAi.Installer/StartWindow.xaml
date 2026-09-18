@@ -2,6 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:LocalAi.Installer.ViewModels"
+        xmlns:local="clr-namespace:LocalAi.Installer"
         Background="{DynamicResource WindowFill}"
         Foreground="{DynamicResource TextPrimary}"
         Icon="pack://application:,,,/Resources/localai.ico"
@@ -135,61 +136,6 @@
             </Setter>
         </Style>
 
-        <Style x:Key="ThemeSegment" TargetType="RadioButton">
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
-            <Setter Property="Padding" Value="10,3" />
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="RadioButton">
-                        <Border x:Name="Segment" Background="Transparent"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Segment" Property="Background"
-                                        Value="{DynamicResource SelectionFill}" />
-                                <Setter Property="Foreground"
-                                        Value="{DynamicResource TextPrimary}" />
-                                <Setter Property="FontWeight" Value="SemiBold" />
-                            </Trigger>
-                            <MultiTrigger>
-                                <MultiTrigger.Conditions>
-                                    <Condition Property="IsMouseOver" Value="True" />
-                                    <Condition Property="IsChecked" Value="False" />
-                                </MultiTrigger.Conditions>
-                                <Setter TargetName="Segment" Property="Background"
-                                        Value="{DynamicResource Surface}" />
-                            </MultiTrigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="LanguageLink" TargetType="Button">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Padding" Value="0" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Foreground" Value="{DynamicResource Accent}" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <TextBlock x:Name="Label" Text="{TemplateBinding Content}"
-                                   Foreground="{TemplateBinding Foreground}" />
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Label" Property="TextDecorations" Value="Underline" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
         <Style TargetType="TextBlock">
             <Setter Property="TextWrapping" Value="Wrap" />
         </Style>
@@ -215,50 +161,7 @@
         <StackPanel Grid.Row="0" Margin="0,0,0,16">
             <!-- Above the headline rather than beside it: sharing the line squeezed a Russian
                  headline into 375px while half the window stood empty. -->
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <!-- Autonyms, never translated and never a flag: a flag is a country, and a
-                     Russian speaker outside Russia is not served by one. The active language is
-                     plain rather than greyed — grey reads as unavailable, which is backwards. -->
-                <TextBlock Text="English" FontWeight="SemiBold" VerticalAlignment="Center"
-                           Visibility="{Binding IsEnglish, Converter={StaticResource BoolToVisibility}}" />
-                <Button Content="English" Style="{StaticResource LanguageLink}"
-                        AutomationProperties.Name="Switch the installer to English"
-                        VerticalAlignment="Center"
-                        Tag="English" Click="OnChooseLanguage"
-                        Visibility="{Binding IsRussian, Converter={StaticResource BoolToVisibility}}" />
-                <TextBlock Text="·" Foreground="{DynamicResource TextDisabled}" Margin="8,0,8,0"
-                           VerticalAlignment="Center" />
-                <TextBlock Text="Русский" FontWeight="SemiBold" VerticalAlignment="Center"
-                           Visibility="{Binding IsRussian, Converter={StaticResource BoolToVisibility}}" />
-                <Button Content="Русский" Style="{StaticResource LanguageLink}"
-                        AutomationProperties.Name="Переключить установщик на русский"
-                        VerticalAlignment="Center"
-                        Tag="Russian" Click="OnChooseLanguage"
-                        Visibility="{Binding IsEnglish, Converter={StaticResource BoolToVisibility}}" />
-                <!-- Three segments rather than a light/dark pair: "System" is not a third colour
-                     scheme, it is the answer somebody already gave Windows, and dropping it
-                     would make the installer stop listening the moment they touched this. -->
-                <Border Margin="16,0,0,0" CornerRadius="3" VerticalAlignment="Center"
-                        BorderBrush="{DynamicResource ControlBorder}" BorderThickness="1"
-                        Background="{DynamicResource ControlFill}" SnapsToDevicePixels="True">
-                    <StackPanel Orientation="Horizontal">
-                        <RadioButton Style="{StaticResource ThemeSegment}"
-                                     Content="{Binding ThemeSystemText}"
-                                     Tag="System" Checked="OnChooseTheme"
-                                     IsChecked="{Binding IsSystemTheme, Mode=OneWay}" />
-                        <Border Width="1" Background="{DynamicResource ControlBorder}" />
-                        <RadioButton Style="{StaticResource ThemeSegment}"
-                                     Content="{Binding ThemeLightText}"
-                                     Tag="Light" Checked="OnChooseTheme"
-                                     IsChecked="{Binding IsLightTheme, Mode=OneWay}" />
-                        <Border Width="1" Background="{DynamicResource ControlBorder}" />
-                        <RadioButton Style="{StaticResource ThemeSegment}"
-                                     Content="{Binding ThemeDarkText}"
-                                     Tag="Dark" Checked="OnChooseTheme"
-                                     IsChecked="{Binding IsDarkTheme, Mode=OneWay}" />
-                    </StackPanel>
-                </Border>
-            </StackPanel>
+            <local:PreferencesBar DataContext="{Binding Presentation}" />
             <TextBlock Text="{Binding Headline}" TextWrapping="Wrap" Margin="0,12,0,0"
                        Style="{StaticResource PageTitle}" />
             <TextBlock Text="{Binding Detail}" TextWrapping="Wrap"
@@ -267,7 +170,7 @@
 
         <!-- The 2px inset keeps the focus ring, drawn at Margin="-2", off the scroll edge. -->
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-            <ItemsControl ItemsSource="{Binding Actions}" Margin="2,2,2,0"
+            <ItemsControl x:Name="Errands" ItemsSource="{Binding Actions}" Margin="2,2,2,0"
                           KeyboardNavigation.DirectionalNavigation="Cycle"
                           AutomationProperties.Name="{Binding ActionsGroupName}"
                           PreviewKeyDown="OnErrandKeyDown">

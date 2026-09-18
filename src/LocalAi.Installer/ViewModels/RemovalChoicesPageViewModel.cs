@@ -88,6 +88,26 @@ public sealed class RemovalChoicesPageViewModel : ObservableObject
             "только если у вас есть офлайн-копия: она останется единственной."),
         SigningKeysDirectory);
 
+    /// <summary>The page and every row on it read their text again; no tick moves.</summary>
+    internal void AnnounceLanguage()
+    {
+        AnnounceEverything();
+        foreach (var row in Rows)
+        {
+            row.AnnounceEverything();
+        }
+
+        foreach (var preset in Presets)
+        {
+            preset.AnnounceEverything();
+        }
+
+        foreach (var repository in Repositories)
+        {
+            repository.AnnounceEverything();
+        }
+    }
+
     /// <summary>The repositories the dispatchers were found in, listed before anybody chooses.</summary>
     public void ListRepositories(IEnumerable<RepositoryRow> repositories)
     {
