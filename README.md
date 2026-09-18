@@ -676,8 +676,8 @@ read no settings file of their own before their first line of output. So the var
 only way to switch languages for someone whose machine speaks one language while they work in
 another.
 
-The installer asks on its first screen and remembers the answer — removal opens in that same
-language, even months later.
+The installer asks on its first screen, lets you switch on any screen after that, and remembers
+the answer — removal opens in that same language, even months later.
 
 **What is never translated.** Commands, option names, identifiers, enum values, paths, wire
 formats, numbers and dates: the same in every language, because they are quoted verbatim and
