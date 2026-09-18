@@ -133,6 +133,29 @@ public sealed class InstallerPresentationTests : IDisposable
         }
     }
 
+    /// <summary>
+    /// A file that is there but cannot be read says nothing about what the next launch will show,
+    /// so it cannot be what takes the notice away.
+    /// </summary>
+    [Fact]
+    public void A_file_that_cannot_be_read_does_not_take_the_complaint_away()
+    {
+        var directory = root.Combine("preferences");
+        Directory.CreateDirectory(directory);
+        var file = Path.Combine(directory, "ui-preferences.json");
+        File.WriteAllText(file, "{\"schemaVersion\":1,\"language\":\"Russian\",\"theme\":\"Dark\"}");
+        InstallerCulture.Current = InstallerLanguage.Russian;
+        var presentation = new InstallerPresentation(new InstallerPreferencesStore(directory));
+
+        using (new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.None))
+        {
+            presentation.ChooseLanguage(InstallerLanguage.English);
+            presentation.ChooseTheme(InstallerTheme.System);
+
+            Assert.True(presentation.HasWriteFailure);
+        }
+    }
+
     /// <summary>The notice is text on screen, so it follows the language like everything else.</summary>
     [Fact]
     public void The_complaint_is_said_in_the_language_now_chosen()

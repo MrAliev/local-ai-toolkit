@@ -88,12 +88,19 @@ public sealed class InstallerPreferencesStore(string directory)
     /// <summary>Why the last write did not reach the disk, or null when it did.</summary>
     public string? WriteFailure { get; private set; }
 
-    /// <summary>What the next launch would show, read from disk rather than from this run's memory.</summary>
-    public (InstallerLanguage Language, InstallerTheme Theme) OnDisk(CultureInfo culture)
+    /// <summary>
+    /// What the next launch would show, read from disk rather than from this run's memory; null
+    /// when a file is there and could not be read, which says nothing about that.
+    /// </summary>
+    public (InstallerLanguage Language, InstallerTheme Theme)? OnDisk(CultureInfo culture)
     {
         var fresh = new InstallerPreferencesStore(directory);
-        return (fresh.ReadLanguage(culture), fresh.ReadTheme());
+        var answer = (fresh.ReadLanguage(culture), fresh.ReadTheme());
+        return fresh.unreadable ? null : answer;
     }
+
+    /// <summary>A file was there and opening it failed, as opposed to no file or one that does not parse.</summary>
+    private bool unreadable;
 
     public bool WriteLanguage(InstallerLanguage language) =>
         Save(Load() with { Language = language.ToString() });
@@ -128,6 +135,7 @@ public sealed class InstallerPreferencesStore(string directory)
             exception is IOException or UnauthorizedAccessException or JsonException)
         {
             // Falls through to the operating system's answer, which is always available.
+            unreadable |= exception is not JsonException;
         }
 
         return null;
@@ -150,6 +158,7 @@ public sealed class InstallerPreferencesStore(string directory)
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException or JsonException)
         {
+            unreadable |= exception is not JsonException;
         }
 
         return null;

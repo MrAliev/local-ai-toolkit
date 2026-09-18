@@ -116,7 +116,7 @@
         </WrapPanel>
 
         <!-- Muted, not a warning: the choice works in this run, only the next launch forgets it.
-             Stays until a later choice reaches the disk. -->
+             Stays until the file on disk holds what is shown. -->
         <StackPanel Margin="0,8,0,0"
                     Visibility="{Binding HasWriteFailure, Converter={StaticResource BoolToVisibility}}">
             <TextBlock Text="{Binding WriteFailureNotice}" TextWrapping="Wrap"

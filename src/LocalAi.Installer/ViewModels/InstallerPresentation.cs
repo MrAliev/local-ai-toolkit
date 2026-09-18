@@ -11,7 +11,7 @@ public sealed class InstallerPresentation(
     InstallerPreferencesStore? store = null,
     Action<InstallerTheme>? applyTheme = null) : ObservableObject
 {
-    /// <summary>Null while every choice so far reached the disk; the reason when the last did not.</summary>
+    /// <summary>Null while the file on disk holds what is shown; otherwise why the last write was refused.</summary>
     private string? writeFailure;
 
     /// <summary>Raised after the new language is in effect, for text that is not a label.</summary>
@@ -80,11 +80,13 @@ public sealed class InstallerPresentation(
 
     /// <summary>
     /// The notice says the next launch will not show this choice, so it rests on what the next
-    /// launch would read, not on whether this write failed.
+    /// launch would read, not on whether this write failed. A file that could not be read answers
+    /// nothing, and the notice stays.
     /// </summary>
     private void Remember(bool written, InstallerPreferencesStore target) =>
         writeFailure = written ||
-            target.OnDisk(CultureInfo.CurrentUICulture) == (InstallerCulture.Current, Theme)
+            target.OnDisk(CultureInfo.CurrentUICulture) is { } onDisk &&
+            onDisk == (InstallerCulture.Current, Theme)
             ? null
             : target.WriteFailure ?? string.Empty;
 }
