@@ -47,6 +47,7 @@ public sealed class MarkupCarriesNoProseTests
     [InlineData("MainWindow.xaml")]
     [InlineData("UninstallWindow.xaml")]
     [InlineData("StartWindow.xaml")]
+    [InlineData("PreferencesBar.xaml")]
     public void No_window_writes_a_sentence_into_its_own_markup(string window)
     {
         var path = Path.Combine(RepositoryRoot(), "src", "LocalAi.Installer", window);

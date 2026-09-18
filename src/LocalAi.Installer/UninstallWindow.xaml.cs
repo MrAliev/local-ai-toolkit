@@ -34,6 +34,7 @@ public partial class UninstallWindow : Window, IReturnsToStart
         };
         DataContext = viewModel;
         viewModel.CloseRequested += (_, _) => Close();
+        Closed += (_, _) => viewModel.DetachPresentation();
         viewModel.InstallRequested += (_, _) =>
         {
             // The errand travels: without it the install half of a clean reinstall runs

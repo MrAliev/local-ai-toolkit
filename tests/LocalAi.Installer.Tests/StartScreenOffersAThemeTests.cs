@@ -27,10 +27,10 @@ public sealed class StartScreenOffersAThemeTests : IDisposable
     [Fact]
     public void With_nothing_chosen_the_screen_follows_the_system()
     {
-        Assert.Equal(InstallerTheme.System, Start().Theme);
-        Assert.True(Start().IsSystemTheme);
-        Assert.False(Start().IsLightTheme);
-        Assert.False(Start().IsDarkTheme);
+        Assert.Equal(InstallerTheme.System, Start().Presentation.Theme);
+        Assert.True(Start().Presentation.IsSystemTheme);
+        Assert.False(Start().Presentation.IsLightTheme);
+        Assert.False(Start().Presentation.IsDarkTheme);
     }
 
     [Fact]
@@ -38,11 +38,11 @@ public sealed class StartScreenOffersAThemeTests : IDisposable
     {
         var start = Start();
 
-        start.ChooseTheme(InstallerTheme.Dark);
+        start.Presentation.ChooseTheme(InstallerTheme.Dark);
 
-        Assert.Equal(InstallerTheme.Dark, start.Theme);
-        Assert.True(start.IsDarkTheme);
-        Assert.False(start.IsSystemTheme);
+        Assert.Equal(InstallerTheme.Dark, start.Presentation.Theme);
+        Assert.True(start.Presentation.IsDarkTheme);
+        Assert.False(start.Presentation.IsSystemTheme);
     }
 
     /// <summary>
@@ -52,7 +52,7 @@ public sealed class StartScreenOffersAThemeTests : IDisposable
     [Fact]
     public void A_theme_chosen_here_is_remembered()
     {
-        Start().ChooseTheme(InstallerTheme.Light);
+        Start().Presentation.ChooseTheme(InstallerTheme.Light);
 
         Assert.Equal(
             InstallerTheme.Light,
@@ -65,13 +65,15 @@ public sealed class StartScreenOffersAThemeTests : IDisposable
     public void Choosing_a_theme_announces_the_change()
     {
         var start = Start();
-        var announced = new List<string>();
-        start.PropertyChanged += (_, e) => announced.Add(e.PropertyName ?? string.Empty);
+        var announced = new List<string?>();
+        start.Presentation.PropertyChanged += (_, e) => announced.Add(e.PropertyName);
 
-        start.ChooseTheme(InstallerTheme.Dark);
+        start.Presentation.ChooseTheme(InstallerTheme.Dark);
 
-        Assert.Contains(nameof(InstallerStartViewModel.IsDarkTheme), announced);
-        Assert.Contains(nameof(InstallerStartViewModel.IsSystemTheme), announced);
+        Assert.Contains(announced, name => InstallerPresentationTests.Announces(
+            name, nameof(InstallerPresentation.IsDarkTheme)));
+        Assert.Contains(announced, name => InstallerPresentationTests.Announces(
+            name, nameof(InstallerPresentation.IsSystemTheme)));
     }
 
     [Fact]

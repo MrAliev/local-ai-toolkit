@@ -1,7 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
 using LocalAi.Installer.ViewModels;
-using LocalAi.Installer.Core;
 using System.Linq;
 using System.Windows.Input;
 
@@ -22,28 +21,6 @@ public partial class StartWindow : Window
         // The caption is the desktop manager's, not the palette's.
         DarkCaption.Follow(this);
         DataContext = viewModel;
-    }
-
-    private void OnChooseLanguage(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button { Tag: string name } &&
-            Enum.TryParse<InstallerLanguage>(name, out var language))
-        {
-            viewModel.ChooseLanguage(language);
-        }
-    }
-
-    private void OnChooseTheme(object sender, RoutedEventArgs e)
-    {
-        // Checked fires while the window is being built, as each binding settles, and again
-        // when the person clicks. Writing the value it already holds is harmless; writing a
-        // different one before the view model exists would not be.
-        if (sender is RadioButton { Tag: string name } &&
-            Enum.TryParse<InstallerTheme>(name, out var theme) &&
-            theme != viewModel.Theme)
-        {
-            viewModel.ChooseTheme(theme);
-        }
     }
 
     private void OnChooseErrand(object sender, RoutedEventArgs e)

@@ -71,8 +71,11 @@ public sealed class UninstallWizardViewModel : ObservableObject
         string? homeDirectory = null,
         IProcessRunner? processRunner = null,
         Func<string, CancellationToken, Task<string?>>? readHooksPath = null,
-        bool canReturnToStart = false)
+        bool canReturnToStart = false,
+        InstallerPresentation? presentation = null)
     {
+        Presentation = presentation ?? App.Presentation ?? new InstallerPresentation();
+        Presentation.LanguageChanged += OnLanguageChanged;
         OffersInstallAfterwards = offersInstallAfterwards;
         this.canReturnToStart = canReturnToStart;
         this.layout = layout ?? InstallationLayout.CreateDefault();
@@ -112,6 +115,22 @@ public sealed class UninstallWizardViewModel : ObservableObject
     }
 
     public event EventHandler? CloseRequested;
+
+    public InstallerPresentation Presentation { get; }
+
+    /// <summary>For the window to call once closed; the shared settings outlive it.</summary>
+    public void DetachPresentation() => Presentation.LanguageChanged -= OnLanguageChanged;
+
+    /// <summary>
+    /// Words only: the confirmed plan, its preview and the consent stay as they are. Text already
+    /// built from a plan or an outcome keeps its language.
+    /// </summary>
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        RebuildSteps();
+        AnnounceEverything();
+        Choices.AnnounceEverything();
+    }
 
     /// <summary>
     /// Raised when the person asks to carry on into an installation after a clean reinstall's

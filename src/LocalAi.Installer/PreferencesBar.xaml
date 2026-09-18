@@ -1,0 +1,129 @@
+<UserControl x:Class="LocalAi.Installer.PreferencesBar"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:LocalAi.Installer.ViewModels"
+             FontSize="12">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+
+        <Style x:Key="ThemeSegment" TargetType="RadioButton">
+            <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRingVisual}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+            <Setter Property="Padding" Value="10,3" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Segment" Background="Transparent"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Segment" Property="Background"
+                                        Value="{DynamicResource SelectionFill}" />
+                                <Setter Property="Foreground"
+                                        Value="{DynamicResource TextPrimary}" />
+                                <Setter Property="FontWeight" Value="SemiBold" />
+                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsMouseOver" Value="True" />
+                                    <Condition Property="IsChecked" Value="False" />
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="Segment" Property="Background"
+                                        Value="{DynamicResource Surface}" />
+                            </MultiTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="LanguageLink" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRingVisual}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="{DynamicResource Accent}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <TextBlock x:Name="Label" Text="{TemplateBinding Content}"
+                                   Foreground="{TemplateBinding Foreground}" />
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Label" Property="TextDecorations" Value="Underline" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <StackPanel>
+        <!-- Two groups that wrap whole, never clipped: a narrow window moves the theme below the
+             languages rather than cutting either. -->
+        <WrapPanel HorizontalAlignment="Right">
+            <!-- Autonyms, never translated and never a flag. The active language is plain rather
+                 than greyed, and each link is named in the language it switches to. -->
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="English" FontWeight="SemiBold" VerticalAlignment="Center"
+                           Visibility="{Binding IsEnglish, Converter={StaticResource BoolToVisibility}}" />
+                <Button Content="English" Style="{StaticResource LanguageLink}"
+                        AutomationProperties.Name="Switch the installer to English"
+                        VerticalAlignment="Center"
+                        Tag="English" Click="OnChooseLanguage"
+                        Visibility="{Binding IsRussian, Converter={StaticResource BoolToVisibility}}" />
+                <TextBlock Text="·" Foreground="{DynamicResource TextDisabled}" Margin="8,0,8,0"
+                           VerticalAlignment="Center" />
+                <TextBlock Text="Русский" FontWeight="SemiBold" VerticalAlignment="Center"
+                           Visibility="{Binding IsRussian, Converter={StaticResource BoolToVisibility}}" />
+                <Button Content="Русский" Style="{StaticResource LanguageLink}"
+                        AutomationProperties.Name="Переключить установщик на русский"
+                        VerticalAlignment="Center"
+                        Tag="Russian" Click="OnChooseLanguage"
+                        Visibility="{Binding IsEnglish, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
+            <!-- "System" is not a third colour scheme: it is the answer somebody already gave
+                 Windows, and the installer keeps following it. -->
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="24,0,0,0">
+                <TextBlock Text="{vm:Label ThemeLabel}" Foreground="{DynamicResource TextSecondary}"
+                           VerticalAlignment="Center" Margin="0,0,8,0" />
+                <Border CornerRadius="3" VerticalAlignment="Center"
+                        BorderBrush="{DynamicResource ControlBorder}" BorderThickness="1"
+                        Background="{DynamicResource ControlFill}" SnapsToDevicePixels="True">
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton Style="{StaticResource ThemeSegment}"
+                                     Content="{vm:Label ThemeSystem}"
+                                     Tag="System" Checked="OnChooseTheme"
+                                     IsChecked="{Binding IsSystemTheme, Mode=OneWay}" />
+                        <Border Width="1" Background="{DynamicResource ControlBorder}" />
+                        <RadioButton Style="{StaticResource ThemeSegment}"
+                                     Content="{vm:Label ThemeLight}"
+                                     Tag="Light" Checked="OnChooseTheme"
+                                     IsChecked="{Binding IsLightTheme, Mode=OneWay}" />
+                        <Border Width="1" Background="{DynamicResource ControlBorder}" />
+                        <RadioButton Style="{StaticResource ThemeSegment}"
+                                     Content="{vm:Label ThemeDark}"
+                                     Tag="Dark" Checked="OnChooseTheme"
+                                     IsChecked="{Binding IsDarkTheme, Mode=OneWay}" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </WrapPanel>
+
+        <!-- Muted, not a warning: the choice works in this run, only the next launch forgets it.
+             Stays until a later choice reaches the disk. -->
+        <StackPanel Margin="0,8,0,0"
+                    Visibility="{Binding HasWriteFailure, Converter={StaticResource BoolToVisibility}}">
+            <TextBlock Text="{Binding WriteFailureNotice}" TextWrapping="Wrap"
+                       Foreground="{DynamicResource TextSecondary}" />
+            <TextBlock Text="{Binding WriteFailureReason}" TextWrapping="Wrap"
+                       Foreground="{DynamicResource TextSecondary}"
+                       Visibility="{Binding HasWriteFailureReason, Converter={StaticResource BoolToVisibility}}" />
+        </StackPanel>
+    </StackPanel>
+</UserControl>

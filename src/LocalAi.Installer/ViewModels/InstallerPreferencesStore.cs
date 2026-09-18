@@ -85,10 +85,13 @@ public sealed class InstallerPreferencesStore(string directory)
             ? theme
             : InstallerTheme.System;
 
-    public void WriteLanguage(InstallerLanguage language) =>
+    /// <summary>Why the last write did not reach the disk, or null when it did.</summary>
+    public string? WriteFailure { get; private set; }
+
+    public bool WriteLanguage(InstallerLanguage language) =>
         Save(Load() with { Language = language.ToString() });
 
-    public void WriteTheme(InstallerTheme theme) =>
+    public bool WriteTheme(InstallerTheme theme) =>
         Save(Load() with { Theme = theme.ToString() });
 
     private Document Load()
@@ -145,7 +148,7 @@ public sealed class InstallerPreferencesStore(string directory)
         return null;
     }
 
-    private void Save(Document document)
+    private bool Save(Document document)
     {
         // Held in memory as well as on disk: the run that made the choice must honour it even
         // when the disk refused, or a person would watch their own selection do nothing.
@@ -156,11 +159,15 @@ public sealed class InstallerPreferencesStore(string directory)
             File.WriteAllText(
                 Path.Combine(directory, FileName),
                 JsonSerializer.Serialize(document));
+            WriteFailure = null;
+            return true;
         }
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException or NotSupportedException)
         {
             // Not remembering is a smaller loss than an installer that will not start.
+            WriteFailure = exception.Message;
+            return false;
         }
     }
 

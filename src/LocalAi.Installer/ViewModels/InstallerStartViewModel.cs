@@ -87,34 +87,37 @@ public sealed class InstallerStartViewModel : ObservableObject
     /// </summary>
     private readonly InstalledVersion installed;
 
-    private readonly InstallerPreferencesStore preferences;
-
     public InstallerStartViewModel(
         string? localAppData = null,
         IExistingLocalAiInspector? inspector = null,
         Func<InstalledVersion>? readInstalledVersion = null,
-        InstallerPreferencesStore? preferencesStore = null)
+        InstallerPreferencesStore? preferencesStore = null,
+        InstallerPresentation? presentation = null)
     {
         var root = localAppData ??
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         // Rooted where the caller said its state lives. Defaulting to the real profile even
         // when the rest of the view model was redirected let the test suite rewrite the
         // language of the installer actually installed on the machine, once per run.
-        preferences = preferencesStore ?? new InstallerPreferencesStore(
-            Path.Combine(root, RemovalMatrix.JournalDirectoryName));
+        Presentation = presentation ?? App.Presentation ?? new InstallerPresentation(
+            preferencesStore ?? new InstallerPreferencesStore(
+                Path.Combine(root, RemovalMatrix.JournalDirectoryName)));
         existing = (inspector ?? new ExistingLocalAiInspector(new SystemFileSystemProbe()))
             .Inspect(root);
         installed = readInstalledVersion is null
             ? InstalledVersionReader.Read(Path.Combine(root, "LocalAi"))
             : readInstalledVersion();
-        Theme = preferences.ReadTheme();
         foreach (var option in BuildOptions())
         {
             Actions.Add(option);
         }
 
         SelectTheOnlyErrandIfThereIsOne();
+        // Not detached: this screen lives as long as the process, hidden while a wizard runs.
+        Presentation.LanguageChanged += (_, _) => Repaint();
     }
+
+    public InstallerPresentation Presentation { get; }
 
     public ObservableCollection<StartActionOption> Actions { get; } = [];
 
@@ -143,15 +146,8 @@ public sealed class InstallerStartViewModel : ObservableObject
             "LocalAi не установлен на этом компьютере."),
     };
 
-    /// <summary>
-    /// Takes effect here, on this screen, rather than from the next window: the alternative is
-    /// an installer whose first act after being told which language you read is to keep using
-    /// the other one.
-    /// </summary>
-    public void ChooseLanguage(InstallerLanguage language)
+    private void Repaint()
     {
-        InstallerCulture.Current = language;
-        preferences.WriteLanguage(language);
         // The rows are rebuilt in the other language, so the choice has to be carried across
         // them: somebody who picked an errand and then switched language would otherwise watch
         // it un-choose itself.
@@ -172,23 +168,9 @@ public sealed class InstallerStartViewModel : ObservableObject
             SelectTheOnlyErrandIfThereIsOne();
         }
 
-        OnPropertyChanged(nameof(Headline));
-        OnPropertyChanged(nameof(Detail));
-        OnPropertyChanged(nameof(IsEnglish));
-        OnPropertyChanged(nameof(IsRussian));
-        OnPropertyChanged(nameof(CloseText));
-        OnPropertyChanged(nameof(NextText));
-        OnPropertyChanged(nameof(ActionsGroupName));
-        OnPropertyChanged(nameof(ThemeSystemText));
-        OnPropertyChanged(nameof(ThemeLightText));
-        OnPropertyChanged(nameof(ThemeDarkText));
+        AnnounceEverything();
     }
 
-    /// <summary>
-    /// Which of the three the person has chosen. "System" is the default and is not a third
-    /// colour scheme: it means the installer keeps following Windows, including a change made
-    /// while it is open.
-    /// </summary>
     /// <summary>
     /// The errand the button at the bottom would run, or null while nobody has chosen. The
     /// screen used to carry a button per row, so there were four primary actions on one page
@@ -235,43 +217,9 @@ public sealed class InstallerStartViewModel : ObservableObject
         }
     }
 
-    public InstallerTheme Theme { get; private set; }
-
-    public bool IsSystemTheme => Theme == InstallerTheme.System;
-
-    public bool IsLightTheme => Theme == InstallerTheme.Light;
-
-    public bool IsDarkTheme => Theme == InstallerTheme.Dark;
-
-    /// <summary>
-    /// Remembers the choice, repaints the running application, and moves the selection. The
-    /// application is asked rather than told: this view model also runs in tests, where there
-    /// is no application to repaint.
-    /// </summary>
-    public void ChooseTheme(InstallerTheme theme)
-    {
-        Theme = theme;
-        preferences.WriteTheme(theme);
-        App.Themes?.Choose(theme);
-        OnPropertyChanged(nameof(Theme));
-        OnPropertyChanged(nameof(IsSystemTheme));
-        OnPropertyChanged(nameof(IsLightTheme));
-        OnPropertyChanged(nameof(IsDarkTheme));
-    }
-
-    public bool IsEnglish => InstallerCulture.Current == InstallerLanguage.English;
-
-    public bool IsRussian => InstallerCulture.Current == InstallerLanguage.Russian;
-
     public string NextText => PageLabels.Next;
 
     public string ActionsGroupName => PageLabels.ChooseWhatToDo;
-
-    public string ThemeSystemText => PageLabels.ThemeSystem;
-
-    public string ThemeLightText => PageLabels.ThemeLight;
-
-    public string ThemeDarkText => PageLabels.ThemeDark;
 
     public string CloseText => InstallerCulture.Pick("Close", "Закрыть");
 

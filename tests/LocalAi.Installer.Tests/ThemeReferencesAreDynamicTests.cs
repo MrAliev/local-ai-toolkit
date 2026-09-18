@@ -32,6 +32,7 @@ public sealed class ThemeReferencesAreDynamicTests
     [InlineData("MainWindow.xaml")]
     [InlineData("UninstallWindow.xaml")]
     [InlineData("StartWindow.xaml")]
+    [InlineData("PreferencesBar.xaml")]
     public void No_window_writes_a_colour_of_its_own(string window)
     {
         var offenders = Read(window)
@@ -52,6 +53,7 @@ public sealed class ThemeReferencesAreDynamicTests
     [InlineData("MainWindow.xaml")]
     [InlineData("UninstallWindow.xaml")]
     [InlineData("StartWindow.xaml")]
+    [InlineData("PreferencesBar.xaml")]
     public void No_window_asks_the_palette_only_once(string window)
     {
         var palette = PaletteKeys();
@@ -83,6 +85,7 @@ public sealed class ThemeReferencesAreDynamicTests
     [InlineData("MainWindow.xaml")]
     [InlineData("UninstallWindow.xaml")]
     [InlineData("StartWindow.xaml")]
+    [InlineData("PreferencesBar.xaml")]
     public void Every_text_style_names_its_colour(string window)
     {
         var text = Read(window);
@@ -115,6 +118,7 @@ public sealed class ThemeReferencesAreDynamicTests
     [InlineData("MainWindow.xaml")]
     [InlineData("UninstallWindow.xaml")]
     [InlineData("StartWindow.xaml")]
+    [InlineData("PreferencesBar.xaml")]
     public void Every_named_control_style_either_inherits_the_theme_or_replaces_it(string window)
     {
         var themed = ThemedTypes();

@@ -30,6 +30,7 @@ public partial class MainWindow : Window, IReturnsToStart
         };
         DataContext = viewModel;
         viewModel.CloseRequested += (_, _) => Close();
+        Closed += (_, _) => viewModel.DetachPresentation();
     }
 
     // Both async void handlers route unexpected exceptions into the view model's error
