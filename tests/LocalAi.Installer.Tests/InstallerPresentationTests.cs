@@ -153,6 +153,23 @@ public sealed class InstallerPresentationTests : IDisposable
         Assert.Equal(InstallerTheme.Light, Store().ReadTheme());
     }
 
+    /// <summary>
+    /// The hidden start window keeps its panel bound, and the binding settling there reports the
+    /// theme back as a click. Repainting and writing again for it would repeat a refused write's
+    /// complaint on every switch.
+    /// </summary>
+    [Fact]
+    public void Choosing_the_theme_already_shown_does_nothing()
+    {
+        var applied = new List<InstallerTheme>();
+        var presentation = new InstallerPresentation(Unwritable(), applied.Add);
+
+        presentation.ChooseTheme(InstallerTheme.System);
+
+        Assert.Empty(applied);
+        Assert.False(presentation.HasWriteFailure);
+    }
+
     /// <summary>The panel repaints itself, or the person watches their own choice do nothing.</summary>
     [Fact]
     public void Choosing_a_theme_announces_the_change()
