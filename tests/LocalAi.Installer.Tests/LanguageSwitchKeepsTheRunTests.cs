@@ -165,6 +165,39 @@ public sealed class LanguageSwitchKeepsTheRunTests : IDisposable
             name => InstallerPresentationTests.Announces(name, nameof(UninstallWizardViewModel.StepTitle)));
     }
 
+    /// <summary>The removal page's rows and presets are labels of the matrix: they switch, and every tick stays.</summary>
+    [Fact]
+    public async Task The_removal_choices_switch_language_and_keep_every_tick()
+    {
+        var presentation = Presentation();
+        var wizard = await Removal(presentation);
+        wizard.SelectedPreset = RemovalPreset.ReinstallFriendly;
+        var binaries = wizard.Rows.Single(row => row.Item == RemovalItem.Binaries);
+        wizard.Rows.Single(row => row.Item == RemovalItem.RepositoryIndexes).IsSelected = true;
+        var ticks = wizard.Rows.Select(row => row.IsSelected).ToArray();
+        var rowAnnounced = new List<string?>();
+        binaries.PropertyChanged += (_, e) => rowAnnounced.Add(e.PropertyName);
+        var presetAnnounced = new List<string?>();
+        wizard.Presets[0].PropertyChanged += (_, e) => presetAnnounced.Add(e.PropertyName);
+        var repositoryAnnounced = new List<string?>();
+        Assert.NotEmpty(wizard.Repositories);
+        wizard.Repositories[0].PropertyChanged += (_, e) => repositoryAnnounced.Add(e.PropertyName);
+
+        presentation.ChooseLanguage(InstallerLanguage.Russian);
+
+        Assert.Equal("Бинарные файлы, launcher, указатель версии", binaries.Title);
+        Assert.Contains(rowAnnounced, name => InstallerPresentationTests.Announces(name, nameof(RemovalRow.Title)));
+        Assert.Contains(rowAnnounced, name => InstallerPresentationTests.Announces(name, nameof(RemovalRow.Note)));
+        Assert.Contains(
+            presetAnnounced,
+            name => InstallerPresentationTests.Announces(name, nameof(UninstallPresetOption.Title)));
+        Assert.Contains(
+            repositoryAnnounced,
+            name => InstallerPresentationTests.Announces(name, nameof(RepositoryRow.StateText)));
+        Assert.Equal(ticks, wizard.Rows.Select(row => row.IsSelected));
+        Assert.Equal(RemovalPreset.ReinstallFriendly, wizard.SelectedPreset);
+    }
+
     [Fact]
     public async Task A_removal_wizard_that_has_been_let_go_no_longer_follows()
     {

@@ -129,7 +129,7 @@ public sealed class UninstallWizardViewModel : ObservableObject
     {
         RebuildSteps();
         AnnounceEverything();
-        Choices.AnnounceEverything();
+        Choices.AnnounceLanguage();
     }
 
     /// <summary>
