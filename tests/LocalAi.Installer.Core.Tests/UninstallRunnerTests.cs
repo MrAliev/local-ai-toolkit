@@ -383,6 +383,30 @@ public sealed class UninstallRunnerTests : IDisposable
         Assert.True(plan.RemovesAppsAndFeaturesEntry);
     }
 
+    /// <summary>
+    /// The key is one per account, not one per installation, so the entry found under it may
+    /// describe a different LocalAi — and removing that one is removing somebody's way to
+    /// uninstall a thing this run never touched. It is also what every removal run in a test
+    /// did to the machine it ran on: a temporary installation, and the real entry beside it.
+    /// </summary>
+    [Fact]
+    public async Task An_entry_that_describes_another_installation_is_left_alone()
+    {
+        using var elsewhere = new RemovalFixture();
+        var theirs = new UninstallRegistration(elsewhere.Layout, registrySubKey, _ => { });
+        theirs.Register(RemovalFixture.InstalledVersion, elsewhere.LauncherPath);
+
+        var plan = await Plan(
+            RemovalSelection.FromPreset(RemovalPreset.FullUninstall),
+            registrySubKey);
+        var outcome = await Apply(plan);
+
+        Assert.False(plan.RemovesAppsAndFeaturesEntry);
+        Assert.DoesNotContain("Apps & features entry", plan.PreviewText, StringComparison.Ordinal);
+        Assert.False(outcome.AppsAndFeaturesEntryRemoved);
+        Assert.Equal(elsewhere.Layout.Root, theirs.Read()?.InstallLocation);
+    }
+
     [Fact]
     public async Task Disconnecting_clients_leaves_the_entry_where_it_is()
     {
