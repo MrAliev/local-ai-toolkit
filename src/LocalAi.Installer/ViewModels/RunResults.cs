@@ -1,8 +1,35 @@
 using System.Globalization;
 using LocalAi.Installer.Core;
+using LocalAi.Installer.Core.Activation;
 using LocalAi.Installer.Core.Removal;
 
 namespace LocalAi.Installer.ViewModels;
+
+public enum PackageOutcomeKind
+{
+    /// <summary>No verified release was selected, so nothing was attempted.</summary>
+    NoRelease,
+
+    /// <summary>The installation layout refused it; <see cref="PackageOutcome.Reason"/> says why.</summary>
+    Refused,
+
+    /// <summary>The package installer answered with a status.</summary>
+    Result,
+}
+
+/// <summary>What the package step ended in, kept as facts so its row can be worded in any language.</summary>
+public sealed record PackageOutcome(
+    PackageOutcomeKind Kind,
+    LocalAiPackageInstallStatus Status = default,
+    string? Version = null,
+    string? Reason = null);
+
+public enum PathOutcome
+{
+    Added,
+    AlreadyThere,
+    Failed,
+}
 
 /// <summary>
 /// What a run did, one row per thing it touched.
@@ -108,6 +135,66 @@ public static class RunResults
 
     public static RunResultRow PathEntry(RunMark mark, string detail) =>
         new(mark, PageLabels.ResultPath, detail);
+
+    public static string PackageDetail(PackageOutcome outcome, bool installed)
+    {
+        ArgumentNullException.ThrowIfNull(outcome);
+        return outcome.Kind switch
+        {
+            PackageOutcomeKind.NoRelease => InstallerCulture.Pick(
+                "not installed, no verified release was selected",
+                "не установлен, проверенный релиз не выбран"),
+            PackageOutcomeKind.Refused => string.Format(
+                InstallerCulture.Pick("not installed — {0}", "не установлен — {0}"),
+                outcome.Reason),
+            _ when installed => string.Format(
+                InstallerCulture.Pick("{0}, version {1}", "{0}, версия {1}"),
+                PackageStatusName(outcome.Status),
+                outcome.Version),
+            _ => $"{PackageStatusName(outcome.Status)} — {outcome.Reason}".TrimEnd(' ', '—'),
+        };
+    }
+
+    public static string PathDetail(PathOutcome outcome) => outcome switch
+    {
+        PathOutcome.Added => InstallerCulture.Pick(
+            "added for this account",
+            "добавлен для этой учётной записи"),
+        PathOutcome.AlreadyThere => InstallerCulture.Pick("already there", "уже был прописан"),
+        _ => InstallerCulture.Pick("could not be updated", "не удалось изменить"),
+    };
+
+    /// <summary>
+    /// What the package installer did, in words rather than in the name of its enum member.
+    /// The summary is read by a person; "ImmutableConflict" tells them nothing about what to
+    /// do next, and on a Russian run it also arrives in the wrong language.
+    /// </summary>
+    private static string PackageStatusName(LocalAiPackageInstallStatus status) => status switch
+    {
+        LocalAiPackageInstallStatus.Installed =>
+            InstallerCulture.Pick("installed", "установлен"),
+        LocalAiPackageInstallStatus.AlreadyInstalled =>
+            InstallerCulture.Pick("already installed", "уже был установлен"),
+        LocalAiPackageInstallStatus.Refused =>
+            InstallerCulture.Pick("refused", "отказано"),
+        LocalAiPackageInstallStatus.ImmutableConflict => InstallerCulture.Pick(
+            "not installed: that version directory already holds different files",
+            "не установлен: в каталоге этой версии уже лежат другие файлы"),
+        LocalAiPackageInstallStatus.RolledBack =>
+            InstallerCulture.Pick("rolled back", "откачено"),
+        LocalAiPackageInstallStatus.RollbackFailed =>
+            InstallerCulture.Pick("rollback failed", "откат не удался"),
+        LocalAiPackageInstallStatus.ManualRecoveryRequired => InstallerCulture.Pick(
+            "manual recovery required",
+            "требуется ручное восстановление"),
+        LocalAiPackageInstallStatus.Indeterminate => InstallerCulture.Pick(
+            "state could not be determined",
+            "состояние определить не удалось"),
+        LocalAiPackageInstallStatus.Busy => InstallerCulture.Pick(
+            "another install or uninstall was running",
+            "шла другая установка или деинсталляция"),
+        _ => status.ToString(),
+    };
 
     /// <summary>
     /// What the Apps &amp; features entry turned out to be, read back rather than recalled.

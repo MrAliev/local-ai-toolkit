@@ -1,5 +1,6 @@
 using LocalAi.Contracts;
 using LocalAi.Installer.Core;
+using LocalAi.Installer.Core.Diagnosis;
 
 namespace LocalAi.Installer.ViewModels;
 
@@ -91,19 +92,25 @@ public sealed class ResidencyPageViewModel : ObservableObject
     /// dedicated video memory — so the group states its subject rather than leaving the
     /// reader to infer it from a number further down.
     /// </summary>
-    public string AdapterFound
+    public string AdapterFound => weighedAdapter is null
+        ? string.Empty
+        : InstallerCulture.Pick("Found: ", "Найден: ") + GpuAdapterDisplay.Describe(weighedAdapter);
+
+    /// <summary>The adapter the recommendation weighed against: the one with the most dedicated video memory.</summary>
+    public GpuAdapterSnapshot? WeighedAdapter
     {
-        get => adapterFound;
+        get => weighedAdapter;
         set
         {
-            SetProperty(ref adapterFound, value);
+            SetProperty(ref weighedAdapter, value);
+            OnPropertyChanged(nameof(AdapterFound));
             OnPropertyChanged(nameof(HasAdapterFound));
         }
     }
 
     public bool HasAdapterFound => !string.IsNullOrWhiteSpace(AdapterFound);
 
-    private string adapterFound = string.Empty;
+    private GpuAdapterSnapshot? weighedAdapter;
 
     public string AdapterHint => HasUsableAdapter
         ? string.Empty

@@ -16,6 +16,18 @@ public sealed class DiagnosePageViewModel : ObservableObject
     private bool hasUsableAdapter;
     private bool hasGitHubSignIn;
     private bool isChecking = true;
+    private EnvironmentDiagnosis? loaded;
+
+    /// <summary>The same findings in the language chosen now; nothing is probed again.</summary>
+    internal void Relabel()
+    {
+        if (loaded is { } diagnosis)
+        {
+            Load(diagnosis);
+        }
+
+        AnnounceEverything();
+    }
 
     public ObservableCollection<EnvironmentCheck> Checks { get; } = [];
 
@@ -89,8 +101,9 @@ public sealed class DiagnosePageViewModel : ObservableObject
     {
         ArgumentNullException.ThrowIfNull(diagnosis);
 
-        Checks.Clear();
-        Checks.Add(new EnvironmentCheck(
+        loaded = diagnosis;
+        var rows = new List<EnvironmentCheck>();
+        rows.Add(new EnvironmentCheck(
             InstallerCulture.Pick("Operating system", "Операционная система"),
             diagnosis.OperatingSystem.OperatingSystemSupport == SupportStatus.Supported &&
             diagnosis.OperatingSystem.ArchitectureSupport == SupportStatus.Supported
@@ -98,17 +111,17 @@ public sealed class DiagnosePageViewModel : ObservableObject
                 : CheckStatus.Blocking,
             $"{diagnosis.OperatingSystem.ProductName} ({diagnosis.OperatingSystem.Architecture})"));
 
-        Checks.Add(Describe(
+        rows.Add(Describe(
             diagnosis.WinGet,
             InstallerCulture.Pick(
                 "Needed to install Git and Ollama automatically.",
                 "Нужен, чтобы установить Git и Ollama автоматически.")));
-        Checks.Add(Describe(
+        rows.Add(Describe(
             diagnosis.Git,
             InstallerCulture.Pick(
                 "Needed to index repositories.",
                 "Нужен, чтобы индексировать репозитории.")));
-        Checks.Add(Describe(
+        rows.Add(Describe(
             diagnosis.GitHubCli,
             InstallerCulture.Pick(
                 "Optional. Releases are downloaded over plain HTTPS; this is only used as "
@@ -120,7 +133,7 @@ public sealed class DiagnosePageViewModel : ObservableObject
         // this line exists to answer "is my gh usable" for the fallback path and for a
         // private fork — not to make anyone feel unprepared for an ordinary install.
         HasGitHubSignIn = diagnosis.GitHubSignIn.State == DependencyState.Detected;
-        Checks.Add(new EnvironmentCheck(
+        rows.Add(new EnvironmentCheck(
             InstallerCulture.Pick("GitHub sign-in", "Вход в GitHub"),
             CheckStatus.Ok,
             HasGitHubSignIn
@@ -134,7 +147,7 @@ public sealed class DiagnosePageViewModel : ObservableObject
             .Where(adapter => !adapter.IsSoftware)
             .ToArray();
         HasUsableAdapter = usableAdapters.Any(adapter => adapter.DedicatedLocalBytes > 0);
-        Checks.Add(new EnvironmentCheck(
+        rows.Add(new EnvironmentCheck(
             InstallerCulture.Pick("Graphics adapters", "Видеоадаптеры"),
             HasUsableAdapter ? CheckStatus.Ok : CheckStatus.Warning,
             diagnosis.Gpu.Adapters.Count > 0
@@ -142,7 +155,7 @@ public sealed class DiagnosePageViewModel : ObservableObject
                 : diagnosis.Gpu.Reason ??
                     InstallerCulture.Pick("No adapter reported.", "Адаптеры не обнаружены.")));
 
-        Checks.Add(new EnvironmentCheck(
+        rows.Add(new EnvironmentCheck(
             InstallerCulture.Pick("Free disk space", "Свободное место на диске"),
             diagnosis.Disk.AvailableBytes is > 0 and var free && free >= 8L * 1024 * 1024 * 1024
                 ? CheckStatus.Ok
@@ -153,7 +166,7 @@ public sealed class DiagnosePageViewModel : ObservableObject
                     bytes / (1024d * 1024 * 1024))
                 : diagnosis.Disk.Reason ?? InstallerCulture.Pick("unknown", "неизвестно")));
 
-        Checks.Add(new EnvironmentCheck(
+        rows.Add(new EnvironmentCheck(
             InstallerCulture.Pick("Network", "Сеть"),
             diagnosis.Network.State == ObservationState.Available
                 ? CheckStatus.Ok
@@ -163,7 +176,7 @@ public sealed class DiagnosePageViewModel : ObservableObject
                 : diagnosis.Network.Reason ??
                     InstallerCulture.Pick("not reachable", "недоступна")));
 
-        Checks.Add(new EnvironmentCheck(
+        rows.Add(new EnvironmentCheck(
             InstallerCulture.Pick("Existing LocalAi", "Установленный LocalAi"),
             diagnosis.ExistingLocalAi.State switch
             {
@@ -184,6 +197,24 @@ public sealed class DiagnosePageViewModel : ObservableObject
                     "present but not recognised",
                     "есть, но не распознан"),
             }));
+
+        // In place when the table has the same shape, which it always has after the first load:
+        // the rows keep their place on screen and in the automation tree.
+        if (Checks.Count == rows.Count)
+        {
+            for (var index = 0; index < rows.Count; index++)
+            {
+                Checks[index].Become(rows[index]);
+            }
+        }
+        else
+        {
+            Checks.Clear();
+            foreach (var row in rows)
+            {
+                Checks.Add(row);
+            }
+        }
 
         SetResult(
             diagnosis.IsSupported,

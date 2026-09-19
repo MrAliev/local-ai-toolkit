@@ -117,6 +117,22 @@ public sealed class AgentIntegrationPageViewModel : ObservableObject
                 InstallerCulture.Pick("    write ", "    записать ") + file);
     }
 
+    /// <summary>The rows and the choices they offer read their text again; no choice moves.</summary>
+    internal void Relabel()
+    {
+        foreach (var option in ChoiceOptions)
+        {
+            option.AnnounceEverything();
+        }
+
+        foreach (var agent in Agents)
+        {
+            agent.AnnounceEverything();
+        }
+
+        AnnounceEverything();
+    }
+
     /// <summary>
     /// Whether the text-search gate can be offered at all: its refusal text sends the reader to
     /// the codesearch tools, so it means nothing unless those servers are being registered — and
@@ -316,7 +332,7 @@ public sealed class AgentIntegrationPageViewModel : ObservableObject
             }
 
             explicitChoices.Add(Agents[index].Agent);
-            Agents[index] = Agents[index] with { Choice = choice };
+            Agents[index].Set(choice, Agents[index].IsDetected);
             OnPropertyChanged(nameof(Agents));
             OnPropertyChanged(nameof(ReviewText));
             NotifyGate();
@@ -351,7 +367,7 @@ public sealed class AgentIntegrationPageViewModel : ObservableObject
                 : detected
                     ? AgentChoice.McpAndInstructions
                     : AgentChoice.NoChange;
-            Agents[index] = Agents[index] with { IsDetected = detected, Choice = choice };
+            Agents[index].Set(choice, detected);
         }
 
         OnPropertyChanged(nameof(Agents));

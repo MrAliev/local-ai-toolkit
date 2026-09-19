@@ -25,10 +25,22 @@ public sealed class PackagePageViewModel : ObservableObject
     private string releaseVersion = LatestTag;
     private string sourceFolder = string.Empty;
     private PackageSourceState state = PackageSourceState.NotChecked;
-    private string statusText =
-        InstallerCulture.Pick(
-        "Press Check again to look up this release.",
-        "Нажмите «Проверить снова», чтобы найти этот релиз.");
+
+    /// <summary>What the status line is about; its words are chosen when it is read.</summary>
+    private enum StatusWording
+    {
+        NotChecked,
+        Resolving,
+        AlreadyInstalled,
+        Verified,
+        Incompatible,
+        Unavailable,
+    }
+
+    private StatusWording wording = StatusWording.NotChecked;
+    private string statusTag = string.Empty;
+    private string statusReason = string.Empty;
+    private double statusMegabytes;
 
     private bool isResolving;
 
@@ -47,9 +59,7 @@ public sealed class PackagePageViewModel : ObservableObject
             OnPropertyChanged(nameof(ResolvedTag));
             OnPropertyChanged(nameof(WantsLatest));
             State = PackageSourceState.NotChecked;
-            StatusText = InstallerCulture.Pick(
-                "Press Check again to look up this release.",
-                "Нажмите «Проверить снова», чтобы найти этот релиз.");
+            SetStatus(StatusWording.NotChecked);
         }
     }
 
@@ -75,9 +85,7 @@ public sealed class PackagePageViewModel : ObservableObject
             ResolvedTag = null;
             OnPropertyChanged(nameof(ResolvedTag));
             State = PackageSourceState.NotChecked;
-            StatusText = InstallerCulture.Pick(
-                "Press Check again to look up this release.",
-                "Нажмите «Проверить снова», чтобы найти этот релиз.");
+            SetStatus(StatusWording.NotChecked);
         }
     }
 
@@ -109,10 +117,41 @@ public sealed class PackagePageViewModel : ObservableObject
         }
     }
 
-    public string StatusText
+    public string StatusText => wording switch
     {
-        get => statusText;
-        private set => SetProperty(ref statusText, value);
+        StatusWording.Resolving => InstallerCulture.Pick("Checking the release…", "Проверяю релиз…"),
+        StatusWording.AlreadyInstalled => string.Format(
+            InstallerCulture.Pick(
+                "Release {0} is already installed. Continuing will re-run the other steps " +
+                "and leave the LocalAi version untouched.",
+                "Релиз {0} уже установлен. Продолжение повторит остальные шаги " +
+                "и не тронет версию LocalAi."),
+            statusTag),
+        StatusWording.Verified => string.Format(
+            InstallerCulture.Pick(
+                "Release {0} verified, {1:N0} MB to download.",
+                "Релиз {0} проверен, скачать {1:N0} МБ."),
+            statusTag,
+            statusMegabytes),
+        StatusWording.Incompatible => statusReason,
+        StatusWording.Unavailable =>
+            InstallerCulture.Pick("No release resolved. ", "Релиз не определён. ") + statusReason,
+        _ => InstallerCulture.Pick(
+            "Press Check again to look up this release.",
+            "Нажмите «Проверить снова», чтобы найти этот релиз."),
+    };
+
+    private void SetStatus(
+        StatusWording value,
+        string tag = "",
+        string reason = "",
+        double megabytes = 0)
+    {
+        wording = value;
+        statusTag = tag;
+        statusReason = reason;
+        statusMegabytes = megabytes;
+        OnPropertyChanged(nameof(StatusText));
     }
 
     public bool HasPackage => State == PackageSourceState.Selected;
@@ -280,7 +319,7 @@ public sealed class PackagePageViewModel : ObservableObject
         ResolvedTag = null;
         OnPropertyChanged(nameof(ResolvedTag));
         OnPropertyChanged(nameof(WantsLatest));
-        StatusText = InstallerCulture.Pick("Checking the release…", "Проверяю релиз…");
+        SetStatus(StatusWording.Resolving);
         State = PackageSourceState.NotChecked;
     }
 
@@ -294,20 +333,15 @@ public sealed class PackagePageViewModel : ObservableObject
         OnPropertyChanged(nameof(ResolvedTag));
         OnPropertyChanged(nameof(WantsLatest));
         OnPropertyChanged(nameof(IsAlreadyInstalled));
-        StatusText = IsAlreadyInstalled
-            ? string.Format(
-                InstallerCulture.Pick(
-                    "Release {0} is already installed. Continuing will re-run the other steps " +
-                    "and leave the LocalAi version untouched.",
-                    "Релиз {0} уже установлен. Продолжение повторит остальные шаги " +
-                    "и не тронет версию LocalAi."),
-                tag)
-            : string.Format(
-                InstallerCulture.Pick(
-                    "Release {0} verified, {1:N0} MB to download.",
-                    "Релиз {0} проверен, скачать {1:N0} МБ."),
-                tag,
-                release.Manifest.PackageSize / (1024d * 1024));
+        if (IsAlreadyInstalled)
+        {
+            SetStatus(StatusWording.AlreadyInstalled, tag);
+        }
+        else
+        {
+            SetStatus(StatusWording.Verified, tag, megabytes: release.Manifest.PackageSize / (1024d * 1024));
+        }
+
         State = PackageSourceState.Selected;
     }
 
@@ -315,7 +349,7 @@ public sealed class PackagePageViewModel : ObservableObject
     {
         IsResolving = false;
         Resolved = null;
-        StatusText = reason;
+        SetStatus(StatusWording.Incompatible, reason: reason);
         State = PackageSourceState.Incompatible;
     }
 
@@ -323,8 +357,7 @@ public sealed class PackagePageViewModel : ObservableObject
     {
         IsResolving = false;
         Resolved = null;
-        StatusText =
-            InstallerCulture.Pick("No release resolved. ", "Релиз не определён. ") + reason;
+        SetStatus(StatusWording.Unavailable, reason: reason);
         State = PackageSourceState.Unavailable;
     }
 
@@ -337,9 +370,7 @@ public sealed class PackagePageViewModel : ObservableObject
         OnPropertyChanged(nameof(ReleaseVersion));
         OnPropertyChanged(nameof(ResolvedTag));
         OnPropertyChanged(nameof(WantsLatest));
-        StatusText = InstallerCulture.Pick(
-            "Press Check again to look up this release.",
-            "Нажмите «Проверить снова», чтобы найти этот релиз.");
+        SetStatus(StatusWording.NotChecked);
         State = PackageSourceState.NotChecked;
     }
 }
