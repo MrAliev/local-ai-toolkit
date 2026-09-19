@@ -191,13 +191,6 @@ public sealed class InstallerWizardViewModel : ObservableObject
 
     private RunMark pathMark = RunMark.None;
 
-    private enum PathOutcome
-    {
-        Added,
-        AlreadyThere,
-        Failed,
-    }
-
     private PathOutcome? pathOutcome;
     private bool wasCancelled;
     private bool hasInitialized;
@@ -211,25 +204,16 @@ public sealed class InstallerWizardViewModel : ObservableObject
     private EnvironmentDiagnosis? environmentDiagnosis;
     private CatalogRecommendation lastRecommendation = CatalogRecommendation.Empty;
     private string? resolvedTag;
-
-    private enum PackageOutcomeKind
-    {
-        NoRelease,
-        Refused,
-        Result,
-    }
-
-    /// <summary>What the package step ended in, kept as facts so the finish row can be reworded.</summary>
-    private sealed record PackageOutcome(
-        PackageOutcomeKind Kind,
-        LocalAiPackageInstallStatus Status = default,
-        string? Version = null,
-        string? Reason = null);
-
     private PackageOutcome? packageOutcome;
     private bool packageInstalled;
     private InstallerRunJournal? runJournal;
     private InstallerRunJournal? interruptedJournal;
+
+    /// <summary>
+    /// The interrupted run as it was found. The notice is worded from this rather than from the
+    /// journal, which a rollback rewrites step by step while it runs.
+    /// </summary>
+    private InstallerRunJournalSnapshot? interruptedAsFound;
 
     /// <summary>What rolling back the interrupted run reported, shown in the notice's place.</summary>
     private string? rollbackNotice;
@@ -320,13 +304,12 @@ public sealed class InstallerWizardViewModel : ObservableObject
 
     /// <summary>
     /// Words only: no check, release lookup or detection runs again, and no page, answer or consent
-    /// moves; the review reads the client files and PATH as on any refresh. Text a page already
-    /// built from a result — a check's name, a finish row — keeps its language.
+    /// moves; the review reads the client files and PATH as on any refresh. The wizard announces
+    /// itself last, because its review is built out of the pages and a binding reads it at once.
     /// </summary>
     private void OnLanguageChanged(object? sender, EventArgs e)
     {
         RebuildSteps();
-        AnnounceEverything();
         diagnose.Relabel();
         dependencies.Relabel();
         package.AnnounceEverything();
@@ -345,6 +328,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         }
 
         finish.AnnounceEverything();
+        AnnounceEverything();
     }
 
     public bool EnableDependencyActions { get; set; }
@@ -577,8 +561,8 @@ public sealed class InstallerWizardViewModel : ObservableObject
         OnPropertyChanged(nameof(HasUnexpectedError));
     }
 
-    public string? InterruptedRunNotice => interruptedJournal is { } journal
-        ? BuildInterruptedRunNotice(journal.Snapshot)
+    public string? InterruptedRunNotice => interruptedJournal is not null && interruptedAsFound is { } found
+        ? BuildInterruptedRunNotice(found)
         : rollbackNotice;
 
     public bool HasInterruptedRunNotice => !string.IsNullOrWhiteSpace(InterruptedRunNotice);
@@ -773,6 +757,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             interruptedJournal = null;
         }
 
+        interruptedAsFound = interruptedJournal?.Snapshot;
         RefreshAll();
     }
 
@@ -2022,38 +2007,6 @@ public sealed class InstallerWizardViewModel : ObservableObject
     }
 
     /// <summary>
-    /// What the package installer did, in words rather than in the name of its enum member.
-    /// The summary is read by a person; "ImmutableConflict" tells them nothing about what to
-    /// do next, and on a Russian run it also arrives in the wrong language.
-    /// </summary>
-    private static string PackageOutcomeName(LocalAiPackageInstallStatus status) => status switch
-    {
-        LocalAiPackageInstallStatus.Installed =>
-            InstallerCulture.Pick("installed", "установлен"),
-        LocalAiPackageInstallStatus.AlreadyInstalled =>
-            InstallerCulture.Pick("already installed", "уже был установлен"),
-        LocalAiPackageInstallStatus.Refused =>
-            InstallerCulture.Pick("refused", "отказано"),
-        LocalAiPackageInstallStatus.ImmutableConflict => InstallerCulture.Pick(
-            "not installed: that version directory already holds different files",
-            "не установлен: в каталоге этой версии уже лежат другие файлы"),
-        LocalAiPackageInstallStatus.RolledBack =>
-            InstallerCulture.Pick("rolled back", "откачено"),
-        LocalAiPackageInstallStatus.RollbackFailed =>
-            InstallerCulture.Pick("rollback failed", "откат не удался"),
-        LocalAiPackageInstallStatus.ManualRecoveryRequired => InstallerCulture.Pick(
-            "manual recovery required",
-            "требуется ручное восстановление"),
-        LocalAiPackageInstallStatus.Indeterminate => InstallerCulture.Pick(
-            "state could not be determined",
-            "состояние определить не удалось"),
-        LocalAiPackageInstallStatus.Busy => InstallerCulture.Pick(
-            "another install or uninstall was running",
-            "шла другая установка или деинсталляция"),
-        _ => status.ToString(),
-    };
-
-    /// <summary>
     /// What the page a run ends on opens with. Every row is a thing the run touched, marked with
     /// the same vocabulary the model rows use, and the one on the end answers the only question
     /// somebody has there.
@@ -2063,41 +2016,21 @@ public sealed class InstallerWizardViewModel : ObservableObject
         finished = (requested, installed, failed);
         SettleModelRuns(wasCancelled);
         finish.Results.Clear();
-        finish.Results.Add(RunResults.Package(PackageOutcomeText(), packageInstalled));
+        finish.Results.Add(RunResults.Package(
+            packageOutcome is { } outcome ? RunResults.PackageDetail(outcome, packageInstalled) : null,
+            packageInstalled));
         finish.Results.Add(RunResults.Prerequisites(requested, installed, failed));
         finish.Results.Add(RunResults.Models(ModelRuns));
         finish.Results.Add(RunResults.Clients(configuredAgents));
         if (pathMark != RunMark.None || pathOutcome is not null)
         {
-            finish.Results.Add(RunResults.PathEntry(pathMark, pathOutcome switch
-            {
-                PathOutcome.Added => InstallerCulture.Pick(
-                    "added for this account",
-                    "добавлен для этой учётной записи"),
-                PathOutcome.AlreadyThere => InstallerCulture.Pick("already there", "уже был прописан"),
-                PathOutcome.Failed => InstallerCulture.Pick("could not be updated", "не удалось изменить"),
-                _ => PageLabels.ResultNotAttempted,
-            }));
+            finish.Results.Add(RunResults.PathEntry(
+                pathMark,
+                pathOutcome is { } path ? RunResults.PathDetail(path) : PageLabels.ResultNotAttempted));
         }
 
         finish.NextSteps = RunResults.NextSteps(configuredAgents);
     }
-
-    private string? PackageOutcomeText() => packageOutcome switch
-    {
-        null => null,
-        { Kind: PackageOutcomeKind.NoRelease } => InstallerCulture.Pick(
-            "not installed, no verified release was selected",
-            "не установлен, проверенный релиз не выбран"),
-        { Kind: PackageOutcomeKind.Refused } refused => string.Format(
-            InstallerCulture.Pick("not installed — {0}", "не установлен — {0}"),
-            refused.Reason),
-        var result when packageInstalled => string.Format(
-            InstallerCulture.Pick("{0}, version {1}", "{0}, версия {1}"),
-            PackageOutcomeName(result.Status),
-            result.Version),
-        var result => $"{PackageOutcomeName(result.Status)} — {result.Reason}".TrimEnd(' ', '—'),
-    };
 
     private async Task RefreshEnvironmentDiagnosticsAsync(CancellationToken cancellationToken)
     {

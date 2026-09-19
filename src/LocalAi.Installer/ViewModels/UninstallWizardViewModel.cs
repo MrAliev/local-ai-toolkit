@@ -144,8 +144,8 @@ public sealed class UninstallWizardViewModel : ObservableObject
     public void DetachPresentation() => Presentation.LanguageChanged -= OnLanguageChanged;
 
     /// <summary>
-    /// Words only: the confirmed plan, its preview and the consent stay as they are. Text already
-    /// built from a plan or an outcome keeps its language.
+    /// Words only: the confirmed plan and the consent stay as they are, and nothing is planned
+    /// again. What the planner and the runner worded themselves keeps the language it came in.
     /// </summary>
     private void OnLanguageChanged(object? sender, EventArgs e)
     {

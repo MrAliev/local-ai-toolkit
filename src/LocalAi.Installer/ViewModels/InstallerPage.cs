@@ -124,8 +124,27 @@ public enum CheckStatus
 /// One line on the diagnosis page. The page exists to show what was actually found on the
 /// machine, so each check carries its own detail rather than collapsing to a single boolean.
 /// </summary>
-public sealed record EnvironmentCheck(string Name, CheckStatus Status, string Detail)
+public sealed class EnvironmentCheck(string Name, CheckStatus Status, string Detail) : ObservableObject
 {
+    public string Name { get; private set; } = Name;
+
+    public CheckStatus Status { get; private set; } = Status;
+
+    public string Detail { get; private set; } = Detail;
+
+    /// <summary>
+    /// Takes another row's content and keeps its own place in the table. A row replaced by an
+    /// equal one — a tool's name, version and path do not translate — dropped out of the
+    /// automation tree, so the table is reworded in place.
+    /// </summary>
+    internal void Become(EnvironmentCheck other)
+    {
+        Name = other.Name;
+        Status = other.Status;
+        Detail = other.Detail;
+        AnnounceEverything();
+    }
+
     public string StatusText => Status switch
     {
         CheckStatus.Ok => InstallerCulture.Pick("OK", "ОК"),

@@ -184,7 +184,10 @@ public sealed class LanguageSwitchKeepsTheRunTests : IDisposable
         var wizard = await Removal(presentation);
         Assert.True(await wizard.MoveNextAsync(TestContext.Current.CancellationToken));
         wizard.IsConfirmed = true;
-        var planned = wizard.PreviewText.Split('\n').Length;
+        // Gone from the disk once the plan names it: a plan built again would not name it.
+        var jobs = Path.Combine(machine.Runtime, "jobs");
+        Assert.Contains(jobs, wizard.PreviewText, StringComparison.Ordinal);
+        Directory.Delete(jobs, recursive: true);
         Assert.True(wizard.CanRun);
         var announced = new List<string?>();
         wizard.PropertyChanged += (_, e) => announced.Add(e.PropertyName);
@@ -194,7 +197,7 @@ public sealed class LanguageSwitchKeepsTheRunTests : IDisposable
         Assert.Equal(UninstallPage.Confirm, wizard.CurrentPage);
         Assert.True(wizard.IsConfirmed);
         Assert.True(wizard.CanRun);
-        Assert.Equal(planned, wizard.PreviewText.Split('\n').Length);
+        Assert.Contains(jobs, wizard.PreviewText, StringComparison.Ordinal);
         Assert.Equal("Готово к удалению", wizard.StepTitle);
         Assert.Equal("Что удалить", wizard.StepList[0].Title);
         Assert.Contains(

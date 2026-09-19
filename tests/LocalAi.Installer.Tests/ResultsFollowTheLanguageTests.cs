@@ -35,9 +35,14 @@ public sealed class ResultsFollowTheLanguageTests : IDisposable
         wizard.Diagnose.Load(Diagnosis());
         var checks = wizard.Diagnose.Checks.Count;
         var detail = wizard.Diagnose.Checks[0].Detail;
+        var rows = wizard.Diagnose.Checks.ToArray();
 
         presentation.ChooseLanguage(InstallerLanguage.Russian);
 
+        // Reworded in place. Replaced rows equal to the ones they replace — a tool's name,
+        // version and path do not translate — dropped out of the automation tree on the built
+        // installer, though the table on screen was whole.
+        Assert.Equal(rows, wizard.Diagnose.Checks, ReferenceEqualityComparer.Instance);
         Assert.Equal(checks, wizard.Diagnose.Checks.Count);
         Assert.Equal("Операционная система", wizard.Diagnose.Checks[0].Name);
         Assert.Equal(detail, wizard.Diagnose.Checks[0].Detail);
@@ -98,20 +103,23 @@ public sealed class ResultsFollowTheLanguageTests : IDisposable
         var (wizard, presentation) = await Removal(RemovalPreset.ReinstallFriendly, offersInstallAfterwards: true);
         Assert.True(await wizard.MoveNextAsync(TestContext.Current.CancellationToken));
         wizard.IsConfirmed = true;
-        var lines = wizard.PreviewText.Split('\n').Length;
+        // Gone from the disk once the plan names it: a plan built again would not name it.
+        var jobs = Path.Combine(machine.Runtime, "jobs");
+        Assert.Contains(jobs, wizard.PreviewText, StringComparison.Ordinal);
+        Directory.Delete(jobs, recursive: true);
 
         presentation.ChooseLanguage(InstallerLanguage.Russian);
 
         Assert.True(wizard.CanRun);
-        Assert.Equal(lines, wizard.PreviewText.Split('\n').Length);
-        Assert.Contains("  удалить ", wizard.PreviewText, StringComparison.Ordinal);
+        Assert.Contains("  удалить " + jobs, wizard.PreviewText, StringComparison.Ordinal);
         Assert.Contains("перепишет все три", wizard.KeepNotice, StringComparison.Ordinal);
     }
 
+    /// <summary>The removal half of a reinstall: it takes the binaries and never plans the registry entry.</summary>
     [Fact]
     public async Task The_removal_outcome_is_reported_in_the_new_language()
     {
-        var (wizard, presentation) = await Removal();
+        var (wizard, presentation) = await Removal(RemovalPreset.ReinstallFriendly, offersInstallAfterwards: true);
         Assert.True(await wizard.MoveNextAsync(TestContext.Current.CancellationToken));
         wizard.IsConfirmed = true;
         Assert.True(await wizard.RunAsync(TestContext.Current.CancellationToken));
@@ -126,6 +134,135 @@ public sealed class ResultsFollowTheLanguageTests : IDisposable
         Assert.Equal(removed, wizard.Report.Split('\n').Count(line => line.StartsWith("Удалено ", StringComparison.Ordinal)));
         Assert.Contains("Оставлено: ", wizard.Report, StringComparison.Ordinal);
         Assert.Equal("Завершено", wizard.ProgressText);
+    }
+
+    [Fact]
+    public async Task A_refused_removal_says_so_in_the_new_language()
+    {
+        var (wizard, presentation) = await Removal(
+            RemovalPreset.ReinstallFriendly,
+            offersInstallAfterwards: true,
+            new StubProcessRunner { Result = new(1, string.Empty, "broker_still_running", false, false) });
+        Assert.True(await wizard.MoveNextAsync(TestContext.Current.CancellationToken));
+        wizard.IsConfirmed = true;
+        Assert.False(await wizard.RunAsync(TestContext.Current.CancellationToken));
+        Assert.Equal("Nothing was removed.", wizard.Report);
+        var refusal = wizard.Summary;
+
+        presentation.ChooseLanguage(InstallerLanguage.Russian);
+
+        Assert.Equal("Ничего не удалено.", wizard.Report);
+        Assert.Equal("Отказано", wizard.ProgressText);
+        Assert.Equal(refusal, wizard.Summary);
+    }
+
+    [Fact]
+    public async Task A_removal_that_left_something_behind_counts_it_in_the_new_language()
+    {
+        var held = Path.Combine(machine.Runtime, "jobs", "job.json");
+        using var handle = new FileStream(held, FileMode.Open, FileAccess.Read, FileShare.None);
+        var (wizard, presentation) = await Removal(RemovalPreset.ReinstallFriendly, offersInstallAfterwards: true);
+        Assert.True(await wizard.MoveNextAsync(TestContext.Current.CancellationToken));
+        wizard.IsConfirmed = true;
+        Assert.False(await wizard.RunAsync(TestContext.Current.CancellationToken));
+        Assert.StartsWith("Could not be removed: 1;", wizard.Summary, StringComparison.Ordinal);
+
+        presentation.ChooseLanguage(InstallerLanguage.Russian);
+
+        Assert.StartsWith("Не удалось удалить: 1;", wizard.Summary, StringComparison.Ordinal);
+        Assert.Contains("Не удалось удалить " + Path.Combine(machine.Runtime, "jobs"), wizard.Report, StringComparison.Ordinal);
+        Assert.Equal("Завершено с проблемами", wizard.ProgressText);
+    }
+
+    /// <summary>
+    /// The review is one string the wizard builds out of its pages, and a binding reads it the
+    /// moment it is announced — so it is announced after every page has its new words.
+    /// </summary>
+    [Fact]
+    public void The_review_is_announced_once_every_page_has_its_new_words()
+    {
+        var (wizard, presentation) = Wizard();
+        wizard.Models.ApplyRecommendation(CatalogRecommendation.Empty, residencyRequiresVideoMemory: true);
+        string? read = null;
+        wizard.PropertyChanged += (_, e) =>
+        {
+            if (InstallerPresentationTests.Announces(e.PropertyName, nameof(InstallerWizardViewModel.ReviewText)))
+            {
+                read = wizard.ReviewText;
+            }
+        };
+
+        presentation.ChooseLanguage(InstallerLanguage.Russian);
+
+        Assert.NotNull(read);
+        Assert.Contains("размер неизвестен", read, StringComparison.Ordinal);
+        Assert.DoesNotContain("size unknown", read, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(false, "результат проверки неизвестен")]
+    [InlineData(true, "проверка отменена")]
+    public void A_model_row_the_run_never_answered_for_keeps_its_state_and_changes_its_words(
+        bool cancelled,
+        string unanswered)
+    {
+        var (wizard, presentation) = Wizard();
+        foreach (var model in new[] { "working", "waiting", "rejected", "failed" })
+        {
+            wizard.ApplyModelStep(new ModelProvisioningProgress(model, 2048, ModelProvisioningPhase.Planned, 0, 4));
+        }
+
+        wizard.ApplyModelStep(new ModelProvisioningProgress("working", 2048, ModelProvisioningPhase.Checking, 0, 4));
+        wizard.ModelRuns[2].Settled(
+            BrokerModelInstallOutcome.RejectedResidency,
+            downloaded: false,
+            [new ModelFallbackSuggestion("rejected", 1024, 1)],
+            "residency");
+        wizard.ModelRuns[3].Settled(BrokerModelInstallOutcome.Failed, downloaded: false, [], "pull_failed");
+        wizard.SettleModelRuns(cancelled);
+        var states = wizard.ModelRuns.Select(row => row.State).ToArray();
+
+        presentation.ChooseLanguage(InstallerLanguage.Russian);
+
+        Assert.Equal(states, wizard.ModelRuns.Select(row => row.State));
+        Assert.Equal(unanswered, wizard.ModelRuns[0].Detail);
+        Assert.Equal("не дошло — настройка моделей остановилась раньше", wizard.ModelRuns[1].Detail);
+        Assert.Equal(
+            "не помещается, поэтому не используется. Помещаются варианты меньше: rejected / 1024",
+            wizard.ModelRuns[2].Detail);
+        Assert.Equal("не удалось (pull_failed)", wizard.ModelRuns[3].Detail);
+    }
+
+    /// <summary>A real run is the only way to these two rows, so their words are asked for directly.</summary>
+    [Fact]
+    public void The_package_and_path_rows_are_worded_in_the_language_chosen()
+    {
+        var installed = new PackageOutcome(
+            PackageOutcomeKind.Result,
+            LocalAi.Installer.Core.Activation.LocalAiPackageInstallStatus.Installed,
+            "0.2.1");
+        var conflict = new PackageOutcome(
+            PackageOutcomeKind.Result,
+            LocalAi.Installer.Core.Activation.LocalAiPackageInstallStatus.ImmutableConflict,
+            Reason: "files differ");
+        Assert.Equal("installed, version 0.2.1", RunResults.PackageDetail(installed, installed: true));
+        Assert.Equal("added for this account", RunResults.PathDetail(PathOutcome.Added));
+
+        InstallerCulture.Current = InstallerLanguage.Russian;
+
+        Assert.Equal("установлен, версия 0.2.1", RunResults.PackageDetail(installed, installed: true));
+        Assert.Equal(
+            "не установлен: в каталоге этой версии уже лежат другие файлы — files differ",
+            RunResults.PackageDetail(conflict, installed: false));
+        Assert.Equal(
+            "не установлен, проверенный релиз не выбран",
+            RunResults.PackageDetail(new PackageOutcome(PackageOutcomeKind.NoRelease), installed: false));
+        Assert.Equal(
+            "не установлен — layout is unsafe",
+            RunResults.PackageDetail(new PackageOutcome(PackageOutcomeKind.Refused, Reason: "layout is unsafe"), installed: false));
+        Assert.Equal("добавлен для этой учётной записи", RunResults.PathDetail(PathOutcome.Added));
+        Assert.Equal("уже был прописан", RunResults.PathDetail(PathOutcome.AlreadyThere));
+        Assert.Equal("не удалось изменить", RunResults.PathDetail(PathOutcome.Failed));
     }
 
     [Fact]
@@ -298,7 +435,8 @@ public sealed class ResultsFollowTheLanguageTests : IDisposable
 
     private async Task<(UninstallWizardViewModel Wizard, InstallerPresentation Presentation)> Removal(
         RemovalPreset preset = RemovalPreset.FullUninstall,
-        bool offersInstallAfterwards = false)
+        bool offersInstallAfterwards = false,
+        IProcessRunner? processRunner = null)
     {
         var presentation = new InstallerPresentation(
             new InstallerPreferencesStore(root.Combine("preferences")));
@@ -307,7 +445,7 @@ public sealed class ResultsFollowTheLanguageTests : IDisposable
             offersInstallAfterwards,
             machine.Layout,
             machine.Home,
-            new StubProcessRunner(),
+            processRunner ?? new StubProcessRunner(),
             machine.HooksPathReader,
             presentation: presentation)
         {
@@ -345,12 +483,14 @@ public sealed class ResultsFollowTheLanguageTests : IDisposable
 
     private sealed class StubProcessRunner : IProcessRunner
     {
+        public ProcessResult Result { get; init; } = new(0, string.Empty, string.Empty, false, false);
+
         public Task<ProcessResult> RunAsync(
             string executable,
             IReadOnlyList<string> arguments,
             TimeSpan timeout,
             CancellationToken cancellationToken) =>
-            Task.FromResult(new ProcessResult(0, string.Empty, string.Empty, false, false));
+            Task.FromResult(Result);
     }
 
     private static ResolvedRelease Release(string version) =>
