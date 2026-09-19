@@ -82,6 +82,9 @@ public sealed class UninstallPlanner
     /// an entry offering to uninstall an installation whose binaries are gone is an entry
     /// pointing at nothing, and one kept beside a runtime that stays is still true.
     ///
+    /// Only the entry that describes this installation. The key is one per account, and one
+    /// pointing at another LocalAi is that installation's way out, not this run's to remove.
+    ///
     /// Never when an installation follows. The entry would be unregistered and registered
     /// again inside one run, which is churn on the best path and a hazard on the rest: the
     /// uninstaller's own copy is what runs a removal launched from Apps &amp; features, so
@@ -112,7 +115,7 @@ public sealed class UninstallPlanner
         !installationFollows &&
         selection.Includes(RemovalItem.Binaries) &&
         OperatingSystem.IsWindows() &&
-        new UninstallRegistration(layout, registrySubKey).Read() is not null;
+        new UninstallRegistration(layout, registrySubKey).ReadOwn() is not null;
 
     /// <summary>
     /// Every top-level entry of the runtime root, split into what this selection takes and

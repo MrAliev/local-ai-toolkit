@@ -125,6 +125,29 @@ public sealed class UninstallRegistration(
     }
 
     /// <summary>
+    /// The entry, when it describes the installation at this layout. The key is one per
+    /// account, so what is found under it may belong to a LocalAi somewhere else.
+    /// </summary>
+    public UninstallEntry? ReadOwn() =>
+        Read() is { } entry && SamePath(entry.InstallLocation, layout.Root) ? entry : null;
+
+    private static bool SamePath(string recorded, string root)
+    {
+        try
+        {
+            return recorded.Length > 0 && string.Equals(
+                Path.TrimEndingDirectorySeparator(Path.GetFullPath(recorded)),
+                Path.TrimEndingDirectorySeparator(Path.GetFullPath(root)),
+                StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception exception) when (
+            exception is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Takes the entry out of Apps &amp; features. Absent is success: an uninstall run on a
     /// machine whose entry was already removed by hand has nothing left to do here.
     /// </summary>
