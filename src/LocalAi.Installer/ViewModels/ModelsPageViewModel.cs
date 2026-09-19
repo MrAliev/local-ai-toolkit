@@ -14,6 +14,9 @@ public sealed class ModelsPageViewModel : ObservableObject
     private CatalogRecommendation recommendation = CatalogRecommendation.Empty;
     private bool residencyRequiresVideoMemory = true;
 
+    /// <summary>Whether a recommendation has arrived; until then the page says it is still weighing.</summary>
+    private bool recommended;
+
     public ModelsPageViewModel()
     {
         foreach (var model in ModelRoutingCatalogResource.SelectableModels())
@@ -119,9 +122,28 @@ public sealed class ModelsPageViewModel : ObservableObject
 
     public ObservableCollection<string> AutomaticSelection { get; } = [];
 
-    public string AutomaticSummary { get; private set; } = InstallerCulture.Pick(
-        "Model sizes have not been checked yet.",
-        "Размеры моделей ещё не проверялись.");
+    public string AutomaticSummary => !recommended
+        ? InstallerCulture.Pick(
+            "Model sizes have not been checked yet.",
+            "Размеры моделей ещё не проверялись.")
+        : !recommendation.SizesKnown
+            ? InstallerCulture.Pick(
+                "Model sizes could not be retrieved, so nothing was weighed against this " +
+                "computer. Every catalogue model will be offered.",
+                "Размеры моделей получить не удалось, поэтому под этот " +
+                "компьютер ничего не взвешивалось. Будут предложены все " +
+                "модели каталога.")
+            // The rule is now above this list on the same page, so "the previous page" would
+            // name a route that no longer exists (#257).
+            : AutomaticSelection.Count > 0
+                ? string.Empty
+                : InstallerCulture.Pick(
+                    "No catalogue model fits the detected video memory. Pick a relaxed rule " +
+                    "above to use this computer anyway, or skip model setup for now.",
+                    "Ни одна модель каталога не помещается в обнаруженную " +
+                    "видеопамять. Выберите смягчённое правило выше, чтобы всё же " +
+                    "пользоваться этим компьютером, или пока пропустите " +
+                    "настройку моделей.");
 
     /// <summary>
     /// Applies a computed recommendation.
@@ -138,16 +160,30 @@ public sealed class ModelsPageViewModel : ObservableObject
     {
         recommendation = value ?? CatalogRecommendation.Empty;
         this.residencyRequiresVideoMemory = residencyRequiresVideoMemory;
+        recommended = true;
+        RebuildAutomaticSelection();
+        OnPropertyChanged(nameof(RuleSummary));
+        OnPropertyChanged(nameof(AutomaticSummary));
+        OnPropertyChanged(nameof(CanContinue));
+        OnPropertyChanged(nameof(ReviewText));
+    }
 
+    /// <summary>The same recommendation, worded in the language chosen now.</summary>
+    internal void Relabel()
+    {
+        if (recommended)
+        {
+            RebuildAutomaticSelection();
+        }
+
+        AnnounceEverything();
+    }
+
+    private void RebuildAutomaticSelection()
+    {
         AutomaticSelection.Clear();
         if (!recommendation.SizesKnown)
         {
-            AutomaticSummary = InstallerCulture.Pick(
-                "Model sizes could not be retrieved, so nothing was weighed against this " +
-                "computer. Every catalogue model will be offered.",
-                "Размеры моделей получить не удалось, поэтому под этот " +
-                "компьютер ничего не взвешивалось. Будут предложены все " +
-                "модели каталога.");
             foreach (var model in CatalogModels)
             {
                 AutomaticSelection.Add(string.Format(
@@ -172,25 +208,9 @@ public sealed class ModelsPageViewModel : ObservableObject
                     fit.DownloadSizeBytes / (1024d * 1024 * 1024),
                     fit.ContextTokens));
             }
-
-            // The rule is now above this list on the same page, so "the previous page" would
-            // name a route that no longer exists (#257).
-            AutomaticSummary = AutomaticSelection.Count > 0
-                ? string.Empty
-                : InstallerCulture.Pick(
-                    "No catalogue model fits the detected video memory. Pick a relaxed rule " +
-                    "above to use this computer anyway, or skip model setup for now.",
-                    "Ни одна модель каталога не помещается в обнаруженную " +
-                    "видеопамять. Выберите смягчённое правило выше, чтобы всё же " +
-                    "пользоваться этим компьютером, или пока пропустите " +
-                    "настройку моделей.");
         }
 
-        RuleSummary = BuildRuleSummary();
         OnPropertyChanged(nameof(AutomaticSelection));
-        OnPropertyChanged(nameof(AutomaticSummary));
-        OnPropertyChanged(nameof(CanContinue));
-        OnPropertyChanged(nameof(ReviewText));
     }
 
     public bool CanContinue => Mode switch
@@ -230,15 +250,11 @@ public sealed class ModelsPageViewModel : ObservableObject
     /// where nobody could see it. On one page the count moves the moment the rule does, and
     /// this line keeps the dependency legible once the radio buttons have scrolled away.
     /// </summary>
-    public string RuleSummary
-    {
-        get => ruleSummary;
-        private set => SetProperty(ref ruleSummary, value);
-    }
-
-    private string ruleSummary = InstallerCulture.Pick(
-        "Weighing models against this computer.",
-        "Взвешиваю модели под этот компьютер.");
+    public string RuleSummary => recommended
+        ? BuildRuleSummary()
+        : InstallerCulture.Pick(
+            "Weighing models against this computer.",
+            "Взвешиваю модели под этот компьютер.");
 
     /// <summary>
     /// "Whole model in video memory - 4 of 6 catalogue models fit", or its relaxed form.

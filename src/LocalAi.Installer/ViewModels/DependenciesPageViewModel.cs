@@ -31,13 +31,13 @@ public sealed class DependenciesPageViewModel : ObservableObject
             // The repository is public, so releases are read over plain HTTPS with no
             // account at all. Kept for a fork held private, or a network that blocks the
             // release host but not the API.
-            Consequence = InstallerCulture.Pick(
+            ConsequenceWording = (
                 "only needed for a private fork, or when the release host is blocked",
                 "нужен только для закрытого форка или когда хост релизов заблокирован"),
         },
         new("DotNetSdk", ".NET SDK 10", false)
         {
-            Consequence = InstallerCulture.Pick(
+            ConsequenceWording = (
                 "without it, C# definitions and references are answered by text matching "
                 + "instead of by the compiler",
                 "без него определения и ссылки в C# ищутся текстовым "
@@ -45,29 +45,40 @@ public sealed class DependenciesPageViewModel : ObservableObject
         },
         new("NodeJs", "Node.js 20", false)
         {
-            Consequence = InstallerCulture.Pick(
+            ConsequenceWording = (
                 "only needed to run the TypeScript indexer",
                 "нужен только для индексатора TypeScript"),
         },
         new("ScipTypeScript", "SCIP TypeScript", false)
         {
-            Consequence = InstallerCulture.Pick(
+            ConsequenceWording = (
                 "without it, TypeScript and JavaScript navigate by text matching",
                 "без него навигация по TypeScript и JavaScript идёт текстовым совпадением"),
         },
         new("Python", "Python 3.10+", false)
         {
-            Consequence = InstallerCulture.Pick(
+            ConsequenceWording = (
                 "only needed to run the Python indexer",
                 "нужен только для индексатора Python"),
         },
         new("ScipPython", "SCIP Python", false)
         {
-            Consequence = InstallerCulture.Pick(
+            ConsequenceWording = (
                 "without it, Python navigates by text matching",
                 "без него навигация по Python идёт текстовым совпадением"),
         },
     ];
+
+    /// <summary>Every row reads its text again; no consent moves.</summary>
+    internal void Relabel()
+    {
+        foreach (var dependency in Dependencies)
+        {
+            dependency.AnnounceEverything();
+        }
+
+        AnnounceEverything();
+    }
 
     public IReadOnlyList<DependencySelection> SelectedDependencies =>
         [.. Dependencies.Where(dependency => dependency.IsConsented)];

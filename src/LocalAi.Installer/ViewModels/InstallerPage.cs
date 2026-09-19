@@ -124,8 +124,27 @@ public enum CheckStatus
 /// One line on the diagnosis page. The page exists to show what was actually found on the
 /// machine, so each check carries its own detail rather than collapsing to a single boolean.
 /// </summary>
-public sealed record EnvironmentCheck(string Name, CheckStatus Status, string Detail)
+public sealed class EnvironmentCheck(string Name, CheckStatus Status, string Detail) : ObservableObject
 {
+    public string Name { get; private set; } = Name;
+
+    public CheckStatus Status { get; private set; } = Status;
+
+    public string Detail { get; private set; } = Detail;
+
+    /// <summary>
+    /// Takes another row's content and keeps its own place in the table. A row replaced by an
+    /// equal one — a tool's name, version and path do not translate — dropped out of the
+    /// automation tree, so the table is reworded in place.
+    /// </summary>
+    internal void Become(EnvironmentCheck other)
+    {
+        Name = other.Name;
+        Status = other.Status;
+        Detail = other.Detail;
+        AnnounceEverything();
+    }
+
     public string StatusText => Status switch
     {
         CheckStatus.Ok => InstallerCulture.Pick("OK", "ОК"),
@@ -136,8 +155,14 @@ public sealed record EnvironmentCheck(string Name, CheckStatus Status, string De
     };
 }
 
-public sealed record DependencySelection(string Id, string Title, bool IsRequired)
+public sealed class DependencySelection(string Id, string Title, bool IsRequired) : ObservableObject
 {
+    public string Id { get; } = Id;
+
+    public string Title { get; } = Title;
+
+    public bool IsRequired { get; } = IsRequired;
+
     public bool IsConsented { get; set; }
 
     public bool IsInstalled { get; set; }
@@ -152,12 +177,24 @@ public sealed record DependencySelection(string Id, string Title, bool IsRequire
         ? InstallerCulture.Pick("Already installed", "Уже установлен")
         : InstallerCulture.Pick("Not installed", "Не установлен");
 
+    private Func<string> consequence = static () => string.Empty;
+
     /// <summary>
     /// What is given up by skipping this. "Optional" on its own invites skipping everything
     /// and finding the cost later, at the point where a tool quietly stops answering
     /// precisely — which is the worst moment to learn it.
     /// </summary>
-    public string Consequence { get; init; } = string.Empty;
+    public string Consequence
+    {
+        get => consequence();
+        init => consequence = () => value;
+    }
+
+    /// <summary>Both languages, read each time the row is drawn.</summary>
+    public (string English, string Russian) ConsequenceWording
+    {
+        init => consequence = () => InstallerCulture.Pick(value.English, value.Russian);
+    }
 
     /// <summary>
     /// Whether the wizard refuses to continue without it. Shown, because a list where
@@ -191,18 +228,16 @@ public sealed record DependencySelection(string Id, string Title, bool IsRequire
 }
 
 /// <summary>One entry of the client-integration combo box: the choice, and its own title.</summary>
-public sealed record AgentChoiceOption(AgentChoice Choice)
+public sealed class AgentChoiceOption(AgentChoice Choice) : ObservableObject
 {
+    public AgentChoice Choice { get; } = Choice;
+
     public string Title => Choice.Title();
 
     /// <summary>
-    /// A record prints its own members, and a control that falls back to <c>ToString</c> then
-    /// shows `AgentChoiceOption { Choice = McpAndInstructions, Title = … }` on the page where a
-    /// person chooses what happens to their clients — which is what it did, because the closed
-    /// combo box draws a template <c>DisplayMemberPath</c> never reaches.
-    ///
-    /// The template is the fix and lives in the XAML. This is the floor under it: a binding that
-    /// breaks again degrades to the right words rather than to a type dump.
+    /// The closed combo box draws a template <c>DisplayMemberPath</c> never reaches; the template
+    /// is in the XAML, and this is the floor under it: a binding that breaks again degrades to the
+    /// right words rather than to a type name.
     /// </summary>
     public override string ToString() => Title;
 }
@@ -252,7 +287,10 @@ public enum ModelRunState
 public sealed class ModelRunRow(string tag, int contextTokens) : ObservableObject
 {
     private ModelRunState state = ModelRunState.Waiting;
-    private string detail = PageLabels.ModelWaiting;
+
+    /// <summary>What the detail is worded from, so the words can follow the language.</summary>
+    private ModelProvisioningProgress? step;
+    private (BrokerModelInstallOutcome Outcome, bool Downloaded, IReadOnlyList<ModelFallbackSuggestion> Smaller, string Code, bool Degraded)? verdict;
 
     public string Tag { get; } = tag;
 
@@ -284,11 +322,36 @@ public sealed class ModelRunRow(string tag, int contextTokens) : ObservableObjec
     };
 
     /// <summary>The tag has a column of its own, so this never repeats it.</summary>
-    public string Detail
+    public string Detail => State switch
     {
-        get => detail;
-        private set => SetProperty(ref detail, value);
-    }
+        ModelRunState.NotReached => PageLabels.ModelNotReached,
+        ModelRunState.Cancelled when verdict is null => PageLabels.ModelCancelled,
+        ModelRunState.Unknown => PageLabels.ModelResultUnknown,
+        _ when verdict is { } settled => Settled(settled),
+        _ when step is { } reported => ModelStepWording.ForARow(reported),
+        _ => PageLabels.ModelWaiting,
+    };
+
+    private static string Settled(
+        (BrokerModelInstallOutcome Outcome, bool Downloaded, IReadOnlyList<ModelFallbackSuggestion> Smaller, string Code, bool Degraded) verdict) =>
+        verdict.Outcome switch
+        {
+            BrokerModelInstallOutcome.Accepted => verdict.Degraded
+                ? verdict.Downloaded ? PageLabels.ModelLimitedDownloaded : PageLabels.ModelLimitedAlreadyHere
+                : verdict.Downloaded ? PageLabels.ModelReadyDownloaded : PageLabels.ModelReadyAlreadyHere,
+            BrokerModelInstallOutcome.RejectedResidency => verdict.Smaller.Count == 0
+                ? PageLabels.ModelDoesNotFit
+                : PageLabels.ModelDoesNotFit + " " + string.Format(
+                    CultureInfo.InvariantCulture,
+                    PageLabels.ModelSmallerOptions,
+                    string.Join(
+                        ", ",
+                        verdict.Smaller.Select(choice => $"{choice.Model} / {choice.ContextTokens}"))),
+            BrokerModelInstallOutcome.Cancelled => PageLabels.ModelCancelled,
+            _ => string.Format(CultureInfo.InvariantCulture, PageLabels.ModelFailed, verdict.Code),
+        };
+
+    internal void Relabel() => OnPropertyChanged(nameof(Detail));
 
     public void Apply(ModelProvisioningProgress step)
     {
@@ -300,6 +363,7 @@ public sealed class ModelRunRow(string tag, int contextTokens) : ObservableObjec
             return;
         }
 
+        this.step = step;
         State = step.Phase switch
         {
             ModelProvisioningPhase.Planned => ModelRunState.Waiting,
@@ -308,7 +372,7 @@ public sealed class ModelRunRow(string tag, int contextTokens) : ObservableObjec
             ModelProvisioningPhase.Rejected => ModelRunState.Rejected,
             _ => ModelRunState.Working,
         };
-        Detail = ModelStepWording.ForARow(step);
+        OnPropertyChanged(nameof(Detail));
     }
 
     /// <summary>
@@ -324,44 +388,22 @@ public sealed class ModelRunRow(string tag, int contextTokens) : ObservableObjec
         bool residencyDegraded = false)
     {
         ArgumentNullException.ThrowIfNull(smaller);
-        switch (outcome)
+        verdict = (outcome, downloaded, smaller, code, residencyDegraded);
+        State = outcome switch
         {
-            case BrokerModelInstallOutcome.Accepted:
-                State = residencyDegraded ? ModelRunState.ReadyWithLimitations : ModelRunState.Ready;
-                Detail = residencyDegraded
-                    ? downloaded ? PageLabels.ModelLimitedDownloaded : PageLabels.ModelLimitedAlreadyHere
-                    : downloaded ? PageLabels.ModelReadyDownloaded : PageLabels.ModelReadyAlreadyHere;
-                break;
-            case BrokerModelInstallOutcome.RejectedResidency:
-                State = ModelRunState.Rejected;
-                Detail = smaller.Count == 0
-                    ? PageLabels.ModelDoesNotFit
-                    : PageLabels.ModelDoesNotFit + " " + string.Format(
-                        CultureInfo.InvariantCulture,
-                        PageLabels.ModelSmallerOptions,
-                        string.Join(
-                            ", ",
-                            smaller.Select(choice =>
-                                $"{choice.Model} / {choice.ContextTokens}")));
-                break;
-            case BrokerModelInstallOutcome.Cancelled:
-                State = ModelRunState.Cancelled;
-                Detail = PageLabels.ModelCancelled;
-                break;
-            default:
-                State = ModelRunState.Failed;
-                Detail = string.Format(
-                    CultureInfo.InvariantCulture,
-                    PageLabels.ModelFailed,
-                    code);
-                break;
-        }
+            BrokerModelInstallOutcome.Accepted when residencyDegraded => ModelRunState.ReadyWithLimitations,
+            BrokerModelInstallOutcome.Accepted => ModelRunState.Ready,
+            BrokerModelInstallOutcome.RejectedResidency => ModelRunState.Rejected,
+            BrokerModelInstallOutcome.Cancelled => ModelRunState.Cancelled,
+            _ => ModelRunState.Failed,
+        };
+        OnPropertyChanged(nameof(Detail));
     }
 
     public void NeverReached()
     {
         State = ModelRunState.NotReached;
-        Detail = PageLabels.ModelNotReached;
+        OnPropertyChanged(nameof(Detail));
     }
 
     public void FinishWithoutVerdict(bool cancelled)
@@ -373,13 +415,19 @@ public sealed class ModelRunRow(string tag, int contextTokens) : ObservableObjec
         else if (State == ModelRunState.Working)
         {
             State = cancelled ? ModelRunState.Cancelled : ModelRunState.Unknown;
-            Detail = cancelled ? PageLabels.ModelCancelled : PageLabels.ModelResultUnknown;
+            OnPropertyChanged(nameof(Detail));
         }
     }
 }
 
-public sealed record AgentOption(string Agent, AgentChoice Choice)
+public sealed class AgentOption(string Agent, AgentChoice Choice) : ObservableObject
 {
+    private bool isDetected;
+
+    public string Agent { get; } = Agent;
+
+    public AgentChoice Choice { get; private set; } = Choice;
+
     public string DisplayName => Agent switch
     {
         "claude" => "Claude Code",
@@ -387,7 +435,19 @@ public sealed record AgentOption(string Agent, AgentChoice Choice)
         _ => Agent,
     };
 
-    public bool IsDetected { get; init; }
+    public bool IsDetected
+    {
+        get => isDetected;
+        init => isDetected = value;
+    }
+
+    /// <summary>The page changes a row in place; the row tells its bindings.</summary>
+    internal void Set(AgentChoice choice, bool detected)
+    {
+        Choice = choice;
+        isDetected = detected;
+        AnnounceEverything();
+    }
 
     public string DetectionText => IsDetected
         ? InstallerCulture.Pick("detected", "обнаружено")
