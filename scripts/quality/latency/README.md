@@ -8,6 +8,8 @@ not call Ollama directly, change retention, or claim cloud token savings.
 
 The next experiment measures a [broker query-vector cache](query-cache.md), including
 the cost of validating model identity and four runs with identical search results.
+The [embedding timing diagnostics](embedding-timings.md) then separate backend-reported
+load/total time and cache hits without changing public response contracts.
 
 Build and run from PowerShell (substitute the existing clean corpus and broker paths):
 

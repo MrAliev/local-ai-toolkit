@@ -21,6 +21,7 @@ public sealed class BrokerHost
         Task<IReadOnlyList<ScheduledJobCandidate>>>? _scheduleMetadata;
     private readonly Func<string?> _residentModel;
     private readonly Action<LocalJobRequest, LocalRoutingReceipt?, TimeSpan> _durationObserver;
+    private readonly Action<LocalJobRequest, BrokerExecutionResult>? _resultObserver;
     private readonly Func<CancellationToken, Task> _idleUnload;
     private readonly TimeSpan _idleUnloadAfter;
     private readonly Func<CancellationToken, Task<BackendProbeResult>>? _backendProbe;
@@ -66,7 +67,8 @@ public sealed class BrokerHost
         Func<CancellationToken, Task>? idleUnload = null,
         TimeSpan? idleUnloadAfter = null,
         Func<CancellationToken, Task<BackendProbeResult>>? backendProbe = null,
-        BackendWatchdogPolicy? watchdogPolicy = null)
+        BackendWatchdogPolicy? watchdogPolicy = null,
+        Action<LocalJobRequest, BrokerExecutionResult>? resultObserver = null)
     {
         _queue = queue ?? throw new ArgumentNullException(nameof(queue));
         ArgumentException.ThrowIfNullOrWhiteSpace(workerId);
@@ -82,6 +84,7 @@ public sealed class BrokerHost
         _scheduleMetadata = scheduleMetadata;
         _residentModel = residentModel ?? (() => null);
         _durationObserver = durationObserver ?? ((_, _, _) => { });
+        _resultObserver = resultObserver;
         _idleUnload = idleUnload ?? (_ => Task.CompletedTask);
         _idleUnloadAfter = idleUnloadAfter ?? TimeSpan.Zero;
         _backendProbe = backendProbe;
@@ -385,6 +388,16 @@ public sealed class BrokerHost
                 Report(lease, "duration-observe", exception);
             }
 
+            try
+            {
+                _resultObserver?.Invoke(lease.Request, result);
+            }
+            catch (Exception exception)
+            {
+                // Diagnostics cannot turn a completed answer into a failed job.
+                Report(lease, "result-observe", exception);
+            }
+
             var envelope = new BrokerResponseEnvelope(
                 result.Body,
                 ReceiptFactory.Create(
@@ -620,7 +633,10 @@ public sealed record BrokerExecutionResult(
     JsonElement Body,
     LocalRoutingReceipt? Routing = null,
     long? BackendInputTokens = null,
-    long? BackendOutputTokens = null);
+    long? BackendOutputTokens = null)
+{
+    public EmbeddingBackendTiming? EmbeddingTiming { get; init; }
+}
 
 public sealed record BrokerHostDiagnostic(
     Guid JobId,
