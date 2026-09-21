@@ -285,6 +285,57 @@ public sealed class SearchEmbeddingFallbackTests : IDisposable
             StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task An_already_cancelled_search_does_not_read_a_missing_index()
+    {
+        using var cancelled = new CancellationTokenSource();
+        cancelled.Cancel();
+        using var service = new SearchService(runtimeRoot: Path.Combine(_runtimeRoot, "empty"));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.SearchAsync(
+            "ExactSymbol", _root, new SearchOptions(), cancelled.Token));
+    }
+
+    [Fact]
+    public async Task Repeating_a_query_reads_a_newly_published_generation()
+    {
+        using var service = new SearchService(
+            model => new StubEmbeddingClient(model), runtimeRoot: _runtimeRoot);
+        await service.SearchAsync(
+            "ExactSymbol", _root, new SearchOptions(), TestContext.Current.CancellationToken);
+
+        var changed = Generation("unknown-embedding-model");
+        PublishIndex(changed, CreateIndex(changed));
+
+        var error = await Assert.ThrowsAsync<SearchNotReadyException>(() => service.SearchAsync(
+            "ExactSymbol", _root, new SearchOptions(), TestContext.Current.CancellationToken));
+        Assert.Contains("threshold not calibrated", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Repeating_a_query_rechecks_saved_edits_before_embedding(bool commit)
+    {
+        using var service = new SearchService(
+            model => new StubEmbeddingClient(model), runtimeRoot: _runtimeRoot);
+        var options = new SearchOptions { TopK = 1 };
+        var first = await service.SearchAsync(
+            "ExactSymbol", _root, options, TestContext.Current.CancellationToken);
+        Assert.Single(first.Hits);
+
+        await File.AppendAllTextAsync(Path.Combine(_root, "Alpha.cs"), "changed\r\n",
+            TestContext.Current.CancellationToken);
+        if (commit)
+        {
+            Git("add", ".");
+            Git("commit", "-m", "Changed source");
+        }
+
+        await Assert.ThrowsAsync<SearchNotReadyException>(() => service.SearchAsync(
+            "ExactSymbol", _root, options, TestContext.Current.CancellationToken));
+    }
+
     private SearchService ServiceThrowing(Exception exception) =>
         new(
             model => new ThrowingEmbeddingClient(model, exception),
