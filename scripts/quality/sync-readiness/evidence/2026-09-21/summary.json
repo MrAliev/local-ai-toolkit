@@ -1,0 +1,38 @@
+{
+  "Baseline": "1e14ccc01aa1153e66a2e18fac94a64c647b9b5d",
+  "Scenario": "Warm prebuilt base; active linked worktree; one 96-chunk overlay missing; same shared broker",
+  "Order": [
+    "before-1",
+    "after-1",
+    "after-2",
+    "before-2",
+    "before-3",
+    "after-3"
+  ],
+  "ModelDigest": "9704fd987c12aa746934ea9f99dc85527c83c6e4b98b3a10b94689332ee866bb",
+  "CloudTokenSavings": null,
+  "TokenReason": "Timing experiment; no cloud input/output comparison",
+  "Retrieval": "Active top 5 identical; other top 3 identical. Other fifth hit varies in both groups after re-embedding; all raw results retained.",
+  "Groups": {
+    "before": {
+      "ActiveReadyMedianMs": 28569.2245,
+      "FullMaintenanceMedianMs": 29110.1611,
+      "CliSha256": [
+        "ded05317d1db5797cb5b6b2d34432640dafd3caa3f6078411511d434528975c9"
+      ],
+      "CoreSha256": [
+        "4cdecae4d00ed5f03d588af82fa4f82bab5814f30000f252aa89c1cc5c528912"
+      ]
+    },
+    "after": {
+      "ActiveReadyMedianMs": 1321.5591,
+      "FullMaintenanceMedianMs": 29118.5532,
+      "CliSha256": [
+        "66e9752b1f99053dd4697ab278052182981aae38b7d93ae31a182dfa63d3eaee"
+      ],
+      "CoreSha256": [
+        "2f85a2a2e56b6bf3da74d00746f7ef654b0be082d7ede6c356cc4aa96245f91a"
+      ]
+    }
+  }
+}

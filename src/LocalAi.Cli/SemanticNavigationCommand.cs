@@ -178,7 +178,7 @@ internal static class SemanticNavigationCommand
             workingRoot,
             runtimeRoot);
         var store = new CodeSearch.Core.Indexing.GenerationStore(identity.RepositoryRuntimeRoot);
-        var current = store.ReadCurrent()
+        var current = CodeSearch.Core.Indexing.WorktreeGenerationPublications.ReadCurrent(identity)
             ?? throw new SemanticNavigationNotReadyException(CliText.NoCurrentGeneration);
         var manifest = store.ReadManifest(current.GenerationId);
         var baseIndex = SemanticIndex.Load(store.SemanticIndexPath(current.GenerationId));
@@ -384,7 +384,7 @@ internal static class SemanticNavigationCommand
     {
         var identity = CodeSearch.Core.Indexing.RuntimeIndexLayout.Inspect(root, runtimeRoot);
         var store = new CodeSearch.Core.Indexing.GenerationStore(identity.RepositoryRuntimeRoot);
-        var current = store.ReadCurrent()
+        var current = CodeSearch.Core.Indexing.WorktreeGenerationPublications.ReadCurrent(identity)
             ?? throw new SemanticNavigationNotReadyException(CliText.NoCurrentGeneration);
         var paths = new[]
         {

@@ -261,7 +261,7 @@ public sealed class SearchService : IDisposable
                 requested with { RepositoryId = identity.RepositoryId });
         }
 
-        var indexPath = RepoLocator.IndexPathFor(RepoLocator.ResolveRoot(root).Value, _runtimeRoot);
+        var indexPath = RuntimeIndexLayout.ResolveBaseIndexPath(identity, _runtimeRoot);
         var baseIndex = Load(indexPath);
         var actualSnapshot = new SearchChunkId(
             identity.RepositoryId,
@@ -446,7 +446,7 @@ public sealed class SearchService : IDisposable
     {
         var workingRoot = RepoLocator.ResolveWorkingRoot(root).Value;
         var repositoryRoot = RepoLocator.ResolveRoot(root).Value;
-        var indexPath = RepoLocator.IndexPathFor(repositoryRoot, _runtimeRoot);
+        var indexPath = RepoLocator.IndexPathFor(workingRoot, _runtimeRoot);
         var currentCommit = RepoLocator.GitCommit(workingRoot);
 
         if (!File.Exists(indexPath))

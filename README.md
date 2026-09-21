@@ -107,6 +107,15 @@ The set is **not the same**: some tools exist only here, some only over MCP.
 | `localai telemetry` | a summary of local jobs |
 | `localai update` | update the installation |
 
+`localai sync --root <worktree>` prepares the requested worktree first. `SYNC_BASE`
+reports whether the base is reused; `SYNC_PLAN` lists pending worktrees in processing order,
+and `WORKTREE_PLAN` identifies reused or rebuilt overlays. `ACTIVE_READY` reports when
+the requested tree can use the new generation, separately from the final sync duration.
+Other worktrees continue using the previous generation until their overlays are ready.
+Maintenance continues in the same sync process; do not start another sync while it runs.
+An interrupted run keeps completed worktrees usable and can be restarted. An MCP wait
+timeout alone does not prove that the sync failed: observe `localai repo status --follow`.
+
 `codesearch evaluate --cases …` resolves C# symbol targets to their source declarations
 before querying. Split chunks such as `[1/6]` and `[2/6]` belong to a single target. Use the
 optional `signature` and `namespace` target fields to disambiguate names; signatures that
