@@ -1076,7 +1076,7 @@ To keep a worktree whatever its branch: git worktree lock &lt;path&gt;</value>
   <data name="DocsSelectionConflict" xml:space="preserve"><value>Choose either --limit or --all.</value></data>
   <data name="DocsSourcesChanged" xml:space="preserve"><value>Source files changed after the package was built. Run localai docs build --root {0} again before applying it.</value></data>
   <data name="DocsSubset" xml:space="preserve"><value>Selected subset: up to {0} public types.</value></data>
-  <data name="DocsUsage" xml:space="preserve"><value>Usage: localai docs build --root &lt;repo&gt; [--limit N | --all] [--json]; localai docs apply --root &lt;repo&gt; [--json]</value></data>
+  <data name="DocsUsage" xml:space="preserve"><value>Usage: localai docs build --root &lt;repo&gt; [--limit N | --all] [--standalone-html] [--json]; localai docs apply --root &lt;repo&gt; [--json]</value></data>
   <data name="DocsValidatingType" xml:space="preserve"><value>Checking documentation for {0}.</value></data>
   <data name="DocsRenderingType" xml:space="preserve"><value>Rendering documentation for {0}.</value></data>
   <data name="DocsValidationFailed" xml:space="preserve"><value>Could not prepare documentation for {0}: {1}</value></data>

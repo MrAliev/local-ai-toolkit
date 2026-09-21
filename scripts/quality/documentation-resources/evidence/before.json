@@ -1,0 +1,128 @@
+{
+  "SourceHashes": {
+    "DocumentationPackStore.cs": "ad6089e933f1a3a940dd5a63c610feae9404b47c133c038cdf3f0ed3239eed6c",
+    "DocumentationRenderer.cs": "9291d82abc75cfa5727cd0d9d2bac163b27d9340185040486c8270c896f737e5"
+  },
+  "ModelInvocations": 0,
+  "Corpus": "1/5/12 synthetic public types; deterministic validated draft replay",
+  "Boundary": "logical file lengths, not allocated filesystem clusters; includes manifests/checkpoints/reviews; excludes installed binaries and models; no timing claim",
+  "Rows": [
+    {
+      "Types": 1,
+      "Revision": 1,
+      "Mode": "default",
+      "GeneratorCalls": 1,
+      "StorageBytes": 3128910,
+      "HtmlBytes": 2888355,
+      "ResourceFiles": 0,
+      "ResourceBytes": 0,
+      "AppliedBytes": 3122552,
+      "AppliedResources": 0,
+      "ContentDigest": "167ada0a0d86b755613457685a33588820262f1dcd25bb555b59cf317e1869b2"
+    },
+    {
+      "Types": 1,
+      "Revision": 2,
+      "Mode": "default",
+      "GeneratorCalls": 0,
+      "StorageBytes": 6255900,
+      "HtmlBytes": 5776710,
+      "ResourceFiles": 0,
+      "ResourceBytes": 0,
+      "AppliedBytes": 3122744,
+      "AppliedResources": 0,
+      "ContentDigest": "cf604ec5e3f8809d1db11d0ba055a4ae5f7777d9062d6ae0ccb85908645c18d9"
+    },
+    {
+      "Types": 1,
+      "Revision": 3,
+      "Mode": "default",
+      "GeneratorCalls": 0,
+      "StorageBytes": 9382945,
+      "HtmlBytes": 8665065,
+      "ResourceFiles": 0,
+      "ResourceBytes": 0,
+      "AppliedBytes": 3122799,
+      "AppliedResources": 0,
+      "ContentDigest": "2e53498d3440c37c0ad69dbd14982a9a51158eb9c420f49841ab8dbc197c8c21"
+    },
+    {
+      "Types": 5,
+      "Revision": 1,
+      "Mode": "default",
+      "GeneratorCalls": 5,
+      "StorageBytes": 15634568,
+      "HtmlBytes": 14441775,
+      "ResourceFiles": 0,
+      "ResourceBytes": 0,
+      "AppliedBytes": 15611734,
+      "AppliedResources": 0,
+      "ContentDigest": "6e23ee969a3d3b989f8452ed0c8f7b6660249125579939abfadd0e154a10715a"
+    },
+    {
+      "Types": 5,
+      "Revision": 2,
+      "Mode": "default",
+      "GeneratorCalls": 0,
+      "StorageBytes": 31259500,
+      "HtmlBytes": 28883550,
+      "ResourceFiles": 0,
+      "ResourceBytes": 0,
+      "AppliedBytes": 15612518,
+      "AppliedResources": 0,
+      "ContentDigest": "dc1f258cfdf632f1e73d0ae31a8442e2e6d721c65c59ecbe135deec6b20c6af7"
+    },
+    {
+      "Types": 5,
+      "Revision": 3,
+      "Mode": "default",
+      "GeneratorCalls": 0,
+      "StorageBytes": 46884652,
+      "HtmlBytes": 43325325,
+      "ResourceFiles": 0,
+      "ResourceBytes": 0,
+      "AppliedBytes": 15612738,
+      "AppliedResources": 0,
+      "ContentDigest": "be128d176334536f624914cb9cb50e25ae60a00a0a8842935e15df702f1f3c39"
+    },
+    {
+      "Types": 12,
+      "Revision": 1,
+      "Mode": "default",
+      "GeneratorCalls": 12,
+      "StorageBytes": 37523634,
+      "HtmlBytes": 34660292,
+      "ResourceFiles": 0,
+      "ResourceBytes": 0,
+      "AppliedBytes": 37471946,
+      "AppliedResources": 0,
+      "ContentDigest": "965c93b73552b15d892bbdda02bbb5602d64f31ca6dcdf1e0c90a8e1b5affcac"
+    },
+    {
+      "Types": 12,
+      "Revision": 2,
+      "Mode": "default",
+      "GeneratorCalls": 0,
+      "StorageBytes": 75024444,
+      "HtmlBytes": 69320584,
+      "ResourceFiles": 0,
+      "ResourceBytes": 0,
+      "AppliedBytes": 37474083,
+      "AppliedResources": 0,
+      "ContentDigest": "dc5e63e05b5daf5e74c624f4c53e6e74733c06488796ddac32a85c59ec1b7fe9"
+    },
+    {
+      "Types": 12,
+      "Revision": 3,
+      "Mode": "default",
+      "GeneratorCalls": 0,
+      "StorageBytes": 112525864,
+      "HtmlBytes": 103980876,
+      "ResourceFiles": 0,
+      "ResourceBytes": 0,
+      "AppliedBytes": 37474693,
+      "AppliedResources": 0,
+      "ContentDigest": "2b78cf3278731df8f8f8b774beae4bb2cbed6476cf32a61bf57552bfd67cbb2d"
+    }
+  ]
+}

@@ -13,6 +13,8 @@ public sealed class DocumentationCommandTests
     [InlineData("build --root ignored --limit 0")]
     [InlineData("build --root ignored --limit 2 --all")]
     [InlineData("apply --root ignored --all")]
+    [InlineData("apply --root ignored --standalone-html")]
+    [InlineData("build --root ignored --standalone-html --standalone-html")]
     [InlineData("build --root ignored --unknown")]
     public async Task Invalid_arguments_are_refused_before_any_model_call(string arguments)
     {
@@ -46,6 +48,26 @@ public sealed class DocumentationCommandTests
         Assert.Contains("docs build", MachineOutput.Commands);
         Assert.Contains("docs apply", MachineOutput.Commands);
         Assert.Contains("localai docs build", CliUsage.Text);
+        Assert.Contains("--standalone-html", CliUsage.Text);
+    }
+
+    [Fact]
+    public async Task Standalone_html_flag_reuses_text_and_applies_a_self_contained_page()
+    {
+        using var repo = new DocumentationRepositoryFixture();
+        var output = new StringWriter(); var error = new StringWriter(); var calls = 0;
+        Task<DocumentationDraft> Generate(DocumentationInput input, CancellationToken _) { calls++; return Task.FromResult(Draft(input)); }
+        Assert.Equal(0, await DocumentationCommand.ExecuteAsync(["build", "--root", repo.Root], new(output, error), false,
+            TestContext.Current.CancellationToken, repo.Runtime, Generate));
+        Assert.Equal(0, await DocumentationCommand.ExecuteAsync(["build", "--root", repo.Root, "--standalone-html"], new(output, error), false,
+            TestContext.Current.CancellationToken, repo.Runtime, Generate));
+        Assert.Equal(1, calls);
+        Assert.Equal(0, await DocumentationCommand.ExecuteAsync(["apply", "--root", repo.Root], new(output, error), false,
+            TestContext.Current.CancellationToken, repo.Runtime));
+        var html = File.ReadAllText(Assert.Single(Directory.GetFiles(repo.Root, "page.en.html", SearchOption.AllDirectories)));
+        Assert.Contains("data:font/ttf;base64,", html);
+        Assert.Contains("data:image/png;base64,", html);
+        Assert.Empty(Directory.GetFiles(repo.Root, "*.css", SearchOption.AllDirectories));
     }
 
     [Fact]
@@ -67,7 +89,7 @@ public sealed class DocumentationCommandTests
         Assert.Equal(0, await DocumentationCommand.ExecuteAsync(["apply", "--root", repo.Root], new(output, error), true,
             TestContext.Current.CancellationToken, repo.Runtime));
         using var applied = JsonDocument.Parse(output.ToString());
-        Assert.Equal(9, applied.RootElement.GetProperty("data").GetProperty("copied").GetInt32());
+        Assert.Equal(10, applied.RootElement.GetProperty("data").GetProperty("copied").GetInt32());
         Assert.Empty(applied.RootElement.GetProperty("data").GetProperty("skipped").EnumerateArray());
     }
 

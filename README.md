@@ -805,6 +805,7 @@ the log of what installs did to this machine.
 lai localai docs build --root R:\YourRepo           # up to 5 public C# types
 lai localai docs build --root R:\YourRepo --limit 20
 lai localai docs build --root R:\YourRepo --all
+lai localai docs build --root R:\YourRepo --standalone-html
 ```
 
 The semantic index must match the source files; run `lai localai sync --root R:\YourRepo`
@@ -818,6 +819,16 @@ Git/index freshness checks still cover the worktree; `--limit` does not bypass t
 Build writes under the runtime's `repositories/<repository-id>/documentation` directory,
 outside the worktree. The identity is the same Git common-directory identity used by the index.
 Each unit contains EN/RU Markdown, HTML and PDF, SVG/PNG diagrams, and third-party notices.
+By default HTML pages share one content-addressed stylesheet in `artifacts/_assets` with
+both fonts embedded as data URLs, avoiding cross-file font requests when opened locally.
+One copy serves every unit and retained package. `docs apply` copies this resource once
+to `docs/generated/_assets`, preserving relative links. Keep this directory with the pages.
+Use `--standalone-html` to embed fonts, the diagram and license notices in each HTML page
+for copying individually; the link to the other language still needs that other page.
+Changing this option rerenders validated text without another model call. Resource hashes
+are checked before apply, and edited destination stylesheets are preserved and reported like
+other manual edits. A build can repair a missing or damaged runtime stylesheet from bundled resources.
+Retention of old packages and artifacts is still pending in #623; this change deletes none.
 Open `index.en.html` or `index.ru.html` in the printed package directory: changes and their
 reasons, failures with the fate of the previous document, a reuse count, and the contents.
 Review the prose and translation for meaning; automatic checks prove references and syntax.

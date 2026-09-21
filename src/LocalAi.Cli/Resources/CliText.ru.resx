@@ -1078,7 +1078,7 @@
   <data name="DocsSelectionConflict" xml:space="preserve"><value>Укажите либо --limit, либо --all.</value></data>
   <data name="DocsSourcesChanged" xml:space="preserve"><value>Исходники изменились после сборки пакета. Перед применением снова выполните localai docs build --root {0}.</value></data>
   <data name="DocsSubset" xml:space="preserve"><value>Выбран поднабор: до {0} публичных типов.</value></data>
-  <data name="DocsUsage" xml:space="preserve"><value>Использование: localai docs build --root &lt;repo&gt; [--limit N | --all] [--json]; localai docs apply --root &lt;repo&gt; [--json]</value></data>
+  <data name="DocsUsage" xml:space="preserve"><value>Использование: localai docs build --root &lt;repo&gt; [--limit N | --all] [--standalone-html] [--json]; localai docs apply --root &lt;repo&gt; [--json]</value></data>
   <data name="DocsValidatingType" xml:space="preserve"><value>Проверяется документация для {0}.</value></data>
   <data name="DocsRenderingType" xml:space="preserve"><value>Формируется документ для {0}.</value></data>
   <data name="DocsValidationFailed" xml:space="preserve"><value>Не удалось подготовить документацию для {0}: {1}</value></data>

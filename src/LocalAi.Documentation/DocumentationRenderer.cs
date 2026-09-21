@@ -13,7 +13,7 @@ namespace LocalAi.Documentation;
 
 public static class DocumentationRenderer
 {
-    public const string CacheVersion = "documentation-renderer-1";
+    public const string CacheVersion = "documentation-renderer-2";
     private static readonly Lock PdfGate = new();
     private static readonly MarkdownPipeline Markdown = new MarkdownPipelineBuilder().DisableHtml().Build();
     private sealed record Block(string Text, int Heading = 0, bool Code = false, bool Diagram = false);
@@ -26,8 +26,10 @@ public static class DocumentationRenderer
     }
 
     // Both callers validate immediately before this method; the store also validates cached text.
-    internal static IReadOnlyDictionary<string, byte[]> RenderValidated(DocumentationInput input, DocumentationDraft draft)
+    internal static IReadOnlyDictionary<string, byte[]> RenderValidated(DocumentationInput input, DocumentationDraft draft,
+        DocumentationHtmlMode htmlMode = DocumentationHtmlMode.Standalone)
     {
+        if (!Enum.IsDefined(htmlMode)) throw new ArgumentOutOfRangeException(nameof(htmlMode));
         var (svg, png) = DocumentationDiagram.Render(input);
         var pack = new Dictionary<string, byte[]>(StringComparer.Ordinal) { ["diagram.svg"] = svg, ["diagram.png"] = png,
             ["LICENSES.txt"] = DocumentationFonts.Read("NOTICES.txt") };
@@ -41,11 +43,16 @@ public static class DocumentationRenderer
                 "\n\n[LICENSES.txt](LICENSES.txt)\n";
             pack[$"page.{language}.md"] = Encoding.UTF8.GetBytes(markdown);
             var htmlBody = Markdig.Markdown.ToHtml(markdown.Replace($"page.{opposite}.md", $"page.{opposite}.html", StringComparison.Ordinal), Markdown);
-            var font = Convert.ToBase64String(DocumentationFonts.Read("NotoSans-Regular.ttf"));
-            var mono = Convert.ToBase64String(DocumentationFonts.Read("NotoSansMono-Regular.ttf"));
+            if (htmlMode == DocumentationHtmlMode.Standalone)
+            {
+                htmlBody = htmlBody.Replace("src=\"diagram.svg\"", "src=\"data:image/png;base64," + Convert.ToBase64String(png) + "\"", StringComparison.Ordinal);
+                htmlBody = htmlBody.Replace("<p><a href=\"LICENSES.txt\">LICENSES.txt</a></p>",
+                    "<details><summary>LICENSES.txt</summary><pre>" + WebUtility.HtmlEncode(Encoding.UTF8.GetString(pack["LICENSES.txt"])) + "</pre></details>", StringComparison.Ordinal);
+            }
             var html = "<!doctype html><html lang=\"" + language + "\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">" +
-                "<title>" + WebUtility.HtmlEncode(input.Name) + "</title><style>" +
-                "@font-face{font-family:Doc;src:url(data:font/ttf;base64," + font + ")}@font-face{font-family:DocMono;src:url(data:font/ttf;base64," + mono + ")}" +
+                "<title>" + WebUtility.HtmlEncode(input.Name) + "</title>" +
+                (htmlMode == DocumentationHtmlMode.Shared ? "<link rel=\"stylesheet\" href=\"../_assets/" + DocumentationHtmlResources.Name + "\">" : "") +
+                "<style>" + (htmlMode == DocumentationHtmlMode.Standalone ? DocumentationHtmlResources.Css : "") +
                 "body{font:16px/1.6 Doc,sans-serif;color:#13233a;background:#fff;max-width:960px;margin:48px auto;padding:0 24px;overflow-wrap:anywhere}" +
                 "h1,h2{line-height:1.2;margin-top:1.8em}pre{white-space:pre-wrap;background:#eef3fa;padding:18px}code{font-family:DocMono,monospace}img{max-width:100%;height:auto}a{color:#164b94}" +
                 "</style></head><body>" + htmlBody + "</body></html>";
