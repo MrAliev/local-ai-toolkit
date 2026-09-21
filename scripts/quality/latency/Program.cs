@@ -69,6 +69,8 @@ sealed class Sample
     public double AfterEmbeddingMs { get; set; }
     public double TotalMs { get; set; }
     public double IdentityMs { get; set; }
+    public double IdentityQueueMs { get; set; }
+    public double IdentityExecutionMs { get; set; }
     public bool CacheHit { get; set; }
     public double? QueueMs { get; set; }
     public double? ExecutionMs { get; set; }
@@ -88,6 +90,8 @@ sealed class ProbeClient(string model, IBrokerClient broker, Sample sample, bool
         {
             var request = LocalJobRequestFactory.CreateNativeOllama("latency:identity:" + Guid.NewGuid(), LocalJobPriority.Interactive, NativeOllamaOperation.Tags, null);
             var result = await broker.ExecuteAsync<NativeOllamaJobOutput>(request, cancellationToken);
+            sample.IdentityQueueMs += result.Receipt.QueueDuration.TotalMilliseconds;
+            sample.IdentityExecutionMs += result.Receipt.ExecutionDuration.TotalMilliseconds;
             return result.Value.Response.GetProperty("models").EnumerateArray()
                 .Where(entry => entry.GetProperty("name").GetString() == model)
                 .Select(entry => entry.GetProperty("digest").GetString()).SingleOrDefault();

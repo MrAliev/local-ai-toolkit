@@ -1,0 +1,85 @@
+{
+  "measuredImplementation": "be7e74118bf10df1345e92e7e7130ed44be9bf6f; metadata receipts probe",
+  "installedBrokerVersion": "f10ff0ec19a5",
+  "brokerSha256": "47783cbe95c2c0bcb557eed9c7a693ab89762b2c88862d6bffaa24a6214564d0",
+  "model": "qwen3-embedding:8b-q8_0",
+  "corpusSha256": "0990bd3f1e0c1041c7c633913126b3de57adb8a3d7d413180c905eb43d5cf994",
+  "sourceCommit": "2a9b6285b7a7bbecf2c826ae41d3bdd53aabf94e",
+  "sourceTree": "4d6f312ef41ca1372a3816738ab9afaa5a1e5ec5",
+  "measurementBoundary": "Identity receipt queue and execution durations are nested within identityMs, itself within embeddingMs. Misses sum two identity jobs; cache hits have one. No concurrent inference or indexing.",
+  "conclusion": "The installed broker treats native metadata as a model switch and opens a 2-second gather window. The candidate removes that window for Tags, Show, Processes and ListModels. Post-change policy decisions are tested with a controlled clock; this artifact is NOT a post-change live latency measurement. The installed runtime was not replaced.",
+  "samples": [
+    {
+      "id": "cs-weight-en",
+      "pass": 0,
+      "cacheHit": false,
+      "totalMs": 10067.3463,
+      "identityMs": 4464.656,
+      "identityQueueMs": 4362.165300000001,
+      "identityExecutionMs": 10.975200000000001
+    },
+    {
+      "id": "cs-weight-ru",
+      "pass": 0,
+      "cacheHit": false,
+      "totalMs": 4899.3415,
+      "identityMs": 4471.6579,
+      "identityQueueMs": 4389.9174,
+      "identityExecutionMs": 10.446100000000001
+    },
+    {
+      "id": "cs-volume-en",
+      "pass": 0,
+      "cacheHit": false,
+      "totalMs": 4806.3348,
+      "identityMs": 4462.1934,
+      "identityQueueMs": 4381.3886999999995,
+      "identityExecutionMs": 9.589300000000001
+    },
+    {
+      "id": "cs-volume-ru",
+      "pass": 0,
+      "cacheHit": false,
+      "totalMs": 4790.4637,
+      "identityMs": 4473.417100000001,
+      "identityQueueMs": 4315.722,
+      "identityExecutionMs": 9.539100000000001
+    },
+    {
+      "id": "cs-weight-en",
+      "pass": 1,
+      "cacheHit": true,
+      "totalMs": 2419.3084,
+      "identityMs": 2232.5925,
+      "identityQueueMs": 2189.8507,
+      "identityExecutionMs": 5.2402
+    },
+    {
+      "id": "cs-weight-ru",
+      "pass": 1,
+      "cacheHit": true,
+      "totalMs": 2425.4118,
+      "identityMs": 2232.649,
+      "identityQueueMs": 2209.0986,
+      "identityExecutionMs": 5.2371
+    },
+    {
+      "id": "cs-volume-en",
+      "pass": 1,
+      "cacheHit": true,
+      "totalMs": 2433.7882,
+      "identityMs": 2229.7982,
+      "identityQueueMs": 2213.2736,
+      "identityExecutionMs": 5.6174
+    },
+    {
+      "id": "cs-volume-ru",
+      "pass": 1,
+      "cacheHit": true,
+      "totalMs": 2427.1845,
+      "identityMs": 2236.1226,
+      "identityQueueMs": 2219.2872,
+      "identityExecutionMs": 4.0572
+    }
+  ]
+}
