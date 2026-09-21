@@ -88,7 +88,7 @@
                                   DataContext="{Binding Presentation}" />
 
             <StackPanel Grid.Row="1" Margin="0,0,0,12">
-                <TextBlock Text="{Binding StepTitle}" Style="{StaticResource PageTitle}" />
+                <local:LiveStatusText Text="{Binding StepTitle}" Style="{StaticResource PageTitle}" />
                 <TextBlock Text="{Binding StepDescription}" Style="{StaticResource Muted}" Margin="0,4,0,0" />
                 <TextBlock Text="{Binding StepStatus}" Style="{StaticResource Muted}" FontSize="11" Margin="0,6,0,0" />
                 <Border Background="{DynamicResource ErrFill}" BorderBrush="{DynamicResource ErrLine}" BorderThickness="1" CornerRadius="3"
@@ -265,7 +265,7 @@
                                 </Style.Triggers>
                             </Style>
                         </StackPanel.Style>
-                        <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" Margin="0,0,0,12" />
+                        <local:LiveStatusText Text="{Binding Summary}" TextWrapping="Wrap" Margin="0,0,0,12" />
                         <WrapPanel Margin="0,0,0,12">
                             <Button Content="{vm:Label CopyRemovalReport}" Click="OnCopyReport" Margin="0,0,8,4" Padding="12,4" />
                             <Button Content="{vm:Label SaveRemovalReport}" Click="OnSaveReport" Margin="0,0,8,4" Padding="12,4" />

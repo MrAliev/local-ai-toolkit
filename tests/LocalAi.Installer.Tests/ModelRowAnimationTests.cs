@@ -57,6 +57,7 @@ public sealed class ModelRowAnimationTests
             new XAttribute(XNamespace.Xmlns + "x", xaml),
             new XAttribute(XNamespace.Xmlns + "vm",
                 "clr-namespace:LocalAi.Installer.ViewModels;assembly=LocalAi.Installer"),
+            new XAttribute(XNamespace.Xmlns + "local", "clr-namespace:LocalAi.Installer;assembly=LocalAi.Installer"),
             new XElement(presentation + "ResourceDictionary.MergedDictionaries",
                 new XElement(presentation + "ResourceDictionary", new XAttribute("Source",
                     "/LocalAi.Installer;component/Themes/Light.xaml")),
@@ -65,8 +66,7 @@ public sealed class ModelRowAnimationTests
             new XElement(styleMarkup));
         var resources = (ResourceDictionary)XamlReader.Parse(dictionaryMarkup.ToString());
         var style = (Style)resources["RowMark"];
-        var busy = style.Triggers.OfType<DataTrigger>()
-            .Single(trigger => Equals(trigger.Value, RunMark.Busy));
+        var busy = style.Triggers.OfType<MultiDataTrigger>().Single();
         var spinner = ((BeginStoryboard)busy.EnterActions[0]).Storyboard;
         var wizard = new InstallerWizardViewModel();
         wizard.ApplyModelStep(Step("first", ModelProvisioningPhase.Planned));
@@ -75,6 +75,8 @@ public sealed class ModelRowAnimationTests
         panel.Resources.MergedDictionaries.Add(resources);
         var first = Mark(wizard.ModelRuns[0]);
         var second = Mark(wizard.ModelRuns[1]);
+        MotionPreference.SetEnabled(first, true);
+        MotionPreference.SetEnabled(second, true);
         panel.Children.Add(first);
         panel.Children.Add(second);
         // A hidden native surface loads the real WPF style without opening the installer or
@@ -90,6 +92,15 @@ public sealed class ModelRowAnimationTests
         wizard.ApplyModelStep(Step("second", ModelProvisioningPhase.Checking));
         DrainDispatcher();
         Assert.Equal(ClockState.Active, spinner.GetCurrentState(first));
+        Assert.Equal(ClockState.Active, spinner.GetCurrentState(second));
+
+        MotionPreference.SetEnabled(second, false);
+        DrainDispatcher();
+        Assert.Equal(ClockState.Stopped, spinner.GetCurrentState(second));
+        Assert.Equal(RunMark.Busy, wizard.ModelRuns[1].Mark);
+        Assert.False(string.IsNullOrWhiteSpace(wizard.ModelRuns[1].Detail));
+        MotionPreference.SetEnabled(second, true);
+        DrainDispatcher();
         Assert.Equal(ClockState.Active, spinner.GetCurrentState(second));
 
         wizard.ApplyModelStep(Step("first", verdict) with { ResidencyDegraded = residencyDegraded });
@@ -110,9 +121,11 @@ public sealed class ModelRowAnimationTests
     private static void DrainDispatcher()
     {
         var frame = new DispatcherFrame();
-        Dispatcher.CurrentDispatcher.BeginInvoke(
+        EventHandler rendered = (_, _) => Dispatcher.CurrentDispatcher.BeginInvoke(
             DispatcherPriority.ApplicationIdle, new Action(() => frame.Continue = false));
-        Dispatcher.PushFrame(frame);
+        CompositionTarget.Rendering += rendered;
+        try { Dispatcher.PushFrame(frame); }
+        finally { CompositionTarget.Rendering -= rendered; }
     }
 
     private static ModelProvisioningProgress Step(string model, ModelProvisioningPhase phase) =>
