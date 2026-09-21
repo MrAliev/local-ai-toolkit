@@ -6,6 +6,9 @@ This diagnostic compares `SearchService.SearchAsync` over the independent evalua
 corpus. It uses the shared LocalAi broker and the installed residency policy. It does
 not call Ollama directly, change retention, or claim cloud token savings.
 
+The next experiment measures a [broker query-vector cache](query-cache.md), including
+the cost of validating model identity and four runs with identical search results.
+
 Build and run from PowerShell (substitute the existing clean corpus and broker paths):
 
 ```powershell
