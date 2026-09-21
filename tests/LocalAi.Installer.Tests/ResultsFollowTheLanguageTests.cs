@@ -146,12 +146,13 @@ public sealed class ResultsFollowTheLanguageTests : IDisposable
         Assert.True(await wizard.MoveNextAsync(TestContext.Current.CancellationToken));
         wizard.IsConfirmed = true;
         Assert.False(await wizard.RunAsync(TestContext.Current.CancellationToken));
-        Assert.Equal("Nothing was removed.", wizard.Report);
+        Assert.StartsWith("Nothing was removed.", wizard.Report, StringComparison.Ordinal);
+        Assert.True(wizard.HasReportPath);
         var refusal = wizard.Summary;
 
         presentation.ChooseLanguage(InstallerLanguage.Russian);
 
-        Assert.Equal("Ничего не удалено.", wizard.Report);
+        Assert.StartsWith("Ничего не удалено.", wizard.Report, StringComparison.Ordinal);
         Assert.Equal("Отказано", wizard.ProgressText);
         Assert.NotEqual(refusal, wizard.Summary);
         Assert.StartsWith("Ничего не удалено.", wizard.Summary, StringComparison.Ordinal);
@@ -173,7 +174,7 @@ public sealed class ResultsFollowTheLanguageTests : IDisposable
         presentation.ChooseLanguage(InstallerLanguage.Russian);
 
         Assert.StartsWith("Не удалось удалить: 1;", wizard.Summary, StringComparison.Ordinal);
-        Assert.Contains("Не удалось удалить " + Path.Combine(machine.Runtime, "jobs"), wizard.Report, StringComparison.Ordinal);
+        Assert.Contains("Не удалось удалить (возможны частичные изменения): " + Path.Combine(machine.Runtime, "jobs"), wizard.Report, StringComparison.Ordinal);
         Assert.Equal("Завершено с проблемами", wizard.ProgressText);
     }
 

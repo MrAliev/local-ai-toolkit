@@ -74,11 +74,14 @@ public sealed class UninstallWizardViewModel : ObservableObject
 
     /// <summary>How the run ended and what it left, kept as facts so the finish page can be reworded.</summary>
     private RunEnd runEnd;
-    private UninstallPlan? ranPlan;
     private UninstallOutcome? outcome;
     private string? refusal;
     private string? removalJournalPath;
     private Exception? failure;
+    private IReadOnlyList<RemovalReportEntry> reportEntries = [];
+    private string? reportPath;
+    private string? reportSaveError;
+    private string? journalError;
 
     /// <summary>
     /// <paramml name="preset"/> is where the page opens: a clean reinstall arrives here on the
@@ -330,12 +333,22 @@ public sealed class UninstallWizardViewModel : ObservableObject
         _ => string.Empty,
     };
 
-    public string Report => runEnd switch
-    {
-        RunEnd.Finished => BuildReport(ranPlan!, outcome!),
-        RunEnd.Refused => InstallerCulture.Pick("Nothing was removed.", "Ничего не удалено."),
-        _ => string.Empty,
-    };
+    public IReadOnlyList<RunResultRow> Results => reportEntries.Select(RemovalReportPresentation.Row).ToArray();
+
+    public string Report =>
+        (runEnd == RunEnd.Refused ? InstallerCulture.Pick("Nothing was removed.\n", "Ничего не удалено.\n") : string.Empty) +
+        string.Join(Environment.NewLine, reportEntries.Select(RemovalReportPresentation.Line));
+
+    public string? ReportPath => reportPath;
+    public bool HasReportPath => reportPath is not null && File.Exists(reportPath);
+    public bool HasReport => runEnd != RunEnd.NotRun;
+    public bool HasReportSaveError => reportSaveError is not null;
+    public string ReportSaveError => reportSaveError is null ? string.Empty : string.Format(
+        InstallerCulture.Pick("Could not save the report: {0}. Copy the details below.",
+            "Не удалось сохранить отчёт: {0}. Скопируйте сведения ниже."), reportSaveError);
+    public string ReportText => Summary + Environment.NewLine + Environment.NewLine + Report +
+        (removalJournalPath is null ? string.Empty : Environment.NewLine + "Journal: " + removalJournalPath) +
+        (journalError is null ? string.Empty : Environment.NewLine + "Journal error: " + journalError);
 
     public int Progress => progress;
 
@@ -535,7 +548,9 @@ public sealed class UninstallWizardViewModel : ObservableObject
         CloseRequested?.Invoke(this, EventArgs.Empty);
     }
 
-    public async Task<bool> RunAsync(CancellationToken cancellationToken = default)
+    public async Task<bool> RunAsync(
+        CancellationToken cancellationToken = default,
+        IProgress<UninstallProgress>? progressObserver = null)
     {
         if (!CanRun || confirmedPlan is not { } plan)
         {
@@ -547,6 +562,15 @@ public sealed class UninstallWizardViewModel : ObservableObject
         isRunning = true;
         isComplete = false;
         hasRunError = false;
+        reportEntries = [];
+        reportPath = null;
+        reportSaveError = null;
+        journalError = null;
+        removalJournalPath = null;
+        failure = null;
+        refusal = null;
+        outcome = null;
+        var acceptingProgress = true;
         CurrentPage = UninstallPage.Progress;
         SetProgress(
             0,
@@ -555,6 +579,7 @@ public sealed class UninstallWizardViewModel : ObservableObject
         InstallerRunJournal? journal = null;
         try
         {
+            ValidateReportDirectory(LogDirectory);
             journal = InstallerRunJournal.Start(LogDirectory);
             removalJournalPath = journal.JournalPath;
             var result = await new UninstallRunner(layout, processRunner)
@@ -562,14 +587,17 @@ public sealed class UninstallWizardViewModel : ObservableObject
                     plan,
                     journal,
                     linked.Token,
-                    new Progress<UninstallProgress>(step =>
-                        SetProgress(step.Percent, step.Text)));
+                    new ObservedProgress(
+                        new Progress<UninstallProgress>(step =>
+                        {
+                            if (acceptingProgress) SetProgress(step.Percent, step.Text);
+                        }),
+                        progressObserver));
             hasRunError = !result.Succeeded;
             isComplete = result.Succeeded;
-            journal.Finish(result.Succeeded
+            FinishJournal(journal, result.Succeeded
                 ? InstallerRunOutcome.Completed
                 : InstallerRunOutcome.Failed);
-            ranPlan = plan;
             outcome = result;
             runEnd = RunEnd.Finished;
             SetProgress(100, result.Succeeded ? ProgressWord.Completed : ProgressWord.FinishedWithProblems);
@@ -578,7 +606,7 @@ public sealed class UninstallWizardViewModel : ObservableObject
         }
         catch (OperationCanceledException)
         {
-            journal?.Finish(InstallerRunOutcome.Cancelled);
+            FinishJournal(journal, InstallerRunOutcome.Cancelled);
             hasRunError = true;
             runEnd = RunEnd.Cancelled;
             SetProgress(progress, ProgressWord.Cancelled);
@@ -589,7 +617,7 @@ public sealed class UninstallWizardViewModel : ObservableObject
         {
             // The run stopped before touching anything, which is the one failure worth
             // stating as its own outcome: the machine is exactly as it was.
-            journal?.Finish(InstallerRunOutcome.Failed);
+            FinishJournal(journal, InstallerRunOutcome.Failed);
             hasRunError = true;
             runEnd = RunEnd.Refused;
             refusal = refused.Message;
@@ -599,7 +627,7 @@ public sealed class UninstallWizardViewModel : ObservableObject
         }
         catch (Exception exception)
         {
-            journal?.Finish(InstallerRunOutcome.Failed);
+            FinishJournal(journal, InstallerRunOutcome.Failed);
             hasRunError = true;
             runEnd = RunEnd.Failed;
             failure = exception;
@@ -609,6 +637,18 @@ public sealed class UninstallWizardViewModel : ObservableObject
         }
         finally
         {
+            acceptingProgress = false;
+            reportEntries = UninstallReport.Capture(plan, journal?.Snapshot, layout);
+            if (outcome is { } completed)
+            {
+                var additional = completed.Failures.Where(item => !reportEntries.Any(entry =>
+                    entry.Target == item.Path && entry.State == RemovalReportState.Failed))
+                    .Select(item => new RemovalReportEntry(item.Path, RemovalReportKind.Other,
+                        RemovalReportState.Failed, item.Reason));
+                reportEntries = [.. reportEntries, .. additional];
+            }
+
+            SaveReport(Path.Combine(LogDirectory, $"uninstall-{journal?.Snapshot.RunId ?? Guid.NewGuid():N}.txt"));
             journal?.Dispose();
             isRunning = false;
             runCancellation = null;
@@ -621,6 +661,83 @@ public sealed class UninstallWizardViewModel : ObservableObject
         unexpected = exception;
         OnPropertyChanged(nameof(UnexpectedError));
         OnPropertyChanged(nameof(HasUnexpectedError));
+    }
+
+    private void FinishJournal(InstallerRunJournal? journal, InstallerRunOutcome result)
+    {
+        try
+        {
+            journal?.Finish(result);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            journalError = exception.Message;
+        }
+    }
+
+    public bool SaveReport(string destination)
+    {
+        try
+        {
+            var fullPath = Path.GetFullPath(destination);
+            var directory = Path.GetDirectoryName(fullPath)!;
+            ValidateReportDirectory(directory);
+            Directory.CreateDirectory(directory);
+            var temporary = Path.Combine(directory, ".uninstall-report-" + Guid.NewGuid().ToString("N") + ".tmp");
+            try
+            {
+                File.WriteAllText(temporary, ReportText, new UTF8Encoding(false));
+                File.Move(temporary, fullPath, overwrite: true);
+            }
+            finally
+            {
+                if (File.Exists(temporary)) File.Delete(temporary);
+            }
+            reportPath = fullPath;
+            reportSaveError = null;
+            RefreshAll();
+            return true;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or
+            NotSupportedException or ArgumentException)
+        {
+            reportSaveError = exception.Message;
+            RefreshAll();
+            return false;
+        }
+    }
+
+    private void ValidateReportDirectory(string directory)
+    {
+        var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(layout.Root));
+        var full = Path.TrimEndingDirectorySeparator(Path.GetFullPath(directory));
+        if (full.Equals(root, StringComparison.OrdinalIgnoreCase) ||
+            full.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new IOException(InstallerCulture.Pick(
+                "Choose a report folder outside the LocalAi runtime being removed.",
+                "Выберите папку отчётов вне удаляемого runtime LocalAi."));
+        }
+
+        for (var ancestor = new DirectoryInfo(full); ancestor is not null; ancestor = ancestor.Parent)
+        {
+            if (ancestor.Exists && (ancestor.Attributes & FileAttributes.ReparsePoint) != 0)
+            {
+                throw new IOException(InstallerCulture.Pick(
+                    "Choose a report folder without directory links.", "Выберите папку отчётов без ссылок на каталоги."));
+            }
+        }
+    }
+
+    private sealed class ObservedProgress(
+        IProgress<UninstallProgress> display,
+        IProgress<UninstallProgress>? observer) : IProgress<UninstallProgress>
+    {
+        public void Report(UninstallProgress value)
+        {
+            display.Report(value);
+            observer?.Report(value);
+        }
     }
 
     /// <summary>The choices as the core understands them.</summary>
@@ -737,46 +854,6 @@ public sealed class UninstallWizardViewModel : ObservableObject
         return summary.ToString();
     }
 
-    private static string BuildReport(UninstallPlan plan, UninstallOutcome outcome)
-    {
-        // Unlike the installation run's report, this one is never written to a file: it is
-        // bound to a read-only box on the finish page and nothing else. There is no English
-        // journal for it to match, and its own "Kept:" lines already carry text the planner
-        // translated — so leaving the labels English produced half a sentence in each language.
-        var log = new StringBuilder();
-        foreach (var path in outcome.RemovedPaths)
-        {
-            log.AppendLine(InstallerCulture.Pick("Removed ", "Удалено ") + path);
-        }
-
-        foreach (var path in outcome.RewrittenConfigurations)
-        {
-            log.AppendLine(InstallerCulture.Pick("Updated ", "Обновлено ") + path);
-        }
-
-        foreach (var hook in outcome.RemovedHooks)
-        {
-            log.AppendLine(InstallerCulture.Pick("Removed hook ", "Удалён хук ") + hook);
-        }
-
-        foreach (var failure in outcome.Failures)
-        {
-            log.AppendLine(
-                InstallerCulture.Pick("Could not remove ", "Не удалось удалить ") +
-                failure.Path + ": " + failure.Reason);
-        }
-
-        // Repeated on the last page rather than only on the review page: the prerequisites and
-        // the models are the part a person goes looking for afterwards.
-        foreach (var notice in plan.Retained)
-        {
-            log.AppendLine(
-                InstallerCulture.Pick("Kept: ", "Оставлено: ") +
-                notice.Title + " — " + notice.Detail);
-        }
-
-        return log.ToString().Trim();
-    }
 
     private void SetProgress(int value, string text)
     {
@@ -844,6 +921,8 @@ public sealed class UninstallWizardViewModel : ObservableObject
                      nameof(Report), nameof(BlockingNotice), nameof(IsBlocked),
                      nameof(CanContinueToInstall), nameof(KeepNotice),
                      nameof(HasKeepNotice), nameof(PreviewText),
+                     nameof(Results), nameof(ReportPath), nameof(HasReportPath), nameof(HasReport),
+                     nameof(ReportSaveError), nameof(HasReportSaveError), nameof(ReportText),
                  })
         {
             OnPropertyChanged(name);
