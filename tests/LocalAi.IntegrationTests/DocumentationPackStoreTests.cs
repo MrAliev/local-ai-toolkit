@@ -9,6 +9,125 @@ namespace LocalAi.IntegrationTests;
 
 public sealed class DocumentationPackStoreTests
 {
+    [Fact]
+    public async Task Changing_html_mode_rerenders_without_generation_and_keeps_the_old_pack_readable()
+    {
+        using var fixture = new Fixture();
+        var shared = await fixture.Build();
+        var standalone = new DocumentationPackStore(fixture.Runtime, new string('a', 64), "fixture-1", htmlMode: DocumentationHtmlMode.Standalone);
+        var changed = await fixture.Build(store: standalone);
+        Assert.Equal(1, fixture.Calls);
+        Assert.Contains("renderer", changed.Units[0].Reasons);
+        Assert.NotEqual(shared.Units[0].ArtifactId, changed.Units[0].ArtifactId);
+        Assert.Equal(1, (await fixture.Build(store: standalone)).Reused);
+        Assert.Equal(9, standalone.Apply(fixture.Worktree, "tree").Copied);
+        Assert.Empty(Directory.GetFiles(fixture.Worktree, "*.css", SearchOption.AllDirectories));
+        var html = File.ReadAllText(Assert.Single(Directory.GetFiles(fixture.Worktree, "page.en.html", SearchOption.AllDirectories)));
+        Assert.Contains("data:font/ttf;base64,", html);
+        Assert.Contains("data:image/png;base64,", html);
+        var restored = await fixture.Build();
+        Assert.Equal(1, fixture.Calls);
+        Assert.Equal(0, restored.Failed);
+        Assert.Single(Directory.GetFiles(fixture.Runtime, "*.css", SearchOption.AllDirectories));
+        var originalPage = Path.Combine(shared.PackagePath, "..", "..", "artifacts", shared.Units[0].ArtifactId!, "page.en.html");
+        foreach (System.Text.RegularExpressions.Match font in System.Text.RegularExpressions.Regex.Matches(File.ReadAllText(originalPage), @"href=""(\.\./_assets/[a-f0-9]{64}\.css)"""))
+            Assert.True(File.Exists(Path.Combine(Path.GetDirectoryName(originalPage)!, font.Groups[1].Value)));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Damaged_shared_font_refuses_apply_before_writes_and_build_repairs_without_generation(bool missing)
+    {
+        using var fixture = new Fixture();
+        await fixture.Build();
+        var font = Directory.GetFiles(fixture.Runtime, "*.css", SearchOption.AllDirectories)[0];
+        var original = File.ReadAllBytes(font);
+        if (missing) File.Delete(font); else File.WriteAllText(font, "corrupt");
+        var error = Assert.Throws<DocumentationValidationException>(() => fixture.Store.Apply(fixture.Worktree, "tree"));
+        Assert.Contains("artifact_corrupt", error.Errors);
+        Assert.Empty(Directory.GetFiles(fixture.Worktree, "*", SearchOption.AllDirectories));
+        Assert.Equal(0, (await fixture.Build()).Failed);
+        Assert.Equal(1, fixture.Calls);
+        Assert.Equal(original, File.ReadAllBytes(font));
+        Assert.Equal(10, fixture.Store.Apply(fixture.Worktree, "tree").Copied);
+    }
+
+    [Fact]
+    public async Task Apply_preserves_a_hand_edited_shared_font_and_reports_its_path()
+    {
+        using var fixture = new Fixture();
+        await fixture.Build();
+        fixture.Store.Apply(fixture.Worktree, "tree");
+        var font = Directory.GetFiles(fixture.Worktree, "*.css", SearchOption.AllDirectories)[0];
+        File.WriteAllText(font, "manual edit");
+        var report = fixture.Store.Apply(fixture.Worktree, "tree");
+        Assert.Equal(font, Assert.Single(report.Skipped));
+        Assert.Equal("manual edit", File.ReadAllText(font));
+        Assert.Equal(0, report.Copied);
+        Assert.Equal(9, report.Unchanged);
+    }
+
+    [Theory]
+    [InlineData("../outside.css")]
+    [InlineData("/outside.css")]
+    [InlineData("wrong.css")]
+    public async Task Resource_manifest_cannot_supply_paths_outside_the_content_addressed_directory(string name)
+    {
+        using var fixture = new Fixture();
+        await fixture.Build();
+        var path = Assert.Single(Directory.GetFiles(fixture.Runtime, "artifact.json", SearchOption.AllDirectories));
+        var artifact = JsonNode.Parse(File.ReadAllText(path))!;
+        var resources = artifact["Resources"]!.AsObject();
+        var first = resources.First();
+        resources.Remove(first.Key);
+        resources[name] = first.Value;
+        File.WriteAllText(path, artifact.ToJsonString());
+        Assert.Throws<DocumentationValidationException>(() => fixture.Store.Apply(fixture.Worktree, "tree"));
+        Assert.Empty(Directory.GetFiles(fixture.Worktree, "*", SearchOption.AllDirectories));
+    }
+
+    [Fact]
+    public async Task Shared_artifact_with_missing_resource_metadata_is_not_applied()
+    {
+        using var fixture = new Fixture();
+        await fixture.Build();
+        var path = Assert.Single(Directory.GetFiles(fixture.Runtime, "artifact.json", SearchOption.AllDirectories));
+        var artifact = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+        artifact.Remove("Resources");
+        File.WriteAllText(path, artifact.ToJsonString());
+        Assert.Throws<DocumentationValidationException>(() => fixture.Store.Apply(fixture.Worktree, "tree"));
+        Assert.Empty(Directory.GetFiles(fixture.Worktree, "*", SearchOption.AllDirectories));
+    }
+
+    [Fact]
+    public async Task Package_pages_share_font_files_and_apply_preserves_their_relative_links()
+    {
+        using var fixture = new Fixture();
+        var other = Fixture.Unit with { Content = Fixture.Unit.Content with { SymbolId = "type:B", Name = "Example.B" } };
+        var report = await fixture.Build([Fixture.Unit, other]);
+        Assert.Equal(0, report.Failed);
+        var pages = Directory.GetFiles(fixture.Runtime, "page.*.html", SearchOption.AllDirectories);
+        Assert.Equal(4, pages.Length);
+        foreach (var page in pages)
+        {
+            var html = File.ReadAllText(page);
+            Assert.DoesNotContain("data:font/ttf;base64,", html);
+            var fonts = System.Text.RegularExpressions.Regex.Matches(html, @"href=""(\.\./_assets/[a-f0-9]{64}\.css)""");
+            Assert.Single(fonts.Cast<System.Text.RegularExpressions.Match>());
+            foreach (System.Text.RegularExpressions.Match font in fonts)
+                Assert.True(File.Exists(Path.Combine(Path.GetDirectoryName(page)!, font.Groups[1].Value)));
+        }
+        var stylesheet = File.ReadAllText(Assert.Single(Directory.GetFiles(fixture.Runtime, "*.css", SearchOption.AllDirectories)));
+        Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(stylesheet, "data:font/ttf;base64,").Count);
+        Assert.DoesNotContain("url(../", stylesheet);
+        fixture.Store.Apply(fixture.Worktree, "tree");
+        Assert.Single(Directory.GetFiles(fixture.Worktree, "*.css", SearchOption.AllDirectories));
+        foreach (var page in Directory.GetFiles(fixture.Worktree, "page.*.html", SearchOption.AllDirectories))
+        foreach (System.Text.RegularExpressions.Match font in System.Text.RegularExpressions.Regex.Matches(File.ReadAllText(page), @"href=""(\.\./_assets/[a-f0-9]{64}\.css)"""))
+            Assert.True(File.Exists(Path.Combine(Path.GetDirectoryName(page)!, font.Groups[1].Value)));
+    }
+
     [Theory]
     [InlineData("prompt", "generator", 2)]
     [InlineData("validator", "generator", 2)]
@@ -86,7 +205,7 @@ public sealed class DocumentationPackStoreTests
     public async Task Legacy_render_only_metadata_rebuilds_once_without_making_old_documents_unreadable()
     {
         using var fixture = new Fixture();
-        await fixture.Build();
+        await fixture.Build(store: new DocumentationPackStore(fixture.Runtime, new string('a', 64), "fixture-1", htmlMode: DocumentationHtmlMode.Standalone));
         var path = Assert.Single(Directory.GetFiles(fixture.Runtime, "artifact.json", SearchOption.AllDirectories));
         var artifact = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
         artifact["Version"] = "documentation-1";
@@ -173,7 +292,7 @@ public sealed class DocumentationPackStoreTests
 
         Assert.Equal(0, fixture.Calls);
         Assert.Equal(0, report.Failed);
-        Assert.Equal(9, fixture.Store.Apply(fixture.Worktree, "tree").Copied);
+        Assert.Equal(10, fixture.Store.Apply(fixture.Worktree, "tree").Copied);
     }
 
     [Fact]
@@ -301,14 +420,14 @@ public sealed class DocumentationPackStoreTests
         using var fixture = new Fixture();
         await fixture.Build();
         var applied = fixture.Store.Apply(fixture.Worktree, "tree");
-        Assert.Equal(9, applied.Copied);
+        Assert.Equal(10, applied.Copied);
         Assert.Equal(1, fixture.Calls);
         var page = Assert.Single(Directory.GetFiles(fixture.Worktree, "page.en.md", SearchOption.AllDirectories));
         File.WriteAllText(page, "manual edit");
         var again = fixture.Store.Apply(fixture.Worktree, "tree");
         Assert.Single(again.Skipped);
         Assert.Equal(0, again.Copied);
-        Assert.Equal(8, again.Unchanged);
+        Assert.Equal(9, again.Unchanged);
         Assert.Equal("manual edit", File.ReadAllText(page));
         Assert.Equal(1, fixture.Calls);
     }
@@ -356,13 +475,16 @@ public sealed class DocumentationPackStoreTests
         Assert.False(result.Units[0].Reused);
     }
 
-    [Fact]
-    public async Task Apply_reports_the_exact_symbolic_link_and_does_not_write_through_it()
+    [Theory]
+    [InlineData("docs")]
+    [InlineData("docs/generated/_assets")]
+    public async Task Apply_reports_the_exact_symbolic_link_and_does_not_write_through_it(string relative)
     {
         using var fixture = new Fixture();
         await fixture.Build();
         var external = Path.Combine(fixture.Runtime, "external"); Directory.CreateDirectory(external);
-        var docs = Path.Combine(fixture.Worktree, "docs");
+        var docs = Path.GetFullPath(Path.Combine(fixture.Worktree, relative));
+        Directory.CreateDirectory(Path.GetDirectoryName(docs)!);
         if (OperatingSystem.IsWindows())
         {
             // Directory junctions exercise the same reparse-point guard without the

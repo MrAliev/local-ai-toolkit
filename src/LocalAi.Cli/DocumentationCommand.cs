@@ -14,7 +14,7 @@ internal static class DocumentationCommand
     {
         var operation = args.FirstOrDefault() ?? "";
         var command = "docs " + operation;
-        var root = ""; var limit = 5; var all = false; var namedLimit = false;
+        var root = ""; var limit = 5; var all = false; var namedLimit = false; var standaloneHtml = false;
         string T(string key, params object?[] values) => CliText.Catalogue.Format(key, values);
         int Refuse(string code, string message, int exit)
         {
@@ -33,6 +33,7 @@ internal static class DocumentationCommand
                     return Refuse("invalid_arguments", T("DocsLimitInvalid"), 2);
             }
             else if (operation == "build" && args[i] == "--all" && !all) all = true;
+            else if (operation == "build" && args[i] == "--standalone-html" && !standaloneHtml) standaloneHtml = true;
             else return Refuse("invalid_arguments", CliText.CommandUnknownArgument(command, args[i], T("DocsUsage")), 2);
         }
         if (root.Length == 0) return Refuse("invalid_arguments", T("DocsRootRequired"), 2);
@@ -42,7 +43,8 @@ internal static class DocumentationCommand
         {
             cancellationToken.ThrowIfCancellationRequested();
             var identity = RuntimeIndexLayout.Inspect(root, runtimeRoot);
-            var store = new DocumentationPackStore(runtimeRoot, identity.RepositoryId);
+            var store = new DocumentationPackStore(runtimeRoot, identity.RepositoryId,
+                htmlMode: standaloneHtml ? DocumentationHtmlMode.Standalone : DocumentationHtmlMode.Shared);
             if (operation == "apply")
             {
                 var applied = store.Apply(identity.WorkingRoot.Value, DocumentationWorkspace.Snapshot(identity));
