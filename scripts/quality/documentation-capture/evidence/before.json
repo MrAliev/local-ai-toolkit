@@ -1,0 +1,99 @@
+{
+  "SourceHashes": {
+    "DocumentationWorkspace": "4d7e70d73dd4c86dd54a1cfb116be01b254eaeae99c8c1413cdf6a4c7b5a80f3",
+    "DocumentationInputs": "2e2745835e97ec4ca186be97466d96cd0e590abaf2a1692f255245b7035a8c70"
+  },
+  "ModelInvocations": 0,
+  "Samples": [
+    {
+      "Limit": 1,
+      "Sample": 1,
+      "Units": 1,
+      "CaptureMs": 1809.735,
+      "AllocatedBytes": 431575888,
+      "SourceReads": 865,
+      "SyntaxParses": 843,
+      "UnitsSha256": "6af65f02a97a75ab36ba22be847eaece012bb219b1fb6ed88263ef96478792ac"
+    },
+    {
+      "Limit": 1,
+      "Sample": 2,
+      "Units": 1,
+      "CaptureMs": 1404.3351,
+      "AllocatedBytes": 431316400,
+      "SourceReads": 865,
+      "SyntaxParses": 843,
+      "UnitsSha256": "6af65f02a97a75ab36ba22be847eaece012bb219b1fb6ed88263ef96478792ac"
+    },
+    {
+      "Limit": 1,
+      "Sample": 3,
+      "Units": 1,
+      "CaptureMs": 1347.9471,
+      "AllocatedBytes": 405371248,
+      "SourceReads": 865,
+      "SyntaxParses": 843,
+      "UnitsSha256": "6af65f02a97a75ab36ba22be847eaece012bb219b1fb6ed88263ef96478792ac"
+    },
+    {
+      "Limit": 5,
+      "Sample": 1,
+      "Units": 5,
+      "CaptureMs": 1620.66,
+      "AllocatedBytes": 461847944,
+      "SourceReads": 865,
+      "SyntaxParses": 843,
+      "UnitsSha256": "1dbbcf671e32c9c64be25f17e44a2cdc0edc9fd5793f69c62bc79dbf677cf576"
+    },
+    {
+      "Limit": 5,
+      "Sample": 2,
+      "Units": 5,
+      "CaptureMs": 1566.1722,
+      "AllocatedBytes": 461729648,
+      "SourceReads": 865,
+      "SyntaxParses": 843,
+      "UnitsSha256": "1dbbcf671e32c9c64be25f17e44a2cdc0edc9fd5793f69c62bc79dbf677cf576"
+    },
+    {
+      "Limit": 5,
+      "Sample": 3,
+      "Units": 5,
+      "CaptureMs": 1597.5833,
+      "AllocatedBytes": 461888448,
+      "SourceReads": 865,
+      "SyntaxParses": 843,
+      "UnitsSha256": "1dbbcf671e32c9c64be25f17e44a2cdc0edc9fd5793f69c62bc79dbf677cf576"
+    },
+    {
+      "Limit": 2147483647,
+      "Sample": 1,
+      "Units": 1269,
+      "CaptureMs": 101958.1114,
+      "AllocatedBytes": 28056970080,
+      "SourceReads": 865,
+      "SyntaxParses": 843,
+      "UnitsSha256": "1c5d6b253b812a34e71addf5fa6250e806acd17f6772d1039feec5e57906ee01"
+    },
+    {
+      "Limit": 2147483647,
+      "Sample": 2,
+      "Units": 1269,
+      "CaptureMs": 103256.8498,
+      "AllocatedBytes": 28056749664,
+      "SourceReads": 865,
+      "SyntaxParses": 843,
+      "UnitsSha256": "1c5d6b253b812a34e71addf5fa6250e806acd17f6772d1039feec5e57906ee01"
+    },
+    {
+      "Limit": 2147483647,
+      "Sample": 3,
+      "Units": 1269,
+      "CaptureMs": 102247.1605,
+      "AllocatedBytes": 28056915288,
+      "SourceReads": 865,
+      "SyntaxParses": 843,
+      "UnitsSha256": "1c5d6b253b812a34e71addf5fa6250e806acd17f6772d1039feec5e57906ee01"
+    }
+  ]
+}
