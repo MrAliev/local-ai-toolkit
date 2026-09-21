@@ -7,6 +7,20 @@ namespace LocalAi.IntegrationTests;
 
 public sealed class DocumentationCommandTests
 {
+    [Fact]
+    public async Task Prune_defaults_to_a_read_only_preview_without_model_calls()
+    {
+        using var repo = new DocumentationRepositoryFixture();
+        var output = new StringWriter(); var error = new StringWriter(); var calls = 0;
+        var exit = await DocumentationCommand.ExecuteAsync(["prune", "--root", repo.Root], new(output, error), true,
+            TestContext.Current.CancellationToken, repo.Runtime, (_, _) => { calls++; throw new InvalidOperationException(); });
+        Assert.Equal(0, exit);
+        Assert.Equal(0, calls);
+        using var response = JsonDocument.Parse(output.ToString());
+        Assert.True(response.RootElement.GetProperty("data").GetProperty("dryRun").GetBoolean());
+        Assert.Empty(response.RootElement.GetProperty("data").GetProperty("entries").EnumerateArray());
+    }
+
     [Theory]
     [InlineData("build")]
     [InlineData("apply")]
@@ -16,6 +30,14 @@ public sealed class DocumentationCommandTests
     [InlineData("apply --root ignored --standalone-html")]
     [InlineData("build --root ignored --standalone-html --standalone-html")]
     [InlineData("build --root ignored --unknown")]
+    [InlineData("prune --root ignored --keep 0")]
+    [InlineData("prune --root ignored --keep -1")]
+    [InlineData("prune --root ignored --apply --dry-run")]
+    [InlineData("prune --root ignored --apply --apply")]
+    [InlineData("prune --root ignored --all")]
+    [InlineData("pin --root ignored")]
+    [InlineData("pin --root ignored --package ../outside")]
+    [InlineData("unpin --root ignored --package invalid")]
     public async Task Invalid_arguments_are_refused_before_any_model_call(string arguments)
     {
         var output = new StringWriter(); var error = new StringWriter(); var calls = 0;
@@ -49,6 +71,11 @@ public sealed class DocumentationCommandTests
         Assert.Contains("docs apply", MachineOutput.Commands);
         Assert.Contains("localai docs build", CliUsage.Text);
         Assert.Contains("--standalone-html", CliUsage.Text);
+        foreach (var operation in new[] { "prune", "pin", "unpin" })
+        {
+            Assert.Contains("docs " + operation, MachineOutput.Commands);
+            Assert.Contains("localai docs " + operation, CliUsage.Text);
+        }
     }
 
     [Fact]
