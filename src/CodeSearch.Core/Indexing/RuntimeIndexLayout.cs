@@ -115,7 +115,7 @@ public static class RuntimeIndexLayout
         string? runtimeRoot)
     {
         var store = new GenerationStore(identity.RepositoryRuntimeRoot);
-        var current = store.ReadCurrent();
+        var current = WorktreeGenerationPublications.ReadCurrent(identity);
         return current is null
             ? RepoLocator.LegacyIndexPathFor(identity.RepositoryRoot.Value, runtimeRoot)
             : store.IndexPath(current.GenerationId);

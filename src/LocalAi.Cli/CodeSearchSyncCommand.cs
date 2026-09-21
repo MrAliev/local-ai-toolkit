@@ -282,6 +282,7 @@ public static class CodeSearchSyncCommand
                 StringComparison.Ordinal);
 
             var generation = TryReadManifest(store, generationIdentity.Id);
+            error.WriteLine($"SYNC_BASE generation={generationIdentity.Id} action={(generation is null ? "build" : "reuse")}");
             if (generation is null)
             {
                 // A generation that exists and cannot be read has to be moved out of the way
@@ -324,8 +325,54 @@ public static class CodeSearchSyncCommand
                 targets.Where(item => !item.IsPrunable),
                 path => error.WriteLine(CliText.WorktreeGone(path)));
             var worktreesSkipped = present.Skipped;
-            foreach (var worktree in present.Worktrees)
+            var orderedWorktrees = present.Worktrees.OrderBy(item =>
+                FsPath.From(item.Path) == requested.WorkingRoot ? 0 : 1).ToArray();
+            error.WriteLine($"SYNC_PLAN requested={JsonSerializer.Serialize(requested.WorkingRoot.Value)} " +
+                $"generation={generation.Identity.Id} pending={JsonSerializer.Serialize(orderedWorktrees.Select(item => item.Path))}");
+            var activeReady = false;
+            var maintenanceIncomplete = false;
+            void PublishReady(WorkingIndexIdentity identity)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+                var isRequested = identity.WorkingRoot == requested.WorkingRoot;
+                WorkingIndexIdentity latest;
+                try
+                {
+                    latest = RuntimeIndexLayout.Inspect(identity.WorkingRoot.Value, runtimeRoot);
+                }
+                catch (Exception exception) when (!isRequested &&
+                    !Directory.Exists(identity.WorkingRoot.Value) &&
+                    exception is InvalidOperationException or IOException or UnauthorizedAccessException)
+                {
+                    error.WriteLine(CliText.WorktreeVanished(identity.WorkingRoot.Value));
+                    worktreesSkipped++;
+                    return;
+                }
+                if (latest != identity)
+                {
+                    if (isRequested)
+                        throw new InvalidOperationException("worktree_changed: refusing to publish a changed working tree.");
+                    error.WriteLine($"WORKTREE_SKIPPED root={JsonSerializer.Serialize(identity.WorkingRoot.Value)} reason=changed");
+                    worktreesSkipped++;
+                    maintenanceIncomplete = true;
+                    return;
+                }
+                cancellationToken.ThrowIfCancellationRequested();
+                var published = WorktreeGenerationPublications.Publish(identity, generation, current);
+                if (published)
+                    error.WriteLine($"WORKTREE_READY root={JsonSerializer.Serialize(identity.WorkingRoot.Value)} " +
+                        $"generation={generation.Identity.Id}");
+                if (isRequested)
+                {
+                    activeReady = true;
+                    if (published)
+                        error.WriteLine($"ACTIVE_READY root={JsonSerializer.Serialize(identity.WorkingRoot.Value)} " +
+                            $"generation={generation.Identity.Id} seconds={Seconds(elapsed)} maintenance=pending");
+                }
+            }
+            foreach (var worktree in orderedWorktrees)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
                 WorkingIndexIdentity identity;
                 try
                 {
@@ -348,6 +395,8 @@ public static class CodeSearchSyncCommand
                         StringComparison.Ordinal) &&
                     identity.DirtyHash is null)
                 {
+                    error.WriteLine($"WORKTREE_PLAN root={JsonSerializer.Serialize(identity.WorkingRoot.Value)} corpus=base semantics=base");
+                    PublishReady(identity);
                     continue;
                 }
 
@@ -358,6 +407,11 @@ public static class CodeSearchSyncCommand
                     identity,
                     generation.Identity.Id);
                 var builtOverlay = false;
+                var semanticOverlayCurrent = IsCurrentSemanticOverlay(
+                    semanticOverlayPath, identity, generation.Identity);
+                var corpusOverlayPresent = File.Exists(overlayPath);
+                error.WriteLine($"WORKTREE_PLAN root={JsonSerializer.Serialize(identity.WorkingRoot.Value)} " +
+                    $"corpus={(corpusOverlayPresent ? "reuse" : "build")} semantics={(semanticOverlayCurrent ? "reuse" : "build")}");
 
                 // Semantics first here too, and for the second of the two reasons the base
                 // generation does it: a file changed on a branch has to be cut on the same
@@ -369,10 +423,7 @@ public static class CodeSearchSyncCommand
                 // materialise against. Reading it twice is a second parse of a file that is
                 // 16.1 MB on this repository and larger on the tree that reported #519.
                 SemanticIndex? baseSemantics = null;
-                if (!IsCurrentSemanticOverlay(
-                        semanticOverlayPath,
-                        identity,
-                        generation.Identity))
+                if (!semanticOverlayCurrent)
                 {
                     ReportPhase(
                         RepositoryIndexProgressPhase.SemanticOverlay,
@@ -494,7 +545,7 @@ public static class CodeSearchSyncCommand
                     builtOverlay = true;
                 }
 
-                if (!File.Exists(overlayPath))
+                if (!corpusOverlayPresent)
                 {
                     // Only now, and only if the corpus overlay is actually being built: an
                     // up-to-date semantic overlay still has to be materialised against the base
@@ -548,14 +599,22 @@ public static class CodeSearchSyncCommand
                             error))
                     {
                         worktreesSkipped++;
+                        maintenanceIncomplete |= Directory.Exists(identity.WorkingRoot.Value);
+                        continue;
                     }
                     else
                     {
                         overlaysBuilt++;
                     }
                 }
+                PublishReady(identity);
             }
 
+            cancellationToken.ThrowIfCancellationRequested();
+            if (includeOverlays && !activeReady)
+                throw new InvalidOperationException("active_worktree_not_ready: the previous repository generation was preserved.");
+            if (maintenanceIncomplete)
+                throw new InvalidOperationException("worktree_changed: maintenance is incomplete; the previous repository generation was preserved.");
             ReportStep(
                 RepositoryIndexProgressPhase.Publishing,
                 requested.WorkingRoot.Value,

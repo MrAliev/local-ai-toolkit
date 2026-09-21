@@ -1,0 +1,133 @@
+{
+  "ActiveReadyMs": 1331.0864,
+  "LastNotReadyMs": 978.0452,
+  "FullMaintenanceMs": 34751.7987,
+  "GlobalGenerationAtReadiness": "f0506eeb5e8186ef6d3d59978a0e6bb44966536db72f17ade305b2e24d51454b",
+  "Previous": "f0506eeb5e8186ef6d3d59978a0e6bb44966536db72f17ade305b2e24d51454b",
+  "Next": "11843447dbe3616211d47885075a4d74eccad7a0ea2d0743a1fee2e00e703da0",
+  "State": {
+    "RepositoryId": "4bacd43733f3f90c1d39bc87773bf04fb667abe7c04f0fcb816f7fef581b8e78",
+    "HeadCommit": "d3115145948bfba08e6f50eb851b18b78c5c48c1",
+    "HeadTree": "0e0d9a7458aa472eda6cd521b8e7a6aa7957face",
+    "DirtyHash": null,
+    "SemanticDirtyHash": null
+  },
+  "Files": 32,
+  "LinesPerFile": 128,
+  "BaseChunks": 96,
+  "Model": "qwen3-embedding:8b-q8_0",
+  "PollDelayMs": 100,
+  "result": {
+    "RepositoryId": "4bacd43733f3f90c1d39bc87773bf04fb667abe7c04f0fcb816f7fef581b8e78",
+    "GenerationId": "11843447dbe3616211d47885075a4d74eccad7a0ea2d0743a1fee2e00e703da0",
+    "BaseIndexPath": "C:\\Users\\Mr.Aliev\\AppData\\Local\\Temp\\LocalAi-issue-620\\measured-fixture-v2\\runtime\\repositories\\4bacd43733f3f90c1d39bc87773bf04fb667abe7c04f0fcb816f7fef581b8e78\\generations\\11843447dbe3616211d47885075a4d74eccad7a0ea2d0743a1fee2e00e703da0\\base.cidx",
+    "OverlaysBuilt": 1,
+    "GenerationChanged": true,
+    "WorktreesSkipped": 0,
+    "RefusedFiles": null,
+    "ElapsedSeconds": "34.7"
+  },
+  "ModelBefore": {
+    "name": "qwen3-embedding:8b-q8_0",
+    "model": "qwen3-embedding:8b-q8_0",
+    "modified_at": "2026-07-27T22:42:27.6355322\u002B03:00",
+    "size": 8047106087,
+    "digest": "9704fd987c12aa746934ea9f99dc85527c83c6e4b98b3a10b94689332ee866bb",
+    "details": {
+      "parent_model": "/Users/ollama/.ollama/models/blobs/sha256-d20ddc71e8a5c4344f2343481e242233a997dc5eaff442427a945836c97b4deb",
+      "format": "gguf",
+      "family": "qwen3",
+      "families": [
+        "qwen3"
+      ],
+      "parameter_size": "7.6B",
+      "quantization_level": "Q8_0",
+      "context_length": 40960,
+      "embedding_length": 4096
+    },
+    "capabilities": [
+      "tools",
+      "embedding"
+    ]
+  },
+  "ModelAfter": {
+    "name": "qwen3-embedding:8b-q8_0",
+    "model": "qwen3-embedding:8b-q8_0",
+    "modified_at": "2026-07-27T22:42:27.6355322\u002B03:00",
+    "size": 8047106087,
+    "digest": "9704fd987c12aa746934ea9f99dc85527c83c6e4b98b3a10b94689332ee866bb",
+    "details": {
+      "parent_model": "/Users/ollama/.ollama/models/blobs/sha256-d20ddc71e8a5c4344f2343481e242233a997dc5eaff442427a945836c97b4deb",
+      "format": "gguf",
+      "family": "qwen3",
+      "families": [
+        "qwen3"
+      ],
+      "parameter_size": "7.6B",
+      "quantization_level": "Q8_0",
+      "context_length": 40960,
+      "embedding_length": 4096
+    },
+    "capabilities": [
+      "tools",
+      "embedding"
+    ]
+  },
+  "Implementation": "issue-620-active-worktree-working-tree",
+  "CoreSha256": "2f85a2a2e56b6bf3da74d00746f7ef654b0be082d7ede6c356cc4aa96245f91a",
+  "CliSha256": "66e9752b1f99053dd4697ab278052182981aae38b7d93ae31a182dfa63d3eaee",
+  "ActiveHits": [
+    {
+      "RelPath": "document-07.md",
+      "StartLine": 97,
+      "EndLine": 128
+    },
+    {
+      "RelPath": "document-07.md",
+      "StartLine": 1,
+      "EndLine": 60
+    },
+    {
+      "RelPath": "document-07.md",
+      "StartLine": 49,
+      "EndLine": 108
+    },
+    {
+      "RelPath": "document-08.md",
+      "StartLine": 97,
+      "EndLine": 128
+    },
+    {
+      "RelPath": "document-08.md",
+      "StartLine": 49,
+      "EndLine": 108
+    }
+  ],
+  "OtherHits": [
+    {
+      "RelPath": "document-07.md",
+      "StartLine": 1,
+      "EndLine": 60
+    },
+    {
+      "RelPath": "document-07.md",
+      "StartLine": 97,
+      "EndLine": 128
+    },
+    {
+      "RelPath": "document-07.md",
+      "StartLine": 49,
+      "EndLine": 108
+    },
+    {
+      "RelPath": "document-08.md",
+      "StartLine": 1,
+      "EndLine": 60
+    },
+    {
+      "RelPath": "document-08.md",
+      "StartLine": 49,
+      "EndLine": 108
+    }
+  ]
+}

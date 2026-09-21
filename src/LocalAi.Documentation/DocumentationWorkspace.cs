@@ -19,7 +19,7 @@ public static class DocumentationWorkspace
         try
         {
             var store = new GenerationStore(identity.RepositoryRuntimeRoot);
-            var current = store.ReadCurrent() ?? throw new InvalidDataException();
+            var current = WorktreeGenerationPublications.ReadCurrent(identity) ?? throw new InvalidDataException();
             var manifest = store.ReadManifest(current.GenerationId);
             var baseline = SemanticIndex.Load(store.SemanticIndexPath(current.GenerationId));
             index = identity.HeadTree == manifest.Identity.DevTree && identity.SemanticDirtyHash is null ? baseline :
