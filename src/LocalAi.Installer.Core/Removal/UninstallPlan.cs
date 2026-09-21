@@ -80,158 +80,175 @@ public sealed record UninstallPlan(
     {
         get
         {
-            var text = new StringBuilder();
-            foreach (var item in RemovalMatrix.Items)
+            var (changes, retained) = PreviewSections();
+            return changes + retained;
+        }
+    }
+
+    /// <summary>One projection supplies both the grouped overview and the technical preview.</summary>
+    public (string Changes, string Retained) PreviewSections()
+    {
+        var text = new StringBuilder();
+        var keptHooks = new StringBuilder();
+        foreach (var item in RemovalMatrix.Items)
+        {
+            var paths = Paths.Where(path => path.Item == item).ToArray();
+            var agents = AgentPlansFor(item);
+            var hooks = item == RemovalItem.GitHooks ? Hooks : [];
+            var registration = item == RemovalItem.Binaries && RemovesAppsAndFeaturesEntry;
+            var launcherPath = item == RemovalItem.Binaries && RemovesLauncherFromPath;
+            if (paths.Length == 0 && agents.Length == 0 && hooks.Count == 0 &&
+                !registration && !launcherPath)
             {
-                var paths = Paths.Where(path => path.Item == item).ToArray();
-                var agents = AgentPlansFor(item);
-                var hooks = item == RemovalItem.GitHooks ? Hooks : [];
-                var registration = item == RemovalItem.Binaries && RemovesAppsAndFeaturesEntry;
-                var launcherPath = item == RemovalItem.Binaries && RemovesLauncherFromPath;
-                if (paths.Length == 0 && agents.Length == 0 && hooks.Count == 0 &&
-                    !registration && !launcherPath)
+                continue;
+            }
+
+            text.AppendLine(RemovalMatrix.Title(item) + ":");
+            foreach (var path in paths)
+            {
+                text.AppendLine(
+                    "  " + InstallerCulture.Pick("remove", "удалить") + " " +
+                    path.Path + (path.IsDirectory ? "\\" : string.Empty));
+            }
+
+            if (item == RemovalItem.Binaries && RemovesLauncherFromPath)
+            {
+                text.AppendLine(InstallerCulture.Pick(
+                    "  take the launcher off this account's PATH",
+                    "  убрать launcher из PATH этой учётной записи"));
+            }
+
+            if (registration)
+            {
+                // The entry is what made this removable from Apps & features in the first
+                // place, and the copy it points at is this very executable — so it is named
+                // here, and it goes last.
+                text.AppendLine(InstallerCulture.Pick(
+                    "  remove the Apps & features entry, and the uninstaller's own copy last",
+                    "  удалить запись в «Приложениях и возможностях» и, последней, " +
+                    "собственную копию деинсталлятора"));
+            }
+
+            foreach (var file in agents.SelectMany(plan => plan.Files))
+            {
+                // A deletion said as a deletion. The skill file is removed rather than
+                // edited, and calling that "rewrite" understates the only line on this page
+                // that takes a whole file out of somebody's home directory.
+                text.AppendLine(
+                    "  " + (file.Deletes
+                        ? InstallerCulture.Pick("remove", "удалить")
+                        : InstallerCulture.Pick("rewrite", "переписать")) +
+                    " " + file.Path);
+            }
+
+            foreach (var hook in hooks)
+            {
+                if (!hook.HasWork)
                 {
+                    keptHooks.AppendLine(HookLine(hook));
                     continue;
                 }
-
-                text.AppendLine(RemovalMatrix.Title(item) + ":");
-                foreach (var path in paths)
+                text.AppendLine(HookLine(hook));
+                foreach (var dispatcher in hook.Dispatchers)
                 {
                     text.AppendLine(
-                        "  " + InstallerCulture.Pick("remove", "удалить") + " " +
-                        path.Path + (path.IsDirectory ? "\\" : string.Empty));
+                        "    " + InstallerCulture.Pick("remove", "удалить") + " " + dispatcher);
                 }
 
-                if (item == RemovalItem.Binaries && RemovesLauncherFromPath)
-                {
-                    text.AppendLine(InstallerCulture.Pick(
-                        "  take the launcher off this account's PATH",
-                        "  убрать launcher из PATH этой учётной записи"));
-                }
-
-                if (registration)
-                {
-                    // The entry is what made this removable from Apps & features in the first
-                    // place, and the copy it points at is this very executable — so it is named
-                    // here, and it goes last.
-                    text.AppendLine(InstallerCulture.Pick(
-                        "  remove the Apps & features entry, and the uninstaller's own copy last",
-                        "  удалить запись в «Приложениях и возможностях» и, последней, " +
-                        "собственную копию деинсталлятора"));
-                }
-
-                foreach (var file in agents.SelectMany(plan => plan.Files))
-                {
-                    // A deletion said as a deletion. The skill file is removed rather than
-                    // edited, and calling that "rewrite" understates the only line on this page
-                    // that takes a whole file out of somebody's home directory.
-                    text.AppendLine(
-                        "  " + (file.Deletes
-                            ? InstallerCulture.Pick("remove", "удалить")
-                            : InstallerCulture.Pick("rewrite", "переписать")) +
-                        " " + file.Path);
-                }
-
-                foreach (var hook in hooks)
-                {
-                    text.AppendLine(HookLine(hook));
-                    foreach (var dispatcher in hook.Dispatchers)
-                    {
-                        text.AppendLine(
-                            "    " + InstallerCulture.Pick("remove", "удалить") + " " + dispatcher);
-                    }
-
-                    foreach (var restored in hook.RestoredHooks)
-                    {
-                        text.AppendLine(
-                            "    " + InstallerCulture.Pick("restore", "восстановить") + " " + restored);
-                    }
-
-                    if (hook.ExcludePatterns.Count > 0 && hook.ExcludePath is not null)
-                    {
-                        text.AppendLine(
-                            "    " + InstallerCulture.Pick("clean", "очистить") + " " +
-                            hook.ExcludePath + ": " +
-                            string.Join(", ", hook.ExcludePatterns));
-                    }
-                }
-            }
-
-            // The gate, which the loop above cannot reach. AgentPlansFor looks plans up by
-            // the client's name, and this one is deliberately named apart from it so that a
-            // stray comma in settings.json cannot take the MCP registration down with it — so
-            // the file it rewrites was named in no preview, on any preset, while the finish
-            // report named it afterwards. The page's whole contract is that what it does not
-            // name, the run does not touch.
-            //
-            // Its own heading rather than the client's: on a run where the Claude row is
-            // unticked — which is what the reinstall-friendly preset does, and where the gate
-            // still goes with the binaries — a "Claude integration:" heading would be a second
-            // untruth in place of the first.
-            if (AgentConfigurations.FirstOrDefault(plan =>
-                    string.Equals(
-                        plan.AgentName,
-                        ClaudeConfigurationAdapter.HooksName,
-                        StringComparison.Ordinal) &&
-                    plan.HasChanges) is { } settingsPlan)
-            {
-                text.AppendLine(InstallerCulture.Pick(
-                    "Claude Code hooks:",
-                    "Хуки Claude Code:"));
-                foreach (var file in settingsPlan.Files)
-                {
-                    // A line per effect rather than per file. Both effects live in one document,
-                    // so a per-file loop would print one line for two removals — and a heading
-                    // promising two while one happens is the kind of lie this page exists to
-                    // prevent. "remove … from", not the loop's bare "rewrite": the file stays,
-                    // and a removal that reads as a deletion is the one thing this must not say
-                    // about somebody's own settings.
-                    if (Leaves(file, ClaudeHook.Gate))
-                    {
-                        text.AppendLine(
-                            "  " + InstallerCulture.Pick(
-                                "remove the text-search refusal from ",
-                                "убрать отклонение текстового поиска из ") + file.Path);
-                    }
-
-                    if (Leaves(file, ClaudeHook.WorktreeCreate) ||
-                        Leaves(file, ClaudeHook.WorktreeRemove))
-                    {
-                        text.AppendLine(
-                            "  " + InstallerCulture.Pick(
-                                "remove worktree placement from ",
-                                "убрать размещение worktree из ") + file.Path);
-                    }
-                }
-            }
-
-            if (!HasWork)
-            {
-                text.AppendLine(InstallerCulture.Pick(
-                    "Nothing selected: this run would change nothing.",
-                    "Ничего не выбрано: этот запуск ничего не изменит."));
-            }
-
-            if (RetainedPaths.Count > 0)
-            {
-                text.AppendLine(
-                    InstallerCulture.Pick("Left in ", "Остаётся в ") + RuntimeRoot + ":");
-                foreach (var path in RetainedPaths)
+                foreach (var restored in hook.RestoredHooks)
                 {
                     text.AppendLine(
-                        "  " + InstallerCulture.Pick("keep", "оставить") + " " + path);
+                        "    " + InstallerCulture.Pick("restore", "восстановить") + " " + restored);
+                }
+
+                if (hook.ExcludePatterns.Count > 0 && hook.ExcludePath is not null)
+                {
+                    text.AppendLine(
+                        "    " + InstallerCulture.Pick("clean", "очистить") + " " +
+                        hook.ExcludePath + ": " +
+                        string.Join(", ", hook.ExcludePatterns));
                 }
             }
-
-            foreach (var notice in Retained)
-            {
-                text.AppendLine(
-                    InstallerCulture.Pick("Kept: ", "Оставлено: ") +
-                    notice.Title + " — " + notice.Detail);
-            }
-
-            return text.ToString();
         }
+
+        // The gate, which the loop above cannot reach. AgentPlansFor looks plans up by
+        // the client's name, and this one is deliberately named apart from it so that a
+        // stray comma in settings.json cannot take the MCP registration down with it — so
+        // the file it rewrites was named in no preview, on any preset, while the finish
+        // report named it afterwards. The page's whole contract is that what it does not
+        // name, the run does not touch.
+        //
+        // Its own heading rather than the client's: on a run where the Claude row is
+        // unticked — which is what the reinstall-friendly preset does, and where the gate
+        // still goes with the binaries — a "Claude integration:" heading would be a second
+        // untruth in place of the first.
+        if (AgentConfigurations.FirstOrDefault(plan =>
+                string.Equals(
+                    plan.AgentName,
+                    ClaudeConfigurationAdapter.HooksName,
+                    StringComparison.Ordinal) &&
+                plan.HasChanges) is { } settingsPlan)
+        {
+            text.AppendLine(InstallerCulture.Pick(
+                "Claude Code hooks:",
+                "Хуки Claude Code:"));
+            foreach (var file in settingsPlan.Files)
+            {
+                // A line per effect rather than per file. Both effects live in one document,
+                // so a per-file loop would print one line for two removals — and a heading
+                // promising two while one happens is the kind of lie this page exists to
+                // prevent. "remove … from", not the loop's bare "rewrite": the file stays,
+                // and a removal that reads as a deletion is the one thing this must not say
+                // about somebody's own settings.
+                if (Leaves(file, ClaudeHook.Gate))
+                {
+                    text.AppendLine(
+                        "  " + InstallerCulture.Pick(
+                            "remove the text-search refusal from ",
+                            "убрать отклонение текстового поиска из ") + file.Path);
+                }
+
+                if (Leaves(file, ClaudeHook.WorktreeCreate) ||
+                    Leaves(file, ClaudeHook.WorktreeRemove))
+                {
+                    text.AppendLine(
+                        "  " + InstallerCulture.Pick(
+                            "remove worktree placement from ",
+                            "убрать размещение worktree из ") + file.Path);
+                }
+            }
+        }
+
+        if (!HasWork)
+        {
+            text.AppendLine(InstallerCulture.Pick(
+                "Nothing selected: this run would change nothing.",
+                "Ничего не выбрано: этот запуск ничего не изменит."));
+        }
+
+        var changes = text.ToString();
+        text.Clear();
+        text.Append(keptHooks);
+
+        if (RetainedPaths.Count > 0)
+        {
+            text.AppendLine(
+                InstallerCulture.Pick("Left in ", "Остаётся в ") + RuntimeRoot + ":");
+            foreach (var path in RetainedPaths)
+            {
+                text.AppendLine(
+                    "  " + InstallerCulture.Pick("keep", "оставить") + " " + path);
+            }
+        }
+
+        foreach (var notice in Retained)
+        {
+            text.AppendLine(
+                InstallerCulture.Pick("Kept: ", "Оставлено: ") +
+                notice.Title + " — " + notice.Detail);
+        }
+
+        return (changes, text.ToString());
     }
 
     /// <summary>
