@@ -153,7 +153,10 @@ public sealed class ResultsFollowTheLanguageTests : IDisposable
 
         Assert.Equal("Ничего не удалено.", wizard.Report);
         Assert.Equal("Отказано", wizard.ProgressText);
-        Assert.Equal(refusal, wizard.Summary);
+        Assert.NotEqual(refusal, wizard.Summary);
+        Assert.StartsWith("Ничего не удалено.", wizard.Summary, StringComparison.Ordinal);
+        Assert.Contains("broker_still_running", wizard.Summary, StringComparison.Ordinal);
+        Assert.Contains("снова запустите установщик", wizard.Summary, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -257,12 +260,12 @@ public sealed class ResultsFollowTheLanguageTests : IDisposable
         Assert.Equal(
             "не установлен, проверенный релиз не выбран",
             RunResults.PackageDetail(new PackageOutcome(PackageOutcomeKind.NoRelease), installed: false));
-        Assert.Equal(
-            "не установлен — layout is unsafe",
-            RunResults.PackageDetail(new PackageOutcome(PackageOutcomeKind.Refused, Reason: "layout is unsafe"), installed: false));
+        var refusal = RunResults.PackageDetail(new PackageOutcome(PackageOutcomeKind.Refused, Reason: "layout is unsafe"), installed: false);
+        Assert.Contains("проверьте права и содержимое", refusal, StringComparison.Ordinal);
+        Assert.EndsWith("layout is unsafe", refusal, StringComparison.Ordinal);
         Assert.Equal("добавлен для этой учётной записи", RunResults.PathDetail(PathOutcome.Added));
         Assert.Equal("уже был прописан", RunResults.PathDetail(PathOutcome.AlreadyThere));
-        Assert.Equal("не удалось изменить", RunResults.PathDetail(PathOutcome.Failed));
+        Assert.Contains("полный путь к localai-launcher.exe", RunResults.PathDetail(PathOutcome.Failed), StringComparison.Ordinal);
     }
 
     [Fact]
