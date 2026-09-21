@@ -9,6 +9,7 @@ namespace LocalAi.Documentation;
 /// <summary>Checks evidence identifiers and syntax. Prose still needs the pack's human review.</summary>
 public static class DocumentationValidator
 {
+    public const string CacheVersion = "documentation-validator-1";
     private static readonly XNamespace SvgNamespace = "http://www.w3.org/2000/svg";
     private static readonly HashSet<string> Elements = ["svg", "g", "rect", "line", "path", "polygon", "circle", "text"];
     private static readonly HashSet<string> Attributes =

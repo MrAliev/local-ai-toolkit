@@ -1064,6 +1064,8 @@ To keep a worktree whatever its branch: git worktree lock &lt;path&gt;</value>
   <data name="DocsPackageReady" xml:space="preserve"><value>Package ready for review: {0}</value></data>
   <data name="DocsPreviousKept" xml:space="preserve"><value>Previous document kept: {0}.</value></data>
   <data name="DocsReason_generator" xml:space="preserve"><value>Documentation generator changed.</value></data>
+  <data name="DocsReason_presentation" xml:space="preserve"><value>Source locations or snapshot details changed.</value></data>
+  <data name="DocsReason_renderer" xml:space="preserve"><value>Document rendering changed.</value></data>
   <data name="DocsReason_history" xml:space="preserve"><value>History changed.</value></data>
   <data name="DocsReason_new" xml:space="preserve"><value>No previous document.</value></data>
   <data name="DocsReason_references" xml:space="preserve"><value>References changed.</value></data>
@@ -1076,6 +1078,7 @@ To keep a worktree whatever its branch: git worktree lock &lt;path&gt;</value>
   <data name="DocsSubset" xml:space="preserve"><value>Selected subset: up to {0} public types.</value></data>
   <data name="DocsUsage" xml:space="preserve"><value>Usage: localai docs build --root &lt;repo&gt; [--limit N | --all] [--json]; localai docs apply --root &lt;repo&gt; [--json]</value></data>
   <data name="DocsValidatingType" xml:space="preserve"><value>Checking documentation for {0}.</value></data>
+  <data name="DocsRenderingType" xml:space="preserve"><value>Rendering documentation for {0}.</value></data>
   <data name="DocsValidationFailed" xml:space="preserve"><value>Could not prepare documentation for {0}: {1}</value></data>
   <data name="DocsModelReceipt" xml:space="preserve"><value>🔧 Local: {0}{1}. Queue: {2}s. Execution: {3}s. Cloud token savings were not measured.</value></data>
   <data name="DocsResidencyCpu" xml:space="preserve"><value> (entirely on the CPU — answers are much slower)</value></data>
