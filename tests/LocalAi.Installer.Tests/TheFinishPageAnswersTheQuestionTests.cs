@@ -161,7 +161,7 @@ public sealed class TheFinishPageAnswersTheQuestionTests
         XNamespace presentation = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
         var expander = XDocument.Parse(InstallerMarkup.Read("MainWindow.xaml"))
             .Descendants(presentation + "Expander")
-            .Single();
+            .Single(element => element.Attribute("Header")?.Value == "{vm:Label Log}");
 
         Assert.Equal(
             "{Binding HasRunError, Mode=OneWay}",

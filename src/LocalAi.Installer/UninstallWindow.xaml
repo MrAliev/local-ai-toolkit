@@ -222,11 +222,13 @@
                         <TextBlock Text="{Binding KeepNotice}" Style="{StaticResource Muted}"
                                    TextWrapping="Wrap" Margin="0,0,0,8"
                                    Visibility="{Binding HasKeepNotice, Converter={StaticResource BoolToVisibility}}" />
-                        <TextBox Text="{Binding PreviewText, Mode=OneWay}"
-                                 IsReadOnly="True" TextWrapping="NoWrap" Height="300"
-                                 FontFamily="Consolas"
-                                 HorizontalScrollBarVisibility="Auto"
-                                 VerticalScrollBarVisibility="Auto" Background="{DynamicResource Surface}" />
+                        <local:EffectsOverview DataContext="{Binding ReviewGroups}" />
+                        <Expander Header="{vm:Label TechnicalDetails}">
+                            <TextBox Text="{Binding PreviewText, Mode=OneWay}"
+                                     IsReadOnly="True" TextWrapping="Wrap" Height="220"
+                                     FontFamily="Consolas"
+                                     VerticalScrollBarVisibility="Auto" Background="{DynamicResource Surface}" />
+                        </Expander>
                         <CheckBox Margin="0,12,0,0"
                                   IsChecked="{Binding IsConfirmed}"
                                   Content="{vm:Label RemovalConsent}" />

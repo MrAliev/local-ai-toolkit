@@ -113,7 +113,27 @@ public sealed class AccessibleControlsTests
                         Assert.Equal((russian ? "Интеграция с " : "Integration with ") + row.DisplayName, Peer(client).GetName());
                         Assert.NotNull(AutomationProperties.GetLabeledBy(client));
                     }
+                    ShowPage(window, wizard, InstallerPage.Confirm);
+                    var overview = Descendants(window.Content).OfType<EffectsOverview>().Single();
+                    CheckOverview();
+                    var technical = Descendants(window.Content).OfType<Expander>()
+                        .Single(item => Equals(item.Header, PageLabels.TechnicalDetails));
+                    technical.IsExpanded = true;
+                    Layout(window);
+                    CheckOverview();
+                    technical.IsExpanded = false;
                     Assert.False(wizard.Review.IsConfirmed);
+
+                    void CheckOverview()
+                    {
+                        var rows = Descendants(overview).OfType<TextBox>().ToArray();
+                        Assert.Equal(wizard.ReviewGroups.SelectMany(group => group.Lines), rows.Select(row => row.Text));
+                        Assert.All(rows, row =>
+                        {
+                            Assert.True(row.IsReadOnly);
+                            Assert.Equal(row.Text, Peer(row).GetName());
+                        });
+                    }
                 }
             }
             finally { window.Close(); }

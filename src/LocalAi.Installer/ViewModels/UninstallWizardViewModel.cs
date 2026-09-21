@@ -300,6 +300,8 @@ public sealed class UninstallWizardViewModel : ObservableObject
 
     public string PreviewText => confirmedPlan?.PreviewText ?? string.Empty;
 
+    public IReadOnlyList<ReviewGroup> ReviewGroups => confirmedPlan is { } plan ? ReviewGroup.ForRemoval(plan) : [];
+
     /// <summary>
     /// What this run deliberately leaves alone, said before the list rather than inside it.
     ///
@@ -920,7 +922,7 @@ public sealed class UninstallWizardViewModel : ObservableObject
                      nameof(IsUninstallVisible), nameof(CancelButtonText), nameof(Summary),
                      nameof(Report), nameof(BlockingNotice), nameof(IsBlocked),
                      nameof(CanContinueToInstall), nameof(KeepNotice),
-                     nameof(HasKeepNotice), nameof(PreviewText),
+                     nameof(HasKeepNotice), nameof(PreviewText), nameof(ReviewGroups),
                      nameof(Results), nameof(ReportPath), nameof(HasReportPath), nameof(HasReport),
                      nameof(ReportSaveError), nameof(HasReportSaveError), nameof(ReportText),
                  })
