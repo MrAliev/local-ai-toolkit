@@ -20,10 +20,19 @@ public sealed class ScheduleMetadataResolver(
         ArgumentNullException.ThrowIfNull(candidate);
         var (profile, model, workload, durationClass, isMaintenance) =
             Describe(candidate.Request.Payload);
+        // Reading metadata does not select a model. A synthetic name here used to make every
+        // Tags/Show/Processes request wait through the scheduler's two-second switch window.
+        var requiresModel = candidate.Request.Payload is not (
+            ListModelsJobPayload or
+            NativeOllamaJobPayload
+            {
+                Operation: NativeOllamaOperation.Tags or NativeOllamaOperation.Show or
+                    NativeOllamaOperation.Processes
+            });
         var key = CreateKey(
             profile,
             selectedModel ?? model,
-            isCold: !string.Equals(
+            isCold: requiresModel && !string.Equals(
                 selectedModel ?? model,
                 residentModel,
                 StringComparison.Ordinal),
@@ -38,7 +47,7 @@ public sealed class ScheduleMetadataResolver(
             candidate.Sequence,
             candidate.Request.Priority,
             candidate.CreatedAtUtc,
-            selectedModel ?? model,
+            requiresModel ? selectedModel ?? model : null,
             prediction.Median,
             durationClass,
             dependencyReady,
