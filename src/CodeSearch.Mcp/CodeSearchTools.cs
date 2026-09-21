@@ -437,8 +437,11 @@ public static class CodeSearchTools
         string? pathContains = null,
         [Description("Max hits from any single file. Default 3, keeps one big class from taking every slot.")]
         int maxPerFile = 3,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        [Description("Context comparison for files behind valid hits: NotPresent assumes first reading (default); AlreadyPresent excludes files already in cloud context; Unknown reports that uncertainty.")]
+        CloudContextPresence? sourceContext = null)
     {
+        if (sourceContext is { } context) UsageCall.Current?.Comparison.SourceContext(context);
         var options = new SearchOptions
         {
             TopK = Math.Clamp(topK, 1, 50),
@@ -568,8 +571,11 @@ public static class CodeSearchTools
             "Repository root. Defaults to the repository containing the working directory, " +
             "and must resolve to the same exact snapshot as the chunk id.")]
         string? root = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        [Description("Context comparison for the source file: NotPresent assumes first reading (default); AlreadyPresent excludes a file already in cloud context; Unknown reports that uncertainty.")]
+        CloudContextPresence? sourceContext = null)
     {
+        if (sourceContext is { } context) UsageCall.Current?.Comparison.SourceContext(context);
         try
         {
             var chunk = await service.GetChunkAsync(

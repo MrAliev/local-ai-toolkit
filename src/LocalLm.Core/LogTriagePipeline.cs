@@ -95,6 +95,7 @@ internal sealed class LogTriagePipeline(
                            cancellationToken))
         {
             fragmentCount++;
+            UsageCall.Current?.Comparison.SourceText(fragment.UniqueText, $"{source.Path ?? "inline"}:{fragment.ConsumedBefore}");
             observer?.Report(new TriagingFragment(
                 (int)fragmentCount,
                 fragment.ConsumedBefore,
@@ -126,6 +127,7 @@ internal sealed class LogTriagePipeline(
         }
 
         var answer = reduced.Text;
+        UsageCall.Current?.Comparison.GeneratedText(answer);
         var receipt = (lastReceipt
             ?? throw new InvalidOperationException(LocalLmText.LogTriageNoReceipt))
             with { QueueDuration = queued, ExecutionDuration = executed };

@@ -320,6 +320,7 @@ public sealed class SearchService : IDisposable
                 IndexText.ChunkSourceStaleRange);
         }
 
+        UsageCall.Current?.Comparison.SourceText(sourceText, fullPath);
         var body = string.Join(
             "\n",
             lines[(meta.StartLine - 1)..meta.EndLine]);

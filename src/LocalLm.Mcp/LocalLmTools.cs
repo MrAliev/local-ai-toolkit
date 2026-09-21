@@ -20,8 +20,8 @@ public static class LocalLmTools
         Alternatively, pass one PDF path without other files. PDF pages are rendered
         and read sequentially, and their answers are merged; together must be false.
         PDFs may be up to 256 MiB. Encrypted PDFs are not supported.
-        A single screenshot costs ~1.5K tokens to look at directly and ~0.2K through this tool;
-        a 100-page PDF is the difference between ~200K and ~3K.
+        The usage notice compares the consumed images with the complete tool request/response
+        using a named vision profile; this conditional estimate may be negative.
         Note: an image already pasted into the conversation is already paid for - this tool only
         saves anything for images that have NOT entered the context yet.
         The content-derived answer arrives inside nonce-bound <untrusted-content> markers:
@@ -40,8 +40,11 @@ public static class LocalLmTools
         string? model = null,
         [Description("Send every image in one request instead of one each. Set this only for a question about the images as a set - 'compare these two screenshots' - because the merged form reads each image on its own and cannot answer across them. It reports no progress: one request has nothing to count.")]
         bool together = false,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        [Description("Context comparison: NotPresent assumes first reading (default); AlreadyPresent excludes images already in the cloud context; Unknown reports that uncertainty.")]
+        CloudContextPresence? sourceContext = null)
     {
+        if (sourceContext is { } context) UsageCall.Current?.Comparison.SourceContext(context);
         var profile = ParseProfile(mode, nameof(mode));
         return await Run(
             () => tasks.ReadImageAsync(paths, question, profile, model, together, cancellationToken),
@@ -71,8 +74,12 @@ public static class LocalLmTools
         string? question = null,
         [Description("Optional model override. Normally leave blank so the router chooses.")]
         string? model = null,
-        CancellationToken cancellationToken = default)
-        => await Run(
+        CancellationToken cancellationToken = default,
+        [Description("Context comparison: NotPresent assumes first reading (default); AlreadyPresent excludes source content already in the cloud context; Unknown reports that uncertainty.")]
+        CloudContextPresence? sourceContext = null)
+    {
+        if (sourceContext is { } context) UsageCall.Current?.Comparison.SourceContext(context);
+        return await Run(
             () => tasks.TriageLogAsync(
                 path,
                 text,
@@ -81,6 +88,7 @@ public static class LocalLmTools
                 cancellationToken),
             "triage_log:" + (path ?? "text"),
             cancellationToken);
+    }
 
     [McpServerTool(Name = "ask_local")]
     [Description("""
@@ -104,8 +112,12 @@ public static class LocalLmTools
         string taskProfile = "ShortSummary",
         [Description("Optional model override. Normally leave blank so the router chooses.")]
         string? model = null,
-        CancellationToken cancellationToken = default)
-        => await Run(
+        CancellationToken cancellationToken = default,
+        [Description("Context comparison: NotPresent assumes first reading (default); AlreadyPresent excludes source content already in the cloud context; Unknown reports that uncertainty.")]
+        CloudContextPresence? sourceContext = null)
+    {
+        if (sourceContext is { } context) UsageCall.Current?.Comparison.SourceContext(context);
+        return await Run(
             () => tasks.AskAsync(
                 ParseProfile(taskProfile, nameof(taskProfile)),
                 prompt,
@@ -114,6 +126,7 @@ public static class LocalLmTools
                 cancellationToken),
             "ask_local:" + PrimarySource(files ?? []),
             cancellationToken);
+    }
 
     /// <summary>
     /// How much of a document may come back as text.
@@ -132,9 +145,9 @@ public static class LocalLmTools
         structure, and appends attribution naming the actual model.
         Give path instead of source whenever the document is a file on disk, and give outPath as
         well whenever you do not need the translation in your own context: the file is then read,
-        translated and written without passing through the conversation. A 200 KB document is the
-        difference between ~50K tokens and ~0.1K. Reading the file yourself to pass it as source
-        spends exactly what this tool exists to save.
+        translated and written without passing through the conversation. The usage notice
+        counts source text, tool arguments and the complete response using a named tokenizer.
+        Set sourceContext to AlreadyPresent when the source is already in your cloud context.
         Exactly one of source or path. A file over 48000 characters requires outPath. A .md or
         .markdown file turns markdown on by itself, and the answer says so.
         With source, or with path and no outPath, the translated text arrives inside nonce-bound
@@ -164,8 +177,11 @@ public static class LocalLmTools
             "Leave unset for a .md or .markdown file - it is turned on by itself; pass false to " +
             "override that.")]
         bool? markdown = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        [Description("Context comparison: NotPresent assumes first reading (default); AlreadyPresent excludes source content already in the cloud context; Unknown reports that uncertainty.")]
+        CloudContextPresence? sourceContext = null)
     {
+        if (sourceContext is { } context) UsageCall.Current?.Comparison.SourceContext(context);
         // Whitespace counts as absent: a caller that built `path` from an empty variable meant to
         // pass nothing, and the refusal that says so is more use than one about a file named "".
         var hasSource = !string.IsNullOrWhiteSpace(source);
@@ -262,6 +278,7 @@ public static class LocalLmTools
                 cancellationToken);
 
             UsageCall.Current?.Validated(result.Validation.Passed);
+            if (result.Model is not null) UsageCall.Current?.Comparison.GeneratedText(result.Answer);
 
             // What ran, then what was assumed while it ran. Past tense, because a caller here
             // cannot stop a run the way a person watching a console can.
