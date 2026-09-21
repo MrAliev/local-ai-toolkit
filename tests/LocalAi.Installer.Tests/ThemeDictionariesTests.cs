@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 
 namespace LocalAi.Installer.Tests;
 
@@ -59,6 +60,51 @@ public sealed class ThemeDictionariesTests
     public void The_dark_palette_is_not_the_light_one()
     {
         Assert.NotEqual(Colours("Light.xaml"), Colours("Dark.xaml"));
+    }
+
+    [Theory]
+    [InlineData("Light.xaml")]
+    [InlineData("Dark.xaml")]
+    public void Active_control_boundaries_and_future_steps_meet_their_contrast_targets(string palette)
+    {
+        XNamespace xaml = "http://schemas.microsoft.com/winfx/2006/xaml";
+        var colours = XDocument.Parse(Read(palette)).Root!.Elements().ToDictionary(
+            element => (string)element.Attribute(xaml + "Key")!,
+            element => (string)element.Attribute("Color")!);
+
+        // Controls.xaml uses these borders inside fields and against the page/card/warning
+        // surfaces. Both wizard rails use TextMuted for future steps. Disabled controls and
+        // decorative Divider strokes deliberately have no active-control contrast target.
+        (string Foreground, string Background, double Minimum)[] pairs =
+        [
+            ("ControlBorder", "ControlFill", 3),
+            ("ControlBorder", "WindowFill", 3),
+            ("ControlBorder", "Surface", 3),
+            ("ControlBorder", "WarnFill", 3),
+            ("TextMuted", "RailFill", 4.5),
+            ("FocusRing", "ControlFill", 3),
+            ("FocusRing", "WindowFill", 3),
+            ("AccentFill", "ControlFill", 3),
+            ("WindowFill", "AccentFill", 3),
+        ];
+        foreach (var (foreground, background, minimum) in pairs)
+        {
+            var a = Luminance(colours[foreground]);
+            var b = Luminance(colours[background]);
+            var ratio = (Math.Max(a, b) + 0.05) / (Math.Min(a, b) + 0.05);
+            Assert.True(ratio >= minimum,
+                $"{palette}: {foreground}/{background} is {ratio:F3}:1; requires {minimum}:1.");
+        }
+    }
+
+    private static double Luminance(string colour)
+    {
+        double Linear(int offset)
+        {
+            var channel = Convert.ToByte(colour.Substring(offset, 2), 16) / 255.0;
+            return channel <= 0.04045 ? channel / 12.92 : Math.Pow((channel + 0.055) / 1.055, 2.4);
+        }
+        return 0.2126 * Linear(1) + 0.7152 * Linear(3) + 0.0722 * Linear(5);
     }
 
     private static IReadOnlyList<string> Keys(string palette) =>
