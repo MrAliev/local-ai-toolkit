@@ -43,10 +43,15 @@ public sealed class DiagnosePageViewModel : ObservableObject
             SetProperty(ref isChecking, value);
             OnPropertyChanged(nameof(HasResults));
             OnPropertyChanged(nameof(CanContinue));
+            OnPropertyChanged(nameof(Announcement));
         }
     }
 
     public bool HasResults => !IsChecking;
+
+    public string Announcement => IsChecking ? string.Empty : IsSupported
+        ? InstallerCulture.Pick("System check complete. Review the results below.", "Проверка системы завершена. Результаты приведены ниже.")
+        : (InstallerCulture.Pick("System check complete. Installation is unavailable. ", "Проверка системы завершена. Установка недоступна. ") + UnsupportedReason).TrimEnd();
 
     public bool IsSupported
     {
@@ -55,13 +60,18 @@ public sealed class DiagnosePageViewModel : ObservableObject
         {
             SetProperty(ref isSupported, value);
             OnPropertyChanged(nameof(CanContinue));
+            OnPropertyChanged(nameof(Announcement));
         }
     }
 
     public string? UnsupportedReason
     {
         get => unsupportedReason;
-        set => SetProperty(ref unsupportedReason, value);
+        set
+        {
+            SetProperty(ref unsupportedReason, value);
+            OnPropertyChanged(nameof(Announcement));
+        }
     }
 
     /// <summary>
@@ -95,6 +105,7 @@ public sealed class DiagnosePageViewModel : ObservableObject
     {
         IsSupported = supported;
         UnsupportedReason = supported ? null : reason;
+        OnPropertyChanged(nameof(Announcement));
     }
 
     public void Load(EnvironmentDiagnosis diagnosis)
