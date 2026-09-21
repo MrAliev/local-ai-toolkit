@@ -1,0 +1,1866 @@
+{
+  "implementation": "ecf4062-cold-concurrent-probe-sequential-2",
+  "mode": "sequential",
+  "concurrency": 1,
+  "maximumObservedOverlap": 1,
+  "policy": {
+    "SchemaVersion": 1,
+    "ModelResidency": "RequireFullVram",
+    "IdleModelKeepAliveSeconds": 10,
+    "MaxEmbeddingBatchItems": 128
+  },
+  "probeSha256": "83c777c76a20ae5599901c95178e9c8ec2f85bb74f4b354b23fd045d5d80f42e",
+  "coreSha256": "ae8544cf10f50c9ae9fe84992557a0343e16afe57c6b8dcb460584dbbdacc0f4",
+  "brokerSha256": "fb0cfd7a93911c047f819fde617f46aded984dd10613bb57e564d1513ec571f0",
+  "brokerAssemblySha256": "1392572368ff2d4426af28a4317ce5a8b07e066efb95da8b370333b8677e0e04",
+  "brokerCoreSha256": "3de88325066659a3290abff6d2911459d4cc887089009fccc30536158338774f",
+  "sourceCommit": "2a9b6285b7a7bbecf2c826ae41d3bdd53aabf94e",
+  "sourceTree": "4d6f312ef41ca1372a3816738ab9afaa5a1e5ec5",
+  "corpusSha256": "0990bd3f1e0c1041c7c633913126b3de57adb8a3d7d413180c905eb43d5cf994",
+  "generationId": "1364bc2a1d1891bae169bc138d397cc633055e64e824193014fd010383fd364b",
+  "indexedFiles": 87,
+  "indexedChunks": 227,
+  "model": "qwen3-embedding:8b-q8_0",
+  "digestBefore": "9704fd987c12aa746934ea9f99dc85527c83c6e4b98b3a10b94689332ee866bb",
+  "digestAfter": "9704fd987c12aa746934ea9f99dc85527c83c6e4b98b3a10b94689332ee866bb",
+  "phases": "BeforeEmbedding includes index read/snapshot/overlay/prompt; Embedding includes broker round trip; AfterEmbedding includes normalization/ranking; receipt queue/execution are nested, not additive to client embedding duration.",
+  "backendTimingSource": "Optional embedding timing sidecar joined by JobId, read after the search timer stops. Null means unavailable. CacheHit means no backend call; total minus load includes backend overhead, not pure inference.",
+  "measurements": [
+    {
+      "id": "cs-weight-en",
+      "pass": 0,
+      "startedAtMs": 6.5095,
+      "totalMs": 2638.5674,
+      "beforeEmbeddingMs": 172.3535,
+      "embeddingMs": 2442.7647,
+      "afterEmbeddingMs": 23.449199999999564,
+      "queueMs": 2174.488,
+      "executionMs": 193.9057,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "5100ae80-1922-4796-8d78-e8d3dbe7d625",
+        "recordedAtUtc": "2026-09-22T02:19:56.0587603+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 169841500,
+          "loadNanoseconds": 671700,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 43
+        }
+      },
+      "hitsSha256": "d425fb1dbb56655822b9a0c8d8cb3be50dfb257ffd19611cbfc6be7ce45665b2"
+    },
+    {
+      "id": "cs-weight-ru",
+      "pass": 0,
+      "startedAtMs": 2651.5211,
+      "totalMs": 286.2462,
+      "beforeEmbeddingMs": 157.0224,
+      "embeddingMs": 123.2301,
+      "afterEmbeddingMs": 5.99369999999999,
+      "queueMs": 72.5665,
+      "executionMs": 29.2509,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "fa005ef6-30e4-45e4-95af-76645fd3bc7d",
+        "recordedAtUtc": "2026-09-22T02:19:56.4199287+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 20999800,
+          "loadNanoseconds": 1500200,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 51
+        }
+      },
+      "hitsSha256": "4d9922c866021a16cadfa40dadb324fe67f1a42fdb304f22259edc2a69992035"
+    },
+    {
+      "id": "cs-volume-en",
+      "pass": 0,
+      "startedAtMs": 2938.0262,
+      "totalMs": 279.0528,
+      "beforeEmbeddingMs": 159.9188,
+      "embeddingMs": 117.6932,
+      "afterEmbeddingMs": 1.4407999999999817,
+      "queueMs": 40.1731,
+      "executionMs": 37.1881,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "1cdd0fc1-2a6b-4bac-9f14-daa1c5f9b025",
+        "recordedAtUtc": "2026-09-22T02:19:56.6848175+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 20499700,
+          "loadNanoseconds": 1999600,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 39
+        }
+      },
+      "hitsSha256": "6f064eaeae21b833ee32d47965b3ef40dc5cda3408468093ef1b98ac90dcf0a0"
+    },
+    {
+      "id": "cs-volume-ru",
+      "pass": 0,
+      "startedAtMs": 3217.3207,
+      "totalMs": 272.9373,
+      "beforeEmbeddingMs": 156.3584,
+      "embeddingMs": 114.4163,
+      "afterEmbeddingMs": 2.1625999999999976,
+      "queueMs": 28.9982,
+      "executionMs": 32.1582,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "bd41e68b-8cbb-4f88-8c05-4aaec4749350",
+        "recordedAtUtc": "2026-09-22T02:19:56.9443461+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 21992000,
+          "loadNanoseconds": 1992500,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 41
+        }
+      },
+      "hitsSha256": "24d1ba9d79e68ea42e909675404d32e0f93a3a081e05be24011a3617dc5c3495"
+    },
+    {
+      "id": "cs-retry-en",
+      "pass": 0,
+      "startedAtMs": 3490.4994,
+      "totalMs": 392.316,
+      "beforeEmbeddingMs": 163.9677,
+      "embeddingMs": 223.1638,
+      "afterEmbeddingMs": 5.184499999999957,
+      "queueMs": 108.1574,
+      "executionMs": 30.9022,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "05ba5f4f-6608-49a3-94a7-15ddf9a7589c",
+        "recordedAtUtc": "2026-09-22T02:19:57.3030338+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 21001800,
+          "loadNanoseconds": 1500400,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 45
+        }
+      },
+      "hitsSha256": "41c802123c150fa875b0e8ef1d11744319cf43cb8d1c5a05b84d67dc602b794e"
+    },
+    {
+      "id": "cs-retry-ru",
+      "pass": 0,
+      "startedAtMs": 3883.1057,
+      "totalMs": 295.3738,
+      "beforeEmbeddingMs": 168.2414,
+      "embeddingMs": 122.5428,
+      "afterEmbeddingMs": 4.5896000000000186,
+      "queueMs": 72.3353,
+      "executionMs": 29.2836,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "bfbefefb-08f4-4c1c-9945-af5d7dc0af5d",
+        "recordedAtUtc": "2026-09-22T02:19:57.6624834+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 21002000,
+          "loadNanoseconds": 998900,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 45
+        }
+      },
+      "hitsSha256": "8614bbf1bd3c8a5a779809b2a93c3923e23ec8cc64e5692a2b67b48cf6c7a4cd"
+    },
+    {
+      "id": "cs-manifest-en",
+      "pass": 0,
+      "startedAtMs": 4178.7186,
+      "totalMs": 289.7565,
+      "beforeEmbeddingMs": 166.0934,
+      "embeddingMs": 113.8692,
+      "afterEmbeddingMs": 9.793900000000008,
+      "queueMs": 36.8082,
+      "executionMs": 38.2571,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "8490d2be-a562-48f3-907a-44517f77f925",
+        "recordedAtUtc": "2026-09-22T02:19:57.9293871+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 30995500,
+          "loadNanoseconds": 1492700,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 46
+        }
+      },
+      "hitsSha256": "8d6e9f69d26a18d9904135373f1141c05307c4183b7262f82a4e53ad497b3fb6"
+    },
+    {
+      "id": "cs-manifest-ru",
+      "pass": 0,
+      "startedAtMs": 4468.7303,
+      "totalMs": 281.8192,
+      "beforeEmbeddingMs": 158.5281,
+      "embeddingMs": 121.6769,
+      "afterEmbeddingMs": 1.6142000000000252,
+      "queueMs": 24.2554,
+      "executionMs": 39.3149,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "9d811f9e-47da-46ef-a624-dcd88edd5897",
+        "recordedAtUtc": "2026-09-22T02:19:58.2003382+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 31489700,
+          "loadNanoseconds": 999700,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 52
+        }
+      },
+      "hitsSha256": "5147661e35f564b0910deda0ae857fbdd8dc07c410dcf8545d1cee11d4c6544d"
+    },
+    {
+      "id": "cs-invoice-en",
+      "pass": 0,
+      "startedAtMs": 4750.791,
+      "totalMs": 385.8618,
+      "beforeEmbeddingMs": 162.7594,
+      "embeddingMs": 222.2479,
+      "afterEmbeddingMs": 0.85450000000003,
+      "queueMs": 114.5831,
+      "executionMs": 38.8546,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "0b080c89-0450-44cc-ac71-99b538e42dfa",
+        "recordedAtUtc": "2026-09-22T02:19:58.5764935+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 29587600,
+          "loadNanoseconds": 999300,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 38
+        }
+      },
+      "hitsSha256": "0a42408447332850049838d065636c8ba698fdc245ce9523a66d2e0191639e54"
+    },
+    {
+      "id": "cs-inventory-ru",
+      "pass": 0,
+      "startedAtMs": 5136.8653,
+      "totalMs": 374.7165,
+      "beforeEmbeddingMs": 158.4319,
+      "embeddingMs": 214.6826,
+      "afterEmbeddingMs": 1.6019999999999754,
+      "queueMs": 106.3405,
+      "executionMs": 41.7894,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "b2ab1f5e-4392-444e-bd5f-a3257ddfcf41",
+        "recordedAtUtc": "2026-09-22T02:19:58.9529339+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 31500400,
+          "loadNanoseconds": 1000100,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 45
+        }
+      },
+      "hitsSha256": "30164e7d6de5154baac0ce2f0ea0e9cd45e5f9fdedeebfb3364f779047e45574"
+    },
+    {
+      "id": "ts-token-en",
+      "pass": 0,
+      "startedAtMs": 5511.822,
+      "totalMs": 392.4103,
+      "beforeEmbeddingMs": 164.6657,
+      "embeddingMs": 226.7413,
+      "afterEmbeddingMs": 1.0033000000000243,
+      "queueMs": 93.8892,
+      "executionMs": 40.8676,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "47dba2bc-b171-49e9-b23e-b9852385289a",
+        "recordedAtUtc": "2026-09-22T02:19:59.3207433+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 30499900,
+          "loadNanoseconds": 1499500,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 38
+        }
+      },
+      "hitsSha256": "488ca6da3328e70af94539807808a8ad30190e77df8fdbb2ce81fcc7b66c895d"
+    },
+    {
+      "id": "ts-token-ru",
+      "pass": 0,
+      "startedAtMs": 5904.5127,
+      "totalMs": 389.1533,
+      "beforeEmbeddingMs": 165.255,
+      "embeddingMs": 222.7139,
+      "afterEmbeddingMs": 1.1844000000000108,
+      "queueMs": 73.6567,
+      "executionMs": 45.4386,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "e677da2d-1ba6-4fe6-858e-1ab2a783c65d",
+        "recordedAtUtc": "2026-09-22T02:19:59.6983691+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 30998200,
+          "loadNanoseconds": 1000000,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 51
+        }
+      },
+      "hitsSha256": "c240f0d367262b372ffce567b8d7690f6477658523cc5bd98ec03604e1d2089d"
+    },
+    {
+      "id": "ts-retry-en",
+      "pass": 0,
+      "startedAtMs": 6293.8663,
+      "totalMs": 282.1151,
+      "beforeEmbeddingMs": 159.9518,
+      "embeddingMs": 121.5698,
+      "afterEmbeddingMs": 0.5934999999999917,
+      "queueMs": 63.4556,
+      "executionMs": 39.1208,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "2dd72cf4-f617-4f54-9e89-77819e095d3b",
+        "recordedAtUtc": "2026-09-22T02:20:00.0658967+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 30502400,
+          "loadNanoseconds": 1000100,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 45
+        }
+      },
+      "hitsSha256": "83ee5254bd16dc7f845736b5e3a008a3ced7ce3ba99bb30aebb7b69f5fea2783"
+    },
+    {
+      "id": "ts-retry-ru",
+      "pass": 0,
+      "startedAtMs": 6576.1867,
+      "totalMs": 278.7392,
+      "beforeEmbeddingMs": 163.4727,
+      "embeddingMs": 114.0829,
+      "afterEmbeddingMs": 1.1835999999999842,
+      "queueMs": 42.4767,
+      "executionMs": 45.027,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "e96b7f8a-423b-4df3-bfcb-5197b602aae4",
+        "recordedAtUtc": "2026-09-22T02:20:00.3366675+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 32002200,
+          "loadNanoseconds": 999400,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 53
+        }
+      },
+      "hitsSha256": "754e2f5110c20f5588c8e4df34379f3a8f2cc78a18a8396b5790f81fd27ee327"
+    },
+    {
+      "id": "ts-menu-en",
+      "pass": 0,
+      "startedAtMs": 6855.1165,
+      "totalMs": 278.0725,
+      "beforeEmbeddingMs": 163.2285,
+      "embeddingMs": 114.1657,
+      "afterEmbeddingMs": 0.678299999999993,
+      "queueMs": 33.745,
+      "executionMs": 39.7297,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "75643f49-8ab9-4045-9b85-31658ed650d1",
+        "recordedAtUtc": "2026-09-22T02:20:00.6013141+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 30999700,
+          "loadNanoseconds": 1999100,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 38
+        }
+      },
+      "hitsSha256": "d63112591229b202c6c4fe4b19f0c1ec15f749ea5ff29dc572eeda7df50e498f"
+    },
+    {
+      "id": "ts-menu-ru",
+      "pass": 0,
+      "startedAtMs": 7133.384,
+      "totalMs": 270.9707,
+      "beforeEmbeddingMs": 155.2115,
+      "embeddingMs": 114.5718,
+      "afterEmbeddingMs": 1.187400000000025,
+      "queueMs": 32.3485,
+      "executionMs": 41.8607,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "8a5d68b2-7356-47bf-909b-ca2a6605689d",
+        "recordedAtUtc": "2026-09-22T02:20:00.8723237+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 31500900,
+          "loadNanoseconds": 999500,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 47
+        }
+      },
+      "hitsSha256": "97841dfe0e1dc0640ade150b5dd07a650f338a665eebaa5311ae2298f2adbc99"
+    },
+    {
+      "id": "ts-empty-en",
+      "pass": 0,
+      "startedAtMs": 7404.5697,
+      "totalMs": 289.9287,
+      "beforeEmbeddingMs": 161.8747,
+      "embeddingMs": 123.8368,
+      "afterEmbeddingMs": 4.217200000000005,
+      "queueMs": 25.9582,
+      "executionMs": 37.8807,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "9ab81f91-e04d-4c85-ba2b-1f3067aada63",
+        "recordedAtUtc": "2026-09-22T02:20:01.1397798+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 30999200,
+          "loadNanoseconds": 1500400,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 41
+        }
+      },
+      "hitsSha256": "5a657503f8675e5eb46cca9217ef8ccbdaf609deff528f298cd0f5835ffb8aeb"
+    },
+    {
+      "id": "ts-empty-ru",
+      "pass": 0,
+      "startedAtMs": 7694.7728,
+      "totalMs": 389.0874,
+      "beforeEmbeddingMs": 159.8123,
+      "embeddingMs": 227.7437,
+      "afterEmbeddingMs": 1.5314000000000192,
+      "queueMs": 121.0332,
+      "executionMs": 39.4217,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "f00b4ffb-9961-4ad4-af49-6eb88f044f85",
+        "recordedAtUtc": "2026-09-22T02:20:01.5245304+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 31502600,
+          "loadNanoseconds": 1000500,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 46
+        }
+      },
+      "hitsSha256": "4c14ece4303da14d7d097747f0396ac12e0a2209a0cf07ccef1c2399f482e520"
+    },
+    {
+      "id": "ts-invoice-en",
+      "pass": 0,
+      "startedAtMs": 8084.0779,
+      "totalMs": 385.6628,
+      "beforeEmbeddingMs": 161.5491,
+      "embeddingMs": 223.2593,
+      "afterEmbeddingMs": 0.8543999999999983,
+      "queueMs": 97.3276,
+      "executionMs": 38.6687,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "f7d7bcd8-af19-4d19-b2ef-79ce168cebef",
+        "recordedAtUtc": "2026-09-22T02:20:01.8911107+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 30002100,
+          "loadNanoseconds": 1000700,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 43
+        }
+      },
+      "hitsSha256": "65815db0cf56144f648d8facc9454865f2b25eb20fcb3ec4b0a00ab8f7a8bfb1"
+    },
+    {
+      "id": "ts-inventory-ru",
+      "pass": 0,
+      "startedAtMs": 8469.9749,
+      "totalMs": 295.1157,
+      "beforeEmbeddingMs": 164.6361,
+      "embeddingMs": 129.3496,
+      "afterEmbeddingMs": 1.1299999999999955,
+      "queueMs": 73.2902,
+      "executionMs": 39.9428,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "e10553a0-3cbe-4d27-8a7c-6f1619fdc43b",
+        "recordedAtUtc": "2026-09-22T02:20:02.2573341+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 31502600,
+          "loadNanoseconds": 1501800,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 47
+        }
+      },
+      "hitsSha256": "0ab13dd3ed2fc9abcb0586037d8cc023376bf153a663cb004fcf75058b14352e"
+    },
+    {
+      "id": "py-halfup-en",
+      "pass": 0,
+      "startedAtMs": 8765.2628,
+      "totalMs": 272.7822,
+      "beforeEmbeddingMs": 159.9035,
+      "embeddingMs": 112.3537,
+      "afterEmbeddingMs": 0.5249999999999773,
+      "queueMs": 55.6565,
+      "executionMs": 40.938,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "f075be58-b0f1-4e9e-8bf1-d4804fb2d5a8",
+        "recordedAtUtc": "2026-09-22T02:20:02.5312524+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 31000000,
+          "loadNanoseconds": 1000100,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 40
+        }
+      },
+      "hitsSha256": "a41d1e7e9affc2ad2ad3c568e94e05c392ce2f4aacb815ef952d8a4c6efa37ce"
+    },
+    {
+      "id": "py-halfup-ru",
+      "pass": 0,
+      "startedAtMs": 9038.2369,
+      "totalMs": 272.7654,
+      "beforeEmbeddingMs": 158.0189,
+      "embeddingMs": 113.1915,
+      "afterEmbeddingMs": 1.5549999999999926,
+      "queueMs": 51.0707,
+      "executionMs": 39.0936,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "e8ce2395-c502-4db5-ae88-f0b606e27c74",
+        "recordedAtUtc": "2026-09-22T02:20:02.7959189+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 32002000,
+          "loadNanoseconds": 1000100,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 56
+        }
+      },
+      "hitsSha256": "13d032c3296659790e4e7e0f7e7f33e2ffca96fc670e8274118046a54c7f8a91"
+    },
+    {
+      "id": "py-even-en",
+      "pass": 0,
+      "startedAtMs": 9311.1906,
+      "totalMs": 273.6332,
+      "beforeEmbeddingMs": 160.0784,
+      "embeddingMs": 112.9663,
+      "afterEmbeddingMs": 0.5884999999999962,
+      "queueMs": 40.5182,
+      "executionMs": 42.9982,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "993f4afc-7559-4eaa-9a56-5a69329f1156",
+        "recordedAtUtc": "2026-09-22T02:20:03.0642758+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 31997300,
+          "loadNanoseconds": 1992400,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 41
+        }
+      },
+      "hitsSha256": "f8c66f5a535769e88702ae99e9dd5a22895764b1476642c9a6ffc0884ed67c2e"
+    },
+    {
+      "id": "py-even-ru",
+      "pass": 0,
+      "startedAtMs": 9585.0071,
+      "totalMs": 281.1574,
+      "beforeEmbeddingMs": 166.9462,
+      "embeddingMs": 113.2012,
+      "afterEmbeddingMs": 1.009999999999991,
+      "queueMs": 29.8108,
+      "executionMs": 39.548,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "22af24af-4fc8-4b31-b8fb-01391cab64c5",
+        "recordedAtUtc": "2026-09-22T02:20:03.330808+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 31002400,
+          "loadNanoseconds": 999800,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 47
+        }
+      },
+      "hitsSha256": "b3d0ce08e40d9e8d6d48c958448bd2f2f8fcb0165db91fcbb1dbc2f5801a2cbf"
+    },
+    {
+      "id": "py-missing-en",
+      "pass": 0,
+      "startedAtMs": 9866.3324,
+      "totalMs": 291.152,
+      "beforeEmbeddingMs": 166.7718,
+      "embeddingMs": 123.0478,
+      "afterEmbeddingMs": 1.3323999999999785,
+      "queueMs": 22.9851,
+      "executionMs": 40.3596,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "16d82bee-0e15-4687-bb69-fc4749b74f79",
+        "recordedAtUtc": "2026-09-22T02:20:03.6059376+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 30999100,
+          "loadNanoseconds": 1500100,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 44
+        }
+      },
+      "hitsSha256": "b0c98d51210eb548274f6eac3d1514a5689f2ebf50b69b6382961d63eea5b8c0"
+    },
+    {
+      "id": "py-missing-ru",
+      "pass": 0,
+      "startedAtMs": 10157.8303,
+      "totalMs": 395.2429,
+      "beforeEmbeddingMs": 168.1926,
+      "embeddingMs": 224.6062,
+      "afterEmbeddingMs": 2.44410000000002,
+      "queueMs": 97.1001,
+      "executionMs": 39.4892,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "920f3aab-29be-497b-97a5-87c123021de6",
+        "recordedAtUtc": "2026-09-22T02:20:03.9721067+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 31505800,
+          "loadNanoseconds": 1499600,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 47
+        }
+      },
+      "hitsSha256": "7bd8228bc2b89e117548344c3fb0c7dbe322a3dc4a30e9906393442b16a1c8f9"
+    },
+    {
+      "id": "py-accepted-en",
+      "pass": 0,
+      "startedAtMs": 10553.3091,
+      "totalMs": 386.0553,
+      "beforeEmbeddingMs": 164.1796,
+      "embeddingMs": 220.3927,
+      "afterEmbeddingMs": 1.483000000000004,
+      "queueMs": 78.1932,
+      "executionMs": 39.8398,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "c5ba3b90-0d2e-40fa-9ddc-ee6a41a17db8",
+        "recordedAtUtc": "2026-09-22T02:20:04.3450122+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 30502200,
+          "loadNanoseconds": 1499900,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 39
+        }
+      },
+      "hitsSha256": "7059468601f5c7aeedfe5e2ea7bf4d65073d8380dacc0ae729e9e2aeb65ff540"
+    },
+    {
+      "id": "py-accepted-ru",
+      "pass": 0,
+      "startedAtMs": 10939.7588,
+      "totalMs": 291.0853,
+      "beforeEmbeddingMs": 167.9507,
+      "embeddingMs": 122.0347,
+      "afterEmbeddingMs": 1.0999000000000052,
+      "queueMs": 54.9797,
+      "executionMs": 39.5129,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "9c318d2c-a191-4611-b97c-4672cc37d7d3",
+        "recordedAtUtc": "2026-09-22T02:20:04.7116947+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 31500200,
+          "loadNanoseconds": 1000400,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 51
+        }
+      },
+      "hitsSha256": "d23252ec6ccee1136b9febe4ce96bd76f5fc051d0482fbae5e538d077a694389"
+    },
+    {
+      "id": "py-invoice-en",
+      "pass": 0,
+      "startedAtMs": 11231.0301,
+      "totalMs": 276.7093,
+      "beforeEmbeddingMs": 162.5646,
+      "embeddingMs": 113.384,
+      "afterEmbeddingMs": 0.7606999999999715,
+      "queueMs": 34.0986,
+      "executionMs": 37.6505,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "f6eab8be-6d4b-4891-864c-c07c8db6fe48",
+        "recordedAtUtc": "2026-09-22T02:20:04.9748383+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 30503500,
+          "loadNanoseconds": 999700,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 40
+        }
+      },
+      "hitsSha256": "50ef0e4b62e10b23318cc7341cabcdb327827e980a8d11113f2bd90efda2016f"
+    },
+    {
+      "id": "py-inventory-ru",
+      "pass": 0,
+      "startedAtMs": 11507.9173,
+      "totalMs": 287.6756,
+      "beforeEmbeddingMs": 163.6176,
+      "embeddingMs": 123.0664,
+      "afterEmbeddingMs": 0.9915999999999627,
+      "queueMs": 25.8058,
+      "executionMs": 41.58,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "63d775c5-bb0c-4280-9b13-93b1b4208a08",
+        "recordedAtUtc": "2026-09-22T02:20:05.2484183+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 30999400,
+          "loadNanoseconds": 1500400,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 46
+        }
+      },
+      "hitsSha256": "3406fa2e7f638f70892ff7f0cb72f49be018e0133352ff69a8a4ff1ef16a093e"
+    },
+    {
+      "id": "absent-encryption-en",
+      "pass": 0,
+      "startedAtMs": 11795.8205,
+      "totalMs": 330.9543,
+      "beforeEmbeddingMs": 217.5218,
+      "embeddingMs": 112.5885,
+      "afterEmbeddingMs": 0.8439999999999799,
+      "queueMs": 52.4344,
+      "executionMs": 41.4566,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "a244bf61-35bf-4507-8e9e-26eb9461d67a",
+        "recordedAtUtc": "2026-09-22T02:20:05.6167224+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 30499600,
+          "loadNanoseconds": 1000100,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 40
+        }
+      },
+      "hitsSha256": "f6cc441f1f155238be8b6a8cdd52df0adb64f2aa90b631692f8fc702b2f20267"
+    },
+    {
+      "id": "absent-migration-ru",
+      "pass": 0,
+      "startedAtMs": 12126.9689,
+      "totalMs": 275.2337,
+      "beforeEmbeddingMs": 161.1992,
+      "embeddingMs": 113.072,
+      "afterEmbeddingMs": 0.9625000000000057,
+      "queueMs": 45.6927,
+      "executionMs": 40.8785,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "ab2e9401-73ba-4543-af86-270765682939",
+        "recordedAtUtc": "2026-09-22T02:20:05.8842569+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 31499900,
+          "loadNanoseconds": 1500000,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 46
+        }
+      },
+      "hitsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "id": "absent-audio-en",
+      "pass": 0,
+      "startedAtMs": 12402.4303,
+      "totalMs": 271.1246,
+      "beforeEmbeddingMs": 157.5501,
+      "embeddingMs": 112.8494,
+      "afterEmbeddingMs": 0.7250999999999976,
+      "queueMs": 38.3649,
+      "executionMs": 36.2791,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "446e86df-056c-4d6d-b59d-35b2bbe10448",
+        "recordedAtUtc": "2026-09-22T02:20:06.1443166+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 29500200,
+          "loadNanoseconds": 1001500,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 38
+        }
+      },
+      "hitsSha256": "bbfe97e236b8db5490e5f86f2ad4be9efd473e98d870beaf7148d0ea49d834d8"
+    },
+    {
+      "id": "absent-signature-ru",
+      "pass": 0,
+      "startedAtMs": 12673.7662,
+      "totalMs": 296.7441,
+      "beforeEmbeddingMs": 163.9505,
+      "embeddingMs": 131.6455,
+      "afterEmbeddingMs": 1.1480999999999995,
+      "queueMs": 25.5876,
+      "executionMs": 43.7676,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "018be05a-5022-4e47-b6d0-cd1048d1e3ad",
+        "recordedAtUtc": "2026-09-22T02:20:06.4165535+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 30501200,
+          "loadNanoseconds": 1499500,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 45
+        }
+      },
+      "hitsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "id": "cs-weight-en",
+      "pass": 1,
+      "startedAtMs": 12989.9798,
+      "totalMs": 288.9379,
+      "beforeEmbeddingMs": 166.6328,
+      "embeddingMs": 121.7852,
+      "afterEmbeddingMs": 0.5199000000000069,
+      "queueMs": 75.9986,
+      "executionMs": 5.3591,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "64e20a90-90fc-4df0-85c1-848d8509478f",
+        "recordedAtUtc": "2026-09-22T02:20:06.747444+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "d425fb1dbb56655822b9a0c8d8cb3be50dfb257ffd19611cbfc6be7ce45665b2"
+    },
+    {
+      "id": "cs-weight-ru",
+      "pass": 1,
+      "startedAtMs": 13279.1014,
+      "totalMs": 291.6488,
+      "beforeEmbeddingMs": 160.481,
+      "embeddingMs": 129.3971,
+      "afterEmbeddingMs": 1.770700000000005,
+      "queueMs": 24.1283,
+      "executionMs": 4.7116,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "60b7fe61-24f3-4803-8877-0db74b4c2ebc",
+        "recordedAtUtc": "2026-09-22T02:20:06.9778984+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "4d9922c866021a16cadfa40dadb324fe67f1a42fdb304f22259edc2a69992035"
+    },
+    {
+      "id": "cs-volume-en",
+      "pass": 1,
+      "startedAtMs": 13570.9681,
+      "totalMs": 277.914,
+      "beforeEmbeddingMs": 164.2648,
+      "embeddingMs": 113.0336,
+      "afterEmbeddingMs": 0.6155999999999722,
+      "queueMs": 62.443,
+      "executionMs": 2.6244,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "874d82f6-6789-4ba9-adce-46a198745bea",
+        "recordedAtUtc": "2026-09-22T02:20:07.3097746+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "6f064eaeae21b833ee32d47965b3ef40dc5cda3408468093ef1b98ac90dcf0a0"
+    },
+    {
+      "id": "cs-volume-ru",
+      "pass": 1,
+      "startedAtMs": 13849.0732,
+      "totalMs": 293.1063,
+      "beforeEmbeddingMs": 162.4138,
+      "embeddingMs": 129.6635,
+      "afterEmbeddingMs": 1.028999999999968,
+      "queueMs": 112.8064,
+      "executionMs": 2.7389,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "19a6a9a7-c5b1-4e5c-b0c4-685d990178bd",
+        "recordedAtUtc": "2026-09-22T02:20:07.6365095+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "24d1ba9d79e68ea42e909675404d32e0f93a3a081e05be24011a3617dc5c3495"
+    },
+    {
+      "id": "cs-retry-en",
+      "pass": 1,
+      "startedAtMs": 14142.3368,
+      "totalMs": 282.5045,
+      "beforeEmbeddingMs": 158.4377,
+      "embeddingMs": 113.2025,
+      "afterEmbeddingMs": 10.8643,
+      "queueMs": 59.7196,
+      "executionMs": 6.5947,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "5c4622f3-6db2-4960-a469-daf8889c8b2d",
+        "recordedAtUtc": "2026-09-22T02:20:07.8765689+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "41c802123c150fa875b0e8ef1d11744319cf43cb8d1c5a05b84d67dc602b794e"
+    },
+    {
+      "id": "cs-retry-ru",
+      "pass": 1,
+      "startedAtMs": 14425.1835,
+      "totalMs": 385.1656,
+      "beforeEmbeddingMs": 162.0728,
+      "embeddingMs": 222.1962,
+      "afterEmbeddingMs": 0.8965999999999781,
+      "queueMs": 110.868,
+      "executionMs": 6.1445,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "bbc2ab74-8f13-4633-a42a-09da88cdb0bd",
+        "recordedAtUtc": "2026-09-22T02:20:08.2137451+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "8614bbf1bd3c8a5a779809b2a93c3923e23ec8cc64e5692a2b67b48cf6c7a4cd"
+    },
+    {
+      "id": "cs-manifest-en",
+      "pass": 1,
+      "startedAtMs": 14810.5123,
+      "totalMs": 267.6183,
+      "beforeEmbeddingMs": 154.2522,
+      "embeddingMs": 112.6554,
+      "afterEmbeddingMs": 0.7106999999999886,
+      "queueMs": 65.1466,
+      "executionMs": 2.9486,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "f27f52a0-a086-4205-8905-a4a072afa381",
+        "recordedAtUtc": "2026-09-22T02:20:08.5423416+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "8d6e9f69d26a18d9904135373f1141c05307c4183b7262f82a4e53ad497b3fb6"
+    },
+    {
+      "id": "cs-manifest-ru",
+      "pass": 1,
+      "startedAtMs": 15078.3106,
+      "totalMs": 282.5994,
+      "beforeEmbeddingMs": 160.8558,
+      "embeddingMs": 120.2284,
+      "afterEmbeddingMs": 1.5152000000000214,
+      "queueMs": 22.7048,
+      "executionMs": 2.8213,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "bf90d1b8-2a0a-4777-8a79-4e1171b0da3a",
+        "recordedAtUtc": "2026-09-22T02:20:08.7741687+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "5147661e35f564b0910deda0ae857fbdd8dc07c410dcf8545d1cee11d4c6544d"
+    },
+    {
+      "id": "cs-invoice-en",
+      "pass": 1,
+      "startedAtMs": 15361.0885,
+      "totalMs": 287.089,
+      "beforeEmbeddingMs": 165.4155,
+      "embeddingMs": 121.0641,
+      "afterEmbeddingMs": 0.6093999999999937,
+      "queueMs": 68.7139,
+      "executionMs": 2.4918,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "e328c715-90a8-4b5b-a1ca-2f4f60753705",
+        "recordedAtUtc": "2026-09-22T02:20:09.1071827+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "0a42408447332850049838d065636c8ba698fdc245ce9523a66d2e0191639e54"
+    },
+    {
+      "id": "cs-inventory-ru",
+      "pass": 1,
+      "startedAtMs": 15648.3589,
+      "totalMs": 307.5893,
+      "beforeEmbeddingMs": 194.0632,
+      "embeddingMs": 112.2847,
+      "afterEmbeddingMs": 1.2413999999999845,
+      "queueMs": 82.4385,
+      "executionMs": 5.7613,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "95b97ee5-0b4c-46eb-a039-d41528083f18",
+        "recordedAtUtc": "2026-09-22T02:20:09.4400967+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "30164e7d6de5154baac0ce2f0ea0e9cd45e5f9fdedeebfb3364f779047e45574"
+    },
+    {
+      "id": "ts-token-en",
+      "pass": 1,
+      "startedAtMs": 15956.1235,
+      "totalMs": 275.8842,
+      "beforeEmbeddingMs": 160.0824,
+      "embeddingMs": 115.0739,
+      "afterEmbeddingMs": 0.7279000000000195,
+      "queueMs": 37.9657,
+      "executionMs": 4.5788,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "3a716f7b-2306-4c1c-bcb9-ded98fff600c",
+        "recordedAtUtc": "2026-09-22T02:20:09.668225+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "488ca6da3328e70af94539807808a8ad30190e77df8fdbb2ce81fcc7b66c895d"
+    },
+    {
+      "id": "ts-token-ru",
+      "pass": 1,
+      "startedAtMs": 16232.3253,
+      "totalMs": 282.3477,
+      "beforeEmbeddingMs": 158.8718,
+      "embeddingMs": 122.4013,
+      "afterEmbeddingMs": 1.0745999999999611,
+      "queueMs": 95.336,
+      "executionMs": 4.2291,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "1830aba2-d538-433f-a740-8f94a377f0ff",
+        "recordedAtUtc": "2026-09-22T02:20:10.0002376+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "c240f0d367262b372ffce567b8d7690f6477658523cc5bd98ec03604e1d2089d"
+    },
+    {
+      "id": "ts-retry-en",
+      "pass": 1,
+      "startedAtMs": 16514.8566,
+      "totalMs": 274.4072,
+      "beforeEmbeddingMs": 160.2544,
+      "embeddingMs": 113.3986,
+      "afterEmbeddingMs": 0.7541999999999831,
+      "queueMs": 50.7681,
+      "executionMs": 2.9637,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "40e325ec-b55e-4965-b14e-c2c069b7c73a",
+        "recordedAtUtc": "2026-09-22T02:20:10.2383149+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "83ee5254bd16dc7f845736b5e3a008a3ced7ce3ba99bb30aebb7b69f5fea2783"
+    },
+    {
+      "id": "ts-retry-ru",
+      "pass": 1,
+      "startedAtMs": 16789.4758,
+      "totalMs": 286.9621,
+      "beforeEmbeddingMs": 164.9686,
+      "embeddingMs": 120.9483,
+      "afterEmbeddingMs": 1.0452000000000083,
+      "queueMs": 102.3364,
+      "executionMs": 3.3224,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "ee90a587-5ae8-45f3-974d-96a977a9c3a1",
+        "recordedAtUtc": "2026-09-22T02:20:10.5695781+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "754e2f5110c20f5588c8e4df34379f3a8f2cc78a18a8396b5790f81fd27ee327"
+    },
+    {
+      "id": "ts-menu-en",
+      "pass": 1,
+      "startedAtMs": 17076.6016,
+      "totalMs": 276.514,
+      "beforeEmbeddingMs": 162.542,
+      "embeddingMs": 113.2797,
+      "afterEmbeddingMs": 0.692300000000003,
+      "queueMs": 49.4176,
+      "executionMs": 3.0936,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "c9b54004-ed86-4889-bd8b-0b6730e3119f",
+        "recordedAtUtc": "2026-09-22T02:20:10.8011302+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "d63112591229b202c6c4fe4b19f0c1ec15f749ea5ff29dc572eeda7df50e498f"
+    },
+    {
+      "id": "ts-menu-ru",
+      "pass": 1,
+      "startedAtMs": 17353.2908,
+      "totalMs": 383.458,
+      "beforeEmbeddingMs": 161.5547,
+      "embeddingMs": 218.8995,
+      "afterEmbeddingMs": 3.003800000000041,
+      "queueMs": 110.0425,
+      "executionMs": 3.3423,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "610e3889-3bae-41f3-afc7-e829782196b5",
+        "recordedAtUtc": "2026-09-22T02:20:11.1377058+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "97841dfe0e1dc0640ade150b5dd07a650f338a665eebaa5311ae2298f2adbc99"
+    },
+    {
+      "id": "ts-empty-en",
+      "pass": 1,
+      "startedAtMs": 17737.0551,
+      "totalMs": 276.3898,
+      "beforeEmbeddingMs": 162.9424,
+      "embeddingMs": 112.8921,
+      "afterEmbeddingMs": 0.5552999999999884,
+      "queueMs": 56.5765,
+      "executionMs": 2.653,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "4c395b06-9ccb-41b3-a867-2c936bda8bb4",
+        "recordedAtUtc": "2026-09-22T02:20:11.4686999+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "5a657503f8675e5eb46cca9217ef8ccbdaf609deff528f298cd0f5835ffb8aeb"
+    },
+    {
+      "id": "ts-empty-ru",
+      "pass": 1,
+      "startedAtMs": 18013.6304,
+      "totalMs": 396.5392,
+      "beforeEmbeddingMs": 159.625,
+      "embeddingMs": 233.4363,
+      "afterEmbeddingMs": 3.4779000000000053,
+      "queueMs": 122.7495,
+      "executionMs": 3.3788,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "e31c6f71-626e-427d-96a9-56a052c63749",
+        "recordedAtUtc": "2026-09-22T02:20:11.8088588+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "4c14ece4303da14d7d097747f0396ac12e0a2209a0cf07ccef1c2399f482e520"
+    },
+    {
+      "id": "ts-invoice-en",
+      "pass": 1,
+      "startedAtMs": 18410.5726,
+      "totalMs": 294.7427,
+      "beforeEmbeddingMs": 167.9239,
+      "embeddingMs": 125.3083,
+      "afterEmbeddingMs": 1.5105000000000075,
+      "queueMs": 46.0224,
+      "executionMs": 4.8136,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "b0169474-f763-4cbe-8d7b-dbf2d8e3636e",
+        "recordedAtUtc": "2026-09-22T02:20:12.1388068+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "65815db0cf56144f648d8facc9454865f2b25eb20fcb3ec4b0a00ab8f7a8bfb1"
+    },
+    {
+      "id": "ts-inventory-ru",
+      "pass": 1,
+      "startedAtMs": 18705.7299,
+      "totalMs": 279.6802,
+      "beforeEmbeddingMs": 165.5053,
+      "embeddingMs": 113.0614,
+      "afterEmbeddingMs": 1.113500000000002,
+      "queueMs": 89.2096,
+      "executionMs": 2.6322,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "94353b94-f005-4f3d-bba6-0bb51c9d1222",
+        "recordedAtUtc": "2026-09-22T02:20:12.4725514+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "0ab13dd3ed2fc9abcb0586037d8cc023376bf153a663cb004fcf75058b14352e"
+    },
+    {
+      "id": "py-halfup-en",
+      "pass": 1,
+      "startedAtMs": 18985.5894,
+      "totalMs": 280.5592,
+      "beforeEmbeddingMs": 163.8076,
+      "embeddingMs": 115.7877,
+      "afterEmbeddingMs": 0.9638999999999669,
+      "queueMs": 37.6134,
+      "executionMs": 2.627,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "438e8aa6-e8ed-4aee-9158-70d6a34b1007",
+        "recordedAtUtc": "2026-09-22T02:20:12.6991128+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "a41d1e7e9affc2ad2ad3c568e94e05c392ce2f4aacb815ef952d8a4c6efa37ce"
+    },
+    {
+      "id": "py-halfup-ru",
+      "pass": 1,
+      "startedAtMs": 19266.6397,
+      "totalMs": 289.1316,
+      "beforeEmbeddingMs": 162.7874,
+      "embeddingMs": 124.6887,
+      "afterEmbeddingMs": 1.6555000000000035,
+      "queueMs": 99.1246,
+      "executionMs": 6.082,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "9f01fe8a-c576-431f-a027-4a8be61a6f62",
+        "recordedAtUtc": "2026-09-22T02:20:13.044109+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "13d032c3296659790e4e7e0f7e7f33e2ffca96fc670e8274118046a54c7f8a91"
+    },
+    {
+      "id": "py-even-en",
+      "pass": 1,
+      "startedAtMs": 19555.9657,
+      "totalMs": 275.0393,
+      "beforeEmbeddingMs": 160.9957,
+      "embeddingMs": 113.2388,
+      "afterEmbeddingMs": 0.8048000000000286,
+      "queueMs": 41.4401,
+      "executionMs": 2.6858,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "3854c528-1408-4613-a41b-1ad8a2db19ee",
+        "recordedAtUtc": "2026-09-22T02:20:13.2705598+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "f8c66f5a535769e88702ae99e9dd5a22895764b1476642c9a6ffc0884ed67c2e"
+    },
+    {
+      "id": "py-even-ru",
+      "pass": 1,
+      "startedAtMs": 19831.2499,
+      "totalMs": 275.3567,
+      "beforeEmbeddingMs": 158.3307,
+      "embeddingMs": 115.9672,
+      "afterEmbeddingMs": 1.0587999999999766,
+      "queueMs": 99.4944,
+      "executionMs": 2.5896,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "adf13e94-f8d5-42bb-91c8-18652d24a7bf",
+        "recordedAtUtc": "2026-09-22T02:20:13.6011523+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "b3d0ce08e40d9e8d6d48c958448bd2f2f8fcb0165db91fcbb1dbc2f5801a2cbf"
+    },
+    {
+      "id": "py-missing-en",
+      "pass": 1,
+      "startedAtMs": 20106.7653,
+      "totalMs": 279.724,
+      "beforeEmbeddingMs": 161.1044,
+      "embeddingMs": 116.7854,
+      "afterEmbeddingMs": 1.8341999999999956,
+      "queueMs": 51.6861,
+      "executionMs": 2.6948,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "c61ad557-f3cf-4152-a343-886fc740c7d6",
+        "recordedAtUtc": "2026-09-22T02:20:13.8317243+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "b0c98d51210eb548274f6eac3d1514a5689f2ebf50b69b6382961d63eea5b8c0"
+    },
+    {
+      "id": "py-missing-ru",
+      "pass": 1,
+      "startedAtMs": 20386.9292,
+      "totalMs": 283.4204,
+      "beforeEmbeddingMs": 160.0909,
+      "embeddingMs": 121.9361,
+      "afterEmbeddingMs": 1.3933999999999713,
+      "queueMs": 100.2267,
+      "executionMs": 5.0365,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "a16eb7f8-aace-4ea0-9050-eea58b536535",
+        "recordedAtUtc": "2026-09-22T02:20:14.1617599+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "7bd8228bc2b89e117548344c3fb0c7dbe322a3dc4a30e9906393442b16a1c8f9"
+    },
+    {
+      "id": "py-accepted-en",
+      "pass": 1,
+      "startedAtMs": 20670.5375,
+      "totalMs": 269.0622,
+      "beforeEmbeddingMs": 155.5779,
+      "embeddingMs": 112.8603,
+      "afterEmbeddingMs": 0.6240000000000236,
+      "queueMs": 52.1105,
+      "executionMs": 3.1037,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "5d3b5c0c-f895-4468-85a9-9c60b7dd42cd",
+        "recordedAtUtc": "2026-09-22T02:20:14.3908054+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "7059468601f5c7aeedfe5e2ea7bf4d65073d8380dacc0ae729e9e2aeb65ff540"
+    },
+    {
+      "id": "py-accepted-ru",
+      "pass": 1,
+      "startedAtMs": 20939.8157,
+      "totalMs": 378.4942,
+      "beforeEmbeddingMs": 164.5376,
+      "embeddingMs": 212.9631,
+      "afterEmbeddingMs": 0.9934999999999832,
+      "queueMs": 104.0999,
+      "executionMs": 3.35,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "3a4747a8-40cb-4791-85b1-ac56aa5491c7",
+        "recordedAtUtc": "2026-09-22T02:20:14.7212794+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "d23252ec6ccee1136b9febe4ce96bd76f5fc051d0482fbae5e538d077a694389"
+    },
+    {
+      "id": "py-invoice-en",
+      "pass": 1,
+      "startedAtMs": 21318.5053,
+      "totalMs": 287.1103,
+      "beforeEmbeddingMs": 161.4048,
+      "embeddingMs": 124.4486,
+      "afterEmbeddingMs": 1.2569000000000017,
+      "queueMs": 60.0045,
+      "executionMs": 2.9161,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "d14fced4-794b-48f9-99b2-1ec2193e486d",
+        "recordedAtUtc": "2026-09-22T02:20:15.0523237+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "50ef0e4b62e10b23318cc7341cabcdb327827e980a8d11113f2bd90efda2016f"
+    },
+    {
+      "id": "py-inventory-ru",
+      "pass": 1,
+      "startedAtMs": 21605.9163,
+      "totalMs": 281.28,
+      "beforeEmbeddingMs": 165.8353,
+      "embeddingMs": 114.4893,
+      "afterEmbeddingMs": 0.9553999999999832,
+      "queueMs": 96.755,
+      "executionMs": 3.1303,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "8617ff69-daa0-40e2-8610-657f7689f7b2",
+        "recordedAtUtc": "2026-09-22T02:20:15.3811084+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "3406fa2e7f638f70892ff7f0cb72f49be018e0133352ff69a8a4ff1ef16a093e"
+    },
+    {
+      "id": "absent-encryption-en",
+      "pass": 1,
+      "startedAtMs": 21887.3673,
+      "totalMs": 282.0615,
+      "beforeEmbeddingMs": 165.4848,
+      "embeddingMs": 115.8196,
+      "afterEmbeddingMs": 0.7571000000000225,
+      "queueMs": 43.4315,
+      "executionMs": 2.7145,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "08d40cd5-7fa3-46a0-9f95-9c0a7ef07cc5",
+        "recordedAtUtc": "2026-09-22T02:20:15.6084697+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "f6cc441f1f155238be8b6a8cdd52df0adb64f2aa90b631692f8fc702b2f20267"
+    },
+    {
+      "id": "absent-migration-ru",
+      "pass": 1,
+      "startedAtMs": 22169.6772,
+      "totalMs": 280.8519,
+      "beforeEmbeddingMs": 157.4739,
+      "embeddingMs": 122.4954,
+      "afterEmbeddingMs": 0.8826000000000107,
+      "queueMs": 105.6293,
+      "executionMs": 3.2976,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "4c558a73-74a7-4035-8b51-dd90885afa1e",
+        "recordedAtUtc": "2026-09-22T02:20:15.945548+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "id": "absent-audio-en",
+      "pass": 1,
+      "startedAtMs": 22450.7286,
+      "totalMs": 279.3822,
+      "beforeEmbeddingMs": 165.6816,
+      "embeddingMs": 112.9246,
+      "afterEmbeddingMs": 0.7760000000000105,
+      "queueMs": 45.7709,
+      "executionMs": 2.5825,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "083ae62f-9bb1-4be0-a3a6-bdb92d423733",
+        "recordedAtUtc": "2026-09-22T02:20:16.1742342+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "bbfe97e236b8db5490e5f86f2ad4be9efd473e98d870beaf7148d0ea49d834d8"
+    },
+    {
+      "id": "absent-signature-ru",
+      "pass": 1,
+      "startedAtMs": 22730.3039,
+      "totalMs": 287.5024,
+      "beforeEmbeddingMs": 172.652,
+      "embeddingMs": 113.9457,
+      "afterEmbeddingMs": 0.9047000000000338,
+      "queueMs": 86.8604,
+      "executionMs": 2.6639,
+      "wasCold": null,
+      "residencyBefore": null,
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "f24b87b7-6ec5-4a71-9bbb-f50c2f63f55d",
+        "recordedAtUtc": "2026-09-22T02:20:16.5019527+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    }
+  ]
+}

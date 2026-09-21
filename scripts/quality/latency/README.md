@@ -10,6 +10,8 @@ The next experiment measures a [broker query-vector cache](query-cache.md), incl
 the cost of validating model identity and four runs with identical search results.
 The [embedding timing diagnostics](embedding-timings.md) then separate backend-reported
 load/total time and cache hits without changing public response contracts.
+The [cold and concurrent measurements](cold-concurrent.md) check confirmed model
+absence and four simultaneous clients against the same retrievals.
 
 Build and run from PowerShell (substitute the existing clean corpus and broker paths):
 
@@ -27,7 +29,7 @@ reference at that checkout's `CodeSearch.Core.csproj`; record its revision. The 
 records source and corpus identities and verifies source stability at the end. Compare
 the before/after model digests as well. A failed/incomplete run is not evidence.
 
-Each run searches every case twice in corpus order. Pass 0 includes first-use costs;
+By default, each run searches every case twice in corpus order. Pass 0 includes first-use costs;
 pass 1 is a repeated, warm sequence. Neither is a forced cold model test. Quantiles use
 nearest rank: sort a pass, take element `ceil(p * count)` (one based). No speed
 threshold belongs in the test suite.
@@ -42,9 +44,19 @@ The timing boundaries are:
   queueing, polling, vector conversion and normalization.
 - `afterEmbeddingMs`: ranking and snippet construction after that call.
 - `queueMs` / `executionMs`: broker receipt durations, nested inside `embeddingMs`.
-  Execution can include model loading. Backend load and inference are **not** separately
-  exposed by the existing embedding contract; `backendLoadMs` remains null. These
-  figures must not be added to the client duration or called pure inference time.
+  Execution can include model loading and preflight. Optional `backendTiming` sidecars
+  expose the successful embedding response's total/load durations when diagnostics
+  are enabled. They do not cover earlier preparation or retries. Missing fields stay
+  null; total minus load is not pure inference. Nested durations must not be added.
+
+Use the sixth argument `concurrent` for two passes with up to four overlapping
+SearchAsync calls through one shared SearchService and broker. `startedAtMs` records
+actual overlap; results are saved in corpus order. The sixth argument `cold` instead
+waits for verified model absence before each new query, then immediately repeats it
+while resident. It primes broker residency tracking outside measurement, uses the
+installed idle policy (1–30 seconds supported), and polls less often than that interval.
+Cold/warm residency checks and idle waiting are outside search timers. Neither mode
+changes the policy; both record it and reject a change during the run.
 
 An optional sixth argument `cache` runs a diagnostic prototype: query vectors are
 reused only after reading the model digest through a separate broker Tags job. Misses

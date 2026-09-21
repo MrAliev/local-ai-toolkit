@@ -1,0 +1,426 @@
+{
+  "implementation": "ecf4062-cold-concurrent-probe-cold",
+  "mode": "cold",
+  "concurrency": 1,
+  "maximumObservedOverlap": 1,
+  "policy": {
+    "SchemaVersion": 1,
+    "ModelResidency": "RequireFullVram",
+    "IdleModelKeepAliveSeconds": 10,
+    "MaxEmbeddingBatchItems": 128
+  },
+  "probeSha256": "83c777c76a20ae5599901c95178e9c8ec2f85bb74f4b354b23fd045d5d80f42e",
+  "coreSha256": "ae8544cf10f50c9ae9fe84992557a0343e16afe57c6b8dcb460584dbbdacc0f4",
+  "brokerSha256": "fb0cfd7a93911c047f819fde617f46aded984dd10613bb57e564d1513ec571f0",
+  "brokerAssemblySha256": "1392572368ff2d4426af28a4317ce5a8b07e066efb95da8b370333b8677e0e04",
+  "brokerCoreSha256": "3de88325066659a3290abff6d2911459d4cc887089009fccc30536158338774f",
+  "sourceCommit": "2a9b6285b7a7bbecf2c826ae41d3bdd53aabf94e",
+  "sourceTree": "4d6f312ef41ca1372a3816738ab9afaa5a1e5ec5",
+  "corpusSha256": "0990bd3f1e0c1041c7c633913126b3de57adb8a3d7d413180c905eb43d5cf994",
+  "generationId": "1364bc2a1d1891bae169bc138d397cc633055e64e824193014fd010383fd364b",
+  "indexedFiles": 87,
+  "indexedChunks": 227,
+  "model": "qwen3-embedding:8b-q8_0",
+  "digestBefore": "9704fd987c12aa746934ea9f99dc85527c83c6e4b98b3a10b94689332ee866bb",
+  "digestAfter": "9704fd987c12aa746934ea9f99dc85527c83c6e4b98b3a10b94689332ee866bb",
+  "phases": "BeforeEmbedding includes index read/snapshot/overlay/prompt; Embedding includes broker round trip; AfterEmbedding includes normalization/ranking; receipt queue/execution are nested, not additive to client embedding duration.",
+  "backendTimingSource": "Optional embedding timing sidecar joined by JobId, read after the search timer stops. Null means unavailable. CacheHit means no backend call; total minus load includes backend overhead, not pure inference.",
+  "measurements": [
+    {
+      "id": "cs-weight-en",
+      "pass": 0,
+      "startedAtMs": 14710.157,
+      "totalMs": 5552.4632,
+      "beforeEmbeddingMs": 168.242,
+      "embeddingMs": 5359.9193,
+      "afterEmbeddingMs": 24.301900000000387,
+      "queueMs": 2190.7111,
+      "executionMs": 3081.2481,
+      "wasCold": null,
+      "residencyBefore": {
+        "observedAtUtc": "2026-09-22T02:20:34.7903305+03:00",
+        "jobId": "1a633e56-2e38-4052-b759-f0fb333856a8",
+        "modelPresent": false,
+        "digest": null,
+        "sizeVramBytes": null
+      },
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "f60bb78b-c8eb-4b5f-9826-d43e03982d46",
+        "recordedAtUtc": "2026-09-22T02:20:40.2323616+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 3067844200,
+          "loadNanoseconds": 3021847500,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 43
+        }
+      },
+      "hitsSha256": "d425fb1dbb56655822b9a0c8d8cb3be50dfb257ffd19611cbfc6be7ce45665b2"
+    },
+    {
+      "id": "cs-weight-en",
+      "pass": 1,
+      "startedAtMs": 20483.4191,
+      "totalMs": 295.6981,
+      "beforeEmbeddingMs": 160.5183,
+      "embeddingMs": 128.4081,
+      "afterEmbeddingMs": 6.77170000000001,
+      "queueMs": 69.6219,
+      "executionMs": 3.7089,
+      "wasCold": null,
+      "residencyBefore": {
+        "observedAtUtc": "2026-09-22T02:20:40.5644014+03:00",
+        "jobId": "0ab9255d-0af9-4d38-9603-027124c332d2",
+        "modelPresent": true,
+        "digest": "9704fd987c12aa746934ea9f99dc85527c83c6e4b98b3a10b94689332ee866bb",
+        "sizeVramBytes": 10558709431
+      },
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "414ecd6e-382c-4d6e-b7cf-1ebfe61b24ad",
+        "recordedAtUtc": "2026-09-22T02:20:40.7983291+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "d425fb1dbb56655822b9a0c8d8cb3be50dfb257ffd19611cbfc6be7ce45665b2"
+    },
+    {
+      "id": "cs-weight-ru",
+      "pass": 0,
+      "startedAtMs": 33026.4662,
+      "totalMs": 5313.6558,
+      "beforeEmbeddingMs": 171.6853,
+      "embeddingMs": 5139.2677,
+      "afterEmbeddingMs": 2.7028000000000247,
+      "queueMs": 2209.477,
+      "executionMs": 2825.1438,
+      "wasCold": null,
+      "residencyBefore": {
+        "observedAtUtc": "2026-09-22T02:20:53.10745+03:00",
+        "jobId": "0bfbdaf9-d3f0-482c-adf5-94ba074f4a6f",
+        "modelPresent": false,
+        "digest": null,
+        "sizeVramBytes": null
+      },
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "dca8c7c1-f09c-4c66-8ce4-250d103c42be",
+        "recordedAtUtc": "2026-09-22T02:20:58.3138538+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 2805605900,
+          "loadNanoseconds": 2760606000,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 51
+        }
+      },
+      "hitsSha256": "4d9922c866021a16cadfa40dadb324fe67f1a42fdb304f22259edc2a69992035"
+    },
+    {
+      "id": "cs-weight-ru",
+      "pass": 1,
+      "startedAtMs": 38463.8545,
+      "totalMs": 275.1781,
+      "beforeEmbeddingMs": 159.947,
+      "embeddingMs": 113.0739,
+      "afterEmbeddingMs": 2.1571999999999747,
+      "queueMs": 69.0109,
+      "executionMs": 5.2708,
+      "wasCold": null,
+      "residencyBefore": {
+        "observedAtUtc": "2026-09-22T02:20:58.5448361+03:00",
+        "jobId": "0d569ec9-34b8-4351-9135-58178c766427",
+        "modelPresent": true,
+        "digest": "9704fd987c12aa746934ea9f99dc85527c83c6e4b98b3a10b94689332ee866bb",
+        "sizeVramBytes": 10558709431
+      },
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "0ff2d4aa-1346-47da-a495-8960a7a8d334",
+        "recordedAtUtc": "2026-09-22T02:20:58.7791276+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "4d9922c866021a16cadfa40dadb324fe67f1a42fdb304f22259edc2a69992035"
+    },
+    {
+      "id": "cs-volume-en",
+      "pass": 0,
+      "startedAtMs": 50975.7589,
+      "totalMs": 5123.3016,
+      "beforeEmbeddingMs": 163.1336,
+      "embeddingMs": 4959.2015,
+      "afterEmbeddingMs": 0.9664999999995416,
+      "queueMs": 2133.4134,
+      "executionMs": 2810.3959,
+      "wasCold": null,
+      "residencyBefore": {
+        "observedAtUtc": "2026-09-22T02:21:11.0567458+03:00",
+        "jobId": "a45fd724-3ebe-41b0-ac52-5cd7a0402e3e",
+        "modelPresent": false,
+        "digest": null,
+        "sizeVramBytes": null
+      },
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "a721e806-3f80-4189-a00c-5209537dcda1",
+        "recordedAtUtc": "2026-09-22T02:21:16.1637388+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 2797256800,
+          "loadNanoseconds": 2755257100,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 39
+        }
+      },
+      "hitsSha256": "6f064eaeae21b833ee32d47965b3ef40dc5cda3408468093ef1b98ac90dcf0a0"
+    },
+    {
+      "id": "cs-volume-en",
+      "pass": 1,
+      "startedAtMs": 56315.5962,
+      "totalMs": 290.6287,
+      "beforeEmbeddingMs": 163.7711,
+      "embeddingMs": 116.4056,
+      "afterEmbeddingMs": 10.451999999999984,
+      "queueMs": 65.8326,
+      "executionMs": 5.4116,
+      "wasCold": null,
+      "residencyBefore": {
+        "observedAtUtc": "2026-09-22T02:21:16.3965823+03:00",
+        "jobId": "3fe0ea3c-c123-41f1-8bb2-2429eea9a22e",
+        "modelPresent": true,
+        "digest": "9704fd987c12aa746934ea9f99dc85527c83c6e4b98b3a10b94689332ee866bb",
+        "sizeVramBytes": 10558709431
+      },
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "c332d606-b552-4722-a05c-9481442ba61a",
+        "recordedAtUtc": "2026-09-22T02:21:16.631642+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "6f064eaeae21b833ee32d47965b3ef40dc5cda3408468093ef1b98ac90dcf0a0"
+    },
+    {
+      "id": "cs-volume-ru",
+      "pass": 0,
+      "startedAtMs": 68838.2661,
+      "totalMs": 5196.9274,
+      "beforeEmbeddingMs": 157.6511,
+      "embeddingMs": 5037.4153,
+      "afterEmbeddingMs": 1.8609999999998763,
+      "queueMs": 2150.7756,
+      "executionMs": 2813.8339,
+      "wasCold": null,
+      "residencyBefore": {
+        "observedAtUtc": "2026-09-22T02:21:28.9192535+03:00",
+        "jobId": "3666660f-51db-471c-84cb-eab3c141ec93",
+        "modelPresent": false,
+        "digest": null,
+        "sizeVramBytes": null
+      },
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "1b9c01f0-9c0b-4905-a64c-d6d038866a15",
+        "recordedAtUtc": "2026-09-22T02:21:34.0415783+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 2802789700,
+          "loadNanoseconds": 2759290100,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 41
+        }
+      },
+      "hitsSha256": "24d1ba9d79e68ea42e909675404d32e0f93a3a081e05be24011a3617dc5c3495"
+    },
+    {
+      "id": "cs-volume-ru",
+      "pass": 1,
+      "startedAtMs": 74148.2718,
+      "totalMs": 283.4457,
+      "beforeEmbeddingMs": 166.1521,
+      "embeddingMs": 114.7269,
+      "afterEmbeddingMs": 2.5666999999999973,
+      "queueMs": 95.7658,
+      "executionMs": 5.1001,
+      "wasCold": null,
+      "residencyBefore": {
+        "observedAtUtc": "2026-09-22T02:21:34.2292564+03:00",
+        "jobId": "0b4b23d8-359c-440c-a818-2dbd788184a3",
+        "modelPresent": true,
+        "digest": "9704fd987c12aa746934ea9f99dc85527c83c6e4b98b3a10b94689332ee866bb",
+        "sizeVramBytes": 10558709431
+      },
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "7ded969e-a453-4953-8e09-45871bfe151b",
+        "recordedAtUtc": "2026-09-22T02:21:34.4963245+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "24d1ba9d79e68ea42e909675404d32e0f93a3a081e05be24011a3617dc5c3495"
+    },
+    {
+      "id": "cs-retry-en",
+      "pass": 0,
+      "startedAtMs": 86674.7066,
+      "totalMs": 5204.6869,
+      "beforeEmbeddingMs": 160.4685,
+      "embeddingMs": 5043.4271,
+      "afterEmbeddingMs": 0.7912999999998647,
+      "queueMs": 2200.0148,
+      "executionMs": 2805.5781,
+      "wasCold": null,
+      "residencyBefore": {
+        "observedAtUtc": "2026-09-22T02:21:46.7556888+03:00",
+        "jobId": "e1a6eda9-e261-4309-bce8-1340033c797f",
+        "modelPresent": false,
+        "digest": null,
+        "sizeVramBytes": null
+      },
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "8c898ce9-68be-4aef-980d-3cf59a507469",
+        "recordedAtUtc": "2026-09-22T02:21:51.9218292+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 2796465100,
+          "loadNanoseconds": 2752464500,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 45
+        }
+      },
+      "hitsSha256": "41c802123c150fa875b0e8ef1d11744319cf43cb8d1c5a05b84d67dc602b794e"
+    },
+    {
+      "id": "cs-retry-en",
+      "pass": 1,
+      "startedAtMs": 91992.906,
+      "totalMs": 273.7731,
+      "beforeEmbeddingMs": 158.3352,
+      "embeddingMs": 114.4624,
+      "afterEmbeddingMs": 0.9755000000000109,
+      "queueMs": 41.021,
+      "executionMs": 3.3908,
+      "wasCold": null,
+      "residencyBefore": {
+        "observedAtUtc": "2026-09-22T02:21:52.0738899+03:00",
+        "jobId": "81ec7fd5-a7b6-4fac-b6a8-ec4a90c635cb",
+        "modelPresent": true,
+        "digest": "9704fd987c12aa746934ea9f99dc85527c83c6e4b98b3a10b94689332ee866bb",
+        "sizeVramBytes": 10558709431
+      },
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "4428fbd4-a7e7-477c-8172-6943b1cde246",
+        "recordedAtUtc": "2026-09-22T02:21:52.2766759+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "41c802123c150fa875b0e8ef1d11744319cf43cb8d1c5a05b84d67dc602b794e"
+    },
+    {
+      "id": "cs-retry-ru",
+      "pass": 0,
+      "startedAtMs": 104493.9301,
+      "totalMs": 5199.1213,
+      "beforeEmbeddingMs": 165.4977,
+      "embeddingMs": 5032.6561,
+      "afterEmbeddingMs": 0.9674999999997453,
+      "queueMs": 2132.4066,
+      "executionMs": 2817.1794,
+      "wasCold": null,
+      "residencyBefore": {
+        "observedAtUtc": "2026-09-22T02:22:04.5749078+03:00",
+        "jobId": "37d70a1d-354c-417d-b41a-6ecba1d39420",
+        "modelPresent": false,
+        "digest": null,
+        "sizeVramBytes": null
+      },
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "3977d651-086e-4af9-9d40-68860c388c52",
+        "recordedAtUtc": "2026-09-22T02:22:09.6900466+03:00",
+        "backend": {
+          "cacheHit": false,
+          "totalNanoseconds": 2809208300,
+          "loadNanoseconds": 2765705700,
+          "promptEvalNanoseconds": null,
+          "promptTokens": 45
+        }
+      },
+      "hitsSha256": "8614bbf1bd3c8a5a779809b2a93c3923e23ec8cc64e5692a2b67b48cf6c7a4cd"
+    },
+    {
+      "id": "cs-retry-ru",
+      "pass": 1,
+      "startedAtMs": 109810.4503,
+      "totalMs": 278.2884,
+      "beforeEmbeddingMs": 164.3956,
+      "embeddingMs": 112.9928,
+      "afterEmbeddingMs": 0.9000000000000199,
+      "queueMs": 81.3967,
+      "executionMs": 2.6413,
+      "wasCold": null,
+      "residencyBefore": {
+        "observedAtUtc": "2026-09-22T02:22:09.8914356+03:00",
+        "jobId": "a7777844-d3ca-4173-a1f7-08563c359c63",
+        "modelPresent": true,
+        "digest": "9704fd987c12aa746934ea9f99dc85527c83c6e4b98b3a10b94689332ee866bb",
+        "sizeVramBytes": 10558709431
+      },
+      "embeddingsUsed": true,
+      "backendTiming": {
+        "schemaVersion": 1,
+        "jobId": "737b5399-520c-451e-8ac0-361cf2bca9a7",
+        "recordedAtUtc": "2026-09-22T02:22:10.1399122+03:00",
+        "backend": {
+          "cacheHit": true,
+          "totalNanoseconds": null,
+          "loadNanoseconds": null,
+          "promptEvalNanoseconds": null,
+          "promptTokens": null
+        }
+      },
+      "hitsSha256": "8614bbf1bd3c8a5a779809b2a93c3923e23ec8cc64e5692a2b67b48cf6c7a4cd"
+    }
+  ]
+}
