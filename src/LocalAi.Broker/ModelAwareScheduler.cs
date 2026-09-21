@@ -2,12 +2,13 @@ using LocalAi.Contracts;
 
 namespace LocalAi.Broker;
 
+/// <param name="Model">Null for metadata operations that do not load or switch a model.</param>
 public sealed record ScheduledJobCandidate(
     Guid JobId,
     long Sequence,
     LocalJobPriority Priority,
     DateTimeOffset CreatedAtUtc,
-    string Model,
+    string? Model,
     TimeSpan PredictedDuration,
     LocalDurationClass DurationClass,
     bool IsDependencyReady,
@@ -104,7 +105,7 @@ public sealed class ModelAwareScheduler
         // models before it preflights — and that is the trade being made on purpose, not an
         // oversight. Among work of equal urgency, affinity still decides, and then the shortest
         // job, so nothing pays for a swap that nobody was waiting on.
-        var selectedModel = starved?.Model ?? jobs
+        var selectedModel = starved is not null ? starved.Model : jobs
             .GroupBy(candidate => candidate.Model, StringComparer.Ordinal)
             .OrderBy(group => group.Min(candidate => candidate.Priority))
             .ThenByDescending(group =>
@@ -126,6 +127,7 @@ public sealed class ModelAwareScheduler
             .ThenBy(candidate => candidate.Sequence)
             .ToArray();
         var switchesModel =
+            selectedModel is not null &&
             !string.Equals(selectedModel, residentModel, StringComparison.Ordinal);
         // Only a switch. The window's job is to avoid choosing a model prematurely — waiting a
         // moment in case work for the model already loaded is on its way is worth it when the
