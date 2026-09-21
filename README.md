@@ -434,6 +434,11 @@ models or clients are ready. After cancellation or a partial failure, the screen
 next action and whether recorded changes can be rolled back. Technical logs retain their
 original text; save the report, or copy the log if saving failed, before closing the window.
 
+Removal also saves its result outside the runtime directory. If it stops partway through,
+the report distinguishes completed, failed, unknown, not-started and retained items from the
+execution journal. You can open its folder, save another copy or copy the details. Deleted
+data is not automatically restored; continue to a clean installation only after removal succeeds.
+
 **3. Connect a repository.** Indexing is opt-in per repository — nothing is read until you
 ask.
 

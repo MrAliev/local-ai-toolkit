@@ -381,4 +381,7 @@ public static class PageLabels
     public static string OpenReportFolder => InstallerCulture.Pick(
         "Open folder",
         "Открыть папку");
+
+    public static string CopyRemovalReport => InstallerCulture.Pick("Copy details", "Скопировать сведения");
+    public static string SaveRemovalReport => InstallerCulture.Pick("Save report as…", "Сохранить отчёт как…");
 }

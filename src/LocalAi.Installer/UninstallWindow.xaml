@@ -266,13 +266,32 @@
                                 </Style.Triggers>
                             </Style>
                         </StackPanel.Style>
-                        <TextBox Text="{Binding Summary, Mode=OneWay}"
-                                 IsReadOnly="True" TextWrapping="Wrap" Height="90"
-                                 VerticalScrollBarVisibility="Auto" Background="{DynamicResource Surface}" />
-                        <TextBlock Text="{vm:Label Report}" Margin="0,12,0,4" FontWeight="SemiBold" />
-                        <TextBox Text="{Binding Report, Mode=OneWay}"
-                                 IsReadOnly="True" TextWrapping="Wrap" Height="220"
-                                 VerticalScrollBarVisibility="Auto" Background="{DynamicResource Surface}" />
+                        <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" Margin="0,0,0,12" />
+                        <WrapPanel Margin="0,0,0,12">
+                            <Button Content="{vm:Label CopyRemovalReport}" Click="OnCopyReport" Margin="0,0,8,4" Padding="12,4" />
+                            <Button Content="{vm:Label SaveRemovalReport}" Click="OnSaveReport" Margin="0,0,8,4" Padding="12,4" />
+                            <Button Content="{vm:Label OpenReportFolder}" Click="OnOpenReportFolder" Margin="0,0,0,4" Padding="12,4"
+                                    Visibility="{Binding HasReportPath, Converter={StaticResource BoolToVisibility}}" />
+                        </WrapPanel>
+                        <TextBox Text="{Binding ReportPath, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap"
+                                 BorderThickness="0" Background="Transparent" Margin="0,0,0,12"
+                                 Visibility="{Binding HasReportPath, Converter={StaticResource BoolToVisibility}}" />
+                        <TextBlock Text="{Binding ReportSaveError}" TextWrapping="Wrap" Margin="0,0,0,12"
+                                   Visibility="{Binding HasReportSaveError, Converter={StaticResource BoolToVisibility}}" />
+                        <ItemsControl ItemsSource="{Binding Results}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="0,0,0,12">
+                                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding Detail}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <Expander Header="{vm:Label Report}" Margin="0,0,0,12">
+                            <TextBox Text="{Binding ReportText, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap"
+                                     Height="220" VerticalScrollBarVisibility="Auto" Background="{DynamicResource Surface}" />
+                        </Expander>
                         <!-- The install half of a clean reinstall, offered only once the
                              removal half has finished and only when it succeeded. -->
                         <Button Content="{vm:Label ContinueToInstall}"

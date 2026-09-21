@@ -65,6 +65,42 @@ public partial class UninstallWindow : Window, IReturnsToStart
 
     public event EventHandler? ReturnToStart;
 
+    private void OnCopyReport(object sender, RoutedEventArgs e)
+    {
+        try { Clipboard.SetText(viewModel.ReportText); }
+        catch (System.Runtime.InteropServices.ExternalException exception) { viewModel.ReportUnexpectedError(exception); }
+    }
+
+    private void OnSaveReport(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.SaveFileDialog
+        {
+            Title = PageLabels.SaveRemovalReport,
+            FileName = "uninstall-report.txt",
+            DefaultExt = ".txt",
+            Filter = "Text (*.txt)|*.txt",
+        };
+        if (dialog.ShowDialog(this) == true) viewModel.SaveReport(dialog.FileName);
+    }
+
+    private void OnOpenReportFolder(object sender, RoutedEventArgs e)
+    {
+        if (!viewModel.HasReportPath) return;
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "explorer.exe",
+                Arguments = "/select,\"" + viewModel.ReportPath + "\"",
+                UseShellExecute = false,
+            });
+        }
+        catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            viewModel.ReportUnexpectedError(exception);
+        }
+    }
+
     private void OnPresetChecked(object sender, RoutedEventArgs e)
     {
         if (sender is RadioButton { Tag: RemovalPreset preset })
