@@ -1,0 +1,58 @@
+{
+  "BaseRevision": "f636319a5ba55bc2f6ff8e9bc62c4864c3d79ff4",
+  "BeforeSourceHashes": {
+    "DocumentationWorkspace": "4d7e70d73dd4c86dd54a1cfb116be01b254eaeae99c8c1413cdf6a4c7b5a80f3",
+    "DocumentationInputs": "2e2745835e97ec4ca186be97466d96cd0e590abaf2a1692f255245b7035a8c70"
+  },
+  "AfterSourceHashes": {
+    "DocumentationWorkspace": "3d6049717beaa62ff6d3a80c144eeb6313eaf65af185875d6814090a778b3afb",
+    "DocumentationInputs": "559c63c25ad63cc004eb3464536c77457d7cb1ce37f5518cb20739226c95eae8"
+  },
+  "SemanticDocuments": 865,
+  "CorpusChunks": 10877,
+  "CorpusBytes": 190908768,
+  "Note": "Frozen corpus and real index; warm filesystem; warmup then three samples per limit; before group then after group; temporary-source counters",
+  "CloudTokenSavings": null,
+  "TokenReason": "No cloud input/output comparison in this Capture experiment",
+  "Rows": [
+    {
+      "Limit": 1,
+      "Units": 1,
+      "BeforeCaptureMedianMs": 1404.3351,
+      "AfterCaptureMedianMs": 1121.4727,
+      "BeforeAllocatedMedianBytes": 431316400,
+      "AfterAllocatedMedianBytes": 251906344,
+      "BeforeSourceReads": 865,
+      "AfterSourceReads": 1,
+      "BeforeSyntaxParses": 843,
+      "AfterSyntaxParses": 1,
+      "UnitsSha256": "6af65f02a97a75ab36ba22be847eaece012bb219b1fb6ed88263ef96478792ac"
+    },
+    {
+      "Limit": 5,
+      "Units": 5,
+      "BeforeCaptureMedianMs": 1597.5833,
+      "AfterCaptureMedianMs": 1395.2377,
+      "BeforeAllocatedMedianBytes": 461847944,
+      "AfterAllocatedMedianBytes": 295481680,
+      "BeforeSourceReads": 865,
+      "AfterSourceReads": 6,
+      "BeforeSyntaxParses": 843,
+      "AfterSyntaxParses": 3,
+      "UnitsSha256": "1dbbcf671e32c9c64be25f17e44a2cdc0edc9fd5793f69c62bc79dbf677cf576"
+    },
+    {
+      "Limit": 2147483647,
+      "Units": 1269,
+      "BeforeCaptureMedianMs": 102247.1605,
+      "AfterCaptureMedianMs": 102835.1614,
+      "BeforeAllocatedMedianBytes": 28056915288,
+      "AfterAllocatedMedianBytes": 28056557776,
+      "BeforeSourceReads": 865,
+      "AfterSourceReads": 824,
+      "BeforeSyntaxParses": 843,
+      "AfterSyntaxParses": 817,
+      "UnitsSha256": "1c5d6b253b812a34e71addf5fa6250e806acd17f6772d1039feec5e57906ee01"
+    }
+  ]
+}

@@ -14,24 +14,43 @@ public static class DocumentationInputs
     public static IReadOnlyList<DocumentationUnitInput> Create(SemanticIndex index,
         IReadOnlyDictionary<string, string> sources, Func<IReadOnlyList<string>, IReadOnlyList<DocumentationHistory>> history,
         int limit = 5)
+        => CreateScoped(index, path => sources.TryGetValue(path, out var source) ? source :
+            throw new DocumentationValidationException(["source_missing"]), history, limit);
+
+    public static IReadOnlyList<DocumentationUnitInput> CreateScoped(SemanticIndex index,
+        Func<string, string> readSource, Func<IReadOnlyList<string>, IReadOnlyList<DocumentationHistory>> history,
+        int limit = 5)
     {
         if (limit < 1) throw new ArgumentOutOfRangeException(nameof(limit));
         var definitions = index.Occurrences.Where(o => o.Precision == NavigationPrecision.Precise && o.Roles.HasFlag(SemanticOccurrenceRoles.Definition))
             .OrderBy(o => o.DocumentPath, StringComparer.Ordinal).ThenBy(o => o.Range.StartLine).ThenBy(o => o.Range.StartCharacter).ToArray();
         var symbols = index.Symbols.ToDictionary(s => s.Id, StringComparer.Ordinal);
-        var files = sources.ToDictionary(p => p.Key, p => SourceText.From(p.Value), StringComparer.Ordinal);
-        var publicPositions = new HashSet<(string Path, int Line, int Column)>();
-        foreach (var (path, text) in files.Where(pair => pair.Key.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)))
+        var files = new Dictionary<string, SourceText>(StringComparer.Ordinal);
+        SourceText Source(string path)
         {
-            var tree = CSharpSyntaxTree.ParseText(text);
-            foreach (var type in tree.GetRoot().DescendantNodes().Where(node => node is BaseTypeDeclarationSyntax or DelegateDeclarationSyntax).Where(IsPublic))
-            {
-                var identifier = type is BaseTypeDeclarationSyntax declaration ? declaration.Identifier : ((DelegateDeclarationSyntax)type).Identifier;
-                var location = text.Lines.GetLinePosition(identifier.SpanStart);
-                publicPositions.Add((path, location.Line, location.Character));
-            }
+            if (!files.TryGetValue(path, out var text)) files.Add(path, text = SourceText.From(readSource(path)));
+            return text;
         }
-        var selected = definitions.Where(o => symbols[o.SymbolId].Kind == SemanticSymbolKind.Type && publicPositions.Contains((o.DocumentPath, o.Range.StartLine, o.Range.StartCharacter)))
+        var parsed = new HashSet<string>(StringComparer.Ordinal);
+        var publicPositions = new HashSet<(string Path, int Line, int Column)>();
+        bool PublicType(SemanticOccurrence definition)
+        {
+            var path = definition.DocumentPath;
+            if (!path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)) return false;
+            if (parsed.Add(path))
+            {
+                var text = Source(path);
+                var tree = CSharpSyntaxTree.ParseText(text);
+                foreach (var type in tree.GetRoot().DescendantNodes().Where(node => node is BaseTypeDeclarationSyntax or DelegateDeclarationSyntax).Where(IsPublic))
+                {
+                    var identifier = type is BaseTypeDeclarationSyntax declaration ? declaration.Identifier : ((DelegateDeclarationSyntax)type).Identifier;
+                    var location = text.Lines.GetLinePosition(identifier.SpanStart);
+                    publicPositions.Add((path, location.Line, location.Character));
+                }
+            }
+            return publicPositions.Contains((path, definition.Range.StartLine, definition.Range.StartCharacter));
+        }
+        var selected = definitions.Where(o => symbols[o.SymbolId].Kind == SemanticSymbolKind.Type && PublicType(o))
             .Select(o => o.SymbolId).Distinct(StringComparer.Ordinal).Take(limit);
         var units = new List<DocumentationUnitInput>();
         foreach (var symbolId in selected)
@@ -48,7 +67,7 @@ public static class DocumentationInputs
             var dependencyDefinitions = definitions.Where(o => dependencyIds.Contains(o.SymbolId)).ToArray();
             string Body(SemanticOccurrence definition)
             {
-                if (!files.TryGetValue(definition.DocumentPath, out var text)) throw new DocumentationValidationException(["source_missing"]);
+                var text = Source(definition.DocumentPath);
                 if (definition.EnclosingRange is not { } range) return text.ToString();
                 var start = text.Lines.GetPosition(new(range.StartLine, range.StartCharacter));
                 var end = text.Lines.GetPosition(new(range.EndLine, range.EndCharacter));
