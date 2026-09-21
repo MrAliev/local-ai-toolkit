@@ -1,0 +1,9 @@
+{
+  "ProcessesPerPhase": 4,
+  "EnqueueCalls": 80,
+  "UniqueJobs": 50,
+  "Sequences": "1..50 without duplicates",
+  "ActiveLeases": 1,
+  "QueuedAfterLease": 49,
+  "ModelInvocations": 0
+}
