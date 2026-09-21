@@ -55,6 +55,7 @@ public sealed class AccessibleControlsTests
             wizard.Dependencies.Dependencies.Add(new DependencySelection("manual", "Manual tool", false) { IsInstallable = false });
             try
             {
+                CheckLogHistory(window, wizard, presentation);
                 foreach (var language in new[] { InstallerLanguage.English, InstallerLanguage.Russian })
                 {
                     var consent = wizard.Dependencies.Dependencies.Select(row => row.IsConsented).ToArray();
@@ -304,6 +305,87 @@ public sealed class AccessibleControlsTests
                     { RoutedEvent = Keyboard.KeyDownEvent });
             target.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, source, Environment.TickCount, key)
                 { RoutedEvent = Keyboard.KeyUpEvent });
+        }
+    }
+
+    private static void CheckLogHistory(MainWindow window, InstallerWizardViewModel wizard, InstallerPresentation presentation)
+    {
+        foreach (var page in new[] { InstallerPage.Progress, InstallerPage.Finish })
+        {
+            ShowPage(window, wizard, page);
+            if (page == InstallerPage.Finish)
+                Descendants(window.Content).OfType<Expander>().Single(item => Equals(item.Header, PageLabels.Log)).IsExpanded = true;
+            wizard.Finish.Progress = string.Join("\r\n", Enumerable.Range(0, 150).Select(i => $"Diagnostic line {i:000}"));
+            Layout(window);
+            var views = Descendants(window.Content).OfType<LogView>().ToArray();
+            var view = page == InstallerPage.Progress ? views.First() : views.Last();
+            var log = Descendants(view).OfType<TextBox>().Single();
+            var jump = Descendants(view).OfType<Button>().Single();
+            AtEnd();
+            wizard.Finish.Progress += "\r\nFollowed line";
+            Layout(window);
+            AtEnd();
+            log.ScrollToVerticalOffset(log.ExtentHeight / 2);
+            Layout(window);
+            log.Select(log.Text.IndexOf("Diagnostic line 075", StringComparison.Ordinal), 19);
+            var offset = log.VerticalOffset;
+            var selected = log.SelectedText;
+            Assert.Equal("Diagnostic line 075", selected);
+            Assert.True(offset > 0);
+            Assert.True(log.ExtentHeight - log.ViewportHeight - offset > 10);
+            wizard.Finish.Progress += "\r\nAnother diagnostic line\r\nPartial";
+            Layout(window);
+            Preserved();
+            Assert.Equal(2, view.UnreadLines);
+            Assert.Equal(Visibility.Visible, jump.Visibility);
+            wizard.Finish.Progress += " continued";
+            Layout(window);
+            Preserved();
+            Assert.Equal(2, view.UnreadLines);
+            foreach (var language in new[] { InstallerLanguage.English, InstallerLanguage.Russian })
+            {
+                var technical = log.Text;
+                presentation.ChooseLanguage(language);
+                Layout(window);
+                Assert.Equal(technical, log.Text);
+                Preserved();
+                Assert.Contains(PageLabels.JumpToLatestEntries, Peer(jump).GetName(), StringComparison.Ordinal);
+                Assert.Contains("2", Peer(jump).GetName(), StringComparison.Ordinal);
+            }
+            ((IInvokeProvider)Peer(jump).GetPattern(PatternInterface.Invoke)!).Invoke();
+            var frame = new DispatcherFrame();
+            Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, new Action(() => frame.Continue = false));
+            Dispatcher.PushFrame(frame);
+            Layout(window);
+            AtEnd();
+            Assert.Equal(0, view.UnreadLines);
+            Assert.Equal(Visibility.Collapsed, jump.Visibility);
+            wizard.Finish.Progress += "\r\nFollowing resumed";
+            Layout(window);
+            AtEnd();
+            log.ScrollToHome();
+            Layout(window);
+            wizard.Finish.Progress += "\r\nUnread again";
+            Layout(window);
+            Assert.Equal(1, view.UnreadLines);
+            log.ScrollToEnd();
+            Layout(window);
+            Assert.Equal(0, view.UnreadLines);
+            wizard.Finish.Progress += "\r\nManual following resumed";
+            Layout(window);
+            AtEnd();
+            wizard.Finish.Progress = "New run";
+            Layout(window);
+            Assert.Equal("New run", log.Text);
+            Assert.Equal(0, view.UnreadLines);
+
+            void Preserved()
+            {
+                Assert.Equal(offset, log.VerticalOffset, 3);
+                Assert.Equal(selected, log.SelectedText);
+                Assert.True(ApplicationCommands.Copy.CanExecute(null, log));
+            }
+            void AtEnd() => Assert.InRange(log.ExtentHeight - log.ViewportHeight - log.VerticalOffset, -1, 1);
         }
     }
 
