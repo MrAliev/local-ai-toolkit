@@ -700,9 +700,9 @@ A refusal is a message, not a breakage. Three common ones:
 There are **two: English and Russian**. English is not one of two equals but the neutral one:
 a locale with no translation is answered in English rather than refused.
 
-**By default it follows the system.** The order is: an explicit choice if there is a usable
-one, otherwise the operating system's language, otherwise English. Regional names resolve to
-their language — `ru-RU`, `ru-KZ` and `ru` all read the same strings.
+**By default it follows the system.** A usable process override takes precedence over the saved
+language; without a usable choice, the operating system's language is used, then English.
+Regional names resolve to their language — `ru-RU`, `ru-KZ` and `ru` all read the same strings.
 
 **How to change it.** Three ways, for three situations:
 
@@ -715,10 +715,9 @@ lai localai ask "…" file.cs --language en   # one call, over both
 The same choice decides what the local model answers in: a Russian machine gets a Russian triage
 of an English log, with paths, line numbers, error codes and quoted lines untouched.
 
-The environment variable is not decoration: the MCP servers are started by the launcher and
-read no settings file of their own before their first line of output. So the variable is the
-only way to switch languages for someone whose machine speaks one language while they work in
-another.
+The saved language applies to new CLI and MCP processes. `LOCALAI_LANGUAGE` overrides it for
+an individual process. Restart running MCP servers after changing the saved language.
+CodeSearch help follows this choice; its other command-line prose currently remains in English.
 
 The installer asks on its first screen, lets you switch on any screen after that, and remembers
 the answer — removal opens in that same language, even months later.
