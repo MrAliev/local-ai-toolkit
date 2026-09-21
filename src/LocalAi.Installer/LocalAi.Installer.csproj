@@ -10,6 +10,7 @@
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
     <InvariantGlobalization>false</InvariantGlobalization>
     <ApplicationIcon>..\..\assets\localai.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup>
     <!-- Linked rather than copied: assets/localai.ico is the one icon the eight
