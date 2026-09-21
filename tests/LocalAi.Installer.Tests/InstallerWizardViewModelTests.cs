@@ -1,4 +1,5 @@
 using LocalAi.Contracts;
+using LocalAi.Installer.Core;
 using LocalAi.Installer.Core.Dependencies;
 using LocalAi.Installer.Core.Planning;
 using LocalAi.Installer.Core.Transactions;
@@ -609,6 +610,43 @@ public sealed class InstallerWizardViewModelTests
         {
             DeleteDirectory(logDirectory);
         }
+    }
+
+    [Fact]
+    public void Relabeling_an_interrupted_run_preserves_recorded_effects_and_unknown_states()
+    {
+        var logDirectory = TestLogDirectory();
+        try
+        {
+            using var journal = InstallerRunJournal.Start(logDirectory);
+            var applied = journal.BeginStep(InstallerRunEffectKind.ResidencyPolicy, "Recorded policy");
+            journal.CompleteStep(applied, "written", isReversible: true);
+            journal.BeginStep(InstallerRunEffectKind.AgentConfiguration, "Unfinished client configuration");
+            journal.Dispose();
+            var originalJournal = File.ReadAllBytes(journal.JournalPath);
+            var presentation = new InstallerPresentation(new InstallerPreferencesStore(Path.Combine(logDirectory, "preferences")));
+            presentation.ChooseLanguage(InstallerLanguage.English);
+            var wizard = new InstallerWizardViewModel(presentation: presentation) { LogDirectory = logDirectory };
+            try
+            {
+                wizard.LoadInterruptedRunJournal();
+                var english = wizard.InterruptedRunNotice;
+                Assert.Contains("Recorded policy: applied", english);
+                Assert.Contains("Unfinished client configuration: started, state unknown", english);
+
+                presentation.ChooseLanguage(InstallerLanguage.Russian);
+                Assert.Contains("Recorded policy: применено", wizard.InterruptedRunNotice);
+                Assert.Contains("Unfinished client configuration: начато, состояние неизвестно", wizard.InterruptedRunNotice);
+                Assert.Equal(originalJournal, File.ReadAllBytes(journal.JournalPath));
+
+                presentation.ChooseLanguage(InstallerLanguage.English);
+                Assert.Equal(english, wizard.InterruptedRunNotice);
+                Assert.True(wizard.HasInterruptedRun);
+                Assert.Equal(originalJournal, File.ReadAllBytes(journal.JournalPath));
+            }
+            finally { wizard.DetachPresentation(); }
+        }
+        finally { DeleteDirectory(logDirectory); }
     }
 
     private static string TestLogDirectory() => Path.Combine(
