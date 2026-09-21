@@ -13,6 +13,7 @@ namespace LocalAi.Documentation;
 
 public static class DocumentationRenderer
 {
+    public const string CacheVersion = "documentation-renderer-1";
     private static readonly Lock PdfGate = new();
     private static readonly MarkdownPipeline Markdown = new MarkdownPipelineBuilder().DisableHtml().Build();
     private sealed record Block(string Text, int Heading = 0, bool Code = false, bool Diagram = false);
@@ -21,6 +22,12 @@ public static class DocumentationRenderer
     {
         var errors = DocumentationValidator.Validate(input, draft);
         if (errors.Count != 0) throw new DocumentationValidationException(errors);
+        return RenderValidated(input, draft);
+    }
+
+    // Both callers validate immediately before this method; the store also validates cached text.
+    internal static IReadOnlyDictionary<string, byte[]> RenderValidated(DocumentationInput input, DocumentationDraft draft)
+    {
         var (svg, png) = DocumentationDiagram.Render(input);
         var pack = new Dictionary<string, byte[]>(StringComparer.Ordinal) { ["diagram.svg"] = svg, ["diagram.png"] = png,
             ["LICENSES.txt"] = DocumentationFonts.Read("NOTICES.txt") };

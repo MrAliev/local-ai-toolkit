@@ -1066,6 +1066,8 @@
   <data name="DocsPackageReady" xml:space="preserve"><value>Пакет готов к просмотру: {0}</value></data>
   <data name="DocsPreviousKept" xml:space="preserve"><value>Предыдущий документ сохранён: {0}.</value></data>
   <data name="DocsReason_generator" xml:space="preserve"><value>Изменился генератор документации.</value></data>
+  <data name="DocsReason_presentation" xml:space="preserve"><value>Изменились координаты исходников или сведения о снимке.</value></data>
+  <data name="DocsReason_renderer" xml:space="preserve"><value>Изменилось оформление документа.</value></data>
   <data name="DocsReason_history" xml:space="preserve"><value>Изменилась история.</value></data>
   <data name="DocsReason_new" xml:space="preserve"><value>Предыдущего документа нет.</value></data>
   <data name="DocsReason_references" xml:space="preserve"><value>Изменились ссылки на символы.</value></data>
@@ -1078,6 +1080,7 @@
   <data name="DocsSubset" xml:space="preserve"><value>Выбран поднабор: до {0} публичных типов.</value></data>
   <data name="DocsUsage" xml:space="preserve"><value>Использование: localai docs build --root &lt;repo&gt; [--limit N | --all] [--json]; localai docs apply --root &lt;repo&gt; [--json]</value></data>
   <data name="DocsValidatingType" xml:space="preserve"><value>Проверяется документация для {0}.</value></data>
+  <data name="DocsRenderingType" xml:space="preserve"><value>Формируется документ для {0}.</value></data>
   <data name="DocsValidationFailed" xml:space="preserve"><value>Не удалось подготовить документацию для {0}: {1}</value></data>
   <data name="DocsModelReceipt" xml:space="preserve"><value>🔧 Локально: {0}{1}. В очереди: {2} с. Выполнение: {3} с. Экономия облачных токенов не измерялась.</value></data>
   <data name="DocsResidencyCpu" xml:space="preserve"><value> (целиком на процессоре — ответы намного медленнее)</value></data>
