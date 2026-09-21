@@ -16,6 +16,7 @@ foreach ($name in @('baseline', 'after', 'pilot-cache')) {
             id = $_.id; pass = $_.pass; totalMs = $_.totalMs
             beforeEmbeddingMs = $_.beforeEmbeddingMs; embeddingMs = $_.embeddingMs
             afterEmbeddingMs = $_.afterEmbeddingMs; identityMs = $_.identityMs
+            identityQueueMs = $_.identityQueueMs; identityExecutionMs = $_.identityExecutionMs
             cacheHit = $_.cacheHit; queueMs = $_.queueMs; executionMs = $_.executionMs
             wasCold = $_.wasCold; embeddingsUsed = $_.embeddingsUsed; hitsSha256 = $hash
         }
