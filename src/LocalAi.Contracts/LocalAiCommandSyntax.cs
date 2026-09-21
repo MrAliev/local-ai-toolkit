@@ -76,4 +76,3 @@ public static class LocalAiCommandSyntax
         "localai agent worktree <create|remove> [branch|path] [--root dir]";
 
 }
-
