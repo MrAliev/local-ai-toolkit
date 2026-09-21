@@ -106,8 +106,14 @@ public static class RuntimeIndexLayout
     public static string ResolveBaseIndexPath(
         string repositoryRoot,
         string? runtimeRoot = null)
+        => ResolveBaseIndexPath(Inspect(repositoryRoot, runtimeRoot), runtimeRoot);
+
+    // Reuse a snapshot captured by this operation. Never retain it between requests: saved
+    // edits, branch changes and generation publication must be observed by the next search.
+    internal static string ResolveBaseIndexPath(
+        WorkingIndexIdentity identity,
+        string? runtimeRoot)
     {
-        var identity = Inspect(repositoryRoot, runtimeRoot);
         var store = new GenerationStore(identity.RepositoryRuntimeRoot);
         var current = store.ReadCurrent();
         return current is null
