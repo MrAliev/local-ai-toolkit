@@ -23,7 +23,8 @@
     <!-- Text. Mono text — versions, paths, the log — uses TextPrimary untinted in both. -->
     <SolidColorBrush x:Key="TextPrimary" Color="#1A1A1A" />
     <SolidColorBrush x:Key="TextSecondary" Color="#5A5A5A" />
-    <SolidColorBrush x:Key="TextMuted" Color="#767676" />
+    <!-- Future steps are navigation information: 4.80:1 against RailFill. -->
+    <SolidColorBrush x:Key="TextMuted" Color="#6B6B6B" />
     <SolidColorBrush x:Key="TextDisabled" Color="#A0A0A0" />
 
     <!-- The accent splits into two tokens because no single hex is legible as 12px text on the

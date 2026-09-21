@@ -21,7 +21,8 @@
     <SolidColorBrush x:Key="RailFill" Color="#171717" />
     <SolidColorBrush x:Key="Surface" Color="#272727" />
     <SolidColorBrush x:Key="ControlFill" Color="#2D2D2D" />
-    <SolidColorBrush x:Key="ControlBorder" Color="#4A4A4A" />
+    <!-- Active field boundaries: 3.73:1 against ControlFill; separators stay subdued. -->
+    <SolidColorBrush x:Key="ControlBorder" Color="#858585" />
     <SolidColorBrush x:Key="Divider" Color="#383838" />
 
     <SolidColorBrush x:Key="TextPrimary" Color="#F2F2F2" />
