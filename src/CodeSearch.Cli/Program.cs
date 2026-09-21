@@ -57,6 +57,16 @@ async Task<int> RunAsync(TextWriter stdout, TextWriter stderr)
     // search --query "--json"` is an ordinary query. `localai` may scan its whole list, because
     // nothing there could plausibly take that literal as a value.
     var machineReadable = MachineEnvelope.RequestedAsOption(args);
+    if (!machineReadable && CliHelp.Resolve("codesearch", args) is { } help)
+    {
+        OutputCulture.Apply();
+        // Resolve again after applying the saved language; other commands retain their
+        // existing English prose and invariant JSON contract.
+        help = CliHelp.Resolve("codesearch", args)!;
+        (help.Success ? stdout : stderr).WriteLine(
+            help.Success && args.Length == 1 ? CodeSearchUsage.Text : help.Text);
+        return help.Success ? 0 : 1;
+    }
     if (machineReadable && !ConsoleJson.Supports(command))
     {
         // The promise is unconditional or it is nothing: if the flag was passed, stdout is an

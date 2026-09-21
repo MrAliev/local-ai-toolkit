@@ -76,6 +76,12 @@ locally.
 
 ## What the command line gets
 
+Use `localai --help` or `codesearch --help` for the command list, and
+`localai repo status --help` or `codesearch help search` for a command's syntax.
+Help writes to stdout and exits successfully; extra or unknown help arguments are refused.
+Help follows the saved language or `LOCALAI_LANGUAGE` (`en` / `ru`). Existing JSON output
+contracts are unchanged; `--json` requests a machine response rather than prose help.
+
 The set is **not the same**: some tools exist only here, some only over MCP.
 
 | Command | What it does |

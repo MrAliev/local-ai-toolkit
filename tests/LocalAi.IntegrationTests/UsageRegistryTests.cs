@@ -80,6 +80,29 @@ public sealed class UsageRegistryTests
         Assert.Equal(expected, string.Join(',', actual));
     }
 
+    [Theory]
+    [InlineData("localai")]
+    [InlineData("codesearch")]
+    public void Every_machine_command_has_syntax_in_the_shared_description(string binary)
+    {
+        foreach (var capability in UsageReportingRegistry.Capabilities(binary).Commands)
+        {
+            var description = UsageReportingRegistry.Find(UsageSurface.Cli, binary, capability.Name);
+            Assert.NotNull(description.Syntax);
+            Assert.Contains(description.Syntax, CliHelp.Render(binary));
+        }
+    }
+
+    [Theory]
+    [InlineData("localai", "ask question --model --help")]
+    [InlineData("localai", "translate --in --help")]
+    [InlineData("codesearch", "search --query --help")]
+    [InlineData("codesearch", "search --query help")]
+    public void Help_words_in_option_values_are_not_help_requests(string binary, string arguments)
+    {
+        Assert.Null(CliHelp.Resolve(binary, arguments.Split(' ')));
+    }
+
     private static void Add(HashSet<string> routes, string prefix, IEnumerable<string> operations)
     {
         foreach (var operation in operations) routes.Add(prefix + " " + operation);
