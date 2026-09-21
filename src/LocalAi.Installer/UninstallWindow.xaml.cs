@@ -25,6 +25,7 @@ public partial class UninstallWindow : Window, IReturnsToStart
             canReturnToStart: canReturnToStart,
             presentation: presentation);
         InitializeComponent();
+        WindowWorkArea.Follow(this);
         // The caption is the desktop manager's, not the palette's.
         DarkCaption.Follow(this);
         // Back on the first page leaves the wizard; the start window is what knows
