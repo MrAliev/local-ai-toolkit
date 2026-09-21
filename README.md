@@ -828,7 +828,6 @@ for copying individually; the link to the other language still needs that other 
 Changing this option rerenders validated text without another model call. Resource hashes
 are checked before apply, and edited destination stylesheets are preserved and reported like
 other manual edits. A build can repair a missing or damaged runtime stylesheet from bundled resources.
-Retention of old packages and artifacts is still pending in #623; this change deletes none.
 Open `index.en.html` or `index.ru.html` in the printed package directory: changes and their
 reasons, failures with the fate of the previous document, a reuse count, and the contents.
 Review the prose and translation for meaning; automatic checks prove references and syntax.
@@ -841,7 +840,31 @@ rendered file can be rebuilt without another generation call. A failed unit keep
 named in the report. Completed units survive an interrupted build. `--json` returns the report;
 **check its `failed` count**: a completed report can contain failed units. Retained artifacts
 kept after a failure keep their original snapshot labels and are marked in the report.
-Documentation caches are kept until the runtime is removed.
+Documentation history is cleaned only by an explicit `docs prune --apply` command.
+
+```powershell
+lai localai docs pin --root R:\YourRepo --package <package-id>  # before opening a package
+lai localai docs prune --root R:\YourRepo --keep 5 --dry-run
+lai localai docs prune --root R:\YourRepo --keep 5 --apply
+lai localai docs unpin --root R:\YourRepo --package <package-id> # after closing it
+```
+
+The package ID is the 32-character directory name printed by build. Pin packages before
+opening them and unpin them after closing: arbitrary browser tabs and external readers
+cannot be detected automatically. Prune without `--apply` is a preview. It lists every
+candidate's bytes and keep/delete reasons; execution recomputes the plan under the same
+lock used by build, apply and pin. Default retention is the five most recently written
+package manifests (minimum one), plus current, pinned and applied versions. Latest type
+checkpoints and the two most recent valid artifacts per type are always retained, along
+with referenced text and shared resources. Explicit protections can exceed `--keep`.
+
+Apply records each managed file's source package, including partial applications and
+preserved manual edits. Legacy or incomplete provenance preserves all history until a
+successful apply reconciles every old baseline entry. An interrupted build likewise
+preserves history until a build completes. Cleanup refuses reparse points and malformed
+protection metadata. It never touches the worktree; unrecognized entries are preserved.
+Directories interrupted during deletion are retired atomically and reclaimed on the next
+run. See [retention measurements and checks](scripts/quality/documentation-retention/README.md).
 
 Text checkpoints are keyed by source/reference/history hashes, generator facts/graph, and
 explicit prompt, validator and route versions. The route identity also includes the pinned

@@ -72,6 +72,8 @@ public static class UsageReportingRegistry
             ("read-image", UsageComparisonKind.ReplacedGeneration, "read_image"), ("translate", UsageComparisonKind.ReplacedGeneration, "translate_local"),
             ("capabilities", UsageComparisonKind.NotApplicable, null), ("docs build", UsageComparisonKind.ReplacedGeneration, null),
             ("docs apply", UsageComparisonKind.NotApplicable, null),
+            ("docs prune", UsageComparisonKind.NotApplicable, null), ("docs pin", UsageComparisonKind.NotApplicable, null),
+            ("docs unpin", UsageComparisonKind.NotApplicable, null),
         }) yield return new(UsageSurface.Cli, "localai", command, new(comparison, UsageResponseShape.Envelope), tool);
 
         foreach (var (command, tool) in new (string, string?)[]

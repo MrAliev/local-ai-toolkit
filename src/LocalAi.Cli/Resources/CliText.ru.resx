@@ -1078,7 +1078,7 @@
   <data name="DocsSelectionConflict" xml:space="preserve"><value>Укажите либо --limit, либо --all.</value></data>
   <data name="DocsSourcesChanged" xml:space="preserve"><value>Исходники изменились после сборки пакета. Перед применением снова выполните localai docs build --root {0}.</value></data>
   <data name="DocsSubset" xml:space="preserve"><value>Выбран поднабор: до {0} публичных типов.</value></data>
-  <data name="DocsUsage" xml:space="preserve"><value>Использование: localai docs build --root &lt;repo&gt; [--limit N | --all] [--standalone-html] [--json]; localai docs apply --root &lt;repo&gt; [--json]</value></data>
+  <data name="DocsUsage" xml:space="preserve"><value>Использование: localai docs build --root &lt;repo&gt; [--limit N | --all] [--standalone-html] [--json]; localai docs apply --root &lt;repo&gt; [--json]; localai docs prune --root &lt;repo&gt; [--keep N] [--dry-run | --apply] [--json]; localai docs pin|unpin --root &lt;repo&gt; --package &lt;package-id&gt; [--json]</value></data>
   <data name="DocsValidatingType" xml:space="preserve"><value>Проверяется документация для {0}.</value></data>
   <data name="DocsRenderingType" xml:space="preserve"><value>Формируется документ для {0}.</value></data>
   <data name="DocsValidationFailed" xml:space="preserve"><value>Не удалось подготовить документацию для {0}: {1}</value></data>
@@ -1087,4 +1087,26 @@
   <data name="DocsResidencyPartial" xml:space="preserve"><value> (в видеопамяти {0}% модели — ответы медленнее)</value></data>
   <data name="UsageReportArguments" xml:space="preserve"><value>Используйте: localai telemetry --call-id &lt;guid&gt;. Идентификатор вызова должен быть корректным GUID.</value></data>
   <data name="UsageReportNotFound" xml:space="preserve"><value>Отчёт для вызова {0} не найден.</value></data>
+  <data name="DocsKeepInvalid" xml:space="preserve"><value>--keep должен быть положительным целым числом.</value></data>
+  <data name="DocsPackageIdRequired" xml:space="preserve"><value>Укажите --package с именем каталога пакета из 32 символов.</value></data>
+  <data name="DocsPrunePreview" xml:space="preserve"><value>Только план. Можно освободить байт: {0}. Для пересчёта и выполнения укажите --apply.</value></data>
+  <data name="DocsPruneApplied" xml:space="preserve"><value>Очистка завершена. Удалено байт: {0}.</value></data>
+  <data name="DocsPruneDelete" xml:space="preserve"><value>УДАЛИТЬ {0} ({1} байт): {2}</value></data>
+  <data name="DocsPruneKeep" xml:space="preserve"><value>СОХРАНИТЬ {0} ({1} байт): {2}</value></data>
+  <data name="DocsPinned" xml:space="preserve"><value>Пакет защищён от очистки: {0}. Не снимайте закрепление, пока он открыт.</value></data>
+  <data name="DocsUnpinned" xml:space="preserve"><value>Закрепление пакета снято: {0}. Остальные правила защиты сохраняются.</value></data>
+  <data name="DocsRetention_unfinished_build" xml:space="preserve"><value>незавершённая сборка; завершите сборку перед очисткой</value></data>
+  <data name="DocsRetention_current" xml:space="preserve"><value>текущий пакет</value></data>
+  <data name="DocsRetention_recent" xml:space="preserve"><value>входит в число последних сохраняемых пакетов</value></data>
+  <data name="DocsRetention_pinned" xml:space="preserve"><value>закреплённый или открытый пакет</value></data>
+  <data name="DocsRetention_latest" xml:space="preserve"><value>последняя версия типа</value></data>
+  <data name="DocsRetention_previous_valid" xml:space="preserve"><value>одна из двух последних исправных версий типа</value></data>
+  <data name="DocsRetention_applied" xml:space="preserve"><value>используется применённым файлом</value></data>
+  <data name="DocsRetention_apply_in_progress" xml:space="preserve"><value>применение начато и не завершено</value></data>
+  <data name="DocsRetention_untracked_apply" xml:space="preserve"><value>неполные сведения о применённых файлах; сохраняется вся история</value></data>
+  <data name="DocsRetention_retained_pack" xml:space="preserve"><value>используется сохраняемым пакетом</value></data>
+  <data name="DocsRetention_retained_artifact" xml:space="preserve"><value>используется сохраняемым артефактом</value></data>
+  <data name="DocsRetention_unknown_entry" xml:space="preserve"><value>нераспознанный файл сохраняется</value></data>
+  <data name="DocsRetention_outside_retention" xml:space="preserve"><value>сверх лимита хранения и без защиты</value></data>
+  <data name="DocsRetention_unreferenced" xml:space="preserve"><value>не используется сохраняемыми версиями</value></data>
 </root>
