@@ -1,0 +1,54 @@
+namespace LocalAi.Contracts;
+
+/// <summary>Syntax attached to the same descriptions that drive capabilities and usage policy.</summary>
+internal static class CliCommandSyntax
+{
+    public static string? For(string binary, string command) => binary switch
+    {
+        "localai" => LocalAi.GetValueOrDefault(command),
+        "codesearch" => CodeSearch.GetValueOrDefault(command),
+        _ => null,
+    };
+
+    private static readonly Dictionary<string, string> LocalAi = new(StringComparer.Ordinal)
+    {
+        ["model status"] = LocalAiCommandSyntax.ModelStatus,
+        ["model pull"] = LocalAiCommandSyntax.ModelPull,
+        ["model preflight"] = LocalAiCommandSyntax.ModelPreflight,
+        ["repo status"] = LocalAiCommandSyntax.RepoStatus,
+        ["repo prune"] = LocalAiCommandSyntax.RepoPrune,
+        ["doctor"] = LocalAiCommandSyntax.Doctor,
+        ["ask"] = LocalAiCommandSyntax.Ask,
+        ["triage"] = LocalAiCommandSyntax.Triage,
+        ["read-image"] = LocalAiCommandSyntax.ReadImage,
+        ["translate"] = LocalAiCommandSyntax.Translate,
+        ["capabilities"] = LocalAiCommandSyntax.Capabilities,
+        ["docs build"] = LocalAiCommandSyntax.DocsBuild,
+        ["docs apply"] = LocalAiCommandSyntax.DocsApply,
+        ["agent gate"] = LocalAiCommandSyntax.AgentGate,
+        ["agent worktree create"] = LocalAiCommandSyntax.AgentWorktreeCreate,
+        ["agent worktree remove"] = LocalAiCommandSyntax.AgentWorktreeRemove,
+        ["hook"] = LocalAiCommandSyntax.Hook,
+        ["prune"] = LocalAiCommandSyntax.Prune,
+        ["telemetry"] = LocalAiCommandSyntax.Telemetry,
+        ["native"] = "localai native <operation> [--request file]",
+        ["policy"] = "localai policy <show|set> [options]",
+        ["update"] = "localai update [--wait] [--force]",
+        ["semantic"] = "localai semantic <operation> [options]",
+        ["bootstrap"] = "localai bootstrap --dry-run",
+        ["sync"] = "localai sync [--root dir] [--base-only] [--require-semantics] [--max-inline-files n]",
+        ["hooks install"] = "localai hooks install [--root dir]",
+    };
+
+    private static readonly Dictionary<string, string> CodeSearch = new(StringComparer.Ordinal)
+    {
+        ["index"] = "codesearch index [--root <dir>] [--model <ollama-model>] [--force] [--index <file>]",
+        ["overlay"] = "codesearch overlay [--root <dir>] [--index <base>] [--overlay <file>]",
+        ["search"] = "codesearch search --query <text> [--root <dir>] [--top N] [--kind Type|Method|Text|File] [--path <substring>] [--per-file N] [--no-instruct] [--json]",
+        ["get-chunk"] = "codesearch get-chunk --id <chunk_id> [--root <dir>] [--json]",
+        ["evaluate"] = "codesearch evaluate --cases <json> [--root <dir>] [--profile|--no-floor] [--no-instruct]",
+        ["status"] = "codesearch status [--root <dir>] [--json]",
+        ["scan"] = "codesearch scan [--root <dir>]",
+        ["capabilities"] = "codesearch capabilities --json",
+    };
+}

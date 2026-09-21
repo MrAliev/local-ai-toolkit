@@ -13,7 +13,10 @@ public sealed record UsagePolicy(UsageComparisonKind Comparison, UsageResponseSh
     public static UsagePolicy AdministrationJson { get; } = Administration with { Response = UsageResponseShape.Json };
 }
 
-public sealed record UsageOperation(UsageSurface Surface, string Component, string Operation, UsagePolicy Policy, string? McpTool = null);
+public sealed record UsageOperation(UsageSurface Surface, string Component, string Operation, UsagePolicy Policy, string? McpTool = null)
+{
+    public string? Syntax { get; init; }
+}
 
 /// <summary>
 /// Inventory of the two MCP servers and the localai/codesearch command surfaces, including
@@ -23,7 +26,9 @@ public sealed record UsageOperation(UsageSurface Surface, string Component, stri
 /// </summary>
 public static class UsageReportingRegistry
 {
-    public static IReadOnlyList<UsageOperation> All { get; } = Array.AsReadOnly(Build().ToArray());
+    public static IReadOnlyList<UsageOperation> All { get; } = Array.AsReadOnly(Build()
+        .Select(entry => entry.Surface == UsageSurface.Cli
+            ? entry with { Syntax = CliCommandSyntax.For(entry.Component, entry.Operation) } : entry).ToArray());
 
     public static UsageOperation Find(UsageSurface surface, string component, string operation) =>
         All.SingleOrDefault(entry => entry.Surface == surface && entry.Component == component && entry.Operation == operation)
@@ -76,7 +81,7 @@ public static class UsageReportingRegistry
 
         foreach (var command in new[]
         {
-            "model", "native", "docs", "policy", "policy show", "policy set", "update", "semantic", "semantic status",
+            "help", "--help", "-h", "model", "native", "docs", "policy", "policy show", "policy set", "update", "semantic", "semantic status",
             "semantic config", "semantic config show", "semantic config path", "semantic config init",
             "semantic lsp-config", "semantic lsp-config show", "semantic lsp-config path", "semantic lsp-config init",
             "semantic fallback-config", "semantic fallback-config show", "semantic fallback-config path", "semantic fallback-config init",

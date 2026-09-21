@@ -10,7 +10,7 @@ public static class CliUsageReporting
     public static async Task<int> RunAsync(string component, string[] arguments, string runtimeRoot,
         TextWriter output, TextWriter error, Func<TextWriter, TextWriter, Task<int>> execute, Guid? callId = null)
     {
-        var operation = UsageReportingRegistry.All.Where(entry => entry.Surface == UsageSurface.Cli && entry.Component == component)
+        var operation = CliHelp.IsRequest(component, arguments) ? "help" : UsageReportingRegistry.All.Where(entry => entry.Surface == UsageSurface.Cli && entry.Component == component)
             .OrderByDescending(entry => entry.Operation.Length)
             .FirstOrDefault(entry => arguments.Length >= entry.Operation.Split(' ').Length
                 && entry.Operation.Split(' ').SequenceEqual(arguments.Take(entry.Operation.Split(' ').Length), StringComparer.OrdinalIgnoreCase))

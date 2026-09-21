@@ -7,6 +7,34 @@ namespace CodeSearch.Tests;
 public sealed class CliUsageReportingTests
 {
     [Theory]
+    [InlineData("en", "--help", 0, "Usage:")]
+    [InlineData("ru", "--help", 0, "Использование:")]
+    [InlineData("en", "search --help", 0, "--query")]
+    [InlineData("ru", "help index", 0, "Использование:")]
+    [InlineData("en", "--help --bogus", 1, "")]
+    [InlineData("en", "search --help --bogus", 1, "")]
+    [InlineData("en", "help missing", 1, "")]
+    public async Task Help_has_consistent_streams_language_and_argument_validation(string language, string arguments, int exit, string expected)
+    {
+        var start = new ProcessStartInfo("dotnet")
+        {
+            RedirectStandardOutput = true, RedirectStandardError = true,
+            UseShellExecute = false, CreateNoWindow = true,
+        };
+        start.Environment["LOCALAI_LANGUAGE"] = language;
+        start.ArgumentList.Add(Assembly.Load("codesearch").Location);
+        foreach (var argument in arguments.Split(' ')) start.ArgumentList.Add(argument);
+        using var process = Process.Start(start)!;
+        var output = process.StandardOutput.ReadToEndAsync(TestContext.Current.CancellationToken);
+        var error = process.StandardError.ReadToEndAsync(TestContext.Current.CancellationToken);
+        try { await process.WaitForExitAsync(TestContext.Current.CancellationToken); }
+        finally { if (!process.HasExited) process.Kill(entireProcessTree: true); }
+        Assert.Equal(exit, process.ExitCode);
+        Assert.Contains(expected, await output);
+        if (exit != 0) Assert.Contains("Unknown help arguments", await error);
+    }
+
+    [Theory]
     [InlineData("capabilities", 0)]
     [InlineData("unknown-command", 1)]
     public async Task Real_cli_preserves_json_stdout_and_reports_success_and_refusal(string command, int exit)

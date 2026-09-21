@@ -187,6 +187,12 @@ static async Task<int> FollowIndexBuildAsync(RepositoryStatus status, TimeSpan i
 // not be opened, which exits 66 the way `--out` exits 73 when it cannot write.
 static async Task<int> RunAsync(string[] args, bool machineReadable, CommandStreams streams)
 {
+    if (!machineReadable && CliHelp.Resolve("localai", args) is { } help)
+    {
+        (help.Success ? streams.Out : streams.Error).WriteLine(help.Text);
+        return help.Success ? 0 : 2;
+    }
+
     int Refuse(string command, CommandRefusal refused, bool machine, int exit = 2)
     {
         UsageCall.Current?.Refused(refused.Code);
