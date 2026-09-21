@@ -20,6 +20,11 @@ public sealed class DurableQueue : ISelectableBrokerQueue
     private readonly string _mutexName;
     private readonly RuntimeRetentionPolicy _retention;
     private DateTimeOffset _nextSweepAtUtc = DateTimeOffset.MinValue;
+    // Requests are immutable while the queue mutex is held. Admission, recovery and
+    // selection can share their validated payloads, but nothing may survive that lease:
+    // a replacement with the same file size/timestamp must be read by the next operation.
+    // Lazy so ordinary state-only polling allocates no request cache.
+    private Dictionary<string, LocalJobRequest>? _requestsInCurrentLease;
 
     public DurableQueue(
         string runtimeRoot,
@@ -685,6 +690,10 @@ public sealed class DurableQueue : ISelectableBrokerQueue
 
     private LocalJobRequest ReadRequest(string jobDirectory)
     {
+        if (_requestsInCurrentLease?.TryGetValue(jobDirectory, out var cached) == true)
+        {
+            return cached;
+        }
         var document = JsonSerializer.Deserialize<RequestDocument>(
             File.ReadAllText(Path.Combine(jobDirectory, "request.json")),
             JsonOptions)
@@ -700,6 +709,8 @@ public sealed class DurableQueue : ISelectableBrokerQueue
             throw new InvalidDataException("The durable request enum value is invalid.");
         }
 
+        (_requestsInCurrentLease ??= new Dictionary<string, LocalJobRequest>(StringComparer.Ordinal))
+            .Add(jobDirectory, document.Request);
         return document.Request;
     }
 
@@ -1147,12 +1158,14 @@ public sealed class DurableQueue : ISelectableBrokerQueue
                 {
                     if (mutex.WaitOne(TimeSpan.FromMilliseconds(100)))
                     {
-                        return new MutexLease(mutex);
+                        _requestsInCurrentLease = null;
+                        return new MutexLease(mutex, this);
                     }
                 }
                 catch (AbandonedMutexException)
                 {
-                    return new MutexLease(mutex);
+                    _requestsInCurrentLease = null;
+                    return new MutexLease(mutex, this);
                 }
             }
         }
@@ -1202,10 +1215,13 @@ public sealed class DurableQueue : ISelectableBrokerQueue
         [property: JsonRequired] int RecoveryCount,
         [property: JsonRequired] string? FailureCode);
 
-    private sealed class MutexLease(Mutex mutex) : IDisposable
+    private sealed class MutexLease(Mutex mutex, DurableQueue owner) : IDisposable
     {
         public void Dispose()
         {
+            // Clear before another thread/process can acquire the queue, including on every
+            // exception path. No request is trusted across separate queue operations.
+            owner._requestsInCurrentLease = null;
             mutex.ReleaseMutex();
             mutex.Dispose();
         }
