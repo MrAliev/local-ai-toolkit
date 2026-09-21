@@ -117,6 +117,8 @@ internal static class BrokerProgram
             // says how long a model is worth holding when nothing wants it, and a queued job for
             // another model is the answer to whether anything wants it.
             var modelKeepAlive = TimeSpan.FromSeconds(policy.IdleModelKeepAliveSeconds);
+            var embeddingTimings = Environment.GetEnvironmentVariable(EmbeddingTimingStore.EnableEnvironmentVariable) == "1"
+                ? new EmbeddingTimingStore(runtimeRoot) : null;
             var host = new BrokerHost(
                 queue,
                 $"broker-{process.Id}",
@@ -150,6 +152,11 @@ internal static class BrokerProgram
                 idleUnload: executionRouter.UnloadResidentAsync,
                 idleUnloadAfter: modelKeepAlive,
                 backendProbe: transport.ProbeActiveModelAsync,
+                resultObserver: embeddingTimings is null ? null : (request, result) =>
+                {
+                    if (request.Payload is EmbedJobPayload && result.EmbeddingTiming is { } timing)
+                        embeddingTimings.Write(request.JobId, timing);
+                },
                 diagnostic: diagnostic =>
                 {
                     Console.Error.WriteLine(

@@ -617,7 +617,22 @@ public sealed partial class OllamaTransport : IModelRuntimeTransport, IDisposabl
             }
         }
 
-        return Result(new EmbedJobOutput(response.Embeddings));
+        var total = ReadTokenCount(document.RootElement, "total_duration");
+        var load = ReadTokenCount(document.RootElement, "load_duration");
+        var evaluation = ReadTokenCount(document.RootElement, "prompt_eval_duration");
+        // Optional diagnostics must not reject an otherwise usable vector. An impossible
+        // sub-duration is unknown, rather than a fabricated negative remainder.
+        if (total is { } duration)
+        {
+            if (load > duration) load = null;
+            if (evaluation > duration - (load ?? 0)) evaluation = null;
+        }
+        var tokens = ReadTokenCount(document.RootElement, "prompt_eval_count");
+        return Result(new EmbedJobOutput(response.Embeddings)) with
+        {
+            BackendInputTokens = tokens,
+            EmbeddingTiming = new EmbeddingBackendTiming(false, total, load, evaluation, tokens),
+        };
     }
 
     private async Task<BrokerExecutionResult> ExecuteChatAsync(
