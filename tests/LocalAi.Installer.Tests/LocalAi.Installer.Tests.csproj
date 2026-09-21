@@ -5,10 +5,14 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <InvariantGlobalization>false</InvariantGlobalization>
+    <UseWPF>true</UseWPF>
     <!-- xUnit v3 Testing Platform tests intentionally reference the self-contained WPF executable. -->
     <ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained>
   </PropertyGroup>
   <ItemGroup>
+    <Using Include="System.IO" />
+    <Using Include="System.Net.Http" />
+    <Resource Include="..\..\assets\localai.ico" Link="Resources\localai.ico" />
     <PackageReference Include="xunit.v3" Version="4.0.0" />
   </ItemGroup>
   <ItemGroup>

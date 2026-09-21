@@ -220,6 +220,8 @@ public sealed class DependencySelection(string Id, string Title, bool IsRequired
     /// </summary>
     public string HeadLine => Title + " — " + StateText;
 
+    public string AccessibleName => ActionText + " " + Title;
+
     public string ActionText => !IsInstallable
         ? InstallerCulture.Pick("Install manually", "Установить вручную")
         : IsInstalled
@@ -459,6 +461,9 @@ public sealed class AgentOption(string Agent, AgentChoice Choice) : ObservableOb
     /// bracket in Russian sits where the sentence puts it, not where the XAML did.
     /// </summary>
     public string Heading => $"{DisplayName} ({DetectionText})";
+
+    public string AccessibleName => string.Format(
+        InstallerCulture.Pick("Integration with {0}", "Интеграция с {0}"), DisplayName);
 
     /// <summary>
     /// Whether this row carries the text-search gate underneath its combo. Claude Code alone: the

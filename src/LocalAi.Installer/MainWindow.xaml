@@ -290,24 +290,19 @@
                         <ItemsControl ItemsSource="{Binding Dependencies.Dependencies}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Grid Margin="0,0,0,10">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <CheckBox Grid.Column="0"
-                                                  IsChecked="{Binding IsConsented}"
+                                    <CheckBox IsChecked="{Binding IsConsented}"
                                                   IsEnabled="{Binding IsInstallable}"
                                                   Tag="{Binding Id}"
                                                   Checked="OnDependencyConsentChanged"
                                                   Unchecked="OnDependencyConsentChanged"
-                                                  VerticalAlignment="Top"
-                                                  Margin="0,2,8,0" />
+                                                  AutomationProperties.Name="{Binding AccessibleName}"
+                                                  AutomationProperties.HelpText="{Binding RequirementText}"
+                                                  Margin="0,0,0,10">
                                         <!-- Two lines, not one long one. The name and the state are
                                              what somebody scans; what skipping costs is what they
                                              read when the scan stops, and joined onto the first
                                              line it ran off the page. -->
-                                        <StackPanel Grid.Column="1">
+                                        <StackPanel>
                                             <TextBlock Text="{Binding HeadLine, Mode=OneWay}" TextWrapping="Wrap" />
                                             <TextBlock Text="{Binding RequirementText, Mode=OneWay}"
                                                        Style="{StaticResource Muted}" FontSize="11"
@@ -327,7 +322,7 @@
                                                 </TextBlock.Style>
                                             </TextBlock>
                                         </StackPanel>
-                                    </Grid>
+                                    </CheckBox>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
@@ -345,12 +340,15 @@
                                 </Style.Triggers>
                             </Style>
                         </StackPanel.Style>
-                        <TextBlock Text="{vm:Label VersionToInstall}" />
-                        <TextBox Text="{Binding Package.ReleaseVersion, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        <TextBlock x:Name="VersionLabel" Text="{vm:Label VersionToInstall}" />
+                        <TextBox AutomationProperties.Name="{Binding Text, ElementName=VersionLabel}"
+                                 AutomationProperties.LabeledBy="{Binding ElementName=VersionLabel}"
+                                 AutomationProperties.HelpText="{vm:Label VersionHint}"
+                                 Text="{Binding Package.ReleaseVersion, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  Width="280" Height="24" HorizontalAlignment="Left" Margin="0,4,0,2" />
                         <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,0,0,8"
                                    Text="{vm:Label VersionHint}" />
-                        <TextBlock Text="{vm:Label InstallFromFolder}" Margin="0,4,0,0" />
+                        <TextBlock x:Name="ReleaseFolderLabel" Text="{vm:Label ReleaseFolder}" Margin="0,4,0,0" />
                         <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,2,0,4"
                                    Text="{vm:Label FolderHint}" />
                         <!-- Stretched rather than Width="480": a fixed width for a path is a clip
@@ -361,7 +359,9 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBox Grid.Column="0" Height="24"
+                            <TextBox Grid.Column="0" Height="24" AutomationProperties.Name="{Binding Text, ElementName=ReleaseFolderLabel}"
+                                     AutomationProperties.LabeledBy="{Binding ElementName=ReleaseFolderLabel}"
+                                     AutomationProperties.HelpText="{vm:Label FolderHint}"
                                      Text="{Binding Package.SourceFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                             <Button Grid.Column="1" Content="{vm:Label BrowseForFolder}"
                                     MinWidth="96" Padding="12,0" Height="24" Margin="8,0,0,0"
@@ -401,7 +401,9 @@
                              page under the pointer. Inside, it is also aligned by the control's
                              own template rather than by a margin measured against it. -->
                         <RadioButton GroupName="Residency" Margin="0,0,0,10"
-                                     IsChecked="{Binding Residency.IsRequireFullVram, Mode=TwoWay}">
+                                     IsChecked="{Binding Residency.IsRequireFullVram, Mode=TwoWay}"
+                                     AutomationProperties.Name="{vm:Label RequireFullVram}"
+                                     AutomationProperties.HelpText="{vm:Label RequireFullVramHint}">
                             <StackPanel>
                                 <TextBlock Text="{vm:Label RequireFullVram}" TextWrapping="Wrap" />
                                 <TextBlock Text="{vm:Label RequireFullVramHint}"
@@ -410,7 +412,9 @@
                             </StackPanel>
                         </RadioButton>
                         <RadioButton GroupName="Residency" Margin="0,0,0,10"
-                                     IsChecked="{Binding Residency.IsAllowPartialOffload, Mode=TwoWay}">
+                                     IsChecked="{Binding Residency.IsAllowPartialOffload, Mode=TwoWay}"
+                                     AutomationProperties.Name="{vm:Label AllowPartialOffload}"
+                                     AutomationProperties.HelpText="{vm:Label AllowPartialOffloadHint}">
                             <StackPanel>
                                 <TextBlock Text="{vm:Label AllowPartialOffload}" TextWrapping="Wrap" />
                                 <TextBlock Text="{vm:Label AllowPartialOffloadHint}"
@@ -419,7 +423,9 @@
                             </StackPanel>
                         </RadioButton>
                         <RadioButton GroupName="Residency" Margin="0,0,0,10"
-                                     IsChecked="{Binding Residency.IsAllowCpu, Mode=TwoWay}">
+                                     IsChecked="{Binding Residency.IsAllowCpu, Mode=TwoWay}"
+                                     AutomationProperties.Name="{vm:Label AllowCpu}"
+                                     AutomationProperties.HelpText="{vm:Label AllowCpuHint}">
                             <StackPanel>
                                 <TextBlock Text="{vm:Label AllowCpu}" TextWrapping="Wrap" />
                                 <TextBlock Text="{vm:Label AllowCpuHint}"
@@ -460,7 +466,7 @@
                                      IsChecked="{Binding Models.IsChooseExact, Mode=TwoWay}" Margin="0,0,0,4" />
                         <StackPanel Margin="23,0,0,10"
                                     Visibility="{Binding Models.IsChooseExact, Converter={StaticResource BoolToVisibility}}">
-                            <TextBlock Text="{vm:Label Model}" />
+                            <TextBlock x:Name="ModelLabel" Text="{vm:Label ModelToInstall}" />
                             <!-- ItemTemplate, not DisplayMemberPath. The closed box draws
                                  SelectionBoxItemTemplate, which ComboBox computes from
                                  ItemTemplate and never from DisplayMemberPath: with the path
@@ -468,7 +474,9 @@
                                  ModelCatalogEntry is a positional record, so the box showed
                                  `ModelCatalogEntry { Tag = …, … }`. A tag is an identifier,
                                  hence Consolas, as the rail already sets for the version. -->
-                            <ComboBox ItemsSource="{Binding Models.CatalogModels}"
+                            <ComboBox AutomationProperties.Name="{Binding Text, ElementName=ModelLabel}"
+                                      AutomationProperties.LabeledBy="{Binding ElementName=ModelLabel}"
+                                      ItemsSource="{Binding Models.CatalogModels}"
                                       SelectedItem="{Binding Models.SelectedModel, Mode=TwoWay}"
                                       MinWidth="240" HorizontalAlignment="Left" Height="24"
                                       Margin="0,4,0,8">
@@ -479,8 +487,11 @@
                                     </DataTemplate>
                                 </ComboBox.ItemTemplate>
                             </ComboBox>
-                            <TextBlock Text="{vm:Label ContextSize}" />
-                            <ComboBox ItemsSource="{Binding Models.AvailableContexts}"
+                            <TextBlock x:Name="ModelContextLabel" Text="{vm:Label ModelContextSize}" />
+                            <ComboBox AutomationProperties.Name="{Binding Text, ElementName=ModelContextLabel}"
+                                      AutomationProperties.LabeledBy="{Binding ElementName=ModelContextLabel}"
+                                      AutomationProperties.HelpText="{vm:Label ContextSizeHint}"
+                                      ItemsSource="{Binding Models.AvailableContexts}"
                                       SelectedItem="{Binding Models.SelectedContext, Mode=TwoWay}"
                                       MaxWidth="160" HorizontalAlignment="Left" Height="24" Margin="0,4,0,6" />
                             <TextBlock Text="{vm:Label ContextSizeHint}"
@@ -524,7 +535,10 @@
                                              MCP-серверы и установить инструкции» does not fit 380
                                              minus the chrome, and a width that fits English and
                                              not Russian is the defect this page is full of. -->
-                                        <ComboBox Height="24" HorizontalAlignment="Stretch" Margin="0,4,0,0"
+                                        <TextBlock x:Name="ClientChoiceLabel" Text="{Binding AccessibleName}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                                        <ComboBox AutomationProperties.Name="{Binding Text, ElementName=ClientChoiceLabel}"
+                                                  AutomationProperties.LabeledBy="{Binding ElementName=ClientChoiceLabel}"
+                                                  Height="24" HorizontalAlignment="Stretch" Margin="0,4,0,0"
                                                   Tag="{Binding Agent}"
                                                   ItemsSource="{Binding DataContext.Agents.ChoiceOptions, RelativeSource={RelativeSource AncestorType=Window}}"
                                                   SelectedValuePath="Choice"
