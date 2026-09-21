@@ -99,7 +99,7 @@
         <Style x:Key="NavButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
             <Setter Property="MinWidth" Value="96" />
             <Setter Property="Padding" Value="12,0" />
-            <Setter Property="Height" Value="28" />
+            <Setter Property="MinHeight" Value="32" />
             <Setter Property="Margin" Value="6,0,0,0" />
         </Style>
 
@@ -346,7 +346,7 @@
                                  AutomationProperties.LabeledBy="{Binding ElementName=VersionLabel}"
                                  AutomationProperties.HelpText="{vm:Label VersionHint}"
                                  Text="{Binding Package.ReleaseVersion, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                 Width="280" Height="24" HorizontalAlignment="Left" Margin="0,4,0,2" />
+                                 MinWidth="240" MinHeight="32" HorizontalAlignment="Stretch" Margin="0,4,0,2" />
                         <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,0,0,8"
                                    Text="{vm:Label VersionHint}" />
                         <TextBlock x:Name="ReleaseFolderLabel" Text="{vm:Label ReleaseFolder}" Margin="0,4,0,0" />
@@ -360,15 +360,15 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBox Grid.Column="0" Height="24" AutomationProperties.Name="{Binding Text, ElementName=ReleaseFolderLabel}"
+                            <TextBox Grid.Column="0" MinHeight="32" AutomationProperties.Name="{Binding Text, ElementName=ReleaseFolderLabel}"
                                      AutomationProperties.LabeledBy="{Binding ElementName=ReleaseFolderLabel}"
                                      AutomationProperties.HelpText="{vm:Label FolderHint}"
                                      Text="{Binding Package.SourceFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                             <Button Grid.Column="1" Content="{vm:Label BrowseForFolder}"
-                                    MinWidth="96" Padding="12,0" Height="24" Margin="8,0,0,0"
+                                    MinWidth="96" Padding="12,0" MinHeight="32" Margin="8,0,0,0"
                                     Click="OnBrowseForReleaseFolder" />
                         </Grid>
-                        <Button Content="{vm:Label CheckAgain}" MinWidth="140" Padding="12,0" Height="26" HorizontalAlignment="Left"
+                        <Button Content="{vm:Label CheckAgain}" MinWidth="140" Padding="12,0" MinHeight="32" HorizontalAlignment="Left"
                                 IsEnabled="{Binding Package.CanCheck}"
                                 Click="OnPackageCheckRelease" />
                         <TextBlock Text="{Binding Package.StatusText}" Style="{StaticResource Muted}" Margin="0,10,0,0" />
@@ -479,7 +479,7 @@
                                       AutomationProperties.LabeledBy="{Binding ElementName=ModelLabel}"
                                       ItemsSource="{Binding Models.CatalogModels}"
                                       SelectedItem="{Binding Models.SelectedModel, Mode=TwoWay}"
-                                      MinWidth="240" HorizontalAlignment="Left" Height="24"
+                                      MinWidth="240" HorizontalAlignment="Left" MinHeight="32"
                                       Margin="0,4,0,8">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate>
@@ -494,7 +494,7 @@
                                       AutomationProperties.HelpText="{vm:Label ContextSizeHint}"
                                       ItemsSource="{Binding Models.AvailableContexts}"
                                       SelectedItem="{Binding Models.SelectedContext, Mode=TwoWay}"
-                                      MaxWidth="160" HorizontalAlignment="Left" Height="24" Margin="0,4,0,6" />
+                                      HorizontalAlignment="Left" MinHeight="32" Margin="0,4,0,6" />
                             <TextBlock Text="{vm:Label ContextSizeHint}"
                                        Style="{StaticResource Muted}" FontSize="11" />
                         </StackPanel>
@@ -539,7 +539,7 @@
                                         <TextBlock x:Name="ClientChoiceLabel" Text="{Binding AccessibleName}" TextWrapping="Wrap" Margin="0,4,0,0" />
                                         <ComboBox AutomationProperties.Name="{Binding Text, ElementName=ClientChoiceLabel}"
                                                   AutomationProperties.LabeledBy="{Binding ElementName=ClientChoiceLabel}"
-                                                  Height="24" HorizontalAlignment="Stretch" Margin="0,4,0,0"
+                                                  MinHeight="32" HorizontalAlignment="Stretch" Margin="0,4,0,0"
                                                   Tag="{Binding Agent}"
                                                   ItemsSource="{Binding DataContext.Agents.ChoiceOptions, RelativeSource={RelativeSource AncestorType=Window}}"
                                                   SelectedValuePath="Choice"
@@ -571,9 +571,11 @@
                                              consents on the confirm page. -->
                                         <StackPanel Margin="0,8,0,0"
                                                     Visibility="{Binding HasTextSearchGate, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
-                                            <CheckBox Content="{vm:Label RefuseTextSearch}"
+                                            <CheckBox AutomationProperties.Name="{vm:Label RefuseTextSearch}"
                                                       IsChecked="{Binding DataContext.Agents.RefusesTextSearch, RelativeSource={RelativeSource AncestorType=Window}, Mode=TwoWay}"
-                                                      IsEnabled="{Binding DataContext.Agents.CanRefuseTextSearch, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}" />
+                                                      IsEnabled="{Binding DataContext.Agents.CanRefuseTextSearch, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}">
+                                                <TextBlock Text="{vm:Label RefuseTextSearch}" TextWrapping="Wrap" />
+                                            </CheckBox>
                                             <TextBlock Text="{Binding DataContext.Agents.TextSearchHint, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
                                                        Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="24,4,0,0" />
                                         </StackPanel>
@@ -603,7 +605,7 @@
                         </Expander>
                         <!-- Two questions, two buttons, in review-box row order: the release
                              is the first row, the settings are the rest. -->
-                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                        <WrapPanel Margin="0,10,0,0">
                             <Button Content="{vm:Label ChooseARelease}"
                                     Command="{Binding RevealReleaseCommand}"
                                     Padding="12,4" Margin="0,0,8,0"
@@ -612,7 +614,7 @@
                                     Command="{Binding RevealSettingsCommand}"
                                     Padding="12,4"
                                     Visibility="{Binding AreSettingsFolded, Converter={StaticResource BoolToVisibility}}" />
-                        </StackPanel>
+                        </WrapPanel>
                         <!-- Opt-in, off unless ticked, with what it does stated beside it
                              rather than in a document nobody opens. -->
                         <Border BorderBrush="{DynamicResource Divider}" BorderThickness="1" CornerRadius="3"
@@ -620,19 +622,23 @@
                             <StackPanel>
                                 <TextBlock Text="{vm:Label AfterThisInstallation}" FontWeight="SemiBold"
                                            Margin="0,0,0,6" />
-                                <CheckBox Content="{vm:Label EnableUpdateCheck}"
-                                          IsChecked="{Binding Review.EnableUpdateCheck, Mode=TwoWay}" />
+                                <CheckBox AutomationProperties.Name="{vm:Label EnableUpdateCheck}"
+                                          IsChecked="{Binding Review.EnableUpdateCheck, Mode=TwoWay}">
+                                    <TextBlock Text="{vm:Label EnableUpdateCheck}" TextWrapping="Wrap" />
+                                </CheckBox>
                                 <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,6,0,0"
                                            Text="{vm:Label UpdateCheckHint}" />
                                 <TextBlock Text="{Binding Review.UpdateCheckDisclosure, Mode=OneWay}"
                                            Style="{StaticResource Muted}" Margin="0,6,0,0" />
                             </StackPanel>
                         </Border>
-                        <CheckBox Content="{Binding ConsentText}"
+                        <CheckBox AutomationProperties.Name="{Binding ConsentText}"
                                   Margin="0,12,0,0"
                                   IsChecked="{Binding Review.IsConfirmed, Mode=TwoWay}"
                                   Checked="OnReviewConfirmedChanged"
-                                  Unchecked="OnReviewConfirmedChanged" />
+                                  Unchecked="OnReviewConfirmedChanged">
+                            <TextBlock Text="{Binding ConsentText}" TextWrapping="Wrap" />
+                        </CheckBox>
                     </StackPanel>
 
                     <!-- Progress -->
@@ -783,9 +789,10 @@
                     <Button Content="{vm:Label Back}" Style="{StaticResource NavButton}"
                             Command="{Binding BackCommand}" />
                     <Button Content="{vm:Label Next}" Style="{StaticResource NavButton}"
+                            IsDefault="{Binding IsNextVisible}"
                             Command="{Binding NextCommand}"
                             Visibility="{Binding IsNextVisible, Converter={StaticResource BoolToVisibility}}" />
-                    <Button Content="{Binding ActionText}" Style="{StaticResource NavButton}" IsDefault="True"
+                    <Button Content="{Binding ActionText}" Style="{StaticResource NavButton}" IsDefault="{Binding IsInstallVisible}"
                             Command="{Binding InstallCommand}"
                             Visibility="{Binding IsInstallVisible, Converter={StaticResource BoolToVisibility}}" />
                     <Button Content="{Binding CancelButtonText}" Style="{StaticResource NavButton}" IsCancel="True"

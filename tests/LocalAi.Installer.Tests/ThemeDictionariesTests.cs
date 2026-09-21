@@ -85,6 +85,7 @@ public sealed class ThemeDictionariesTests
             ("FocusRing", "ControlFill", 3),
             ("FocusRing", "WindowFill", 3),
             ("AccentFill", "ControlFill", 3),
+            ("AccentForeground", "AccentFill", 4.5),
             ("WindowFill", "AccentFill", 3),
         ];
         foreach (var (foreground, background, minimum) in pairs)

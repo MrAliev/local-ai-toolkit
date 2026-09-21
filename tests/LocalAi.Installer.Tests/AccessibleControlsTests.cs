@@ -66,6 +66,7 @@ public sealed class AccessibleControlsTests
                     Assert.Equal(clientsBefore, wizard.Agents.Agents.Select(row => row.Choice));
                     var russian = language == InstallerLanguage.Russian;
                     ShowPage(window, wizard, InstallerPage.Dependencies);
+                    CheckDefaultAction(window, wizard.NextCommand);
                     var dependencies = Descendants(window.Content).OfType<CheckBox>()
                         .Where(control => control.DataContext is DependencySelection).ToArray();
                     Assert.NotEmpty(dependencies);
@@ -114,6 +115,9 @@ public sealed class AccessibleControlsTests
                         Assert.NotNull(AutomationProperties.GetLabeledBy(client));
                     }
                     ShowPage(window, wizard, InstallerPage.Confirm);
+                    var apply = CheckDefaultAction(window, wizard.InstallCommand);
+                    Assert.False(apply.IsEnabled);
+                    Assert.Throws<ElementNotEnabledException>(() => ((IInvokeProvider)Peer(apply).GetPattern(PatternInterface.Invoke)!).Invoke());
                     var overview = Descendants(window.Content).OfType<EffectsOverview>().Single();
                     CheckOverview();
                     var technical = Descendants(window.Content).OfType<Expander>()
@@ -190,6 +194,43 @@ public sealed class AccessibleControlsTests
         }
         finally { removal.Close(); }
         CheckStartKeyboard(presentation);
+        CheckRemovalDefault(presentation, machine);
+    }
+
+    private static Button CheckDefaultAction(Window window, ICommand command)
+    {
+        var buttons = Descendants(window.Content).OfType<Button>().ToArray();
+        var primary = Assert.Single(buttons, button => button.IsDefault && button.Visibility == Visibility.Visible);
+        Assert.Same(command, primary.Command);
+        return primary;
+    }
+
+    private static void CheckRemovalDefault(InstallerPresentation presentation, RemovalFixture machine)
+    {
+        var before = RemovalFixture.Snapshot(machine.Runtime);
+        var wizard = new UninstallWizardViewModel(RemovalPreset.FullUninstall, false, machine.Layout, machine.Home,
+            readHooksPath: machine.HooksPathReader, presentation: presentation);
+        wizard.InitializeAsync().GetAwaiter().GetResult();
+        var window = new UninstallWindow(presentation) { DataContext = wizard };
+        try
+        {
+            Layout(window);
+            CheckDefaultAction(window, wizard.NextCommand);
+            wizard.MoveNextAsync().GetAwaiter().GetResult();
+            Layout(window);
+            var remove = CheckDefaultAction(window, wizard.UninstallCommand);
+            Assert.False(remove.IsEnabled);
+            Assert.Throws<ElementNotEnabledException>(() => ((IInvokeProvider)Peer(remove).GetPattern(PatternInterface.Invoke)!).Invoke());
+            Assert.Equal(before, RemovalFixture.Snapshot(machine.Runtime));
+            wizard.IsConfirmed = true;
+            Layout(window);
+            Assert.True(remove.IsEnabled);
+            wizard.IsConfirmed = false;
+            Layout(window);
+            Assert.False(remove.IsEnabled);
+            Assert.Equal(before, RemovalFixture.Snapshot(machine.Runtime));
+        }
+        finally { window.Close(); wizard.DetachPresentation(); }
     }
 
     private static void CheckStartKeyboard(InstallerPresentation presentation)

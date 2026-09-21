@@ -45,6 +45,7 @@
         <!-- The errand row. The template's root Border is the whole row, so the click
              target is the row rather than the 15px circle beside it. -->
         <Style x:Key="ErrandRow" TargetType="RadioButton">
+            <Setter Property="MinHeight" Value="32" />
             <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRingVisual}" />
             <Setter Property="Margin" Value="0,0,0,6" />
             <Setter Property="Cursor" Value="Hand" />
@@ -195,10 +196,10 @@
                 <!-- One action for four errands. It opens the wizard that asks the rest of the
                      questions, so it says Next rather than naming the errand: a button labelled
                      "Remove" here would promise removal and then show a page of questions. -->
-                <Button Content="{Binding NextText}" MinWidth="96" Height="28" Padding="12,0"
+                <Button Content="{Binding NextText}" MinWidth="96" MinHeight="32" Padding="12,0"
                         Margin="6,0,0,0" IsDefault="True"
                         IsEnabled="{Binding HasSelection}" Click="OnNext" />
-                <Button Content="{Binding CloseText}" MinWidth="96" Height="28" Padding="12,0"
+                <Button Content="{Binding CloseText}" MinWidth="96" MinHeight="32" Padding="12,0"
                         Margin="6,0,0,0" IsCancel="True" Click="OnClose" />
             </StackPanel>
         </Border>
