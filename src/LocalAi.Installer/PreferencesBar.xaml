@@ -7,6 +7,7 @@
         <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
 
         <Style x:Key="ThemeSegment" TargetType="RadioButton">
+            <Setter Property="MinHeight" Value="32" />
             <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRingVisual}" />
             <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
             <Setter Property="Padding" Value="10,3" />
@@ -16,7 +17,7 @@
                     <ControlTemplate TargetType="RadioButton">
                         <Border x:Name="Segment" Background="Transparent"
                                 Padding="{TemplateBinding Padding}">
-                            <ContentPresenter />
+                            <ContentPresenter VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
@@ -41,6 +42,7 @@
         </Style>
 
         <Style x:Key="LanguageLink" TargetType="Button">
+            <Setter Property="MinHeight" Value="32" />
             <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRingVisual}" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
@@ -50,8 +52,10 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <TextBlock x:Name="Label" Text="{TemplateBinding Content}"
-                                   Foreground="{TemplateBinding Foreground}" />
+                        <Border Background="Transparent">
+                            <TextBlock x:Name="Label" Text="{TemplateBinding Content}" VerticalAlignment="Center"
+                                       Foreground="{TemplateBinding Foreground}" />
+                        </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Label" Property="TextDecorations" Value="Underline" />

@@ -31,6 +31,7 @@
          dark window fill and also carries white at 4.5:1. Light sets both the same. -->
     <SolidColorBrush x:Key="Accent" Color="#0067C0" />
     <SolidColorBrush x:Key="AccentFill" Color="#0067C0" />
+    <SolidColorBrush x:Key="AccentForeground" Color="#FFFFFF" />
     <SolidColorBrush x:Key="Success" Color="#107C10" />
 
     <!-- Advisory strips keep their hue and swap their weight between themes: here the fill is

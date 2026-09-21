@@ -10,7 +10,7 @@
     carries white at 4.5:1.
 
     Ratios against the surface each colour sits on: TextPrimary 14.6:1, TextSecondary 8.6:1,
-    TextMuted 5.3:1, Accent 6.9:1, white on AccentFill 4.6:1, Success 8.9:1, WarnText 9.3:1,
+    TextMuted 5.3:1, Accent 6.9:1, white on AccentFill 4.55:1, Success 8.9:1, WarnText 9.3:1,
     ErrText 8.5:1. TextDisabled is 2.7:1 on purpose.
 -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -31,7 +31,8 @@
     <SolidColorBrush x:Key="TextDisabled" Color="#6E6E6E" />
 
     <SolidColorBrush x:Key="Accent" Color="#4CA0E0" />
-    <SolidColorBrush x:Key="AccentFill" Color="#2D7FD3" />
+    <SolidColorBrush x:Key="AccentFill" Color="#2878C8" />
+    <SolidColorBrush x:Key="AccentForeground" Color="#FFFFFF" />
     <SolidColorBrush x:Key="Success" Color="#5CC95C" />
 
     <SolidColorBrush x:Key="WarnText" Color="#F0B858" />
