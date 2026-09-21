@@ -44,6 +44,9 @@ public static class LocalAiCommandSyntax
     public const string Capabilities = "localai capabilities --json";
     public const string DocsBuild = "localai docs build --root <repo> [--limit N | --all] [--standalone-html] [--json]";
     public const string DocsApply = "localai docs apply --root <repo> [--json]";
+    public const string DocsPrune = "localai docs prune --root <repo> [--keep N] [--dry-run | --apply] [--json]";
+    public const string DocsPin = "localai docs pin --root <repo> --package <package-id> [--json]";
+    public const string DocsUnpin = "localai docs unpin --root <repo> --package <package-id> [--json]";
 
     // No options and no operands: the payload arrives on standard input and the answer goes to
     // standard output, both in the client's own schema. Two words rather than one because `hook`

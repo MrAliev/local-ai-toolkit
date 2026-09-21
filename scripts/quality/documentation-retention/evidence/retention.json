@@ -1,0 +1,2944 @@
+{
+  "ModelInvocations": 0,
+  "Corpus": "1/5/12 types, eight source revisions, pin revision 1, apply revision 2, keep 2 recent packages",
+  "Boundary": "logical documentation-store file lengths; deterministic valid draft replay; no model, index, latency or cloud-token claim",
+  "Rows": [
+    {
+      "Types": 1,
+      "BeforeBytes": 3387048,
+      "AfterBytes": 2416833,
+      "DeletedBytes": 970215,
+      "RetainedPacks": 4,
+      "RetainedArtifacts": 4,
+      "RetainedTextCheckpoints": 4,
+      "RetainedFilesUnchanged": true,
+      "AppliedFilesUnchanged": true,
+      "NextRevisionBytes": 2417029,
+      "NextDeletedBytes": 242458,
+      "Plan": [
+        {
+          "Path": "packs/13aadca9c40c4fa986edc0ff07c71fda",
+          "Kind": "pack",
+          "Bytes": 3183,
+          "Delete": true,
+          "Reasons": [
+            "outside_retention"
+          ]
+        },
+        {
+          "Path": "packs/17a51747e66949219cd5bab778769e0d",
+          "Kind": "pack",
+          "Bytes": 3185,
+          "Delete": false,
+          "Reasons": [
+            "current",
+            "recent"
+          ]
+        },
+        {
+          "Path": "packs/29d4b9a9a2124e92b9059a6ea8d6a9da",
+          "Kind": "pack",
+          "Bytes": 3185,
+          "Delete": true,
+          "Reasons": [
+            "outside_retention"
+          ]
+        },
+        {
+          "Path": "packs/597ee5fd478542e694b2a5d44a97d9c5",
+          "Kind": "pack",
+          "Bytes": 3185,
+          "Delete": false,
+          "Reasons": [
+            "applied"
+          ]
+        },
+        {
+          "Path": "packs/5ba1d6e43af4401b8d25b9017a839207",
+          "Kind": "pack",
+          "Bytes": 3184,
+          "Delete": false,
+          "Reasons": [
+            "recent"
+          ]
+        },
+        {
+          "Path": "packs/85237662863847b2b5a6281bd7a9092e",
+          "Kind": "pack",
+          "Bytes": 3185,
+          "Delete": true,
+          "Reasons": [
+            "outside_retention"
+          ]
+        },
+        {
+          "Path": "packs/ba81d4c4f01641f0842463467f091787",
+          "Kind": "pack",
+          "Bytes": 3184,
+          "Delete": true,
+          "Reasons": [
+            "outside_retention"
+          ]
+        },
+        {
+          "Path": "packs/d846a21944be47db95034dae9e71d23d",
+          "Kind": "pack",
+          "Bytes": 3029,
+          "Delete": false,
+          "Reasons": [
+            "pinned"
+          ]
+        },
+        {
+          "Path": "artifacts/05387b762dd24cf6a2b54958323906cb",
+          "Kind": "artifact",
+          "Bytes": 238360,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/0f97496e326942618cbc2f980e317a6d",
+          "Kind": "artifact",
+          "Bytes": 238552,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/30a8e8dd65144b51b50a7a5f27a8762b",
+          "Kind": "artifact",
+          "Bytes": 238588,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/3ab5b52bb182443583b66fd44a7f08b0",
+          "Kind": "artifact",
+          "Bytes": 238607,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/73f6a169455f4e1c89a67fc5568d1a19",
+          "Kind": "artifact",
+          "Bytes": 238663,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/a7760e5cdf9748968b6057ef6d9b24d8",
+          "Kind": "artifact",
+          "Bytes": 238459,
+          "Delete": false,
+          "Reasons": [
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/cceafb68b0ca432b98612d9e3c8b7315",
+          "Kind": "artifact",
+          "Bytes": 238360,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/de59875a25ce406eb7b31eb8313bd169",
+          "Kind": "artifact",
+          "Bytes": 238693,
+          "Delete": false,
+          "Reasons": [
+            "latest",
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "texts/07608b6d42f21cf51953707464f3c019e3561a12a684594baae64c478edf8498.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/34712cfc5ba6710d8b283f5ec16041923e172cfa4c5078683d2345b7936ae714.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/4630284a8a72aaf9177dd29ac76986c4244183df257b1bf2dafbd603a09204d0.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/78c3d6c6f0b6e1fe8cf4d4f9b84b3c7f3d0531c304d51448afaee4e294c7fb8c.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/91984b357517d2b1632d8a15bbe2860e9ef2d6846352839d27a360397198fee0.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/a2f44320bebfe64e5db2aba9a8b27c8f779c752227541d86778981b95dc57a4d.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/d00c34afd12d16a7f561ddd5eaae2aaa59c1bfb5fb26feb29fc9a55493f08029.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/e2a70e34831e9a5b412703f3acf3f8bc9ac6f55817713a654db16882300c1191.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "artifacts/_assets/1cc1e9e20c199bff0c714b66287272ded2d545ed773d6f87237f836fd09a22e9.css",
+          "Kind": "resource",
+          "Bytes": 1442848,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        }
+      ]
+    },
+    {
+      "Types": 5,
+      "BeforeBytes": 11082877,
+      "AfterBytes": 6271316,
+      "DeletedBytes": 4811561,
+      "RetainedPacks": 4,
+      "RetainedArtifacts": 20,
+      "RetainedTextCheckpoints": 20,
+      "RetainedFilesUnchanged": true,
+      "AppliedFilesUnchanged": true,
+      "NextRevisionBytes": 6272260,
+      "NextDeletedBytes": 1202499,
+      "Plan": [
+        {
+          "Path": "packs/2e0cc08d90ac4f76a07cb3da768a3bf1",
+          "Kind": "pack",
+          "Bytes": 7129,
+          "Delete": true,
+          "Reasons": [
+            "outside_retention"
+          ]
+        },
+        {
+          "Path": "packs/628779a707b943048c642d6b5b5eaf34",
+          "Kind": "pack",
+          "Bytes": 6349,
+          "Delete": false,
+          "Reasons": [
+            "pinned"
+          ]
+        },
+        {
+          "Path": "packs/79456ef58c4d408a891fbaa13c8f9c00",
+          "Kind": "pack",
+          "Bytes": 7128,
+          "Delete": true,
+          "Reasons": [
+            "outside_retention"
+          ]
+        },
+        {
+          "Path": "packs/b8a78a33dac34e8c9e4a860631958c67",
+          "Kind": "pack",
+          "Bytes": 7129,
+          "Delete": false,
+          "Reasons": [
+            "applied"
+          ]
+        },
+        {
+          "Path": "packs/c9233393ff9f45b49b15b281b929c28c",
+          "Kind": "pack",
+          "Bytes": 7129,
+          "Delete": true,
+          "Reasons": [
+            "outside_retention"
+          ]
+        },
+        {
+          "Path": "packs/d7148cba13424a8d83da20ab3093ba58",
+          "Kind": "pack",
+          "Bytes": 7129,
+          "Delete": false,
+          "Reasons": [
+            "current",
+            "recent"
+          ]
+        },
+        {
+          "Path": "packs/d93edb1005194c8592f16a071e9c7a0b",
+          "Kind": "pack",
+          "Bytes": 7129,
+          "Delete": true,
+          "Reasons": [
+            "outside_retention"
+          ]
+        },
+        {
+          "Path": "packs/f2972726454a41beb421ebf36a59d19f",
+          "Kind": "pack",
+          "Bytes": 7129,
+          "Delete": false,
+          "Reasons": [
+            "recent"
+          ]
+        },
+        {
+          "Path": "artifacts/002d91daeef14d1b84c43d1ad1146c03",
+          "Kind": "artifact",
+          "Bytes": 239098,
+          "Delete": false,
+          "Reasons": [
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/005d3cd588e544b091cf4d3b4c4ead14",
+          "Kind": "artifact",
+          "Bytes": 238459,
+          "Delete": false,
+          "Reasons": [
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/069d8db5b31a436b8ae4b118b1c091c8",
+          "Kind": "artifact",
+          "Bytes": 238483,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/12aea0670f4f4197ae24e92a80c7138a",
+          "Kind": "artifact",
+          "Bytes": 238693,
+          "Delete": false,
+          "Reasons": [
+            "latest",
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/1659b46bd2dd4881b19e2e1521a53c5b",
+          "Kind": "artifact",
+          "Bytes": 238663,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/178b5456e3444de2a0dbecbaa7387772",
+          "Kind": "artifact",
+          "Bytes": 239192,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/1b2e3a64ae8c4b00a41ecd13ced05679",
+          "Kind": "artifact",
+          "Bytes": 238588,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/24eb69ee70714687aecf632819822492",
+          "Kind": "artifact",
+          "Bytes": 237671,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/295710973d434ad99366a25905154d62",
+          "Kind": "artifact",
+          "Bytes": 238039,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/2d07f698899143868d0c2c7b75c985d6",
+          "Kind": "artifact",
+          "Bytes": 239323,
+          "Delete": false,
+          "Reasons": [
+            "latest",
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/31f8df756b6d45d0adfd7815f4ae4585",
+          "Kind": "artifact",
+          "Bytes": 238548,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/33b84d3ade764b9889bacc843a6830c2",
+          "Kind": "artifact",
+          "Bytes": 239214,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/50d7754f734f4375b31cca729883a412",
+          "Kind": "artifact",
+          "Bytes": 238070,
+          "Delete": false,
+          "Reasons": [
+            "latest",
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/5d7d991e715f440b859a47bde421eb76",
+          "Kind": "artifact",
+          "Bytes": 237775,
+          "Delete": false,
+          "Reasons": [
+            "latest",
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/5dfe697379fa4c34bb167dd889e95c3c",
+          "Kind": "artifact",
+          "Bytes": 238574,
+          "Delete": false,
+          "Reasons": [
+            "latest",
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/641750c10e62473a9b37623e03073693",
+          "Kind": "artifact",
+          "Bytes": 238984,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/65cc8c630d7e49f9a34df66b6a5d74bf",
+          "Kind": "artifact",
+          "Bytes": 237746,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/66074e8aa614478d925393bfe4c6c1fe",
+          "Kind": "artifact",
+          "Bytes": 238513,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/88b8c020513f4f239dfc9be30cf71470",
+          "Kind": "artifact",
+          "Bytes": 238250,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/97dba0869f2f4cba9211ab00894c9e4d",
+          "Kind": "artifact",
+          "Bytes": 237739,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/9a6b2ae3847e4431951cf3ec3a068581",
+          "Kind": "artifact",
+          "Bytes": 237929,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/a5b3e14d13324133ae870d9cdab99237",
+          "Kind": "artifact",
+          "Bytes": 238360,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/a5d139cfae444d34b56c18d134ac5f42",
+          "Kind": "artifact",
+          "Bytes": 238984,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/a701d3c529fd43e68cf5d156821cd655",
+          "Kind": "artifact",
+          "Bytes": 237984,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/aa8911d78aa84641b34832924f908077",
+          "Kind": "artifact",
+          "Bytes": 238552,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/ab816e671f634778927c725121d407e0",
+          "Kind": "artifact",
+          "Bytes": 237443,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/b08833b356a845a7a1c39bcb014e8777",
+          "Kind": "artifact",
+          "Bytes": 238984,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/be03d5b3ed304807841a0b1fb6180df5",
+          "Kind": "artifact",
+          "Bytes": 238250,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/c225bf24425e49a2bc24615d62f50722",
+          "Kind": "artifact",
+          "Bytes": 237541,
+          "Delete": false,
+          "Reasons": [
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/c81b0f92a2854f08b8cf96123bbcaa36",
+          "Kind": "artifact",
+          "Bytes": 238607,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/d354af114b184dc6b1633aeae60be305",
+          "Kind": "artifact",
+          "Bytes": 238361,
+          "Delete": false,
+          "Reasons": [
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/d4ae986a05564f3cbec81db699ef7c9e",
+          "Kind": "artifact",
+          "Bytes": 237836,
+          "Delete": false,
+          "Reasons": [
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/d943a5455fb44295b217f90a041d6542",
+          "Kind": "artifact",
+          "Bytes": 239275,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/da034ddfe4994d3f907f7b1e8f256ebe",
+          "Kind": "artifact",
+          "Bytes": 237443,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/ddb12b7dd0844d13aa705e3d21c16e4a",
+          "Kind": "artifact",
+          "Bytes": 237965,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/e0bfd647312f499c837c2458a4f31802",
+          "Kind": "artifact",
+          "Bytes": 238250,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/e5907dade11b4994b17101922a3303df",
+          "Kind": "artifact",
+          "Bytes": 237635,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/edb9100b49bc4a1080d163668b986fff",
+          "Kind": "artifact",
+          "Bytes": 238360,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/f8369acf2abd4235858ccd084711f6a4",
+          "Kind": "artifact",
+          "Bytes": 237690,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/ff600038df33419a8a9cf744c023a607",
+          "Kind": "artifact",
+          "Bytes": 237737,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "texts/07608b6d42f21cf51953707464f3c019e3561a12a684594baae64c478edf8498.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/0bae6892b961da7e0243c2264fa55da06465f7d8b24a08e485961cce02c8df32.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/0e73914e7cd196a916a47bcd3e1ffc1d45eee68e195e0b9c63c5aeabc626dcb4.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/1916e3b3113c34f201603a6190c5fe9214709a3eb5b12f2a6f2f6291b2c10b92.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/1c7c36ce16356d71f7549f5b0a1fecd74eb378cabf748caacc6c083ff4c485cb.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/1eee71eac5354bd21c046f7aaa0979a6119b399d1e1d086ba4745b2234201881.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/207919b6c79ca41f6829ec77cd600e118a0def166f32e1b175e4c3323eca6b10.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/236bc3254ed061a4e81a4d76b2b2886e4380724b3265b26f382866e5d2c19cbf.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/3270ee2a870df76bbc000db112018f5cccefa38f3fb678c53461f4efd16c5827.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/34712cfc5ba6710d8b283f5ec16041923e172cfa4c5078683d2345b7936ae714.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/37fa7a4188653df29b058783b9c2759c23c0e73ffa505c4f6cce9cc0e8629f8b.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/3afa587abf8f013665407dc1437cdc28d6ed9f0c36dace5af746896c60d375d3.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/4402a9364cb16fd732b045a48d70788bf4ed9cd1584b88db3b9c775d26545df4.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/4630284a8a72aaf9177dd29ac76986c4244183df257b1bf2dafbd603a09204d0.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/46618b00b36ea68d4acd275453c605cdd175ba8af7445881b348f24fc6827e41.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/51bf59f00c094200878d527342136d110b2e9f7a15ace0b1ebf8d2270c4560a9.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/5deb9a88bb319c628278622cb00b290bedf3a13c067396333387448473c1a88f.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/5e9f1eef0ad70f3f533642dd0d9fdd2aefddaaefb92ea91462a9762093dc8164.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/761d8ed51f1eb93ec9b70a2eeb86978f2f7cafa68a01d63c0bc8c17400f58961.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/78c3d6c6f0b6e1fe8cf4d4f9b84b3c7f3d0531c304d51448afaee4e294c7fb8c.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/8047838b8c8a449fb46b86b0ccccba9c70abe71b9ab4d71af4edf3dab713e82e.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/80721e0f4c1144a023e46402f6173742c45861896f27f0c8f0eda59719aab74d.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/81d50b532dcfd68017a1a6bf777a7c3b8c9c8c37507249bbc85ca4fac0973099.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/873fdd68515933726b112eab18d2ee3be5eae7c7488dbf88b2506d7c27a58198.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/8a86a4d73dafc72d387207de022e2dbd806f717bf6b4dfc529d8a615cdcc4800.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/8af6e27abb0b7434c002bc247a575f492a9d640c4f2b90499ac434ba3d66447c.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/91984b357517d2b1632d8a15bbe2860e9ef2d6846352839d27a360397198fee0.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/a2f44320bebfe64e5db2aba9a8b27c8f779c752227541d86778981b95dc57a4d.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/b2b1320e9255f9ca906b6a36694e7ca7be10b3bb0337571a31448adfcbbecf52.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/b7299c51320abf97cdd1d9183a1fec09d4e4a647f9bf2c6e633c7ffa62eed080.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/c1506fa3a829fb6ce31066c60d7573ced89fb7753228fe3fb53dd4229fe856fd.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/cb894ae5a8c123a7dabb2335ab7ba6d136f0a0af7c87956a604b38aca8f13e18.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/d00c34afd12d16a7f561ddd5eaae2aaa59c1bfb5fb26feb29fc9a55493f08029.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/d5f5ed1b0d0140687a0a8468cdd4a04e7f215ad50b9848c0ace302de6f57d678.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/dbe5fdefb91523bfdded6d4c5e47f996d4aecf0bde079e0edc07c59e096504f4.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/dd6e92b7134f384d31b7460cdb8e369ca0f173e9e0c1ef5050ca0f9562872ae1.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/e076dd4a555a4335eababfaf589dd6a9dbd373bcfb44a5c3d9f84c7cc643c30a.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/e2a70e34831e9a5b412703f3acf3f8bc9ac6f55817713a654db16882300c1191.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/e3d7a9f3b824d7e5b879383c4f76004f4af616c964622d0bb1dbb4c7f1bd0106.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/f4e82567def2d9918c4c1d666512f451c3b5114ab1fec640932c0794c78415a5.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "artifacts/_assets/1cc1e9e20c199bff0c714b66287272ded2d545ed773d6f87237f836fd09a22e9.css",
+          "Kind": "resource",
+          "Bytes": 1442848,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        }
+      ]
+    },
+    {
+      "Types": 12,
+      "BeforeBytes": 24583647,
+      "AfterBytes": 13033194,
+      "DeletedBytes": 11550453,
+      "RetainedPacks": 4,
+      "RetainedArtifacts": 48,
+      "RetainedTextCheckpoints": 48,
+      "RetainedFilesUnchanged": true,
+      "AppliedFilesUnchanged": true,
+      "NextRevisionBytes": 13035266,
+      "NextDeletedBytes": 2886611,
+      "Plan": [
+        {
+          "Path": "packs/2de8d51f2cbd4bfbb5c13b10e11afb7a",
+          "Kind": "pack",
+          "Bytes": 14046,
+          "Delete": true,
+          "Reasons": [
+            "outside_retention"
+          ]
+        },
+        {
+          "Path": "packs/3012851799c5453999a8901fec51457b",
+          "Kind": "pack",
+          "Bytes": 14046,
+          "Delete": false,
+          "Reasons": [
+            "current",
+            "recent"
+          ]
+        },
+        {
+          "Path": "packs/326170b02ede4a53a9c1a65318398da8",
+          "Kind": "pack",
+          "Bytes": 14045,
+          "Delete": false,
+          "Reasons": [
+            "applied"
+          ]
+        },
+        {
+          "Path": "packs/370ecde4da11431bad7ce705c1fab49a",
+          "Kind": "pack",
+          "Bytes": 12174,
+          "Delete": false,
+          "Reasons": [
+            "pinned"
+          ]
+        },
+        {
+          "Path": "packs/377cff22ab7b4a10942c79c3ecf67d6a",
+          "Kind": "pack",
+          "Bytes": 14046,
+          "Delete": true,
+          "Reasons": [
+            "outside_retention"
+          ]
+        },
+        {
+          "Path": "packs/4ac6f8a5a79c4ddb98704f55bfdeb7d5",
+          "Kind": "pack",
+          "Bytes": 14046,
+          "Delete": false,
+          "Reasons": [
+            "recent"
+          ]
+        },
+        {
+          "Path": "packs/4ffddbeb9a2b455d930246fade304ac6",
+          "Kind": "pack",
+          "Bytes": 14046,
+          "Delete": true,
+          "Reasons": [
+            "outside_retention"
+          ]
+        },
+        {
+          "Path": "packs/9bd60b9e37a04ce5834eea69771b4252",
+          "Kind": "pack",
+          "Bytes": 14046,
+          "Delete": true,
+          "Reasons": [
+            "outside_retention"
+          ]
+        },
+        {
+          "Path": "artifacts/04d024525a61426f989137b710bdbd3c",
+          "Kind": "artifact",
+          "Bytes": 238842,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/06df5a66ab3c4002aa65609c32a31404",
+          "Kind": "artifact",
+          "Bytes": 238552,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/079c49e2de284e9996621f81ff77897a",
+          "Kind": "artifact",
+          "Bytes": 237635,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/09417ecc5a2544bebe72a4636f387ddd",
+          "Kind": "artifact",
+          "Bytes": 238643,
+          "Delete": false,
+          "Reasons": [
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/0a10047695084d528c588a5c699b4239",
+          "Kind": "artifact",
+          "Bytes": 238537,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/0e058bc7b47e405699dbc75c35e2562f",
+          "Kind": "artifact",
+          "Bytes": 238537,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/0e98f9cfb940494fa197b3462a998f87",
+          "Kind": "artifact",
+          "Bytes": 239372,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/1050f10e3f1f45c699c8fe1bc5f3097f",
+          "Kind": "artifact",
+          "Bytes": 238250,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/1154778475ac414780ebefca8587fa65",
+          "Kind": "artifact",
+          "Bytes": 238972,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/116a55a1c7174f929804a4a16d36b584",
+          "Kind": "artifact",
+          "Bytes": 239499,
+          "Delete": false,
+          "Reasons": [
+            "latest",
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/127f4b8de47d4234ba3b9dcd1e2e3630",
+          "Kind": "artifact",
+          "Bytes": 239535,
+          "Delete": false,
+          "Reasons": [
+            "latest",
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/1283d54728374e9badf593d081fc1a65",
+          "Kind": "artifact",
+          "Bytes": 239323,
+          "Delete": false,
+          "Reasons": [
+            "latest",
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/132dbd7ac4c744009fae73db00bee544",
+          "Kind": "artifact",
+          "Bytes": 237443,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/189ff228b6ae483e98327a79503f520c",
+          "Kind": "artifact",
+          "Bytes": 239275,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/23af40d8d0414c199eafea979c76c200",
+          "Kind": "artifact",
+          "Bytes": 237496,
+          "Delete": false,
+          "Reasons": [
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/27b8d0e2171a4146900cfc4c33cce3e8",
+          "Kind": "artifact",
+          "Bytes": 239164,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/299d135e181e444c848dca952d0f3ff5",
+          "Kind": "artifact",
+          "Bytes": 238548,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/2c46df8d319443c2bbb3a3dba2791475",
+          "Kind": "artifact",
+          "Bytes": 238607,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/2cc7cd5082a142169fc3aea936f11ff8",
+          "Kind": "artifact",
+          "Bytes": 239839,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/2e79397118c94849b4b4c0df9479c65d",
+          "Kind": "artifact",
+          "Bytes": 238021,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/2f44cd07acce4fb2aacd8d7353a6398e",
+          "Kind": "artifact",
+          "Bytes": 239417,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/37f6a13280ab40ceac1db3388a643ac5",
+          "Kind": "artifact",
+          "Bytes": 237541,
+          "Delete": false,
+          "Reasons": [
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/46191e53ddb3490988baa868a20900ae",
+          "Kind": "artifact",
+          "Bytes": 239255,
+          "Delete": false,
+          "Reasons": [
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/48324ccd994642969430e3af6f308c9a",
+          "Kind": "artifact",
+          "Bytes": 238250,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/4a66f949f8f542648ac5c50948e7b3eb",
+          "Kind": "artifact",
+          "Bytes": 237775,
+          "Delete": false,
+          "Reasons": [
+            "latest",
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/4b845d4d01564950b3091af86cfcbc49",
+          "Kind": "artifact",
+          "Bytes": 238213,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/57484daf67b8450cb2875d8f631050f7",
+          "Kind": "artifact",
+          "Bytes": 239759,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/5a244470c58d428790d7157056541c15",
+          "Kind": "artifact",
+          "Bytes": 239165,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/5add2ce11722449f952f86e57ff3888c",
+          "Kind": "artifact",
+          "Bytes": 237690,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/5c8ef58b453447e2b8a2cc716acb658a",
+          "Kind": "artifact",
+          "Bytes": 239533,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/5df1d39f57744bae8ed5597fc386dcdc",
+          "Kind": "artifact",
+          "Bytes": 238971,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/5e977906c33749529672a7ee4383b23a",
+          "Kind": "artifact",
+          "Bytes": 238574,
+          "Delete": false,
+          "Reasons": [
+            "latest",
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/5f15b110f7994a42aeb79db07b7f9bab",
+          "Kind": "artifact",
+          "Bytes": 239071,
+          "Delete": false,
+          "Reasons": [
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/60ab16423fdb4969b3145b5d8748a9d8",
+          "Kind": "artifact",
+          "Bytes": 239401,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/6277a7815a6546da98c43a6a5acbb2ad",
+          "Kind": "artifact",
+          "Bytes": 239535,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/670953570ae340deae2aabcf110a25c1",
+          "Kind": "artifact",
+          "Bytes": 237737,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/68a38dff3a9a40228e716f61117bf79b",
+          "Kind": "artifact",
+          "Bytes": 237835,
+          "Delete": false,
+          "Reasons": [
+            "latest",
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/6ec6a1739d374a3393e200029644e107",
+          "Kind": "artifact",
+          "Bytes": 237984,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/717849da027e43e6ba26af4e5a162505",
+          "Kind": "artifact",
+          "Bytes": 239214,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/71e6b3178e8f4423981763921f443ab6",
+          "Kind": "artifact",
+          "Bytes": 237965,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/758961bed38048e7bc0eaf55e2eda40f",
+          "Kind": "artifact",
+          "Bytes": 239305,
+          "Delete": false,
+          "Reasons": [
+            "latest",
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/7a9dcb6905254da58d9eec9f2df28769",
+          "Kind": "artifact",
+          "Bytes": 238361,
+          "Delete": false,
+          "Reasons": [
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/7bd49ec784dd4a34b1271112bf787cf5",
+          "Kind": "artifact",
+          "Bytes": 238537,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/7cdcb80adff64139bf2451ed5ff32c38",
+          "Kind": "artifact",
+          "Bytes": 238268,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/7f04e5a3a11540a39c4fa7a0d11ed80a",
+          "Kind": "artifact",
+          "Bytes": 237496,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/7f43429f76ac4475bf33cdd3aed7cf0d",
+          "Kind": "artifact",
+          "Bytes": 239149,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/80d5450f7c544451bcd8ecb4a2989faa",
+          "Kind": "artifact",
+          "Bytes": 238119,
+          "Delete": false,
+          "Reasons": [
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/8160332f9e824becbc84fbda58360255",
+          "Kind": "artifact",
+          "Bytes": 238360,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/8164b3fae94b4bf7a422af8c8b2e1917",
+          "Kind": "artifact",
+          "Bytes": 237799,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/82ad543209e540f7883014814d9a8386",
+          "Kind": "artifact",
+          "Bytes": 239219,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/855e2839c9fc4190af741e6caaa07459",
+          "Kind": "artifact",
+          "Bytes": 238866,
+          "Delete": false,
+          "Reasons": [
+            "latest",
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/86516b108cc445eabe6410aa104de528",
+          "Kind": "artifact",
+          "Bytes": 238021,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/86ab729fdea946c9ac608eedcb295200",
+          "Kind": "artifact",
+          "Bytes": 237671,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/8acfea1895a7485fb7068650bb8f9b50",
+          "Kind": "artifact",
+          "Bytes": 238588,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/8db3e9f0e76f43f2bf9fe931f98c8245",
+          "Kind": "artifact",
+          "Bytes": 239490,
+          "Delete": false,
+          "Reasons": [
+            "latest",
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/9075ca967cef40b0829d5861b9e64c98",
+          "Kind": "artifact",
+          "Bytes": 237929,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/92c36b53d95846268ce6bb44fadbf8e1",
+          "Kind": "artifact",
+          "Bytes": 237700,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/935ef934be1a457dad890ca577d4846b",
+          "Kind": "artifact",
+          "Bytes": 239393,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/9586c896eb72478a9b5a39a2ff63c0e7",
+          "Kind": "artifact",
+          "Bytes": 239166,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/97ab962840e54b1bb38111956cbf448f",
+          "Kind": "artifact",
+          "Bytes": 239166,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/9e4fc2f2818049a3a7e7866080f9e496",
+          "Kind": "artifact",
+          "Bytes": 238513,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/a0754a2b98674d58b9d2906e68cce8d9",
+          "Kind": "artifact",
+          "Bytes": 239275,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/a2893b18f31341949998a7340c3917e7",
+          "Kind": "artifact",
+          "Bytes": 239192,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/a70b87e23eb6418dbccacceb0600b029",
+          "Kind": "artifact",
+          "Bytes": 239264,
+          "Delete": false,
+          "Reasons": [
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/aabb0479bbaf4e69ad65b1b1cf0be8d3",
+          "Kind": "artifact",
+          "Bytes": 238250,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/abbd3b7fd889406e988d218ccd542835",
+          "Kind": "artifact",
+          "Bytes": 238324,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/afb92a294260403e98bc80fc1fe5d797",
+          "Kind": "artifact",
+          "Bytes": 238353,
+          "Delete": false,
+          "Reasons": [
+            "latest",
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/b22b716849e84235b90177cedea453ed",
+          "Kind": "artifact",
+          "Bytes": 237836,
+          "Delete": false,
+          "Reasons": [
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/b7cd4bec52fc4b3db51fcf780c461461",
+          "Kind": "artifact",
+          "Bytes": 239200,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/b7e3589cd8b64760bd0b40b39604f0c1",
+          "Kind": "artifact",
+          "Bytes": 238984,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/bc5b4328531e4b53973d71a685526c67",
+          "Kind": "artifact",
+          "Bytes": 239098,
+          "Delete": false,
+          "Reasons": [
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/bf815c2373854e6c96e850dbbb0a0084",
+          "Kind": "artifact",
+          "Bytes": 239640,
+          "Delete": false,
+          "Reasons": [
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/c2501fe4308f41788593665637c4e721",
+          "Kind": "artifact",
+          "Bytes": 239788,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/c4c4851a50b6467787927d785441884e",
+          "Kind": "artifact",
+          "Bytes": 239341,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/c5f55fd8848d47629b82a5d3ea596d80",
+          "Kind": "artifact",
+          "Bytes": 238734,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/c6772037417040a19ea7a6bb17a93208",
+          "Kind": "artifact",
+          "Bytes": 237746,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/c6e044202ff9484b93fe6fdc0804fb6e",
+          "Kind": "artifact",
+          "Bytes": 237739,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/cf9ff41dca7b449d900212e725f3c6aa",
+          "Kind": "artifact",
+          "Bytes": 237494,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/d370f26ab9854e9cb9efcf6bec1137cb",
+          "Kind": "artifact",
+          "Bytes": 238249,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/d443238502854bc187594223bc08c11a",
+          "Kind": "artifact",
+          "Bytes": 237758,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/d7fbadef15dd40b58285cea899cfb979",
+          "Kind": "artifact",
+          "Bytes": 238786,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/d96dadb8eeed4979be5bf50833e27bbc",
+          "Kind": "artifact",
+          "Bytes": 238459,
+          "Delete": false,
+          "Reasons": [
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/dbf940228b404197819f15ee514153d5",
+          "Kind": "artifact",
+          "Bytes": 237731,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/dfcd701d86dc4cd1b5931a59da124757",
+          "Kind": "artifact",
+          "Bytes": 237443,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/e59859c244714c7aa493f6fc6d7849a6",
+          "Kind": "artifact",
+          "Bytes": 238070,
+          "Delete": false,
+          "Reasons": [
+            "latest",
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/e771e180442d4fc48680324dcae1e044",
+          "Kind": "artifact",
+          "Bytes": 238984,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/e9b74e309d0e423a996dbbfe19024699",
+          "Kind": "artifact",
+          "Bytes": 238039,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/ed66d6f5e56347caafa283767d4a83cd",
+          "Kind": "artifact",
+          "Bytes": 239149,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/ed7c08262de94b439acc337be18d7d20",
+          "Kind": "artifact",
+          "Bytes": 239718,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/ee3b0438b51546a28e7c1356c1486d61",
+          "Kind": "artifact",
+          "Bytes": 239353,
+          "Delete": false,
+          "Reasons": [
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/f29301d15e7e47ed8c9173d0f70f15ae",
+          "Kind": "artifact",
+          "Bytes": 238360,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/f2a3356c590c46dc88c853639dfac3b1",
+          "Kind": "artifact",
+          "Bytes": 238483,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/f693701017784cc2810a950d87f13cfa",
+          "Kind": "artifact",
+          "Bytes": 239396,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/f74c8eb5ed3c47a8bb7ca128415b4250",
+          "Kind": "artifact",
+          "Bytes": 238984,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "artifacts/fc2d068e9cb7446ea2321b6d323a4115",
+          "Kind": "artifact",
+          "Bytes": 238693,
+          "Delete": false,
+          "Reasons": [
+            "latest",
+            "previous_valid",
+            "retained_pack"
+          ]
+        },
+        {
+          "Path": "artifacts/fd030138771d4efebd21cd6c8eca5310",
+          "Kind": "artifact",
+          "Bytes": 238663,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/023f692e50f749c7e32c8f6172424753b4a77cde26ce337260d3054b783f693c.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/04ac9c0f9da1ab6e91d45dcf4e3e09e343a003ae8718b2db9ac468c8aecb268d.json",
+          "Kind": "text",
+          "Bytes": 816,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/07608b6d42f21cf51953707464f3c019e3561a12a684594baae64c478edf8498.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/0bae6892b961da7e0243c2264fa55da06465f7d8b24a08e485961cce02c8df32.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/0ce39b9922b70a8b4176aa72b78a5ac8bf2543f0836bf92dd0c3adc0b0553c12.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/0e27b3614acf4c2dba5f67a8c23dda2a3ed94bccc94601d879f73f7af04bca82.json",
+          "Kind": "text",
+          "Bytes": 816,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/0e73914e7cd196a916a47bcd3e1ffc1d45eee68e195e0b9c63c5aeabc626dcb4.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/1262dad1683f3ab77c53088243b1e1b6944226a6251529d9e3e23b0ebb4df99f.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/1361e935a16c7f465640ad866c7d6e281cdeeda535e54c4cee42c67a4ad4c9b8.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/166b5563eda7cf710705f2b4e3d1dab6543c2c820771f5a771ff5c5f7077d65e.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/1916e3b3113c34f201603a6190c5fe9214709a3eb5b12f2a6f2f6291b2c10b92.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/1c7c36ce16356d71f7549f5b0a1fecd74eb378cabf748caacc6c083ff4c485cb.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/1eee71eac5354bd21c046f7aaa0979a6119b399d1e1d086ba4745b2234201881.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/1fa376725a473f44544f551d993153da34ec11356a352e78eaf27cbb6858271d.json",
+          "Kind": "text",
+          "Bytes": 816,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/207919b6c79ca41f6829ec77cd600e118a0def166f32e1b175e4c3323eca6b10.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/236bc3254ed061a4e81a4d76b2b2886e4380724b3265b26f382866e5d2c19cbf.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/2508a4983e13531247e3c8a52e012c143fbfb2b61b3f568313edc911ee298503.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/2510496755c3449225a23ab9b70253719a709583e6938175ea5260857e28d4e8.json",
+          "Kind": "text",
+          "Bytes": 816,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/2c441f1caee9ab6069c711141257c416758987d5131a278956f3a2f6c8da8e87.json",
+          "Kind": "text",
+          "Bytes": 816,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/2e0fdb39950812b5ce02de7711f1ddcc9d7c253177fd9fc728f55e1d94e3b554.json",
+          "Kind": "text",
+          "Bytes": 816,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/3270ee2a870df76bbc000db112018f5cccefa38f3fb678c53461f4efd16c5827.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/32df9fbe80d58e3186c6f32ed339c8bf8a73e9caf7f07c05247b86ea2a0dbfcc.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/34712cfc5ba6710d8b283f5ec16041923e172cfa4c5078683d2345b7936ae714.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/348ffda15f0b70abebe5b12ad2ad5ac56cd89e23862e3699bc2c905c4918d35d.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/34cf0b9b54829e3a9f9f74c1348adebcc70c5e30596694db9b2ab6c27c1d757e.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/37fa7a4188653df29b058783b9c2759c23c0e73ffa505c4f6cce9cc0e8629f8b.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/3afa587abf8f013665407dc1437cdc28d6ed9f0c36dace5af746896c60d375d3.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/4402a9364cb16fd732b045a48d70788bf4ed9cd1584b88db3b9c775d26545df4.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/4630284a8a72aaf9177dd29ac76986c4244183df257b1bf2dafbd603a09204d0.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/46618b00b36ea68d4acd275453c605cdd175ba8af7445881b348f24fc6827e41.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/51bf59f00c094200878d527342136d110b2e9f7a15ace0b1ebf8d2270c4560a9.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/52fd6eae12c8bc1dc293e3c5a4acf939884679d699dc141fb01a1a8f96086c5e.json",
+          "Kind": "text",
+          "Bytes": 816,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/576a284fb0c7d91a810c9f0485dd18be369805b0bd7f3e4302ca3713ca61947e.json",
+          "Kind": "text",
+          "Bytes": 816,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/5deb9a88bb319c628278622cb00b290bedf3a13c067396333387448473c1a88f.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/5e9f1eef0ad70f3f533642dd0d9fdd2aefddaaefb92ea91462a9762093dc8164.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/6094b81c34dafa81b630cb1b86155e97e8030237f8b2043780a246c6370da38b.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/66c5fc014c4a29bc6a76fd3e217961542e09aaf86322a97897cc80db00982520.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/69a2ba0d988aeef66594f73b2e41309e7a9aaefd749723ec8e5c4b15bd8968ba.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/6dc3ebf65aeabe35dacd5c588a82a2fa9285dce680357b44d22be047f0583d2b.json",
+          "Kind": "text",
+          "Bytes": 816,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/705dbdc9a6788cf4958c38dc47e0af2617c2c9b3ae742bb178ed294e01d1e4ae.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/761d8ed51f1eb93ec9b70a2eeb86978f2f7cafa68a01d63c0bc8c17400f58961.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/78c3d6c6f0b6e1fe8cf4d4f9b84b3c7f3d0531c304d51448afaee4e294c7fb8c.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/7addcf0d3be19f7e3c35954c3e4e363acce8d1ad52608784bbb3687ab9f0b751.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/8047838b8c8a449fb46b86b0ccccba9c70abe71b9ab4d71af4edf3dab713e82e.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/80721e0f4c1144a023e46402f6173742c45861896f27f0c8f0eda59719aab74d.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/81d50b532dcfd68017a1a6bf777a7c3b8c9c8c37507249bbc85ca4fac0973099.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/843ad64268a12ea701b75eac6f5410f6c1a110a9e5dca6f27895e81cc067b0cd.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/851eaef3d115299bb1987f10459b1b1866f60385e5c96615f3cbd7e79743d95c.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/873fdd68515933726b112eab18d2ee3be5eae7c7488dbf88b2506d7c27a58198.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/8a86a4d73dafc72d387207de022e2dbd806f717bf6b4dfc529d8a615cdcc4800.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/8af6e27abb0b7434c002bc247a575f492a9d640c4f2b90499ac434ba3d66447c.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/8d1bff4e80d0d88b4cdcd0ecbeedf9e58e9569c8d97ee9bba0c82253c85c4a35.json",
+          "Kind": "text",
+          "Bytes": 816,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/8e35831de229b9013a40f8a7b72d7fec369642e9cc51a90b8ae88ae8bb0b154a.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/91984b357517d2b1632d8a15bbe2860e9ef2d6846352839d27a360397198fee0.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/921a91ab9df2f30850d216c740e661b6f7b4fc86c57bf4b0fd13ab9f1271c2aa.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/95b2af83114a665f6b35c5afcaf61dc9c6420f90a3ea61f16daf3653bfbbcf1e.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/98dab902a03a67a051ffaa71bdedd7588a49760f959f1d45ebf8514c818ba3e8.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/9a251c8e702aa1c968cdf6cc0bbbc402b77a8fd44d2c3d540a39d0995fd6a4f6.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/9f22ce49462334bfaa25de5e0e8141d8845496a4cfd5f0ce03face319dd98374.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/9feb7278df020032730c0b94c1d1d1ab3ce94172ff239930f44cda0705d450e9.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/a2f44320bebfe64e5db2aba9a8b27c8f779c752227541d86778981b95dc57a4d.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/a68659e749b7e7f876b9fcec70673c08c5851493daa84de387ab7dfd248d53d8.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/a749efd0b3abdf530e5fd4fe7b30e503d772172127b1e3b668b03dda7006ae29.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/aaf0d0ff2a4b666900e0af689fd2d79955e3ab4cba0eb80c4ad9e65cc1e325c1.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/b09f89055a71a6bfdf64e2e7b39e3e517acb5e1d0424d6335a6807d5113d541d.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/b12bf26bd55a449d72e77c5bc88214604a814201f5465a345195dee26aca3a9d.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/b2b1320e9255f9ca906b6a36694e7ca7be10b3bb0337571a31448adfcbbecf52.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/b7299c51320abf97cdd1d9183a1fec09d4e4a647f9bf2c6e633c7ffa62eed080.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/b76153caf1950db90d7c2798de3a316b4552593eaf61be69706c716b4c30d2eb.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/bd2d6d21693c476e9dd10f10f55d9305cc99a6fc3e0cf718dd56ac23bfb77571.json",
+          "Kind": "text",
+          "Bytes": 816,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/c1506fa3a829fb6ce31066c60d7573ced89fb7753228fe3fb53dd4229fe856fd.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/c656ddd9ad30b58c51afa77732378c5bb777a28ecbc359ab7dcfd9af93e28536.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/ca3655d6222c1f7a697ed5ebf50b21601cc10ba22876a44f2447d26e14e026f2.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/cab9f223240f16e9bd9de8571e72464cc1daa8ebf6c1ec10e8f8a026b370cb18.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/cb894ae5a8c123a7dabb2335ab7ba6d136f0a0af7c87956a604b38aca8f13e18.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/d00c34afd12d16a7f561ddd5eaae2aaa59c1bfb5fb26feb29fc9a55493f08029.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/d00e6296abd33fbcf8d3da5132ca0d4bd0959af1681eb126dac5dda531762fa1.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/d15f4e74eb0d9a13e7a67e6a5fa439b865fb547a92068c01ce1bcfc4e3e4b0fc.json",
+          "Kind": "text",
+          "Bytes": 816,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/d37d36b370fdee52c4e517e66aa10eeb9a42f012d3ee45792682707c5180a1ef.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/d549eb688c682c85939c3b5972afb539bfc4010563429538cdb30bfb9c8e478b.json",
+          "Kind": "text",
+          "Bytes": 816,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/d5f5ed1b0d0140687a0a8468cdd4a04e7f215ad50b9848c0ace302de6f57d678.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/d7e83384250f8efe1c7237579b41409b3ff5b6bfbce75fc12e197ab61c854d58.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/d9ce412aec3ba7b789f3722674400fda6a099819443ce2eab62ad471cb9c3610.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/dbe5fdefb91523bfdded6d4c5e47f996d4aecf0bde079e0edc07c59e096504f4.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/dd6e92b7134f384d31b7460cdb8e369ca0f173e9e0c1ef5050ca0f9562872ae1.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/de29ee9a1beb57b4281f4a5d375a9bc70095eaf31bb511586ab588a859b0f5b4.json",
+          "Kind": "text",
+          "Bytes": 816,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/e076dd4a555a4335eababfaf589dd6a9dbd373bcfb44a5c3d9f84c7cc643c30a.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/e2a70e34831e9a5b412703f3acf3f8bc9ac6f55817713a654db16882300c1191.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/e301a91bdaa73d50b9af3396801e50e50e6c9cb306d1ebe20c4b67b6959cd382.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/e3d7a9f3b824d7e5b879383c4f76004f4af616c964622d0bb1dbb4c7f1bd0106.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/e54bde8e52eaaa287c9ad4fa07f5d9ad30098ca1571683657788d853a6d5a6fc.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/ea6f01a438b036ba6db7e371629af1bd53a0f22fc0a0c0e0c11e62268e411c92.json",
+          "Kind": "text",
+          "Bytes": 816,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/ef3d6a0f40989b92911a7b7e35f3fd9a356831e8315b1693e5ef7b488ef30156.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": true,
+          "Reasons": [
+            "unreferenced"
+          ]
+        },
+        {
+          "Path": "texts/f4c240208ff955dd7ec641106c49b502d88b5e70bec4d91ef39afc828f0060e5.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/f4e82567def2d9918c4c1d666512f451c3b5114ab1fec640932c0794c78415a5.json",
+          "Kind": "text",
+          "Bytes": 815,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "texts/fb117609e704fd4140b3089bb9bdf20b88f34f8a6292cce59193a3eb18777045.json",
+          "Kind": "text",
+          "Bytes": 816,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        },
+        {
+          "Path": "artifacts/_assets/1cc1e9e20c199bff0c714b66287272ded2d545ed773d6f87237f836fd09a22e9.css",
+          "Kind": "resource",
+          "Bytes": 1442848,
+          "Delete": false,
+          "Reasons": [
+            "retained_artifact"
+          ]
+        }
+      ]
+    }
+  ]
+}
