@@ -64,6 +64,7 @@ public partial class StartWindow : Window
             ? (step > 0 ? 0 : reachable.Length - 1)
             : ((current + step) % reachable.Length + reachable.Length) % reachable.Length;
         viewModel.Select(reachable[next].Choice);
+        FocusChosenErrand();
         e.Handled = true;
     }
 
