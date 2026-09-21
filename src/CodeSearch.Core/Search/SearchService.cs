@@ -190,12 +190,14 @@ public sealed class SearchService : IDisposable
     public async Task<SearchOutcome> SearchAsync(
         string query, string? root, SearchOptions options, CancellationToken ct = default)
     {
+        ct.ThrowIfCancellationRequested();
         var workingRoot = RepoLocator.ResolveWorkingRoot(root).Value;
-        var indexPath = RepoLocator.IndexPathFor(RepoLocator.ResolveRoot(root).Value, _runtimeRoot);
+        var identity = RuntimeIndexLayout.Inspect(workingRoot, _runtimeRoot);
+        var indexPath = RuntimeIndexLayout.ResolveBaseIndexPath(identity, _runtimeRoot);
         var baseIndex = Load(indexPath);
         RequireSnapshotIdentity(baseIndex, workingRoot);
 
-        var searchable = Compose(baseIndex, workingRoot);
+        var searchable = Compose(baseIndex, workingRoot, identity);
         var resolvedOptions = SearchQualityProfile.Resolve(baseIndex.Model, options);
 
         // The model is read out of the index header rather than configured at the call site.
@@ -378,11 +380,14 @@ public sealed class SearchService : IDisposable
     /// overlay searches the base alone, which is correct only while it matches the base checkout -
     /// hence the staleness reporting in <see cref="Status"/>.
     /// </summary>
-    private ISearchableIndex Compose(CodeIndex baseIndex, string workingRoot)
+    private ISearchableIndex Compose(
+        CodeIndex baseIndex,
+        string workingRoot,
+        WorkingIndexIdentity? identity = null)
     {
         if (!string.IsNullOrWhiteSpace(baseIndex.GenerationId))
         {
-            var identity = RuntimeIndexLayout.Inspect(workingRoot, _runtimeRoot);
+            identity ??= RuntimeIndexLayout.Inspect(workingRoot, _runtimeRoot);
             if (!string.Equals(
                     baseIndex.RepositoryId,
                     identity.RepositoryId,
