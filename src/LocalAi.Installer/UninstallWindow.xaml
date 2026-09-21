@@ -34,7 +34,7 @@
         <Style x:Key="NavButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
             <Setter Property="MinWidth" Value="96" />
             <Setter Property="Padding" Value="12,0" />
-            <Setter Property="Height" Value="28" />
+            <Setter Property="MinHeight" Value="32" />
             <Setter Property="Margin" Value="6,0,0,0" />
         </Style>
 
@@ -232,7 +232,9 @@
                         </Expander>
                         <CheckBox Margin="0,12,0,0"
                                   IsChecked="{Binding IsConfirmed}"
-                                  Content="{vm:Label RemovalConsent}" />
+                                  AutomationProperties.Name="{vm:Label RemovalConsent}">
+                            <TextBlock Text="{vm:Label RemovalConsent}" TextWrapping="Wrap" />
+                        </CheckBox>
                     </StackPanel>
 
                     <!-- Progress -->
@@ -304,9 +306,10 @@
                     <Button Content="{vm:Label Back}" Style="{StaticResource NavButton}"
                             Command="{Binding BackCommand}" />
                     <Button Content="{vm:Label Next}" Style="{StaticResource NavButton}"
+                            IsDefault="{Binding IsNextVisible}"
                             Command="{Binding NextCommand}"
                             Visibility="{Binding IsNextVisible, Converter={StaticResource BoolToVisibility}}" />
-                    <Button Content="{vm:Label Uninstall}" Style="{StaticResource NavButton}" IsDefault="True"
+                    <Button Content="{vm:Label Uninstall}" Style="{StaticResource NavButton}" IsDefault="{Binding IsUninstallVisible}"
                             Command="{Binding UninstallCommand}"
                             Visibility="{Binding IsUninstallVisible, Converter={StaticResource BoolToVisibility}}" />
                     <Button Content="{Binding CancelButtonText}" Style="{StaticResource NavButton}" IsCancel="True"
