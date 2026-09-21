@@ -105,10 +105,11 @@ public sealed class UninstallRunner(
             "Удаляю диспетчеры хуков Git…")));
         var hooks = RemoveHooks(plan, journal, failures, cancellationToken);
         progress?.Report(new(60, InstallerCulture.Pick("Removing files…", "Удаляю файлы…")));
-        var removed = RemovePaths(plan, journal, failures, cancellationToken);
+        var removed = RemovePaths(plan, journal, failures, cancellationToken, progress);
         progress?.Report(new(90, InstallerCulture.Pick(
             "Finishing the removal…",
             "Завершаю удаление…")));
+        cancellationToken.ThrowIfCancellationRequested();
         // Before the entry and the uninstaller's own copy, which is the last thing that happens:
         // the PATH entry names a directory the binaries have already left.
         RemoveLauncherPath(plan, journal, failures);
@@ -150,7 +151,7 @@ public sealed class UninstallRunner(
         var directory = Path.Combine(layout.BinRoot, "launcher");
         var step = journal.BeginStep(
             InstallerRunEffectKind.LauncherPath,
-            "Take " + directory + " off the user PATH");
+            UninstallJournalDescriptions.LauncherPath(directory));
         try
         {
             LauncherPathRegistration.Unregister(directory);
@@ -180,7 +181,7 @@ public sealed class UninstallRunner(
             removeUninstallerAfterExit);
         var step = journal.BeginStep(
             InstallerRunEffectKind.RuntimeRemoval,
-            "Remove the Apps & features entry and " + registration.UninstallerDirectory);
+            UninstallJournalDescriptions.Registration(registration.UninstallerDirectory));
         try
         {
             var unregistered = registration.Unregister();
@@ -278,8 +279,7 @@ public sealed class UninstallRunner(
             cancellationToken.ThrowIfCancellationRequested();
             var step = journal.BeginStep(
                 InstallerRunEffectKind.AgentConfiguration,
-                "Disconnect " + configuration.AgentName + ": " +
-                string.Join(", ", configuration.Files.Select(file => file.Path)));
+                UninstallJournalDescriptions.Configuration(configuration));
             try
             {
                 await AgentConfigurationApply.ApplyAsync(
@@ -319,7 +319,7 @@ public sealed class UninstallRunner(
             cancellationToken.ThrowIfCancellationRequested();
             var step = journal.BeginStep(
                 InstallerRunEffectKind.GitHookRemoval,
-                "Remove the LocalAi hooks from " + hook.CommonDirectory);
+                UninstallJournalDescriptions.Hooks(hook.CommonDirectory));
             var before = removed.Count;
             try
             {
@@ -392,7 +392,8 @@ public sealed class UninstallRunner(
         UninstallPlan plan,
         InstallerRunJournal journal,
         List<UninstallFailure> failures,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IProgress<UninstallProgress>? progress)
     {
         var removed = new List<string>();
         foreach (var entry in plan.Paths)
@@ -400,12 +401,14 @@ public sealed class UninstallRunner(
             cancellationToken.ThrowIfCancellationRequested();
             var step = journal.BeginStep(
                 InstallerRunEffectKind.RuntimeRemoval,
-                "Remove " + entry.Path);
+                UninstallJournalDescriptions.Path(entry.Path));
             try
             {
                 Delete(entry.Path);
                 removed.Add(entry.Path);
                 journal.CompleteStep(step, "Removed.", isReversible: false);
+                progress?.Report(new(60 + (25 * removed.Count / Math.Max(plan.Paths.Count, 1)),
+                    InstallerCulture.Pick("Removed ", "Удалено ") + entry.Path));
             }
             catch (Exception exception) when (
                 exception is IOException or UnauthorizedAccessException)
