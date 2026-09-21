@@ -12,6 +12,9 @@ public sealed class CliHelpTests
     [InlineData("ru", "repo status --help", "localai repo status")]
     [InlineData("en", "help model pull", "--catalog-version")]
     [InlineData("en", "-h", "localai sync")]
+    [InlineData("en", "docs prune --help", "--dry-run | --apply")]
+    [InlineData("ru", "docs pin --help", "--package")]
+    [InlineData("en", "docs unpin --help", "--package")]
     public async Task Help_is_successful_stdout_without_executing_the_command(string language, string arguments, string expected)
     {
         var result = await Run(language, arguments);

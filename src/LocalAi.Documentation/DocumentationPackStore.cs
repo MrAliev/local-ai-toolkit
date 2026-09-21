@@ -35,7 +35,7 @@ public sealed record DocumentationApplyReport(
     [property: JsonPropertyName("skipped"), JsonRequired] IReadOnlyList<string> Skipped);
 public sealed record DocumentationBuildProgress(string SymbolId, string Name, int Index, int Total, string Phase);
 
-public sealed class DocumentationPackStore(string runtimeRoot, string repositoryId, string? generatorVersion = null,
+public sealed partial class DocumentationPackStore(string runtimeRoot, string repositoryId, string? generatorVersion = null,
     DocumentationCacheVersions? cacheVersions = null, DocumentationHtmlMode htmlMode = DocumentationHtmlMode.Shared)
 {
     private static readonly string[] FileNames = ["page.en.md", "page.ru.md", "page.en.html", "page.ru.html", "page.en.pdf", "page.ru.pdf", "diagram.svg", "diagram.png", "LICENSES.txt"];
@@ -53,6 +53,7 @@ public sealed class DocumentationPackStore(string runtimeRoot, string repository
         if (!Enum.IsDefined(htmlMode)) throw new ArgumentOutOfRangeException(nameof(htmlMode));
         Directory.CreateDirectory(Root);
         using var lease = AcquireLock();
+        WriteJson(Path.Combine(Root, "unfinished.json"), new { Schema = 1, input.Snapshot });
         var timer = Stopwatch.StartNew();
         var versions = cacheVersions ?? DocumentationCacheVersions.ForRuntime(runtimeRoot);
         var rendererVersion = versions.Renderer + ":" + htmlMode;
@@ -132,21 +133,25 @@ public sealed class DocumentationPackStore(string runtimeRoot, string repository
         WriteJson(Path.Combine(path, "manifest.json"), new Pack(repositoryId, input.Snapshot, report));
         cancellationToken.ThrowIfCancellationRequested();
         WriteJson(Path.Combine(Root, "current.json"), packId);
+        File.Delete(Path.Combine(Root, "unfinished.json"));
         return report;
     }
 
     public DocumentationApplyReport Apply(string workingRoot, string currentSnapshot)
     {
         ValidateLocation(workingRoot);
+        if (!Directory.Exists(Root)) throw Failure("package_missing");
+        using var lease = AcquireLock();
         var id = Read<string>(Path.Combine(Root, "current.json"));
         var pack = IsId(id) ? Read<Pack>(Path.Combine(Root, "packs", id!, "manifest.json")) : null;
         if (pack is null || pack.RepositoryId != repositoryId) throw Failure("package_missing");
         if (pack.Snapshot != currentSnapshot) throw Failure("sources_changed");
         var destination = Path.GetFullPath(Path.Combine(workingRoot, "docs", "generated"));
         RejectLinks(destination);
-        using var lease = AcquireLock();
         var baselinePath = Path.Combine(Root, "applied", Hash(Encoding.UTF8.GetBytes(Normalize(workingRoot))) + ".json");
         var baseline = Read<Dictionary<string, string>>(baselinePath) ?? new(StringComparer.Ordinal);
+        var provenancePath = Path.Combine(Root, "applied-origins", Path.GetFileName(baselinePath));
+        var origins = Read<AppliedOrigins>(provenancePath) is { Schema: 1, Files: not null } existingOrigins ? existingOrigins.Files : new(StringComparer.Ordinal);
         var copied = 0; var unchanged = 0;
         var skipped = new List<string>();
         // Check every artifact before changing the destination.
@@ -154,34 +159,41 @@ public sealed class DocumentationPackStore(string runtimeRoot, string repository
             .Select(unit => (Unit: unit, Artifact: ValidArtifact(unit.ArtifactId, unit.SymbolId) ?? throw Failure("artifact_corrupt"))).ToArray();
         var resources = artifacts.SelectMany(item => item.Artifact.Resources ?? []).DistinctBy(pair => pair.Key).ToArray();
         foreach (var (name, _) in resources) RejectLinks(Path.Combine(destination, "_assets", name));
+        RejectLinks(provenancePath);
+        WriteJson(provenancePath, new AppliedOrigins(1, origins, id));
         foreach (var (name, hash) in resources)
-            Copy("_assets/" + name, Path.Combine(Root, "artifacts", "_assets", name), hash);
+            Copy("_assets/" + name, Path.Combine(Root, "artifacts", "_assets", name), hash,
+                artifacts.First(item => item.Artifact.Resources?.ContainsKey(name) == true).Unit.ArtifactId!);
         foreach (var (unit, artifact) in artifacts)
         {
             var key = Hash(Encoding.UTF8.GetBytes(unit.SymbolId));
             foreach (var name in FileNames)
-                Copy(key + "/" + name, Path.Combine(Root, "artifacts", unit.ArtifactId!, name), artifact.Files[name]);
+                Copy(key + "/" + name, Path.Combine(Root, "artifacts", unit.ArtifactId!, name), artifact.Files[name], unit.ArtifactId!);
         }
         WriteJson(baselinePath, baseline);
+        WriteJson(provenancePath, new AppliedOrigins(1, origins, null));
         return new(destination, copied, unchanged, skipped);
 
-        void Copy(string relative, string source, string desired)
+        void Copy(string relative, string source, string desired, string artifactId)
         {
             var target = Path.GetFullPath(Path.Combine(destination, relative));
             RejectLinks(target);
             var bytes = File.ReadAllBytes(source);
             if (Hash(bytes) != desired) throw Failure("artifact_corrupt");
             var existing = File.Exists(target) ? Hash(File.ReadAllBytes(target)) : null;
-            if (existing == desired) { unchanged++; baseline[relative] = desired; }
-            else if (existing is not null && (!baseline.TryGetValue(relative, out var prior) || prior != existing)) skipped.Add(target);
+            if (existing == desired) unchanged++;
+            else if (existing is not null && (!baseline.TryGetValue(relative, out var prior) || prior != existing)) { skipped.Add(target); return; }
             else
             {
                 WriteBytes(target, bytes);
                 copied++;
-                baseline[relative] = desired;
-                // Persist each successful copy so an interrupted apply can be safely resumed.
-                WriteJson(baselinePath, baseline);
             }
+            baseline[relative] = desired;
+            origins[relative] = new(id!, artifactId, desired);
+            // A crash between these atomic writes leaves an untracked baseline entry, which
+            // makes retention preserve the whole history until a later apply reconciles it.
+            WriteJson(baselinePath, baseline);
+            WriteJson(provenancePath, new AppliedOrigins(1, origins, id));
         }
     }
 

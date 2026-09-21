@@ -15,6 +15,7 @@ internal static class DocumentationCommand
         var operation = args.FirstOrDefault() ?? "";
         var command = "docs " + operation;
         var root = ""; var limit = 5; var all = false; var namedLimit = false; var standaloneHtml = false;
+        var keep = 5; var namedKeep = false; var dryRun = true; var namedAction = false; var package = "";
         string T(string key, params object?[] values) => CliText.Catalogue.Format(key, values);
         int Refuse(string code, string message, int exit)
         {
@@ -22,7 +23,7 @@ internal static class DocumentationCommand
             else streams.Error.WriteLine(message);
             return exit;
         }
-        if (operation is not ("build" or "apply")) return Refuse("invalid_arguments", T("DocsUsage"), 2);
+        if (operation is not ("build" or "apply" or "prune" or "pin" or "unpin")) return Refuse("invalid_arguments", T("DocsUsage"), 2);
         for (var i = 1; i < args.Length; i++)
         {
             if (args[i] == "--root" && root.Length == 0 && i + 1 < args.Length && !args[i + 1].StartsWith("--", StringComparison.Ordinal)) root = args[++i];
@@ -34,10 +35,22 @@ internal static class DocumentationCommand
             }
             else if (operation == "build" && args[i] == "--all" && !all) all = true;
             else if (operation == "build" && args[i] == "--standalone-html" && !standaloneHtml) standaloneHtml = true;
+            else if (operation == "prune" && args[i] == "--keep" && !namedKeep)
+            {
+                namedKeep = true;
+                if (++i >= args.Length || !int.TryParse(args[i], NumberStyles.None, CultureInfo.InvariantCulture, out keep) || keep < 1)
+                    return Refuse("invalid_arguments", T("DocsKeepInvalid"), 2);
+            }
+            else if (operation == "prune" && args[i] is "--dry-run" or "--apply" && !namedAction)
+            { namedAction = true; dryRun = args[i] == "--dry-run"; }
+            else if (operation is "pin" or "unpin" && args[i] == "--package" && package.Length == 0 && i + 1 < args.Length)
+                package = args[++i];
             else return Refuse("invalid_arguments", CliText.CommandUnknownArgument(command, args[i], T("DocsUsage")), 2);
         }
         if (root.Length == 0) return Refuse("invalid_arguments", T("DocsRootRequired"), 2);
         if (all && namedLimit) return Refuse("invalid_arguments", T("DocsSelectionConflict"), 2);
+        if (operation is "pin" or "unpin" && (package.Length != 32 || package.Any(c => !Uri.IsHexDigit(c))))
+            return Refuse("invalid_arguments", T("DocsPackageIdRequired"), 2);
         runtimeRoot ??= RuntimeIndexLayout.DefaultRuntimeRoot;
         try
         {
@@ -45,6 +58,26 @@ internal static class DocumentationCommand
             var identity = RuntimeIndexLayout.Inspect(root, runtimeRoot);
             var store = new DocumentationPackStore(runtimeRoot, identity.RepositoryId,
                 htmlMode: standaloneHtml ? DocumentationHtmlMode.Standalone : DocumentationHtmlMode.Shared);
+            if (operation == "prune")
+            {
+                var retained = store.Prune(identity.WorkingRoot.Value, keep, dryRun, cancellationToken);
+                if (machineReadable) streams.Out.WriteLine(MachineOutput.Answer(command, retained));
+                else
+                {
+                    streams.Out.WriteLine(T(dryRun ? "DocsPrunePreview" : "DocsPruneApplied", retained.ReclaimableBytes));
+                    foreach (var entry in retained.Entries)
+                        streams.Out.WriteLine(T(entry.Delete ? "DocsPruneDelete" : "DocsPruneKeep", entry.Path, entry.Bytes,
+                            string.Join("; ", entry.Reasons.Select(reason => T("DocsRetention_" + reason)))));
+                }
+                return 0;
+            }
+            if (operation is "pin" or "unpin")
+            {
+                var pinned = store.Pin(identity.WorkingRoot.Value, package, operation == "pin");
+                if (machineReadable) streams.Out.WriteLine(MachineOutput.Answer(command, pinned));
+                else streams.Out.WriteLine(T(pinned.Pinned ? "DocsPinned" : "DocsUnpinned", pinned.PackagePath));
+                return 0;
+            }
             if (operation == "apply")
             {
                 var applied = store.Apply(identity.WorkingRoot.Value, DocumentationWorkspace.Snapshot(identity));

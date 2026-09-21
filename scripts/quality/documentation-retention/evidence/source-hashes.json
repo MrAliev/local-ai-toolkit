@@ -1,0 +1,9 @@
+{
+  "Baseline": "ca84edde34fa9fc3b1b43869a123c8c146f71c32",
+  "Normalization": "UTF-8, CRLF normalized to LF",
+  "Files": {
+    "src/LocalAi.Documentation/DocumentationPackStore.cs": "9ec7f9e0f3ec2a09688f3c0043e5769fbe3066a252bb64fc2c83ff7194a84bfe",
+    "src/LocalAi.Documentation/DocumentationRetention.cs": "c70a288838d37181291b81835a03bf3497f2204fbe2252a8e728086d916fe49e",
+    "scripts/quality/documentation-retention/Program.cs": "4363362379483689fc47ff24c3bf4e7954518f0ebec33f82172ec20cc60418cd"
+  }
+}

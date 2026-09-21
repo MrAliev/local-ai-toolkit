@@ -1076,7 +1076,7 @@ To keep a worktree whatever its branch: git worktree lock &lt;path&gt;</value>
   <data name="DocsSelectionConflict" xml:space="preserve"><value>Choose either --limit or --all.</value></data>
   <data name="DocsSourcesChanged" xml:space="preserve"><value>Source files changed after the package was built. Run localai docs build --root {0} again before applying it.</value></data>
   <data name="DocsSubset" xml:space="preserve"><value>Selected subset: up to {0} public types.</value></data>
-  <data name="DocsUsage" xml:space="preserve"><value>Usage: localai docs build --root &lt;repo&gt; [--limit N | --all] [--standalone-html] [--json]; localai docs apply --root &lt;repo&gt; [--json]</value></data>
+  <data name="DocsUsage" xml:space="preserve"><value>Usage: localai docs build --root &lt;repo&gt; [--limit N | --all] [--standalone-html] [--json]; localai docs apply --root &lt;repo&gt; [--json]; localai docs prune --root &lt;repo&gt; [--keep N] [--dry-run | --apply] [--json]; localai docs pin|unpin --root &lt;repo&gt; --package &lt;package-id&gt; [--json]</value></data>
   <data name="DocsValidatingType" xml:space="preserve"><value>Checking documentation for {0}.</value></data>
   <data name="DocsRenderingType" xml:space="preserve"><value>Rendering documentation for {0}.</value></data>
   <data name="DocsValidationFailed" xml:space="preserve"><value>Could not prepare documentation for {0}: {1}</value></data>
@@ -1085,4 +1085,26 @@ To keep a worktree whatever its branch: git worktree lock &lt;path&gt;</value>
   <data name="DocsResidencyPartial" xml:space="preserve"><value> ({0}% of the model in VRAM — answers are slower)</value></data>
   <data name="UsageReportArguments" xml:space="preserve"><value>Use: localai telemetry --call-id &lt;guid&gt;. The call ID must be a valid GUID.</value></data>
   <data name="UsageReportNotFound" xml:space="preserve"><value>No usage report found for call {0}.</value></data>
+  <data name="DocsKeepInvalid" xml:space="preserve"><value>--keep must be a positive integer.</value></data>
+  <data name="DocsPackageIdRequired" xml:space="preserve"><value>Specify --package with the 32-character package directory name.</value></data>
+  <data name="DocsPrunePreview" xml:space="preserve"><value>Preview only. Reclaimable bytes: {0}. Use --apply to recompute and execute the plan.</value></data>
+  <data name="DocsPruneApplied" xml:space="preserve"><value>Cleanup completed. Deleted bytes: {0}.</value></data>
+  <data name="DocsPruneDelete" xml:space="preserve"><value>DELETE {0} ({1} bytes): {2}</value></data>
+  <data name="DocsPruneKeep" xml:space="preserve"><value>KEEP {0} ({1} bytes): {2}</value></data>
+  <data name="DocsPinned" xml:space="preserve"><value>Package protected from cleanup: {0}. Keep it pinned while it is open.</value></data>
+  <data name="DocsUnpinned" xml:space="preserve"><value>Package pin removed: {0}. Other retention protections still apply.</value></data>
+  <data name="DocsRetention_unfinished_build" xml:space="preserve"><value>unfinished build; complete a build before cleanup</value></data>
+  <data name="DocsRetention_current" xml:space="preserve"><value>current package</value></data>
+  <data name="DocsRetention_recent" xml:space="preserve"><value>within the retained recent packages</value></data>
+  <data name="DocsRetention_pinned" xml:space="preserve"><value>explicitly pinned/open package</value></data>
+  <data name="DocsRetention_latest" xml:space="preserve"><value>latest type checkpoint</value></data>
+  <data name="DocsRetention_previous_valid" xml:space="preserve"><value>one of the two latest valid versions of the type</value></data>
+  <data name="DocsRetention_applied" xml:space="preserve"><value>used by an applied file</value></data>
+  <data name="DocsRetention_apply_in_progress" xml:space="preserve"><value>apply started and has not completed</value></data>
+  <data name="DocsRetention_untracked_apply" xml:space="preserve"><value>applied files have incomplete provenance; preserve all history</value></data>
+  <data name="DocsRetention_retained_pack" xml:space="preserve"><value>referenced by a retained package</value></data>
+  <data name="DocsRetention_retained_artifact" xml:space="preserve"><value>referenced by a retained artifact</value></data>
+  <data name="DocsRetention_unknown_entry" xml:space="preserve"><value>unrecognized entry is preserved</value></data>
+  <data name="DocsRetention_outside_retention" xml:space="preserve"><value>outside retention and not protected</value></data>
+  <data name="DocsRetention_unreferenced" xml:space="preserve"><value>not referenced by any retained version</value></data>
 </root>
