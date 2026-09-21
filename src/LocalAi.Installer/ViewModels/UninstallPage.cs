@@ -30,6 +30,9 @@ public sealed class RemovalRow(RemovalItem item) : ObservableObject
 
     public string Note => RemovalMatrix.Note(Item);
 
+    public string AccessibleName => string.Format(
+        InstallerCulture.Pick("Remove: {0}", "Удалить: {0}"), Title);
+
     public bool IsSelected
     {
         get => isSelected;
@@ -60,6 +63,9 @@ public sealed class RepositoryRow(
     public string RepositoryId { get; } = repositoryId;
 
     public string CommonDirectory { get; } = commonDirectory;
+
+    public string AccessibleName => string.Format(
+        InstallerCulture.Pick("Change repository hooks: {0}", "Изменить хуки репозитория: {0}"), CommonDirectory);
 
     public bool IsSelected
     {

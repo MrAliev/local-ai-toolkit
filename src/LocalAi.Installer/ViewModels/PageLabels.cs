@@ -46,6 +46,10 @@ public static class PageLabels
         "Install from a folder",
         "Установка из папки");
 
+    public static string ReleaseFolder => InstallerCulture.Pick("Release folder", "Папка релиза");
+    public static string ModelToInstall => InstallerCulture.Pick("Model to install", "Модель для установки");
+    public static string ModelContextSize => InstallerCulture.Pick("Model context size", "Размер контекста модели");
+
     public static string FolderHint => InstallerCulture.Pick(
         "A folder holding release-manifest.json, release-manifest.sig and " +
         "localai-package.zip. Leave empty to install from GitHub. The manifest is verified " +

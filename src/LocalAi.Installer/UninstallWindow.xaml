@@ -124,6 +124,8 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <RadioButton GroupName="Preset" Margin="0,0,0,8"
+                                                 AutomationProperties.Name="{Binding Title}"
+                                                 AutomationProperties.HelpText="{Binding Description}"
                                                  Tag="{Binding Preset}"
                                                  IsChecked="{Binding IsSelected, Mode=OneWay}"
                                                  Checked="OnPresetChecked">
@@ -142,14 +144,10 @@
                         <ItemsControl ItemsSource="{Binding Rows}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Grid Margin="0,0,0,10">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}"
-                                                  VerticalAlignment="Top" Margin="0,2,8,0" />
-                                        <StackPanel Grid.Column="1">
+                                    <CheckBox IsChecked="{Binding IsSelected}" Margin="0,0,0,10"
+                                              AutomationProperties.Name="{Binding AccessibleName}"
+                                              AutomationProperties.HelpText="{Binding Note}">
+                                        <StackPanel>
                                             <!-- A Grid, not a horizontal StackPanel: that panel
                                                  measures its children with infinite width, so
                                                  neither of these could wrap however they asked. -->
@@ -167,7 +165,7 @@
                                             <TextBlock Text="{Binding Note}"
                                                        Style="{StaticResource Muted}" TextWrapping="Wrap" />
                                         </StackPanel>
-                                    </Grid>
+                                    </CheckBox>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
@@ -176,21 +174,15 @@
                         <ItemsControl ItemsSource="{Binding Repositories}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Grid Margin="0,0,0,8">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}"
-                                                  IsEnabled="{Binding CanChoose}"
-                                                  VerticalAlignment="Top" Margin="0,2,8,0" />
-                                        <TextBlock Grid.Column="1" Text="{Binding CommonDirectory}"
-                                                   TextWrapping="Wrap" />
-                                        <TextBlock Grid.Column="2" Text="{Binding StateText}"
-                                                   Style="{StaticResource Muted}" TextWrapping="Wrap"
-                                                   Margin="8,0,0,0" />
-                                    </Grid>
+                                    <CheckBox IsChecked="{Binding IsSelected}" IsEnabled="{Binding CanChoose}"
+                                              AutomationProperties.Name="{Binding AccessibleName}"
+                                              AutomationProperties.HelpText="{Binding StateText}" Margin="0,0,0,8">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding CommonDirectory}" TextWrapping="Wrap" />
+                                            <TextBlock Text="{Binding StateText}" Style="{StaticResource Muted}"
+                                                       TextWrapping="Wrap" Margin="0,4,0,0" />
+                                        </StackPanel>
+                                    </CheckBox>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
@@ -200,7 +192,9 @@
                         <Border Background="{DynamicResource WarnFill}" BorderBrush="{DynamicResource WarnLine}" BorderThickness="1"
                                 CornerRadius="3" Padding="8,6" Margin="0,10,0,0">
                             <StackPanel>
-                                <CheckBox IsChecked="{Binding RemoveSigningKeys}">
+                                <CheckBox IsChecked="{Binding RemoveSigningKeys}"
+                                          AutomationProperties.Name="{Binding SigningKeysTitle}"
+                                          AutomationProperties.HelpText="{Binding SigningKeysWarning}">
                                     <TextBlock Text="{Binding SigningKeysTitle}" FontWeight="SemiBold"
                                                TextWrapping="Wrap" />
                                 </CheckBox>
