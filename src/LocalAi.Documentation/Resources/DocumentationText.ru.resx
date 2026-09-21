@@ -13,6 +13,8 @@
   <data name="NoPrevious" xml:space="preserve"><value>Предыдущего документа нет.</value></data>
   <data name="PreviousKept" xml:space="preserve"><value>Предыдущий документ сохранён.</value></data>
   <data name="Reason_generator" xml:space="preserve"><value>Изменился генератор документации.</value></data>
+  <data name="Reason_presentation" xml:space="preserve"><value>Изменились координаты исходников или сведения о снимке.</value></data>
+  <data name="Reason_renderer" xml:space="preserve"><value>Изменилось оформление документа.</value></data>
   <data name="Reason_history" xml:space="preserve"><value>Изменилась история.</value></data>
   <data name="Reason_new" xml:space="preserve"><value>Предыдущего документа нет.</value></data>
   <data name="Reason_references" xml:space="preserve"><value>Изменились ссылки на символы.</value></data>

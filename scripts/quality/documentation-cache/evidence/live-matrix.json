@@ -1,0 +1,640 @@
+{
+  "CorpusTypes": 12,
+  "BrokerVersionDirectory": "f10ff0ec19a5",
+  "Samples": [
+    {
+      "Types": 1,
+      "Phase": "cold",
+      "BuildMs": 25654.5863,
+      "ModelRequests": 3,
+      "GenerationCalls": 1,
+      "GenerationMs": 24871.6894,
+      "ValidationMs": 6.7136,
+      "RenderMs": 662.2966,
+      "Failed": 0,
+      "FreshPresentation": true,
+      "RouteUnchanged": true,
+      "Errors": []
+    },
+    {
+      "Types": 1,
+      "Phase": "presentation",
+      "BuildMs": 244.8588,
+      "ModelRequests": 0,
+      "GenerationCalls": 0,
+      "GenerationMs": 0,
+      "ValidationMs": 0.1325,
+      "RenderMs": 170.2613,
+      "Failed": 0,
+      "FreshPresentation": true,
+      "RouteUnchanged": true,
+      "Errors": []
+    },
+    {
+      "Types": 1,
+      "Phase": "renderer",
+      "BuildMs": 243.96,
+      "ModelRequests": 0,
+      "GenerationCalls": 0,
+      "GenerationMs": 0,
+      "ValidationMs": 0.1855,
+      "RenderMs": 171.828,
+      "Failed": 0,
+      "FreshPresentation": true,
+      "RouteUnchanged": true,
+      "Errors": []
+    },
+    {
+      "Types": 5,
+      "Phase": "cold",
+      "BuildMs": 137028.6804,
+      "ModelRequests": 15,
+      "GenerationCalls": 5,
+      "GenerationMs": 136002.3084,
+      "ValidationMs": 1.3443,
+      "RenderMs": 743.9234,
+      "Failed": 0,
+      "FreshPresentation": true,
+      "RouteUnchanged": true,
+      "Errors": []
+    },
+    {
+      "Types": 5,
+      "Phase": "presentation",
+      "BuildMs": 872.2726,
+      "ModelRequests": 0,
+      "GenerationCalls": 0,
+      "GenerationMs": 0,
+      "ValidationMs": 0.4676,
+      "RenderMs": 590.2,
+      "Failed": 0,
+      "FreshPresentation": true,
+      "RouteUnchanged": true,
+      "Errors": []
+    },
+    {
+      "Types": 5,
+      "Phase": "renderer",
+      "BuildMs": 869.8328,
+      "ModelRequests": 0,
+      "GenerationCalls": 0,
+      "GenerationMs": 0,
+      "ValidationMs": 0.4925,
+      "RenderMs": 593.9891,
+      "Failed": 0,
+      "FreshPresentation": true,
+      "RouteUnchanged": true,
+      "Errors": []
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "BuildMs": 343907.8434,
+      "ModelRequests": 38,
+      "GenerationCalls": 12,
+      "GenerationMs": 341749.2287,
+      "ValidationMs": 5.8842,
+      "RenderMs": 1524.4575,
+      "Failed": 0,
+      "FreshPresentation": true,
+      "RouteUnchanged": true,
+      "Errors": []
+    },
+    {
+      "Types": 12,
+      "Phase": "presentation",
+      "BuildMs": 2149.1566,
+      "ModelRequests": 0,
+      "GenerationCalls": 0,
+      "GenerationMs": 0,
+      "ValidationMs": 0.7072,
+      "RenderMs": 1476.0922,
+      "Failed": 0,
+      "FreshPresentation": true,
+      "RouteUnchanged": true,
+      "Errors": []
+    },
+    {
+      "Types": 12,
+      "Phase": "renderer",
+      "BuildMs": 2071.1801,
+      "ModelRequests": 0,
+      "GenerationCalls": 0,
+      "GenerationMs": 0,
+      "ValidationMs": 0.7222,
+      "RenderMs": 1447.4795,
+      "Failed": 0,
+      "FreshPresentation": true,
+      "RouteUnchanged": true,
+      "Errors": []
+    }
+  ],
+  "Receipts": [
+    {
+      "Types": 1,
+      "Phase": "cold",
+      "Model": "gpt-oss:20b",
+      "QueueMs": 2242.6488,
+      "ExecutionMs": 14208.4865,
+      "Shortfall": "offload_unknown",
+      "VramResidentPercent": null
+    },
+    {
+      "Types": 1,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 2151.2617,
+      "ExecutionMs": 5567.3473,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 1,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 39.4127,
+      "ExecutionMs": 118.5686,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 5,
+      "Phase": "cold",
+      "Model": "gpt-oss:20b",
+      "QueueMs": 2210.5781,
+      "ExecutionMs": 10714.0678,
+      "Shortfall": "offload_unknown",
+      "VramResidentPercent": null
+    },
+    {
+      "Types": 5,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 2159.0207,
+      "ExecutionMs": 5553.1618,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 5,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 58.1002,
+      "ExecutionMs": 147.2137,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 5,
+      "Phase": "cold",
+      "Model": "gpt-oss:20b",
+      "QueueMs": 2140.6739,
+      "ExecutionMs": 20720.4766,
+      "Shortfall": "offload_unknown",
+      "VramResidentPercent": null
+    },
+    {
+      "Types": 5,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 2185.0644,
+      "ExecutionMs": 5592.5002,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 5,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 115.6271,
+      "ExecutionMs": 173.9739,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 5,
+      "Phase": "cold",
+      "Model": "gpt-oss:20b",
+      "QueueMs": 2208.1796,
+      "ExecutionMs": 18548.3151,
+      "Shortfall": "offload_unknown",
+      "VramResidentPercent": null
+    },
+    {
+      "Types": 5,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 2205.9163,
+      "ExecutionMs": 5521.1354,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 5,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 66.1065,
+      "ExecutionMs": 178.7242,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 5,
+      "Phase": "cold",
+      "Model": "gpt-oss:20b",
+      "QueueMs": 2170.268,
+      "ExecutionMs": 14652.6674,
+      "Shortfall": "offload_unknown",
+      "VramResidentPercent": null
+    },
+    {
+      "Types": 5,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 2214.5768,
+      "ExecutionMs": 5531.3605,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 5,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 84.1771,
+      "ExecutionMs": 153.1612,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 5,
+      "Phase": "cold",
+      "Model": "gpt-oss:20b",
+      "QueueMs": 2161.5822,
+      "ExecutionMs": 19645.9655,
+      "Shortfall": "offload_unknown",
+      "VramResidentPercent": null
+    },
+    {
+      "Types": 5,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 2215.979,
+      "ExecutionMs": 4915.196,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 5,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 74.5576,
+      "ExecutionMs": 94.674,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "gpt-oss:20b",
+      "QueueMs": 2135.3054,
+      "ExecutionMs": 13983.7856,
+      "Shortfall": "offload_unknown",
+      "VramResidentPercent": null
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 2208.4074,
+      "ExecutionMs": 5550.8635,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 106.536,
+      "ExecutionMs": 143.8751,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "gpt-oss:20b",
+      "QueueMs": 2177.0506,
+      "ExecutionMs": 12954.309,
+      "Shortfall": "offload_unknown",
+      "VramResidentPercent": null
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 2214.0838,
+      "ExecutionMs": 5496.2626,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 50.8962,
+      "ExecutionMs": 109.4939,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "gpt-oss:20b",
+      "QueueMs": 2206.0698,
+      "ExecutionMs": 23842.9373,
+      "Shortfall": "offload_unknown",
+      "VramResidentPercent": null
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 2223.6771,
+      "ExecutionMs": 5233.3913,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 99.7096,
+      "ExecutionMs": 113.3203,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "gpt-oss:20b",
+      "QueueMs": 2144.7269,
+      "ExecutionMs": 12297.5252,
+      "Shortfall": "offload_unknown",
+      "VramResidentPercent": null
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 2143.1161,
+      "ExecutionMs": 5548.8383,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 36.8727,
+      "ExecutionMs": 137.0066,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 74.8972,
+      "ExecutionMs": 145.9034,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "gpt-oss:20b",
+      "QueueMs": 2138.0624,
+      "ExecutionMs": 19338.0358,
+      "Shortfall": "offload_unknown",
+      "VramResidentPercent": null
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 2212.844,
+      "ExecutionMs": 5556.4124,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 114.819,
+      "ExecutionMs": 141.3672,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "gpt-oss:20b",
+      "QueueMs": 2194.4012,
+      "ExecutionMs": 19441.6677,
+      "Shortfall": "offload_unknown",
+      "VramResidentPercent": null
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "gpt-oss:20b",
+      "QueueMs": 54.3353,
+      "ExecutionMs": 15587.9771,
+      "Shortfall": "offload_unknown",
+      "VramResidentPercent": null
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 2224.0764,
+      "ExecutionMs": 5534.1002,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 108.8723,
+      "ExecutionMs": 131.9423,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "gpt-oss:20b",
+      "QueueMs": 2177.0399,
+      "ExecutionMs": 16362.3867,
+      "Shortfall": "offload_unknown",
+      "VramResidentPercent": null
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 2224.7097,
+      "ExecutionMs": 5555.1737,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 114.6763,
+      "ExecutionMs": 156.2138,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "gpt-oss:20b",
+      "QueueMs": 2208.1314,
+      "ExecutionMs": 28866.8318,
+      "Shortfall": "offload_unknown",
+      "VramResidentPercent": null
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 2222.5035,
+      "ExecutionMs": 5600.6707,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 65.8533,
+      "ExecutionMs": 169.8634,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "gpt-oss:20b",
+      "QueueMs": 2160.2229,
+      "ExecutionMs": 11877.9876,
+      "Shortfall": "offload_unknown",
+      "VramResidentPercent": null
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 2225.4858,
+      "ExecutionMs": 5529.2223,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 95.1429,
+      "ExecutionMs": 142.0536,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "gpt-oss:20b",
+      "QueueMs": 2155.451,
+      "ExecutionMs": 12509.5917,
+      "Shortfall": "offload_unknown",
+      "VramResidentPercent": null
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 2169.5211,
+      "ExecutionMs": 5215.5079,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 30.0979,
+      "ExecutionMs": 129.3731,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "gpt-oss:20b",
+      "QueueMs": 2185.6111,
+      "ExecutionMs": 13126.3548,
+      "Shortfall": "offload_unknown",
+      "VramResidentPercent": null
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 2205.4324,
+      "ExecutionMs": 5251.9507,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 97.5649,
+      "ExecutionMs": 131.7153,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "gpt-oss:20b",
+      "QueueMs": 2147.6212,
+      "ExecutionMs": 17351.0001,
+      "Shortfall": "offload_unknown",
+      "VramResidentPercent": null
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 2229.7692,
+      "ExecutionMs": 5206.6868,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Types": 12,
+      "Phase": "cold",
+      "Model": "qwen3.5:9b",
+      "QueueMs": 83.8968,
+      "ExecutionMs": 97.9244,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    }
+  ],
+  "CloudTokenSavings": null,
+  "TokenReason": "No cloud comparison; model request counts and timing are separate diagnostics"
+}

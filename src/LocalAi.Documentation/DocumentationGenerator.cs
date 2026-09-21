@@ -11,6 +11,9 @@ public interface IDocumentationModel
 
 public sealed class DocumentationGenerator(IDocumentationModel model)
 {
+    public const string PromptVersion = "documentation-prompt-1";
+    internal static IReadOnlyList<string> OverviewModels { get; } = Array.AsReadOnly(new[] { "gpt-oss:20b", "gpt-oss:20b", "qwen3.5:9b" });
+
     public async Task<DocumentationDraft> GenerateAsync(DocumentationInput input, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -38,7 +41,7 @@ public sealed class DocumentationGenerator(IDocumentationModel model)
         IReadOnlyList<string> errors = ["invalid_json"];
         // The pinned-model A/B over twenty graphs passed 14/20 with gpt-oss and 5/20
         // with qwen. Use the measured stronger structured-output model first.
-        foreach (var selectedModel in new[] { "gpt-oss:20b", "gpt-oss:20b", "qwen3.5:9b" })
+        foreach (var selectedModel in OverviewModels)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var answer = await model.CompleteAsync(selectedModel, prompt, cancellationToken);
