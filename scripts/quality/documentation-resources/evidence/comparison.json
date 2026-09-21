@@ -1,0 +1,182 @@
+[
+  {
+    "types": 1,
+    "revision": 1,
+    "mode": "default",
+    "beforeBytes": 3128910,
+    "afterBytes": 1686586,
+    "beforeAppliedBytes": 3122552,
+    "afterAppliedBytes": 1679924,
+    "verifiedContentDigest": "167ada0a0d86b755613457685a33588820262f1dcd25bb555b59cf317e1869b2"
+  },
+  {
+    "types": 1,
+    "revision": 2,
+    "mode": "default",
+    "beforeBytes": 6255900,
+    "afterBytes": 1928258,
+    "beforeAppliedBytes": 3122744,
+    "afterAppliedBytes": 1680116,
+    "verifiedContentDigest": "cf604ec5e3f8809d1db11d0ba055a4ae5f7777d9062d6ae0ccb85908645c18d9"
+  },
+  {
+    "types": 1,
+    "revision": 3,
+    "mode": "default",
+    "beforeBytes": 9382945,
+    "afterBytes": 2169985,
+    "beforeAppliedBytes": 3122799,
+    "afterAppliedBytes": 1680171,
+    "verifiedContentDigest": "2e53498d3440c37c0ad69dbd14982a9a51158eb9c420f49841ab8dbc197c8c21"
+  },
+  {
+    "types": 1,
+    "revision": 1,
+    "mode": "standalone",
+    "beforeBytes": 3128910,
+    "afterBytes": 3462180,
+    "beforeAppliedBytes": 3122552,
+    "afterAppliedBytes": 3455792,
+    "verifiedContentDigest": "167ada0a0d86b755613457685a33588820262f1dcd25bb555b59cf317e1869b2"
+  },
+  {
+    "types": 1,
+    "revision": 2,
+    "mode": "standalone",
+    "beforeBytes": 6255900,
+    "afterBytes": 6922440,
+    "beforeAppliedBytes": 3122744,
+    "afterAppliedBytes": 3455984,
+    "verifiedContentDigest": "cf604ec5e3f8809d1db11d0ba055a4ae5f7777d9062d6ae0ccb85908645c18d9"
+  },
+  {
+    "types": 1,
+    "revision": 3,
+    "mode": "standalone",
+    "beforeBytes": 9382945,
+    "afterBytes": 10382755,
+    "beforeAppliedBytes": 3122799,
+    "afterAppliedBytes": 3456039,
+    "verifiedContentDigest": "2e53498d3440c37c0ad69dbd14982a9a51158eb9c420f49841ab8dbc197c8c21"
+  },
+  {
+    "types": 5,
+    "revision": 1,
+    "mode": "default",
+    "beforeBytes": 15634568,
+    "afterBytes": 2650976,
+    "beforeAppliedBytes": 15611734,
+    "afterAppliedBytes": 2627202,
+    "verifiedContentDigest": "6e23ee969a3d3b989f8452ed0c8f7b6660249125579939abfadd0e154a10715a"
+  },
+  {
+    "types": 5,
+    "revision": 2,
+    "mode": "default",
+    "beforeBytes": 31259500,
+    "afterBytes": 3849322,
+    "beforeAppliedBytes": 15612518,
+    "afterAppliedBytes": 2627986,
+    "verifiedContentDigest": "dc1f258cfdf632f1e73d0ae31a8442e2e6d721c65c59ecbe135deec6b20c6af7"
+  },
+  {
+    "types": 5,
+    "revision": 3,
+    "mode": "default",
+    "beforeBytes": 46884652,
+    "afterBytes": 5047888,
+    "beforeAppliedBytes": 15612738,
+    "afterAppliedBytes": 2628206,
+    "verifiedContentDigest": "be128d176334536f624914cb9cb50e25ae60a00a0a8842935e15df702f1f3c39"
+  },
+  {
+    "types": 5,
+    "revision": 1,
+    "mode": "standalone",
+    "beforeBytes": 15634568,
+    "afterBytes": 17299982,
+    "beforeAppliedBytes": 15611734,
+    "afterAppliedBytes": 17277006,
+    "verifiedContentDigest": "6e23ee969a3d3b989f8452ed0c8f7b6660249125579939abfadd0e154a10715a"
+  },
+  {
+    "types": 5,
+    "revision": 2,
+    "mode": "standalone",
+    "beforeBytes": 31259500,
+    "afterBytes": 34590328,
+    "beforeAppliedBytes": 15612518,
+    "afterAppliedBytes": 17277790,
+    "verifiedContentDigest": "dc1f258cfdf632f1e73d0ae31a8442e2e6d721c65c59ecbe135deec6b20c6af7"
+  },
+  {
+    "types": 5,
+    "revision": 3,
+    "mode": "standalone",
+    "beforeBytes": 46884652,
+    "afterBytes": 51880894,
+    "beforeAppliedBytes": 15612738,
+    "afterAppliedBytes": 17278010,
+    "verifiedContentDigest": "be128d176334536f624914cb9cb50e25ae60a00a0a8842935e15df702f1f3c39"
+  },
+  {
+    "types": 12,
+    "revision": 1,
+    "mode": "default",
+    "beforeBytes": 37523634,
+    "afterBytes": 4342821,
+    "beforeAppliedBytes": 37471946,
+    "afterAppliedBytes": 4289082,
+    "verifiedContentDigest": "965c93b73552b15d892bbdda02bbb5602d64f31ca6dcdf1e0c90a8e1b5affcac"
+  },
+  {
+    "types": 12,
+    "revision": 2,
+    "mode": "default",
+    "beforeBytes": 75024444,
+    "afterBytes": 7219826,
+    "beforeAppliedBytes": 37474083,
+    "afterAppliedBytes": 4291219,
+    "verifiedContentDigest": "dc5e63e05b5daf5e74c624f4c53e6e74733c06488796ddac32a85c59ec1b7fe9"
+  },
+  {
+    "types": 12,
+    "revision": 3,
+    "mode": "default",
+    "beforeBytes": 112525864,
+    "afterBytes": 10097441,
+    "beforeAppliedBytes": 37474693,
+    "afterAppliedBytes": 4291829,
+    "verifiedContentDigest": "2b78cf3278731df8f8f8b774beae4bb2cbed6476cf32a61bf57552bfd67cbb2d"
+  },
+  {
+    "types": 12,
+    "revision": 1,
+    "mode": "standalone",
+    "beforeBytes": 37523634,
+    "afterBytes": 41521948,
+    "beforeAppliedBytes": 37471946,
+    "afterAppliedBytes": 41469922,
+    "verifiedContentDigest": "965c93b73552b15d892bbdda02bbb5602d64f31ca6dcdf1e0c90a8e1b5affcac"
+  },
+  {
+    "types": 12,
+    "revision": 2,
+    "mode": "standalone",
+    "beforeBytes": 75024444,
+    "afterBytes": 83021072,
+    "beforeAppliedBytes": 37474083,
+    "afterAppliedBytes": 41472059,
+    "verifiedContentDigest": "dc5e63e05b5daf5e74c624f4c53e6e74733c06488796ddac32a85c59ec1b7fe9"
+  },
+  {
+    "types": 12,
+    "revision": 3,
+    "mode": "standalone",
+    "beforeBytes": 112525864,
+    "afterBytes": 124520806,
+    "beforeAppliedBytes": 37474693,
+    "afterAppliedBytes": 41472669,
+    "verifiedContentDigest": "2b78cf3278731df8f8f8b774beae4bb2cbed6476cf32a61bf57552bfd67cbb2d"
+  }
+]

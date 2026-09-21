@@ -8,6 +8,22 @@ namespace LocalAi.IntegrationTests;
 public sealed class DocumentationRendererTests
 {
     [Fact]
+    public void Standalone_html_contains_fonts_diagram_and_licenses_without_resource_files()
+    {
+        var files = DocumentationRenderer.Render(DocumentationValidationTests.Input, DocumentationValidationTests.Draft);
+        foreach (var language in new[] { "en", "ru" })
+        {
+            var html = Encoding.UTF8.GetString(files[$"page.{language}.html"]);
+            Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(html, "data:font/ttf;base64,").Count);
+            Assert.Contains("src=\"data:image/png;base64," + Convert.ToBase64String(files["diagram.png"]), html);
+            Assert.Contains("SIL OPEN FONT LICENSE", html);
+            Assert.DoesNotContain("src=\"diagram.svg\"", html);
+            Assert.DoesNotContain("href=\"LICENSES.txt\"", html);
+            Assert.DoesNotContain("../_assets/", html);
+        }
+    }
+
+    [Fact]
     public void Both_languages_have_all_three_formats_and_a_readable_diagram()
     {
         var pack = DocumentationRenderer.Render(DocumentationValidationTests.Input, DocumentationValidationTests.Draft);

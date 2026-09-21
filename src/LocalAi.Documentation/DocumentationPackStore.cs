@@ -36,12 +36,12 @@ public sealed record DocumentationApplyReport(
 public sealed record DocumentationBuildProgress(string SymbolId, string Name, int Index, int Total, string Phase);
 
 public sealed class DocumentationPackStore(string runtimeRoot, string repositoryId, string? generatorVersion = null,
-    DocumentationCacheVersions? cacheVersions = null)
+    DocumentationCacheVersions? cacheVersions = null, DocumentationHtmlMode htmlMode = DocumentationHtmlMode.Shared)
 {
     private static readonly string[] FileNames = ["page.en.md", "page.ru.md", "page.en.html", "page.ru.html", "page.en.pdf", "page.ru.pdf", "diagram.svg", "diagram.png", "LICENSES.txt"];
     private string Root => Path.GetFullPath(Path.Combine(runtimeRoot, "repositories", repositoryId, "documentation"));
     private sealed record Artifact(string SymbolId, string SourceHash, string ReferencesHash, string HistoryHash, string Version, Dictionary<string, string> Files,
-        string TextKey = "", string PresentationHash = "", string RendererVersion = "");
+        string TextKey = "", string PresentationHash = "", string RendererVersion = "", Dictionary<string, string>? Resources = null);
     private sealed record TextCheckpoint(int Schema, string Key, string DraftHash, DocumentationDraft Draft);
     private sealed record Pack(string RepositoryId, string Snapshot, DocumentationBuildReport Report);
 
@@ -50,10 +50,12 @@ public sealed class DocumentationPackStore(string runtimeRoot, string repository
         Action<DocumentationBuildProgress>? progress = null, CancellationToken cancellationToken = default)
     {
         ValidateLocation(input.WorkingRoot);
+        if (!Enum.IsDefined(htmlMode)) throw new ArgumentOutOfRangeException(nameof(htmlMode));
         Directory.CreateDirectory(Root);
         using var lease = AcquireLock();
         var timer = Stopwatch.StartNew();
         var versions = cacheVersions ?? DocumentationCacheVersions.ForRuntime(runtimeRoot);
+        var rendererVersion = versions.Renderer + ":" + htmlMode;
         var textVersion = Hash(JsonSerializer.SerializeToUtf8Bytes(new { Schema = "documentation-text-1", generatorVersion, versions.Prompt, versions.Validator, versions.Route }));
         var results = new List<DocumentationUnitResult>();
         foreach (var unit in input.Units)
@@ -66,7 +68,7 @@ public sealed class DocumentationPackStore(string runtimeRoot, string repository
             var textKey = Hash(JsonSerializer.SerializeToUtf8Bytes(new { textVersion, unit.SourceHash, unit.ReferencesHash, unit.HistoryHash,
                 unit.Content.SymbolId, unit.Content.Name, unit.Content.Facts, unit.Content.Nodes, unit.Content.Edges }));
             var presentationHash = Hash(JsonSerializer.SerializeToUtf8Bytes(unit.Content));
-            var reasons = Reasons(unit, previous, textVersion, textKey, presentationHash, versions.Renderer);
+            var reasons = Reasons(unit, previous, textVersion, textKey, presentationHash, rendererVersion);
             if (reasons.Length == 0)
             {
                 results.Add(new(unit.Content.SymbolId, unit.Content.Name, [], true, null, false, previousId));
@@ -96,7 +98,14 @@ public sealed class DocumentationPackStore(string runtimeRoot, string repository
                 }
                 Progress("render");
                 cancellationToken.ThrowIfCancellationRequested();
-                files = DocumentationRenderer.RenderValidated(unit.Content, draft);
+                files = DocumentationRenderer.RenderValidated(unit.Content, draft, htmlMode);
+                if (htmlMode == DocumentationHtmlMode.Shared)
+                    foreach (var (name, bytes) in DocumentationHtmlResources.Files)
+                    {
+                        var resourcePath = Path.Combine(Root, "artifacts", "_assets", name);
+                        RejectLinks(resourcePath);
+                        if (!File.Exists(resourcePath) || Hash(File.ReadAllBytes(resourcePath)) != Hash(bytes)) WriteBytes(resourcePath, bytes);
+                    }
             }
             catch (Exception error) when (error is not OperationCanceledException)
             {
@@ -108,7 +117,8 @@ public sealed class DocumentationPackStore(string runtimeRoot, string repository
             Directory.CreateDirectory(directory);
             foreach (var name in FileNames) WriteBytes(Path.Combine(directory, name), files[name]);
             WriteJson(Path.Combine(directory, "artifact.json"), new Artifact(unit.Content.SymbolId, unit.SourceHash, unit.ReferencesHash, unit.HistoryHash, textVersion,
-                FileNames.ToDictionary(name => name, name => Hash(files[name]), StringComparer.Ordinal), textKey, presentationHash, versions.Renderer));
+                FileNames.ToDictionary(name => name, name => Hash(files[name]), StringComparer.Ordinal), textKey, presentationHash, rendererVersion,
+                htmlMode == DocumentationHtmlMode.Shared ? DocumentationHtmlResources.Files.ToDictionary(pair => pair.Key, pair => Hash(pair.Value), StringComparer.Ordinal) : null));
             // Only a completely rendered artifact becomes a resumable checkpoint.
             WriteJson(pointer, id);
             results.Add(new(unit.Content.SymbolId, unit.Content.Name, reasons, false, null, false, id));
@@ -142,32 +152,37 @@ public sealed class DocumentationPackStore(string runtimeRoot, string repository
         // Check every artifact before changing the destination.
         var artifacts = pack.Report.Units.Where(unit => unit.ArtifactId is not null)
             .Select(unit => (Unit: unit, Artifact: ValidArtifact(unit.ArtifactId, unit.SymbolId) ?? throw Failure("artifact_corrupt"))).ToArray();
+        var resources = artifacts.SelectMany(item => item.Artifact.Resources ?? []).DistinctBy(pair => pair.Key).ToArray();
+        foreach (var (name, _) in resources) RejectLinks(Path.Combine(destination, "_assets", name));
+        foreach (var (name, hash) in resources)
+            Copy("_assets/" + name, Path.Combine(Root, "artifacts", "_assets", name), hash);
         foreach (var (unit, artifact) in artifacts)
         {
             var key = Hash(Encoding.UTF8.GetBytes(unit.SymbolId));
             foreach (var name in FileNames)
-            {
-                var relative = key + "/" + name;
-                var target = Path.Combine(destination, key, name);
-                RejectLinks(target);
-                var bytes = File.ReadAllBytes(Path.Combine(Root, "artifacts", unit.ArtifactId!, name));
-                var desired = artifact.Files[name];
-                if (Hash(bytes) != desired) throw Failure("artifact_corrupt");
-                var existing = File.Exists(target) ? Hash(File.ReadAllBytes(target)) : null;
-                if (existing == desired) { unchanged++; baseline[relative] = desired; }
-                else if (existing is not null && (!baseline.TryGetValue(relative, out var prior) || prior != existing)) skipped.Add(target);
-                else
-                {
-                    WriteBytes(target, bytes);
-                    copied++;
-                    baseline[relative] = desired;
-                    // Persist each successful copy so an interrupted apply can be safely resumed.
-                    WriteJson(baselinePath, baseline);
-                }
-            }
+                Copy(key + "/" + name, Path.Combine(Root, "artifacts", unit.ArtifactId!, name), artifact.Files[name]);
         }
         WriteJson(baselinePath, baseline);
         return new(destination, copied, unchanged, skipped);
+
+        void Copy(string relative, string source, string desired)
+        {
+            var target = Path.GetFullPath(Path.Combine(destination, relative));
+            RejectLinks(target);
+            var bytes = File.ReadAllBytes(source);
+            if (Hash(bytes) != desired) throw Failure("artifact_corrupt");
+            var existing = File.Exists(target) ? Hash(File.ReadAllBytes(target)) : null;
+            if (existing == desired) { unchanged++; baseline[relative] = desired; }
+            else if (existing is not null && (!baseline.TryGetValue(relative, out var prior) || prior != existing)) skipped.Add(target);
+            else
+            {
+                WriteBytes(target, bytes);
+                copied++;
+                baseline[relative] = desired;
+                // Persist each successful copy so an interrupted apply can be safely resumed.
+                WriteJson(baselinePath, baseline);
+            }
+        }
     }
 
     private static string[] Reasons(DocumentationUnitInput unit, Artifact? previous, string textVersion, string textKey, string presentationHash, string rendererVersion)
@@ -203,10 +218,22 @@ public sealed class DocumentationPackStore(string runtimeRoot, string repository
         var directory = Path.Combine(Root, "artifacts", id!);
         var artifact = Read<Artifact>(Path.Combine(directory, "artifact.json"));
         if (artifact is null || artifact.SymbolId != symbolId || artifact.Files is null || artifact.Files.Count != FileNames.Length) return null;
+        if (artifact.RendererVersion?.EndsWith(":" + DocumentationHtmlMode.Shared, StringComparison.Ordinal) == true && artifact.Resources is null) return null;
         try
         {
             foreach (var name in FileNames)
                 if (!artifact.Files.TryGetValue(name, out var hash) || !File.Exists(Path.Combine(directory, name)) || Hash(File.ReadAllBytes(Path.Combine(directory, name))) != hash) return null;
+            if (artifact.Resources is not null)
+            {
+                if (artifact.Resources.Count != 1) return null;
+                foreach (var (name, hash) in artifact.Resources)
+                {
+                    if (!DocumentationHtmlResources.ValidName(name, hash)) return null;
+                    var resource = Path.Combine(Root, "artifacts", "_assets", name);
+                    RejectLinks(resource);
+                    if (!File.Exists(resource) || Hash(File.ReadAllBytes(resource)) != hash) return null;
+                }
+            }
             return artifact;
         }
         catch (IOException) { return null; }
