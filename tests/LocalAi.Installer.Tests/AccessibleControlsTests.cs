@@ -124,6 +124,18 @@ public sealed class AccessibleControlsTests
                     technical.IsExpanded = false;
                     Assert.False(wizard.Review.IsConfirmed);
 
+                    wizard.ModelRuns.Clear();
+                    wizard.ModelRuns.Add(new ModelRunRow("long-model-name:instruct-q8_0", 16384));
+                    wizard.RefreshNavigationState();
+                    ShowPage(window, wizard, InstallerPage.Progress);
+                    // The fixture adds a row directly, without starting the model runner.
+                    foreach (var viewer in Descendants(window.Content).OfType<ScrollViewer>())
+                        BindingOperations.GetBindingExpression(viewer, UIElement.VisibilityProperty)?.UpdateTarget();
+                    Layout(window);
+                    var modelText = Descendants(window.Content).OfType<TextBlock>().Single(row =>
+                        row.Inlines.OfType<System.Windows.Documents.Run>().Any(run => run.Text == "long-model-name:instruct-q8_0"));
+                    Assert.Contains("long-model-name:instruct-q8_0", Peer(modelText).GetName(), StringComparison.Ordinal);
+
                     void CheckOverview()
                     {
                         var rows = Descendants(overview).OfType<TextBox>().ToArray();

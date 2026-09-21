@@ -21,6 +21,7 @@ public partial class StartWindow : Window
     {
         viewModel = new InstallerStartViewModel(presentation: presentation);
         InitializeComponent();
+        WindowWorkArea.Follow(this);
         // The caption is the desktop manager's, not the palette's.
         DarkCaption.Follow(this);
         DataContext = viewModel;

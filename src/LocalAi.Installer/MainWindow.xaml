@@ -14,6 +14,7 @@
         WindowStartupLocation="CenterScreen"
         Loaded="OnLoaded">
     <Window.Resources>
+        <local:CompactRailWidthConverter x:Key="RailWidth" />
         <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
 
         <Style TargetType="TextBlock">
@@ -123,15 +124,14 @@
         </DataTemplate>
     </Window.Resources>
 
-    <Grid>
+    <Grid x:Name="ShellLayout">
         <Grid.ColumnDefinitions>
-            <!-- 220, not 180: the merged page's rail entries are longer, and
-                 Russian runs 15-30% longer than English. -->
-            <ColumnDefinition Width="220" />
+            <ColumnDefinition Width="{Binding ActualWidth, ElementName=ShellLayout, Converter={StaticResource RailWidth}, ConverterParameter=220}" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
         <Border Grid.Column="0" Background="{DynamicResource RailFill}" BorderBrush="{DynamicResource Divider}" BorderThickness="0,0,1,0">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Margin="16,20,12,16">
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -162,6 +162,7 @@
                 <ItemsControl ItemsSource="{Binding StepList}"
                               ItemTemplate="{StaticResource StepTemplate}" />
             </StackPanel>
+            </ScrollViewer>
         </Border>
 
         <!-- Top margin 20, as on the rail, so the panel lines up with the product name. -->
@@ -658,13 +659,12 @@
                                    Visibility="{Binding HasModelRuns, Converter={StaticResource BoolToVisibility}}" />
                         <ScrollViewer MaxHeight="180" VerticalScrollBarVisibility="Auto"
                                       Visibility="{Binding HasModelRuns, Converter={StaticResource BoolToVisibility}}">
-                            <ItemsControl ItemsSource="{Binding ModelRuns}" Grid.IsSharedSizeScope="True">
+                            <ItemsControl ItemsSource="{Binding ModelRuns}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Grid Margin="0,0,0,6">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="Auto" SharedSizeGroup="ModelTag" />
                                                 <ColumnDefinition Width="*" />
                                             </Grid.ColumnDefinitions>
                                             <Path Grid.Column="0" Style="{StaticResource RowMark}"
@@ -674,12 +674,9 @@
                                                     <RotateTransform />
                                                 </Path.RenderTransform>
                                             </Path>
-                                            <TextBlock Grid.Column="1" Text="{Binding Tag}"
-                                                       FontFamily="Consolas" FontSize="12"
-                                                       Margin="0,0,12,0" TextWrapping="NoWrap" />
-                                            <TextBlock Grid.Column="2" Text="{Binding Detail}"
-                                                       FontSize="12" Style="{StaticResource Muted}"
-                                                       TextWrapping="Wrap" />
+                                            <TextBlock Grid.Column="1" FontSize="12" TextWrapping="Wrap">
+                                                <Run Text="{Binding Tag, Mode=OneWay}" FontFamily="Consolas" /><Run Text=" — " /><Run Text="{Binding Detail, Mode=OneWay}" Foreground="{DynamicResource TextSecondary}" />
+                                            </TextBlock>
                                         </Grid>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -709,13 +706,12 @@
                              box, and on the ordinary run — where the machine already has every
                              prerequisite — they read "0. 0. 0. 0." beside a package that had
                              either installed or not, and said nothing about which. -->
-                        <ItemsControl ItemsSource="{Binding Finish.Results}" Grid.IsSharedSizeScope="True">
+                        <ItemsControl ItemsSource="{Binding Finish.Results}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Grid Margin="0,0,0,8">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" SharedSizeGroup="ResultName" />
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
                                         <Path Grid.Column="0" Style="{StaticResource RowMark}"
@@ -724,11 +720,9 @@
                                                 <RotateTransform />
                                             </Path.RenderTransform>
                                         </Path>
-                                        <TextBlock Grid.Column="1" Text="{Binding Title}"
-                                                   FontWeight="SemiBold" Margin="0,0,12,0"
-                                                   TextWrapping="Wrap" />
-                                        <TextBlock Grid.Column="2" Text="{Binding Detail}"
-                                                   Style="{StaticResource Muted}" TextWrapping="Wrap" />
+                                        <TextBlock Grid.Column="1" TextWrapping="Wrap">
+                                            <Run Text="{Binding Title, Mode=OneWay}" FontWeight="SemiBold" /><Run Text=" — " /><Run Text="{Binding Detail, Mode=OneWay}" Foreground="{DynamicResource TextSecondary}" />
+                                        </TextBlock>
                                     </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
@@ -785,7 +779,7 @@
 
             <!-- Navigation stays in place for the whole wizard; only availability changes. -->
             <Border Grid.Row="3" BorderBrush="{DynamicResource Divider}" BorderThickness="0,1,0,0" Padding="0,10,0,0" Margin="0,10,0,0">
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <WrapPanel HorizontalAlignment="Right">
                     <Button Content="{vm:Label Back}" Style="{StaticResource NavButton}"
                             Command="{Binding BackCommand}" />
                     <Button Content="{vm:Label Next}" Style="{StaticResource NavButton}"
@@ -796,7 +790,7 @@
                             Visibility="{Binding IsInstallVisible, Converter={StaticResource BoolToVisibility}}" />
                     <Button Content="{Binding CancelButtonText}" Style="{StaticResource NavButton}" IsCancel="True"
                             Command="{Binding CancelCommand}" />
-                </StackPanel>
+                </WrapPanel>
             </Border>
         </Grid>
     </Grid>
