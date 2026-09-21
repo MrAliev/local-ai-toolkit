@@ -83,6 +83,11 @@ public static class GenerationRetention
         }
 
         var current = pointer?.GenerationId;
+        if (!WorktreeGenerationPublications.TryGetProtectedGenerations(
+                root, pointer, reachable, out var publishedWorktrees))
+        {
+            return GenerationRetentionResult.Empty;
+        }
 
         var candidates = Directory.EnumerateDirectories(generationsRoot)
             .Select(directory => new
@@ -95,7 +100,7 @@ public static class GenerationRetention
             .OrderByDescending(candidate => candidate.PublishedAtUtc)
             .ToArray();
 
-        var keep = new HashSet<string>(StringComparer.Ordinal);
+        var keep = publishedWorktrees;
         if (current is not null)
         {
             keep.Add(current);

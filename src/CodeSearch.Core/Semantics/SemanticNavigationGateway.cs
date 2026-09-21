@@ -376,7 +376,7 @@ public sealed class SemanticNavigationGateway
         var workingRoot = RepoLocator.ResolveWorkingRoot(root).Value;
         var identity = RuntimeIndexLayout.Inspect(workingRoot, runtimeRoot);
         var store = new GenerationStore(identity.RepositoryRuntimeRoot);
-        var current = store.ReadCurrent()
+        var current = WorktreeGenerationPublications.ReadCurrent(identity)
             ?? throw new SemanticNavigationNotReadyException(new SemanticDegradation(
                 IndexText.GenerationNotPublishedFact,
                 IndexText.GenerationNotPublishedRemedy(workingRoot)));
