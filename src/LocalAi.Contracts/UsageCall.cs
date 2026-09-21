@@ -25,6 +25,7 @@ public sealed class UsageCall : IDisposable
     private UsageReport? completed;
     public static UsageCall? Current => Ambient.Value;
     public Guid CallId => initial.Identity.CallId;
+    public RuntimeCloudComparison Comparison { get; } = new();
 
     public UsageCall(UsageSurface surface, string component, string operation, Guid? callId = null)
     {

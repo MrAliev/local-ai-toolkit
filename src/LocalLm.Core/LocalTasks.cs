@@ -207,6 +207,7 @@ public sealed class LocalTasks
         var described = new List<string>(paths.Count);
         var fullPaths = new List<string>(paths.Count);
         var pixels = new List<long>(paths.Count);
+        var dimensions = new List<(int Width, int Height)>();
 
         // Metadata first, bytes second (#206): every base64 string is held in memory at once,
         // so the totals have to refuse the batch before the first file is materialized.
@@ -236,6 +237,7 @@ public sealed class LocalTasks
             }
 
             var info = ImageInfo.Read(full);
+            dimensions.Add((info.Width, info.Height));
             wouldHaveCost += TokenEstimator.ForImage(info);
             totalImagePixels = checked(
                 totalImagePixels + (long)info.Width * info.Height);
@@ -324,9 +326,16 @@ public sealed class LocalTasks
             return answer;
         }
 
-        async Task<string> EncodeAsync(int index, CancellationToken token) =>
-            pdf is not null ? await pdf.ReadNextAsync(token)
+        async Task<string> EncodeAsync(int index, CancellationToken token)
+        {
+            var encoded = pdf is not null ? await pdf.ReadNextAsync(token)
                 : Convert.ToBase64String(await File.ReadAllBytesAsync(fullPaths[index], token));
+            var size = pdf is not null ? (pdf.Pages[index].Width, pdf.Pages[index].Height) : dimensions[index];
+            var identity = (pdf is not null ? paths[0] + ":page:" + index : fullPaths[index]) + ":" +
+                Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(encoded)));
+            UsageCall.Current?.Comparison.SourceImage(identity, size.Item1, size.Item2);
+            return encoded;
+        }
 
         LocalJobResult<string> result;
         // Accumulated over every call, the way triage does it: reporting the last one as the whole
@@ -464,6 +473,7 @@ public sealed class LocalTasks
                 ct);
         }
 
+        UsageCall.Current?.Comparison.GeneratedText(result.Value);
         return new LocalResult(
             result.Value,
             TokenEstimator.Saved(wouldHaveCost, result.Value),
@@ -654,6 +664,7 @@ public sealed class LocalTasks
             // file and clamping the concatenation afterwards meant the limit bounded the
             // prompt but not the peak memory (#206).
             var (content, truncated) = await ReadBoundedTextAsync(full, remaining, ct);
+            UsageCall.Current?.Comparison.SourceText(content, full);
             wouldHaveCost += TokenEstimator.ForText(content);
             remaining -= content.Length;
             bundle.AppendLine(content);
@@ -674,6 +685,7 @@ public sealed class LocalTasks
             : string.Empty;
 
         var requestBody = files.Count == 0 ? prompt : $"{prompt}\n\n{body}";
+        if (files.Count == 0) UsageCall.Current?.Comparison.NoSource();
         // A bare prompt names nothing: there is no cargo worth reporting, and the plain
         // heartbeat is the honest sentence for it.
         if (files.Count > 0)
@@ -712,6 +724,8 @@ public sealed class LocalTasks
             ct);
         var chosen = result.Receipt.Routing?.SelectedModel ?? result.Receipt.Model;
 
+        UsageCall.Current?.Comparison.GeneratedText(result.Value);
+
         var detail = (files.Count == 0
             ? LocalLmText.PromptOnly
             : LocalLmText.FilesProcessed(
@@ -746,6 +760,7 @@ public sealed class LocalTasks
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceLanguage);
         ArgumentException.ThrowIfNullOrWhiteSpace(targetLanguage);
         ct.ThrowIfCancellationRequested();
+        UsageCall.Current?.Comparison.SourceText(source, "translation-input");
         var profile = markdown
             ? LocalTaskProfile.TechnicalTranslation
             : LocalTaskProfile.PlainTranslation;
@@ -767,6 +782,7 @@ public sealed class LocalTasks
         if (modelStepCount == 0)
         {
             ct.ThrowIfCancellationRequested();
+            UsageCall.Current?.Comparison.NotApplicable("no_translatable_text");
             // This is deterministic preservation, not an inference attempt. There is
             // no model, receipt, or applicable cloud-generation comparison to invent.
             return new LocalTranslationResult(
@@ -1007,6 +1023,7 @@ public sealed class LocalTasks
             targetLanguage,
             model,
             markdown);
+        UsageCall.Current?.Comparison.GeneratedText(answer);
         return new LocalTranslationResult(
             answer,
             tokenMetrics.EstimatedCloudGenerationTokensSaved,

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using LocalAi.Contracts;
 using CodeSearch.Core.Chunking;
 using CodeSearch.Core.Embedding;
 using CodeSearch.Core.Indexing;
@@ -8,6 +9,23 @@ namespace CodeSearch.Tests;
 
 public class SearchEngineTests : IDisposable
 {
+    [Fact]
+    public void Source_comparison_counts_each_hit_file_once_and_excludes_missing_files()
+    {
+        using var call = new UsageCall(UsageSurface.Mcp, "codesearch", "search_code");
+        var hits = SearchEngine.Search(_index, Unit(1, 0, 0), "charging", new SearchOptions { TopK = 3, PathContains = "Payments" }, _root);
+        Assert.Equal(3, hits.Count);
+        var scenario = Assert.IsType<CloudTokenScenario>(call.Comparison.Scenario("request"));
+        Assert.Single(scenario.Sources);
+        var report = CloudTokenMethodology.Apply(call.Complete(), scenario, "hits", call.Comparison.Profile);
+        Assert.Equal(O200kCloudTokenProfile.Instance.CountText(File.ReadAllText(Path.Combine(_root, "Payments.cs"))),
+            report.CloudTokens[UsageCloudTokens.InputWithoutDelegation]);
+        using var missing = new UsageCall(UsageSurface.Mcp, "codesearch", "search_code");
+        File.Delete(Path.Combine(_root, "Payments.cs"));
+        SearchEngine.Search(_index, Unit(1, 0, 0), "charging", new SearchOptions { TopK = 1, PathContains = "Payments" }, _root);
+        Assert.Null(missing.Comparison.Scenario("request"));
+    }
+
     private readonly string _root = Path.Combine(Path.GetTempPath(), $"codesearch-root-{Guid.NewGuid():N}");
     private readonly CodeIndex _index;
 

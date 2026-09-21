@@ -12,6 +12,10 @@ public sealed record CloudTextSource(string Id, string Text, int Offset = 0, Clo
 public sealed record CloudImageSource(string Id, int Width, int Height, string Detail, CloudContextPresence Presence = CloudContextPresence.Unknown)
     : CloudSource(Id, Presence);
 
+/// <summary>An exact input unit tokenized while it was read, without retaining its contents.</summary>
+public sealed record CloudCountedTextSource(string Id, UsageValue Tokens, string ProfileId,
+    CloudContextPresence Presence = CloudContextPresence.Unknown) : CloudSource(Id, Presence);
+
 /// <summary>
 /// An explicit counterfactual: only the source reading needed for the same result, the complete
 /// desired cloud output, and additional cloud input/output incurred by delegation. The latter
@@ -20,7 +24,10 @@ public sealed record CloudImageSource(string Id, int Width, int Height, string D
 /// Source presence refers to the cloud context before the call, never inferred from a path.
 /// </summary>
 public sealed record CloudTokenScenario(string Id, IReadOnlyList<CloudSource> Sources,
-    string? OutputWithoutDelegation, string? AdditionalInputWithDelegation, string? OutputWithDelegation);
+    string? OutputWithoutDelegation, string? AdditionalInputWithDelegation, string? OutputWithDelegation)
+{
+    public string? NotApplicableReason { get; init; }
+}
 
 /// <summary>
 /// A versioned cloud tokenizer/vision profile. A backend's local prompt/eval counts do not
@@ -87,6 +94,8 @@ public static class CloudTokenMethodology
 
         if (report.ComparisonKind == UsageComparisonKind.NotApplicable)
             tokens = tokens.ToDictionary(pair => pair.Key, _ => UsageValue.NotApplicable("administrative_operation"));
+        else if (scenario?.NotApplicableReason is { } reason)
+            tokens = tokens.ToDictionary(pair => pair.Key, _ => UsageValue.NotApplicable(reason));
         else if (scenario is not null && !string.IsNullOrWhiteSpace(scenario.Id))
         {
             if (profile is null || string.IsNullOrWhiteSpace(profile.TextProfileId))
@@ -167,6 +176,15 @@ public static class CloudTokenMethodology
         foreach (var group in sources.GroupBy(source => source.Id, StringComparer.Ordinal))
         {
             if (group.All(source => source is CloudTextSource)) counts.Add(CountTextSources(group.Cast<CloudTextSource>().ToArray(), profile));
+            else if (group.All(source => source is CloudCountedTextSource))
+            {
+                var units = group.Cast<CloudCountedTextSource>().ToArray();
+                if (units.Any(unit => unit.ProfileId != profile.TextProfileId)) return UsageValue.Unknown("source_profile_mismatch");
+                if (units.Any(unit => unit.Tokens != units[0].Tokens)) return UsageValue.Unknown("source_content_conflict");
+                if (units.Any(unit => unit.Presence == CloudContextPresence.AlreadyPresent)) continue;
+                if (units.Any(unit => unit.Presence == CloudContextPresence.Unknown)) return UsageValue.Unknown("source_context_unknown");
+                counts.Add(Count(units[0].Tokens));
+            }
             else if (group.All(source => source is CloudImageSource))
             {
                 var images = group.Cast<CloudImageSource>().ToArray();

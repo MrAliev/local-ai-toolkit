@@ -8,6 +8,20 @@ namespace LocalAi.Broker.Tests;
 
 public sealed class TokenCalibrationTests
 {
+    [Fact]
+    public void Runtime_tokenizer_matches_independently_retained_o200k_counts()
+    {
+        using var corpus = Document("corpus.json");
+        using var reference = Document("reference.json");
+        var texts = Texts(corpus.RootElement);
+        foreach (var sample in reference.RootElement.GetProperty("texts").EnumerateArray())
+        {
+            var text = texts[sample.GetProperty("id").GetString()!];
+            Assert.Equal(UsageValue.Measured(sample.GetProperty("tokens").GetProperty("o200k_base").GetInt64()),
+                O200kCloudTokenProfile.Instance.CountText(text));
+        }
+    }
+
     private static readonly JsonSerializerOptions ArgumentsJson = new() { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
 
     [Fact]

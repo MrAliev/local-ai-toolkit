@@ -9,22 +9,27 @@ public sealed record UsagePayload<T>(UsageReport Report, T Value);
 /// </summary>
 public static class UsagePayload
 {
-    public static UsagePayload<T> Finalize<T>(UsageReport report, Func<UsageReport, T> render, Func<T, string> serialize)
+    public static UsagePayload<T> Finalize<T>(UsageReport report, Func<UsageReport, T> render, Func<T, string> serialize,
+        CloudTokenScenario? scenario = null, ICloudTokenProfile? profile = null)
     {
-        report = CloudTokenMethodology.Apply(report, null, null, null);
+        report = RuntimeCloudComparison.MarkConditional(CloudTokenMethodology.Apply(report, scenario, null, profile));
         for (var iteration = 0; iteration < 16; iteration++)
         {
             var payload = render(report);
-            var measured = CloudTokenMethodology.Apply(report, null, serialize(payload), null);
+            var measured = RuntimeCloudComparison.MarkConditional(CloudTokenMethodology.Apply(report, scenario, serialize(payload), profile));
             if (measured.Volumes[UsageVolume.ResponseBytes] == report.Volumes[UsageVolume.ResponseBytes]
-                && measured.Volumes[UsageVolume.ResponseCharacters] == report.Volumes[UsageVolume.ResponseCharacters])
+                && measured.Volumes[UsageVolume.ResponseCharacters] == report.Volumes[UsageVolume.ResponseCharacters]
+                && measured.CloudTokens.All(pair => pair.Value == report.CloudTokens[pair.Key]))
                 return new(report, payload);
             report = measured;
         }
         var volumes = report.Volumes.ToDictionary();
         volumes[UsageVolume.ResponseBytes] = UsageValue.Unknown("response_size_unstable");
         volumes[UsageVolume.ResponseCharacters] = UsageValue.Unknown("response_size_unstable");
-        report = report with { Volumes = volumes };
+        var tokens = report.CloudTokens.ToDictionary();
+        tokens[UsageCloudTokens.InputWithDelegation] = UsageValue.Unknown("response_size_unstable");
+        tokens[UsageCloudTokens.InputSaved] = UsageValue.Unknown("response_size_unstable");
+        report = report with { Volumes = volumes, CloudTokens = tokens };
         return new(report, render(report));
     }
 }

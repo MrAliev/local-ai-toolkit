@@ -25,7 +25,20 @@ public static class UsageNotice
             ? (ms / 1000d).ToString("0.###", CultureInfo.InvariantCulture) + " s"
             : Value(report.Timings[UsageTiming.ElapsedMilliseconds]),
         Value(report.CloudTokens[UsageCloudTokens.InputSaved], report.Comparison.VisionProfile is null ? report.Comparison.TokenizerProfile : null),
-        Value(report.CloudTokens[UsageCloudTokens.OutputSaved], report.Comparison.TokenizerProfile));
+        Value(report.CloudTokens[UsageCloudTokens.OutputSaved], report.Comparison.TokenizerProfile)) + Scenario(report);
+
+    private static string Scenario(UsageReport report)
+    {
+        const string prefix = "runtime-source-units-v1:";
+        if (report.Comparison.ScenarioId?.StartsWith(prefix, StringComparison.Ordinal) != true) return string.Empty;
+        var key = report.Comparison.ScenarioId[prefix.Length..] switch
+        {
+            nameof(CloudContextPresence.NotPresent) => "UsageFirstReadScenario",
+            nameof(CloudContextPresence.AlreadyPresent) => "UsageAlreadyReadScenario",
+            _ => "UsageUnknownContextScenario",
+        };
+        return " " + Catalogue.Format(key, report.Comparison.TokenizerProfile, report.Comparison.VisionProfile);
+    }
 
     private static string Value(UsageValue value, string? profile = null) => value.Status switch
     {

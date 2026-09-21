@@ -16,4 +16,7 @@
   <data name="UsageReportSaveFailed" xml:space="preserve"><value>Не удалось сохранить отчёт для вызова {0} ({1}).</value></data>
   <data name="UsageInvalidToolArguments" xml:space="preserve"><value>Недопустимые аргументы инструмента.</value></data>
   <data name="UsageToolCallFailed" xml:space="preserve"><value>Не удалось выполнить вызов инструмента.</value></data>
+  <data name="UsageFirstReadScenario" xml:space="preserve"><value>Условное сравнение при первом чтении; текст: {0}; изображения: {1}. Не расход аккаунта.</value></data>
+  <data name="UsageAlreadyReadScenario" xml:space="preserve"><value>Источник уже в контексте; текст: {0}; изображения: {1}. Не расход аккаунта.</value></data>
+  <data name="UsageUnknownContextScenario" xml:space="preserve"><value>Наличие источника в контексте неизвестно; текст: {0}; изображения: {1}.</value></data>
 </root>
