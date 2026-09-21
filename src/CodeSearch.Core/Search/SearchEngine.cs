@@ -1,5 +1,6 @@
 using System.Numerics.Tensors;
 using System.Text;
+using LocalAi.Contracts;
 using CodeSearch.Core.Chunking;
 using CodeSearch.Core.Indexing;
 using CodeSearch.Core.Resources;
@@ -489,6 +490,11 @@ public static class SearchEngine
                     var text = File.ReadAllText(fullPath);
                     lines = SourceLines.Split(text);
                     canonicalHash = CanonicalIndexText.Hash(text);
+                    // The explicit comparison is reading the files behind valid hits, once,
+                    // not reading the entire repository. Reuse this read, never reopen files.
+                    if (chunk.StartLine >= 1 && chunk.StartLine <= lines.Length &&
+                        (indexedHash.IndexOfAnyExcept((byte)0) < 0 || canonicalHash.AsSpan().SequenceEqual(indexedHash)))
+                        UsageCall.Current?.Comparison.SourceText(text, fullPath);
                 }
                 catch (Exception ex) when (
                     ex is IOException or UnauthorizedAccessException)

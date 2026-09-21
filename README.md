@@ -598,7 +598,34 @@ lai localai ask "List the public members of this class, one per line." src/CodeS
 
 The model's answer is written to stdout. A separate usage notice on stderr identifies the
 call and the models actually used, reports elapsed time, and shows cloud INPUT and OUTPUT
-token savings separately. Missing comparison evidence is reported as unknown.
+token savings separately. Runtime calls use a **conditional first-read comparison**, not
+account billing: INPUT is the tokenized source units minus the arguments and full response;
+OUTPUT is the validated, delivered local answer minus the generated tool request. Either
+difference can be negative; an unsuccessful, invalid or undelivered result earns no savings
+estimate. A later cloud answer and transport framing outside that payload
+are excluded from both sides. MCP counts its serialized request/result, including metadata;
+CLI counts serialized arguments and stdout followed by stderr, including the usage notice.
+These representations are explicit proxies, not a measurement of a client's model context.
+
+Text uses the bundled `microsoft-ml-tokenizers-2.0.0:o200k_base` vocabulary, checked against
+independent reference counts. Images use `openai-gpt-4o-tiles-v1` at high detail; PDF comparisons
+use the rendered page images, not a provider's native PDF upload. Neither profile claims to
+match the cloud model used by your account. Duplicate source units within a call count once;
+triage counts unique fragment text without overlap. Search compares reading only the files
+behind valid hits, not the entire repository. Missing evidence remains unknown with a reason;
+administrative operations and code-only translation report not applicable.
+
+The default `NotPresent` assumption means the source has not entered the cloud context.
+For an already read source, pass `sourceContext: "AlreadyPresent"` to the supported MCP tool,
+or `_meta: {"localai/sourceContext":"AlreadyPresent"}` on the request. Use `"Unknown"` if
+context presence cannot be established. CLI uses `LOCALAI_SOURCE_CONTEXT` with the same values.
+There is no cross-call context ledger: callers must supply this information on repeated reads.
+Only counts, profile IDs and the scenario are persisted, never source/answer text. CLI response
+capture is bounded to 8 Mi characters per stream; exceeding it makes the response token count
+unknown. Existing JSON fields remain compatible; the canonical usage report and notice carry
+this comparison, while older task-specific scalar estimates retain their legacy meaning.
+Evidence is bounded to 16,384 distinct source units per call; longer streams report
+`source_evidence_limit` instead of crediting a partial baseline.
 
 #### Triage a log
 

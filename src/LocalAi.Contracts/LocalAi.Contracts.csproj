@@ -1,6 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.ML.Tokenizers.Data.O200kBase" Version="2.0.0" />
+    <!-- The vocabulary package still requests 9.0.4; 9.0.14 fixes CVE-2026-26127. -->
+    <PackageReference Include="Microsoft.Bcl.Memory" Version="9.0.14" />
     <!-- The routing catalog lives here so the broker and the installer read one copy.
          The broker still owns validation and routing; this project only owns the document. -->
     <EmbeddedResource Include="..\..\model-routing.json"

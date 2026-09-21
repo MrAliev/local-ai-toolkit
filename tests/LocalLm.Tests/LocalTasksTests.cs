@@ -1,13 +1,139 @@
 using System.Buffers.Binary;
+using System.Text.Json;
+using LocalAi.Broker;
 using LocalAi.Contracts;
 using LocalAi.Broker.Client;
 using LocalAi.Tests.Shared;
 using LocalLm.Core;
+using LocalAi.Mcp;
+using ModelContextProtocol.Protocol;
 
 namespace LocalLm.Tests;
 
 public sealed class LocalTasksTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task File_translation_comparison_requires_actual_delivery(bool failDelivery)
+    {
+        var root = Path.Combine(Path.GetTempPath(), "localai-file-comparison-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var sourcePath = Path.Combine(root, "source.txt");
+            var targetPath = Path.Combine(root, "translation.txt");
+            await File.WriteAllTextAsync(sourcePath, "Hello.", TestContext.Current.CancellationToken);
+            var tasks = new LocalTasks(new FakeLocalModelClient
+            {
+                RoutedAnswerFactory = (_, _) =>
+                {
+                    // The destination becomes invalid after preflight, during generation.
+                    if (failDelivery) Directory.CreateDirectory(targetPath);
+                    return "Привет.";
+                },
+            });
+            var response = await new UsageReporting(root).InvokeAsync("locallm", "translate_local", Guid.NewGuid(), async token =>
+                new CallToolResult { Content = [new TextContentBlock { Text = await LocalLm.Mcp.LocalLmTools.TranslateLocal(tasks,
+                    "English", "Russian", path: sourcePath, outPath: targetPath, cancellationToken: token) }] },
+                TestContext.Current.CancellationToken, requestJson: "{\"path\":\"source.txt\",\"outPath\":\"translation.txt\"}");
+            var report = UsageReportJson.Read(response.Meta!["localai/usage"]!.ToJsonString());
+            Assert.Equal(O200kCloudTokenProfile.Instance.CountText("Hello."), report.CloudTokens[UsageCloudTokens.InputWithoutDelegation]);
+            Assert.DoesNotContain("Привет.", string.Join("\n", response.Content.OfType<TextContentBlock>().Select(block => block.Text)), StringComparison.Ordinal);
+            if (failDelivery)
+            {
+                Assert.Equal(UsageDelivery.Failed, report.Outcome.Delivery);
+                Assert.Equal(UsageValue.Unknown("result_not_delivered"), report.CloudTokens[UsageCloudTokens.InputSaved]);
+                Assert.Equal(UsageValue.Unknown("result_not_delivered"), report.CloudTokens[UsageCloudTokens.OutputSaved]);
+            }
+            else
+            {
+                Assert.Equal(UsageDelivery.Delivered, report.Outcome.Delivery);
+                Assert.Equal(O200kCloudTokenProfile.Instance.CountText(await File.ReadAllTextAsync(targetPath, TestContext.Current.CancellationToken)),
+                    report.CloudTokens[UsageCloudTokens.OutputWithoutDelegation]);
+                Assert.Equal(UsageValueStatus.Estimated, report.CloudTokens[UsageCloudTokens.OutputSaved].Status);
+            }
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
+    public async Task Cli_counts_the_delivered_unicode_streams_arguments_and_notice()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "localai-cli-comparison-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var path = Path.Combine(root, "source.txt");
+            var source = string.Concat(Enumerable.Repeat("Исходный документ с диагностическими фактами.\n", 1000));
+            await File.WriteAllTextAsync(path, source, TestContext.Current.CancellationToken);
+            using var output = new StringWriter();
+            using var error = new StringWriter();
+            string[] arguments = ["ask", "Резюме", path];
+            var tasks = new LocalTasks(new FakeLocalModelClient { Answer = "Краткий результат." });
+            var exit = await CliUsageReporting.RunAsync("localai", arguments, root, output, error, async (stdout, stderr) =>
+            {
+                UsageCall.Current!.Comparison.SourceContext(CloudContextPresence.NotPresent);
+                var result = await tasks.AskAsync(LocalTaskProfile.ShortSummary, "Резюме", [path], null, TestContext.Current.CancellationToken);
+                await stdout.WriteAsync(result.Answer);
+                await stderr.WriteAsync("Готово.\n");
+                return 0;
+            });
+            Assert.Equal(0, exit);
+            var reportPath = Assert.Single(Directory.GetFiles(root, "*.json", SearchOption.AllDirectories));
+            var report = UsageReportJson.Read(await File.ReadAllTextAsync(reportPath, TestContext.Current.CancellationToken));
+            var profile = O200kCloudTokenProfile.Instance;
+            Assert.Equal(profile.CountText(source), report.CloudTokens[UsageCloudTokens.InputWithoutDelegation]);
+            Assert.Equal(profile.CountText(JsonSerializer.Serialize(arguments)).Value + profile.CountText(output.ToString() + error).Value,
+                report.CloudTokens[UsageCloudTokens.InputWithDelegation].Value);
+            Assert.Equal(UsageValueStatus.Estimated, report.CloudTokens[UsageCloudTokens.InputSaved].Status);
+            Assert.True(report.CloudTokens[UsageCloudTokens.InputSaved].Value > 0);
+            Assert.Equal(System.Text.Encoding.UTF8.GetByteCount(output.ToString() + error), report.Volumes[UsageVolume.ResponseBytes].Value);
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
+    public async Task Code_only_translation_has_no_applicable_cloud_generation_comparison()
+    {
+        using var call = new UsageCall(UsageSurface.Mcp, "locallm", "translate_local");
+        var tasks = new LocalTasks(new FakeLocalModelClient());
+        var result = await tasks.TranslateAsync("```cs\nreturn 42;\n```", "English", "Russian", true,
+            TranslationDelivery.ToCaller, TestContext.Current.CancellationToken);
+        var report = CloudTokenMethodology.Apply(call.Complete(), call.Comparison.Scenario("request"), result.Answer, call.Comparison.Profile);
+        Assert.All(report.CloudTokens.Values, value => Assert.Equal(UsageValue.NotApplicable("no_translatable_text"), value));
+    }
+
+    [Theory]
+    [InlineData(CloudContextPresence.NotPresent)]
+    [InlineData(CloudContextPresence.AlreadyPresent)]
+    [InlineData(CloudContextPresence.Unknown)]
+    public async Task Real_ask_surface_reports_a_numeric_comparison_for_a_known_file(CloudContextPresence presence)
+    {
+        var root = Path.Combine(Path.GetTempPath(), "localai-runtime-comparison-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var path = Path.Combine(root, "source.txt");
+            await File.WriteAllTextAsync(path, string.Concat(Enumerable.Repeat("A substantial source document with diagnostic facts.\n", 1000)), TestContext.Current.CancellationToken);
+            var tasks = new LocalTasks(new FakeLocalModelClient { Answer = "One compact result." });
+            var response = await new UsageReporting(root).InvokeAsync("locallm", "ask_local", Guid.NewGuid(), async token =>
+                new CallToolResult { Content = [new TextContentBlock { Text = await LocalLm.Mcp.LocalLmTools.AskLocal(tasks, "Summarize", [path], cancellationToken: token, sourceContext: presence) }] },
+                TestContext.Current.CancellationToken, requestJson: "{\"name\":\"ask_local\",\"arguments\":{\"prompt\":\"Summarize\",\"files\":[\"source.txt\"]}}");
+            var report = UsageReportJson.Read(response.Meta!["localai/usage"]!.ToJsonString());
+            if (presence == CloudContextPresence.Unknown)
+                Assert.Equal(UsageValue.Unknown("source_context_unknown"), report.CloudTokens[UsageCloudTokens.InputSaved]);
+            else
+            {
+                Assert.Equal(UsageValueStatus.Estimated, report.CloudTokens[UsageCloudTokens.InputSaved].Status);
+                Assert.Equal(presence == CloudContextPresence.NotPresent, report.CloudTokens[UsageCloudTokens.InputSaved].Value > 0);
+            }
+            Assert.NotNull(report.Comparison.ScenarioId);
+            Assert.NotNull(report.Comparison.TokenizerProfile);
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
     [Theory]
     [InlineData(true, TranslationDelivery.ToCaller)]
     [InlineData(false, TranslationDelivery.ToCaller)]

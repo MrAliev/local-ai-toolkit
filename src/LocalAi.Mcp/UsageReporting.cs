@@ -13,9 +13,11 @@ public sealed class UsageReporting(string runtimeRoot)
 {
     public string RuntimeRoot { get; } = runtimeRoot;
     public async ValueTask<CallToolResult> InvokeAsync(string component, string operation, Guid callId,
-        Func<CancellationToken, ValueTask<CallToolResult>> next, CancellationToken cancellationToken)
+        Func<CancellationToken, ValueTask<CallToolResult>> next, CancellationToken cancellationToken,
+        string? requestJson = null, CloudContextPresence sourceContext = CloudContextPresence.NotPresent)
     {
         using var call = new UsageCall(UsageSurface.Mcp, component, operation, callId);
+        call.Comparison.SourceContext(sourceContext);
         var store = new UsageReportStore(RuntimeRoot);
         CallToolResult result;
         try { result = await next(cancellationToken); }
@@ -49,6 +51,7 @@ public sealed class UsageReporting(string runtimeRoot)
         // Keep content and provenance nonces fixed throughout the bounded size calculation.
         var content = result.Content.ToArray();
         var metadata = result.Meta?.DeepClone().AsObject() ?? new JsonObject();
+        var scenario = call.Comparison.Scenario(requestJson);
         UsagePayload<CallToolResult> Render(string? persistenceError = null) => UsagePayload.Finalize(call.Complete(), report =>
         {
             var meta = metadata.DeepClone().AsObject();
@@ -65,7 +68,8 @@ public sealed class UsageReporting(string runtimeRoot)
                 Content = policy.Response == UsageResponseShape.Json ? content : [new TextContentBlock { Text = notice }, .. content],
                 StructuredContent = result.StructuredContent, IsError = result.IsError, Meta = meta,
             };
-        }, payload => JsonSerializer.Serialize(payload, McpJsonUtilities.DefaultOptions));
+        }, payload => JsonSerializer.Serialize(payload, McpJsonUtilities.DefaultOptions),
+            scenario, call.Comparison.Profile);
         var final = Render();
         try { await store.WriteAsync(final.Report, CancellationToken.None); }
         catch (Exception persistence) when (persistence is IOException or UnauthorizedAccessException)
@@ -82,7 +86,14 @@ public static class UsageReportingExtensions
             var supplied = context.Params?.Meta?["localai/callId"];
             var id = supplied is JsonValue value && value.TryGetValue<string>(out var text)
                 && Guid.TryParse(text, out var parsed) && parsed != Guid.Empty ? parsed : Guid.NewGuid();
+            var presenceNode = context.Params?.Meta?["localai/sourceContext"];
+            var presenceText = presenceNode is JsonValue presenceValue && presenceValue.TryGetValue<string>(out var sourcePresence)
+                ? sourcePresence : null;
+            var presence = Enum.TryParse<CloudContextPresence>(presenceText, true, out var parsedPresence)
+                && Enum.IsDefined(parsedPresence) ? parsedPresence : presenceNode is null
+                    ? CloudContextPresence.NotPresent : CloudContextPresence.Unknown;
             return new UsageReporting(runtimeRoot).InvokeAsync(component, context.Params!.Name, id,
-                token => next(context, token), cancellationToken);
+                token => next(context, token), cancellationToken,
+                JsonSerializer.Serialize(context.Params, McpJsonUtilities.DefaultOptions), presence);
         }));
 }
