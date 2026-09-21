@@ -811,6 +811,9 @@ The semantic index must match the source files; run `lai localai sync --root R:\
 after changing code. A unit is one precisely indexed public C# type, including its members
 and partial declarations. Type selection follows source path and position. Other indexed
 languages can supply references, but do not become documentation units in this version.
+Preparation reads and parses candidate files until the requested number of public types is
+selected, then also reads their partial declarations and required indexed definitions.
+Git/index freshness checks still cover the worktree; `--limit` does not bypass them.
 
 Build writes under the runtime's `repositories/<repository-id>/documentation` directory,
 outside the worktree. The identity is the same Git common-directory identity used by the index.

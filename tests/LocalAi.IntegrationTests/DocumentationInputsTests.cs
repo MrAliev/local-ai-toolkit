@@ -7,6 +7,83 @@ namespace LocalAi.IntegrationTests;
 
 public sealed class DocumentationInputsTests
 {
+    [Theory]
+    [InlineData(1, 1)]
+    [InlineData(5, 5)]
+    [InlineData(int.MaxValue, 8)]
+    public void Scoped_collection_stops_loading_after_the_requested_public_types(int limit, int expected)
+    {
+        var sources = Enumerable.Range(0, 8).ToDictionary(i => $"src/Type{i}.cs", i => $"public class Type{i} {{}}", StringComparer.Ordinal);
+        var index = CombinedIndex(sources);
+        var reads = new List<string>();
+        var units = DocumentationInputs.CreateScoped(index, path =>
+        {
+            reads.Add(path);
+            return sources[path];
+        }, _ => [], limit);
+
+        Assert.Equal(expected, units.Count);
+        Assert.Equal(sources.Keys.Take(expected), reads);
+    }
+
+    [Fact]
+    public void Scoped_collection_includes_all_partial_bodies_and_dependencies_once()
+    {
+        var sources = new Dictionary<string, string>
+        {
+            ["src/A.cs"] = "public partial class A : B {}",
+            ["src/AOther.cs"] = "public partial class A { int Value => 1; }",
+            ["src/B.cs"] = "public class B {}",
+            ["src/ZUnused.cs"] = "public class ZUnused {}"
+        };
+        var index = CombinedIndex(sources) with
+        {
+            Relationships = [new() { SourceSymbolId = "A", TargetSymbolId = "B", Kind = SemanticRelationshipKind.Implementation }]
+        };
+        var reads = new List<string>();
+        var unit = Assert.Single(DocumentationInputs.CreateScoped(index, path =>
+        {
+            reads.Add(path);
+            return sources[path];
+        }, paths => { Assert.Equal(["src/A.cs", "src/AOther.cs", "src/B.cs"], paths); return []; }, 1));
+
+        Assert.Equal("A", unit.Content.SymbolId);
+        Assert.Equal(["src/A.cs", "src/AOther.cs", "src/B.cs"], reads);
+        Assert.Equal(["A", "B"], DocumentationInputs.CreateScoped(index, path => sources[path], _ => [], 2).Select(u => u.Content.SymbolId));
+    }
+
+    [Fact]
+    public void Scoped_collection_continues_past_hidden_types_and_ignores_non_CSharp_definitions()
+    {
+        var sources = new Dictionary<string, string>
+        {
+            ["src/0.txt"] = "public class TextOnly {}",
+            ["src/1.cs"] = "internal class Hidden { public class Nested {} }",
+            ["src/2.cs"] = "public class Visible {}",
+            ["src/3.cs"] = "public class Unused {}"
+        };
+        var reads = new List<string>();
+        var unit = Assert.Single(DocumentationInputs.CreateScoped(CombinedIndex(sources), path =>
+        {
+            reads.Add(path);
+            return sources[path];
+        }, _ => [], 1));
+
+        Assert.Equal("Visible", unit.Content.SymbolId);
+        Assert.Equal(["src/1.cs", "src/2.cs"], reads);
+    }
+
+    private static SemanticIndex CombinedIndex(IReadOnlyDictionary<string, string> sources)
+    {
+        var indexes = sources.Select(pair => (pair.Key, Index: Index(pair.Value))).ToArray();
+        return indexes[0].Index with
+        {
+            Documents = indexes.SelectMany(pair => pair.Index.Documents.Select(d => d with { RelPath = pair.Key })).ToList(),
+            Symbols = indexes.SelectMany(pair => pair.Index.Symbols).DistinctBy(s => s.Id).ToList(),
+            Occurrences = indexes.SelectMany(pair => pair.Index.Occurrences.Select(o => o with { DocumentPath = pair.Key })).ToList()
+        };
+    }
+
     [Fact]
     public void Public_delegates_are_documentation_types_too()
     {

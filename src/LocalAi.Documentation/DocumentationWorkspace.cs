@@ -31,10 +31,11 @@ public static class DocumentationWorkspace
         {
             throw new DocumentationValidationException(["index_outdated"]);
         }
-        var sources = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (var document in index.Documents)
+        var documents = index.Documents.ToDictionary(document => document.RelPath, StringComparer.Ordinal);
+        string ReadSource(string relativePath)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (!documents.TryGetValue(relativePath, out var document)) throw new DocumentationValidationException(["source_missing"]);
             var path = Path.GetFullPath(Path.Combine(identity.WorkingRoot.Value, document.RelPath));
             var relative = Path.GetRelativePath(identity.WorkingRoot.Value, path);
             if (Path.IsPathRooted(relative) || relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
@@ -42,11 +43,11 @@ public static class DocumentationWorkspace
             try
             {
                 var text = File.ReadAllText(path);
-                sources.Add(document.RelPath, ValidatedSource(text, document.Hash));
+                return ValidatedSource(text, document.Hash);
             }
             catch (IOException) { throw new DocumentationValidationException(["index_outdated"]); }
         }
-        var input = new DocumentationBuildInput(identity.WorkingRoot.Value, Snapshot(identity), DocumentationInputs.Create(index, sources,
+        var input = new DocumentationBuildInput(identity.WorkingRoot.Value, Snapshot(identity), DocumentationInputs.CreateScoped(index, ReadSource,
             paths => History(identity.WorkingRoot.Value, identity.HeadCommit, paths, cancellationToken), limit));
         if (Snapshot(RuntimeIndexLayout.Inspect(workingRoot, runtimeRoot)) != input.Snapshot) throw new DocumentationValidationException(["index_outdated"]);
         return input;
