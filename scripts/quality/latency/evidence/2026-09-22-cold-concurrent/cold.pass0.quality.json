@@ -1,0 +1,23 @@
+{
+  "precisionAt5": 0.16666666666666666,
+  "recallAt10": 0.8333333333333334,
+  "meanFirstRelevantRank": 3.6666666666666665,
+  "noAnswerFalsePositiveRate": null,
+  "responseCharacters": 17349,
+  "estimatedResponseTokens": 4338,
+  "estimatedResponseTokensLowerBound": 2892,
+  "estimatedResponseTokensUpperBound": 5783,
+  "sourceLines": 274,
+  "chunkReads": 47,
+  "fileReads": 29,
+  "elapsedMilliseconds": 31590.1561,
+  "brokerQueueWaitMilliseconds": 13016.7984,
+  "responseTokenEstimatePolicy": {
+    "schemaVersion": 1,
+    "method": "utf16_characters_v1",
+    "rangeBasis": "heuristic_not_confidence_interval",
+    "pointDivisor": 4,
+    "lowerBoundDivisor": 6,
+    "upperBoundDivisor": 3
+  }
+}
