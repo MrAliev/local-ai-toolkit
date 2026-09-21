@@ -34,7 +34,11 @@ public sealed partial class OllamaTransport
             {
                 _queryRecency.Remove(cached);
                 _queryRecency.AddLast(cached);
-                return cached.Value.Result;
+                return cached.Value.Result with
+                {
+                    BackendInputTokens = null,
+                    EmbeddingTiming = new EmbeddingBackendTiming(true, null, null, null, null),
+                };
             }
 
             var result = await ExecuteEmbedAsync(payload, ct);

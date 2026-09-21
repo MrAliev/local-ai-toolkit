@@ -18,6 +18,7 @@ var corpus = SearchEvaluationCorpus.ResolveAgainstSource(SearchEvaluationCorpus.
 if (limit < corpus.Cases.Count) corpus = corpus with { Cases = corpus.Cases.Take(limit).ToArray() };
 var options = SearchEvaluation.CreateSearchOptions(false) with { ExcludedPaths = SearchEvaluationScope.Create(root, cases, corpus).ExcludedPaths };
 var runtimeRoot = ModelResidencyPolicyStore.DefaultRuntimeRoot;
+var embeddingTimings = new EmbeddingTimingStore(runtimeRoot);
 var broker = new BrokerClient(new DurableQueue(runtimeRoot), new BrokerProcess(args[4], runtimeRoot));
 var active = new AsyncLocal<Sample?>();
 var measurements = new List<Sample>();
@@ -31,7 +32,7 @@ var document = new { sourceCommit = initial.HeadCommit, sourceTree = initial.Hea
     brokerAssemblySha256 = Hash(Path.ChangeExtension(args[4], ".dll")),
     brokerCoreSha256 = Hash(Path.Combine(Path.GetDirectoryName(args[4])!, "LocalAi.Broker.Core.dll")),
     phases = "BeforeEmbedding includes index read/snapshot/overlay/prompt; Embedding includes broker round trip; AfterEmbedding includes normalization/ranking; receipt queue/execution are nested, not additive to client embedding duration.",
-    backendLoadMs = (double?)null, backendLoadReason = "not exposed by existing EmbedJobOutput", tagsBefore,
+    backendTimingSource = "Optional embedding timing sidecar joined by JobId, read after the search timer stops. Null means unavailable. CacheHit means no backend call; total minus load includes backend overhead, not pure inference.", tagsBefore,
     measurements };
 for (var pass = 0; pass < 2; pass++)
 {
@@ -43,6 +44,7 @@ for (var pass = 0; pass < 2; pass++)
         var outcome = await search.SearchAsync(item.Query, root, options);
         sample.TotalMs = sample.Watch.Elapsed.TotalMilliseconds;
         sample.AfterEmbeddingMs = sample.TotalMs - sample.BeforeEmbeddingMs - sample.EmbeddingMs;
+        sample.BackendTiming = sample.JobId is { } jobId ? embeddingTimings.Read(jobId) : null;
         sample.EmbeddingsUsed = outcome.EmbeddingsUsed;
         sample.Hits = outcome.Hits.Select(SearchEvaluation.FromSearchHit).ToArray();
         measurements.Add(sample);
@@ -78,6 +80,7 @@ sealed class Sample
     public double? QueueMs { get; set; }
     public double? ExecutionMs { get; set; }
     public Guid? JobId { get; set; }
+    public EmbeddingTimingRecord? BackendTiming { get; set; }
     public bool? WasCold { get; set; }
     public bool EmbeddingsUsed { get; set; }
     public IReadOnlyList<SearchEvaluationHit> Hits { get; set; } = [];
