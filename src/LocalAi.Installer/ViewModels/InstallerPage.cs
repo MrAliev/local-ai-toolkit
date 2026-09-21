@@ -298,6 +298,9 @@ public sealed class ModelRunRow(string tag, int contextTokens) : ObservableObjec
 
     public int ContextTokens { get; } = contextTokens;
 
+    public string Announcement => State is ModelRunState.Waiting or ModelRunState.Working
+        ? string.Empty : Tag + " — " + Detail;
+
     public ModelRunState State
     {
         get => state;
@@ -353,7 +356,11 @@ public sealed class ModelRunRow(string tag, int contextTokens) : ObservableObjec
             _ => string.Format(CultureInfo.InvariantCulture, PageLabels.ModelFailed, verdict.Code),
         };
 
-    internal void Relabel() => OnPropertyChanged(nameof(Detail));
+    internal void Relabel()
+    {
+        OnPropertyChanged(nameof(Detail));
+        OnPropertyChanged(nameof(Announcement));
+    }
 
     public void Apply(ModelProvisioningProgress step)
     {
@@ -375,6 +382,7 @@ public sealed class ModelRunRow(string tag, int contextTokens) : ObservableObjec
             _ => ModelRunState.Working,
         };
         OnPropertyChanged(nameof(Detail));
+        OnPropertyChanged(nameof(Announcement));
     }
 
     /// <summary>
@@ -400,12 +408,14 @@ public sealed class ModelRunRow(string tag, int contextTokens) : ObservableObjec
             _ => ModelRunState.Failed,
         };
         OnPropertyChanged(nameof(Detail));
+        OnPropertyChanged(nameof(Announcement));
     }
 
     public void NeverReached()
     {
         State = ModelRunState.NotReached;
         OnPropertyChanged(nameof(Detail));
+        OnPropertyChanged(nameof(Announcement));
     }
 
     public void FinishWithoutVerdict(bool cancelled)
@@ -418,6 +428,7 @@ public sealed class ModelRunRow(string tag, int contextTokens) : ObservableObjec
         {
             State = cancelled ? ModelRunState.Cancelled : ModelRunState.Unknown;
             OnPropertyChanged(nameof(Detail));
+            OnPropertyChanged(nameof(Announcement));
         }
     }
 }

@@ -1,58 +1,68 @@
-using System.Xml.Linq;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Interop;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Threading;
 
 namespace LocalAi.Installer.Tests;
 
-/// <summary>
-/// The system check says «это займёт несколько секунд» over a bar that does not move.
-///
-/// WPF puts a progress bar's indeterminate animation in the template, not in the control: the
-/// stock template animates a glow rectangle it declares itself. This installer replaces that
-/// template — the stock one is an Aero green gradient belonging to neither palette — and the
-/// replacement has no glow and no <c>IsIndeterminate</c> trigger, so
-/// <c>IsIndeterminate="True"</c> sets a property nothing reads while winget, git and ollama are
-/// probed.
-/// </summary>
 public sealed class TheWaitingBarMovesTests
 {
-    private static readonly XNamespace Presentation =
-        "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
-
     [Fact]
-    public void A_bar_with_nothing_to_measure_still_moves()
+    public async Task Waiting_stays_visible_without_motion_and_stops_animating_when_complete()
     {
-        var waiting = Template()
-            .Descendants(Presentation + "Trigger")
-            .SingleOrDefault(trigger =>
-                trigger.Attribute("Property")?.Value == "IsIndeterminate" &&
-                trigger.Attribute("Value")?.Value == "True");
-
-        Assert.NotNull(waiting);
-        var animation = waiting!.Descendants()
-            .Single(element => element.Name.LocalName.EndsWith("Animation", StringComparison.Ordinal));
-        Assert.Equal("Forever", animation.Attribute("RepeatBehavior")?.Value);
+        var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                var panel = new StackPanel();
+                foreach (var name in new[] { "Light", "Controls" })
+                    panel.Resources.MergedDictionaries.Add(new ResourceDictionary
+                    {
+                        Source = new Uri($"/LocalAi.Installer;component/Themes/{name}.xaml", UriKind.Relative),
+                    });
+                var bar = new ProgressBar { IsIndeterminate = true, Width = 200 };
+                MotionPreference.SetEnabled(bar, true);
+                panel.Children.Add(bar);
+                using var surface = new HwndSource(new HwndSourceParameters("Waiting animation test")
+                {
+                    WindowStyle = unchecked((int)0x80000000), Width = 240, Height = 100,
+                }) { RootVisual = panel };
+                Frame();
+                var waiting = bar.Template.Triggers.OfType<MultiTrigger>().Single();
+                var pulse = ((BeginStoryboard)waiting.EnterActions[0]).Storyboard;
+                Assert.Equal(ClockState.Active, pulse.GetCurrentState(bar));
+                MotionPreference.SetEnabled(bar, false);
+                Frame();
+                Assert.Equal(ClockState.Stopped, pulse.GetCurrentState(bar));
+                var indicator = (FrameworkElement)bar.Template.FindName("PART_Indicator", bar);
+                Assert.True(indicator.ActualWidth > 0);
+                Assert.Equal(1, indicator.Opacity);
+                MotionPreference.SetEnabled(bar, true);
+                Frame();
+                Assert.Equal(ClockState.Active, pulse.GetCurrentState(bar));
+                bar.IsIndeterminate = false;
+                Frame();
+                Assert.Equal(ClockState.Stopped, pulse.GetCurrentState(bar));
+                completed.SetResult();
+            }
+            catch (Exception error) { completed.SetException(error); }
+            finally { Dispatcher.CurrentDispatcher.InvokeShutdown(); }
+        }) { IsBackground = true };
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        await completed.Task.WaitAsync(TimeSpan.FromSeconds(20), TestContext.Current.CancellationToken);
     }
 
-    /// <summary>
-    /// Started on entering the state and stopped on leaving it. A storyboard left running holds
-    /// the render thread awake on a page that has finished.
-    /// </summary>
-    [Fact]
-    public void The_motion_stops_when_the_wait_does()
+    private static void Frame()
     {
-        var waiting = Template()
-            .Descendants(Presentation + "Trigger")
-            .Single(trigger => trigger.Attribute("Property")?.Value == "IsIndeterminate");
-
-        var begun = waiting.Descendants(Presentation + "BeginStoryboard").Single();
-        var stopped = waiting.Descendants(Presentation + "StopStoryboard").Single();
-
-        Assert.Equal(
-            begun.Attributes().Single(a => a.Name.LocalName == "Name").Value,
-            stopped.Attribute("BeginStoryboardName")?.Value);
+        var frame = new DispatcherFrame();
+        EventHandler rendered = (_, _) => Dispatcher.CurrentDispatcher.BeginInvoke(
+            DispatcherPriority.ApplicationIdle, new Action(() => frame.Continue = false));
+        CompositionTarget.Rendering += rendered;
+        try { Dispatcher.PushFrame(frame); }
+        finally { CompositionTarget.Rendering -= rendered; }
     }
-
-    private static XElement Template() =>
-        XDocument.Parse(InstallerMarkup.Read(Path.Combine("Themes", "Controls.xaml")))
-            .Descendants(Presentation + "ControlTemplate")
-            .Single(template => template.Attribute("TargetType")?.Value == "ProgressBar");
 }

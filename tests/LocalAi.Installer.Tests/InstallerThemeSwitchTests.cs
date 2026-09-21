@@ -14,6 +14,23 @@ public sealed class InstallerThemeSwitchTests
     private static readonly ResourceDictionary DarkPalette = Palette("dark");
 
     [Fact]
+    public void High_contrast_temporarily_overrides_an_explicit_theme_and_restores_the_choice()
+    {
+        var resources = new ResourceDictionary();
+        var contrast = Palette("high contrast");
+        var enabled = true;
+        using var themes = new InstallerThemeSwitch(resources, InstallerTheme.Dark, () => false,
+            dark => dark ? DarkPalette : LightPalette, () => enabled, () => contrast);
+        themes.Apply();
+        Assert.Same(contrast, Assert.Single(resources.MergedDictionaries));
+        themes.Choose(InstallerTheme.Light);
+        Assert.Same(contrast, Assert.Single(resources.MergedDictionaries));
+        enabled = false;
+        themes.Apply();
+        Assert.Same(LightPalette, Assert.Single(resources.MergedDictionaries));
+    }
+
+    [Fact]
     public void Following_a_dark_system_paints_the_dark_palette()
     {
         var resources = new ResourceDictionary();
@@ -84,7 +101,8 @@ public sealed class InstallerThemeSwitchTests
             resources,
             chosen,
             () => systemPrefersDark,
-            dark => dark ? DarkPalette : LightPalette);
+            dark => dark ? DarkPalette : LightPalette,
+            highContrast: () => false);
 
     private static ResourceDictionary Palette(string name) =>
         new() { { "Name", name } };

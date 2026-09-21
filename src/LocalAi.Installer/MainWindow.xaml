@@ -44,6 +44,7 @@
              template's transform over frozen and the animation system replaces it with a mutable
              copy; that is measured rather than assumed. -->
         <Style x:Key="RowMark" TargetType="Path">
+            <Setter Property="local:MotionPreference.Enabled" Value="{DynamicResource {x:Static SystemParameters.ClientAreaAnimationKey}}" />
             <Setter Property="Width" Value="11" />
             <Setter Property="Height" Value="11" />
             <Setter Property="Stretch" Value="None" />
@@ -59,7 +60,13 @@
                 <DataTrigger Binding="{Binding Mark}" Value="{x:Static vm:RunMark.Busy}">
                     <Setter Property="Data" Value="{StaticResource MarkBusy}" />
                     <Setter Property="Stroke" Value="{DynamicResource Accent}" />
-                    <DataTrigger.EnterActions>
+                </DataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding Mark}" Value="{x:Static vm:RunMark.Busy}" />
+                        <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=(local:MotionPreference.Enabled)}" Value="True" />
+                    </MultiDataTrigger.Conditions>
+                    <MultiDataTrigger.EnterActions>
                         <BeginStoryboard x:Name="Spin">
                             <Storyboard>
                                 <DoubleAnimation
@@ -68,22 +75,14 @@
                                     RepeatBehavior="Forever" />
                             </Storyboard>
                         </BeginStoryboard>
-                    </DataTrigger.EnterActions>
-                    <DataTrigger.ExitActions>
+                    </MultiDataTrigger.EnterActions>
+                    <MultiDataTrigger.ExitActions>
                         <StopStoryboard BeginStoryboardName="Spin" />
-                    </DataTrigger.ExitActions>
-                </DataTrigger>
+                    </MultiDataTrigger.ExitActions>
+                </MultiDataTrigger>
                 <DataTrigger Binding="{Binding Mark}" Value="{x:Static vm:RunMark.Done}">
                     <Setter Property="Data" Value="{StaticResource MarkTick}" />
                     <Setter Property="Stroke" Value="{DynamicResource Success}" />
-                    <DataTrigger.EnterActions>
-                        <BeginStoryboard>
-                            <Storyboard>
-                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                 From="0" To="1" Duration="0:0:0.15" />
-                            </Storyboard>
-                        </BeginStoryboard>
-                    </DataTrigger.EnterActions>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Mark}" Value="{x:Static vm:RunMark.Warned}">
                     <Setter Property="Data" Value="{StaticResource MarkWarn}" />
@@ -180,13 +179,14 @@
                                   DataContext="{Binding Presentation}" />
 
             <StackPanel Grid.Row="1" Margin="0,0,0,12">
-                <TextBlock Text="{Binding StepTitle}" Style="{StaticResource PageTitle}" />
+                <local:LiveStatusText Text="{Binding StepTitle}" Style="{StaticResource PageTitle}" />
                 <TextBlock Text="{Binding StepDescription}" Style="{StaticResource Muted}" Margin="0,4,0,0" />
                 <TextBlock Text="{Binding StepStatus}" Style="{StaticResource Muted}" FontSize="11" Margin="0,6,0,0" />
                 <Border Background="{DynamicResource ErrFill}" BorderBrush="{DynamicResource ErrLine}" BorderThickness="1" CornerRadius="3"
                         Padding="8,6" Margin="0,8,0,0"
                         Visibility="{Binding HasUnexpectedError, Converter={StaticResource BoolToVisibility}}">
-                    <TextBlock Text="{Binding UnexpectedError}" Foreground="{DynamicResource ErrText}" />
+                    <local:LiveStatusText Text="{Binding UnexpectedError}" TextWrapping="Wrap"
+                                          AutomationProperties.LiveSetting="Assertive" Foreground="{DynamicResource ErrText}" />
                 </Border>
             </StackPanel>
 
@@ -258,8 +258,8 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                        <TextBlock Text="{Binding Diagnose.UnsupportedReason}"
-                                   Style="{StaticResource WarningText}"
+                        <local:LiveStatusText Text="{Binding Diagnose.Announcement}"
+                                   Style="{StaticResource Muted}"
                                    Margin="0,10,0,0" />
                         <!-- A previous run that was killed mid-install left effects nobody
                              wrote down anywhere else; this is where they get offered back. -->
@@ -680,9 +680,9 @@
                                                     <RotateTransform />
                                                 </Path.RenderTransform>
                                             </Path>
-                                            <TextBlock Grid.Column="1" FontSize="12" TextWrapping="Wrap">
+                                            <local:LiveStatusText Grid.Column="1" FontSize="12" TextWrapping="Wrap" Announcement="{Binding Announcement}">
                                                 <Run Text="{Binding Tag, Mode=OneWay}" FontFamily="Consolas" /><Run Text=" — " /><Run Text="{Binding Detail, Mode=OneWay}" Foreground="{DynamicResource TextSecondary}" />
-                                            </TextBlock>
+                                            </local:LiveStatusText>
                                         </Grid>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>

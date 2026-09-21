@@ -266,6 +266,30 @@ public sealed class AccessibleControlsTests
             Assert.Equal(StartChoice.Remove, wizard.Selected);
             Assert.Same(rows[3], Keyboard.FocusedElement);
             Assert.False(Peer(rows[0]).IsEnabled());
+
+            // Changing a live region must leave keyboard focus on the user's chosen row.
+            var focus = Keyboard.FocusedElement;
+            Assert.Same(rows[3], focus);
+            var live = new LiveStatusText { Text = "Checking" };
+            ((Grid)window.Content).Children.Add(live);
+            window.UpdateLayout();
+            DrainAnnouncements();
+            live.Text = "Check complete";
+            DrainAnnouncements();
+            Assert.Equal(AutomationLiveSetting.Polite, AutomationProperties.GetLiveSetting(live));
+            Assert.Equal("Check complete", Peer(live).GetName());
+            Assert.Same(focus, Keyboard.FocusedElement);
+            live.Text = "Проверка завершена";
+            DrainAnnouncements();
+            Assert.Equal("Проверка завершена", Peer(live).GetName());
+            Assert.Same(focus, Keyboard.FocusedElement);
+
+            static void DrainAnnouncements()
+            {
+                var frame = new DispatcherFrame();
+                Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, new Action(() => frame.Continue = false));
+                Dispatcher.PushFrame(frame);
+            }
         }
         finally { window.Close(); }
 
