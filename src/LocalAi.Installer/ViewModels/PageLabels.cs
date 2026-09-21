@@ -13,6 +13,16 @@ namespace LocalAi.Installer.ViewModels;
 /// </summary>
 public static class PageLabels
 {
+    public static string ReviewRelease => InstallerCulture.Pick("Release and source", "Релиз и источник");
+    public static string ReviewComponents => InstallerCulture.Pick("Components", "Компоненты");
+    public static string ReviewModels => InstallerCulture.Pick("Models and memory", "Модели и память");
+    public static string ReviewClients => InstallerCulture.Pick("Clients and PATH", "Клиенты и PATH");
+    public static string ReviewAdditional => InstallerCulture.Pick("Additional actions", "Дополнительные действия");
+    public static string ReviewWarnings => InstallerCulture.Pick("Warnings", "Предупреждения");
+    public static string WillBeRemoved => InstallerCulture.Pick("Will be removed", "Будет удалено");
+    public static string WillBeKept => InstallerCulture.Pick("Will be kept", "Будет сохранено");
+    public static string TechnicalDetails => InstallerCulture.Pick("Technical details", "Технические подробности");
+
     // --- System check -------------------------------------------------------------------
     public static string Probing => InstallerCulture.Pick(
         "Starting winget, git and ollama…",

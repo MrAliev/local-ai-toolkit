@@ -623,6 +623,8 @@ public sealed class InstallerWizardViewModel : ObservableObject
 
     public string? ReviewText => BuildReview();
 
+    public IReadOnlyList<ReviewGroup> ReviewGroups => BuildReviewGroups();
+
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
         if (hasInitialized)
@@ -1909,23 +1911,21 @@ public sealed class InstallerWizardViewModel : ObservableObject
             : InstallerCulture.Pick("off", "выключена");
     }
 
-    private string BuildReview()
+    private string BuildReview() => string.Join(Environment.NewLine, ReviewGroups.SelectMany(group => group.Lines)).Trim();
+
+    private IReadOnlyList<ReviewGroup> BuildReviewGroups()
     {
-        var builder = new StringBuilder();
-        // The release lines name the button that applies the run; only the wizard knows
-        // whether that button reads Install or Update.
         package.ActionText = ActionText;
-        builder.AppendLine(package.ReviewText);
-        builder.AppendLine(dependencies.ReviewText);
-        builder.AppendLine(models.ReviewText);
-        builder.AppendLine(residency.ReviewText + StoredResidencyNote());
-        builder.AppendLine(agents.ReviewText);
-        builder.AppendLine(agents.GateReviewText);
-        // Printed on every run, including one that leaves the client alone: on an update the
-        // clients page is folded away, so this is the only place the effect is stated.
-        builder.AppendLine(agents.WorktreeReviewText);
-        builder.AppendLine(LauncherPathReviewLine());
-        builder.AppendLine(UpdateCheckReviewLine());
+        var groups = new List<ReviewGroup>
+        {
+            new(PageLabels.ReviewRelease, ReviewGroup.SplitLines(package.ReviewText)),
+            new(PageLabels.ReviewComponents, ReviewGroup.SplitLines(dependencies.ReviewText)),
+            new(PageLabels.ReviewModels, ReviewGroup.SplitLines(models.ReviewText, residency.ReviewText + StoredResidencyNote())),
+            new(PageLabels.ReviewClients, ReviewGroup.SplitLines(agents.ReviewText, agents.GateReviewText,
+                agents.WorktreeReviewText, LauncherPathReviewLine())),
+            new(PageLabels.ReviewAdditional, ReviewGroup.SplitLines(UpdateCheckReviewLine())),
+        };
+        var builder = new StringBuilder();
         if (residency.HasWarning)
         {
             builder.AppendLine();
@@ -1966,7 +1966,11 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 remaining));
         }
 
-        return builder.ToString().Trim();
+        if (builder.Length > 0)
+        {
+            groups.Add(new(PageLabels.ReviewWarnings, ReviewGroup.SplitLines(builder.ToString())));
+        }
+        return groups;
     }
 
     /// <summary>
@@ -2016,6 +2020,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         OnPropertyChanged(nameof(IsComplete));
         OnPropertyChanged(nameof(HasRunError));
         OnPropertyChanged(nameof(ReviewText));
+        OnPropertyChanged(nameof(ReviewGroups));
         OnPropertyChanged(nameof(CanRollback));
         OnPropertyChanged(nameof(HasInterruptedRun));
         OnPropertyChanged(nameof(InterruptedRunNotice));

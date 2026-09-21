@@ -1,0 +1,26 @@
+<UserControl x:Class="LocalAi.Installer.EffectsOverview"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ItemsControl ItemsSource="{Binding}">
+        <ItemsControl.ItemTemplate>
+            <DataTemplate>
+                <StackPanel Margin="0,0,0,16">
+                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,6" />
+                    <ItemsControl ItemsSource="{Binding Lines}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <!-- Natural height and disabled scrollbars keep all effects in
+                                     the page's one scroll area; native selection preserves copy. -->
+                                <TextBox Text="{Binding Mode=OneWay}" AutomationProperties.Name="{Binding}"
+                                         IsReadOnly="True" TextWrapping="Wrap" BorderThickness="0"
+                                         Background="Transparent" Padding="0" Margin="0,0,0,4"
+                                         VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Disabled" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </DataTemplate>
+        </ItemsControl.ItemTemplate>
+    </ItemsControl>
+</UserControl>
