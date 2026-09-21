@@ -27,7 +27,10 @@ var status = search.Status(root);
 var tagsBefore = await Tags();
 var document = new { sourceCommit = initial.HeadCommit, sourceTree = initial.HeadTree, initial.DirtyHash,
     corpusSha256 = Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(cases))), status,
-    implementation = Environment.GetEnvironmentVariable("CODESEARCH_LATENCY_REVISION") ?? "unrecorded", coreSha256 = Hash(typeof(SearchService).Assembly.Location), brokerSha256 = Hash(args[4]), phases = "BeforeEmbedding includes index read/snapshot/overlay/prompt; Embedding includes broker round trip; AfterEmbedding includes normalization/ranking; receipt queue/execution are nested, not additive to client embedding duration.",
+    implementation = Environment.GetEnvironmentVariable("CODESEARCH_LATENCY_REVISION") ?? "unrecorded", coreSha256 = Hash(typeof(SearchService).Assembly.Location), brokerSha256 = Hash(args[4]),
+    brokerAssemblySha256 = Hash(Path.ChangeExtension(args[4], ".dll")),
+    brokerCoreSha256 = Hash(Path.Combine(Path.GetDirectoryName(args[4])!, "LocalAi.Broker.Core.dll")),
+    phases = "BeforeEmbedding includes index read/snapshot/overlay/prompt; Embedding includes broker round trip; AfterEmbedding includes normalization/ranking; receipt queue/execution are nested, not additive to client embedding duration.",
     backendLoadMs = (double?)null, backendLoadReason = "not exposed by existing EmbedJobOutput", tagsBefore,
     measurements };
 for (var pass = 0; pass < 2; pass++)

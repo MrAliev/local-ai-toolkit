@@ -8,7 +8,7 @@ using LocalAi.Contracts;
 
 namespace LocalAi.Broker;
 
-public sealed class OllamaTransport : IModelRuntimeTransport, IDisposable
+public sealed partial class OllamaTransport : IModelRuntimeTransport, IDisposable
 {
     private const int MaxAttempts = 3;
 
@@ -83,6 +83,9 @@ public sealed class OllamaTransport : IModelRuntimeTransport, IDisposable
         ArgumentNullException.ThrowIfNull(request);
         return request.Payload switch
         {
+            EmbedJobPayload payload when request.Priority == LocalJobPriority.Interactive &&
+                payload.Inputs.Count == 1 && request.DeduplicationKey.StartsWith("codesearch:query:", StringComparison.Ordinal) =>
+                ExecuteSearchEmbeddingAsync(payload, cancellationToken),
             EmbedJobPayload payload => ExecuteEmbedAsync(payload, cancellationToken),
             ChatJobPayload payload => ExecuteChatAsync(payload, cancellationToken),
             ListModelsJobPayload payload => ExecuteListModelsAsync(cancellationToken),
