@@ -17,6 +17,41 @@ namespace LocalAi.Installer.Tests;
 public sealed class TheFinishPageAnswersTheQuestionTests
 {
     [Fact]
+    public void Unfinished_prerequisites_are_not_reported_as_successful()
+    {
+        var row = RunResults.Prerequisites(requested: 3, installed: 1, failed: 0);
+        Assert.Equal(RunMark.Warned, row.Mark);
+        Assert.Contains("not completed: 2", row.Detail, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Missing_registration_does_not_claim_that_models_and_clients_work()
+    {
+        var detail = RunResults.AppsAndFeatures(null, @"C:\LocalAi\uninstall.exe");
+        Assert.DoesNotContain("installed and works", detail, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Partial_client_configuration_keeps_success_failure_and_unfinished_distinct()
+    {
+        var applied = RunResults.Client(new("Codex", ClientRunState.Applied));
+        var failed = RunResults.Client(new("Claude Code", ClientRunState.Failed, "invalid_json"));
+        var pending = RunResults.Client(new("pending", ClientRunState.NotAttempted));
+        var interrupted = RunResults.Client(new("interrupted", ClientRunState.Configuring));
+
+        Assert.Equal(RunMark.Done, applied.Mark);
+        Assert.Equal(RunMark.Failed, failed.Mark);
+        Assert.Contains("invalid_json", failed.Detail, StringComparison.Ordinal);
+        Assert.Contains("retry setup", failed.Detail, StringComparison.Ordinal);
+        Assert.Equal(RunMark.None, pending.Mark);
+        Assert.Contains("not attempted", pending.Detail, StringComparison.Ordinal);
+        Assert.Equal(RunMark.Warned, interrupted.Mark);
+        Assert.Contains("unknown", interrupted.Detail, StringComparison.Ordinal);
+        Assert.Equal(RunMark.Warned, RunResults.Registration(RegistrationOutcome.Missing).Mark);
+        Assert.Contains("Remove", RunResults.Registration(RegistrationOutcome.Failed).Detail, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void The_package_row_says_what_became_of_it()
     {
         Assert.Equal(

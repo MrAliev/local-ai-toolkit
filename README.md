@@ -428,6 +428,12 @@ It registers the MCP servers with those clients and adds an instruction block to
 `~/.claude/CLAUDE.md` and `~/.codex/AGENTS.md`, so the agent knows these tools exist and when
 to reach for them.
 
+Check the finish screen before continuing: package installation, model validation and each
+client's configuration have separate results. A copied package alone does not establish that
+models or clients are ready. After cancellation or a partial failure, the screen explains the
+next action and whether recorded changes can be rolled back. Technical logs retain their
+original text; save the report, or copy the log if saving failed, before closing the window.
+
 **3. Connect a repository.** Indexing is opt-in per repository — nothing is read until you
 ask.
 

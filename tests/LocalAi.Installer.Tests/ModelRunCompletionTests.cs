@@ -1,5 +1,8 @@
 using LocalAi.Installer.Core.Models;
 using LocalAi.Installer.Core.Diagnosis;
+using LocalAi.Installer.Core;
+using LocalAi.Installer.Core.Activation;
+using LocalAi.Installer.Core.Releases;
 using LocalAi.Installer.ViewModels;
 using LocalAi.Tests.Shared;
 
@@ -169,11 +172,14 @@ public sealed class ModelRunCompletionTests
     {
         using var logs = new TemporaryDirectory("LocalAi-model-run-finish");
         using var stop = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        var presentation = new InstallerPresentation(new InstallerPreferencesStore(logs.Combine("preferences")));
         InstallerWizardViewModel? wizard = null;
         wizard = new InstallerWizardViewModel(StartChoice.UpdateOrRepair, detectEnvironment: token =>
         {
             if (hasModelRows)
             {
+                wizard!.ApplyPackageResult(new ReleaseInstallResult(
+                    LocalAiPackageInstallStatus.Installed, "0.2.1-test", null, logs.Path, null));
                 wizard!.ApplyModelStep(Step("ready", ModelProvisioningPhase.Planned));
                 wizard.ApplyModelStep(Step("ready", ModelProvisioningPhase.Accepted));
                 wizard.ApplyModelStep(Step("active", ModelProvisioningPhase.Planned));
@@ -188,7 +194,7 @@ public sealed class ModelRunCompletionTests
             }
 
             return Task.FromException<EnvironmentDiagnosis>(new InvalidOperationException("diagnostic failure"));
-        })
+        }, presentation: presentation)
         {
             EnableDependencyActions = true,
             LogDirectory = logs.Path,
@@ -205,10 +211,17 @@ public sealed class ModelRunCompletionTests
         Assert.True(wizard.HasRunError);
         Assert.False(wizard.IsComplete);
         Assert.Equal(cancelled, wizard.IsCanceled);
+        Assert.True(wizard.Finish.HasNextSteps);
+        Assert.Contains(cancelled ? "Installation stopped" : "Installation did not complete",
+            wizard.Finish.NextSteps!, StringComparison.Ordinal);
         Assert.NotEqual(RunMark.Done,
             wizard.Finish.Results.Single(row => row.Title == PageLabels.LocalModels).Mark);
         if (hasModelRows)
         {
+            var package = wizard.Finish.Results.Single(row => row.Title == PageLabels.ResultPackage);
+            Assert.Equal(RunMark.Done, package.Mark);
+            Assert.Contains("0.2.1-test", package.Detail, StringComparison.Ordinal);
+            Assert.Contains(wizard.Finish.Results, row => row.Title == "active");
             Assert.Equal(ModelRunState.Ready, wizard.ModelRuns[0].State);
             Assert.Equal(cancelled ? ModelRunState.Cancelled : ModelRunState.Unknown, wizard.ModelRuns[1].State);
             Assert.Equal(ModelRunState.NotReached, wizard.ModelRuns[2].State);
@@ -221,6 +234,36 @@ public sealed class ModelRunCompletionTests
         Assert.All(wizard.ModelRuns, row => Assert.NotEqual(RunMark.Busy, row.Mark));
         Assert.NotNull(wizard.Finish.ReportPath);
         Assert.True(File.Exists(wizard.Finish.ReportPath));
+        var technicalLog = wizard.Finish.Progress;
+        presentation.ChooseLanguage(InstallerLanguage.Russian);
+        Assert.Contains(cancelled ? "Установка остановлена" : "Установка завершилась с проблемами",
+            wizard.Finish.NextSteps!, StringComparison.Ordinal);
+        Assert.Equal(technicalLog, wizard.Finish.Progress);
+        Assert.Equal(technicalLog + Environment.NewLine, File.ReadAllText(wizard.Finish.ReportPath!));
+    }
+
+    [Fact]
+    public async Task A_report_that_cannot_be_saved_leaves_copyable_diagnostics_and_no_file_link()
+    {
+        using var logs = new TemporaryDirectory("LocalAi-report-failure");
+        var blocked = logs.Combine("not-a-directory");
+        File.WriteAllText(blocked, "existing user file");
+        var wizard = new InstallerWizardViewModel(StartChoice.UpdateOrRepair)
+        {
+            LogDirectory = blocked,
+        };
+        wizard.Diagnose.IsChecking = false;
+        wizard.Diagnose.SetResult(supported: true);
+        Assert.True(wizard.MoveNext());
+        wizard.SetReviewConfirmed(true);
+
+        Assert.True(await wizard.RunAsync(TestContext.Current.CancellationToken));
+
+        Assert.False(wizard.Finish.HasReportPath);
+        Assert.Contains("Could not save the report", wizard.Finish.NextSteps!, StringComparison.Ordinal);
+        Assert.Contains("Copy the technical details", wizard.Finish.NextSteps!, StringComparison.Ordinal);
+        Assert.Contains("Nothing was installed", wizard.Finish.Progress!, StringComparison.Ordinal);
+        Assert.Equal("existing user file", File.ReadAllText(blocked));
     }
 
     private static ModelProvisioningProgress Step(string model, ModelProvisioningPhase phase) =>

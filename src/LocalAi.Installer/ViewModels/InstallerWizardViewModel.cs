@@ -188,6 +188,10 @@ public sealed class InstallerWizardViewModel : ObservableObject
 
     /// <summary>The clients this run actually wrote to, which is what has to be restarted.</summary>
     private readonly List<string> configuredAgents = [];
+    private readonly List<ClientRunOutcome> clientOutcomes = [];
+    private ClientRunOutcome? hooksOutcome;
+    private RegistrationOutcome? registrationOutcome;
+    private string? reportSaveFailure;
 
     private RunMark pathMark = RunMark.None;
 
@@ -930,6 +934,23 @@ public sealed class InstallerWizardViewModel : ObservableObject
         wasCancelled = false;
         // A second attempt after a failure reports on itself, not on the one before it.
         configuredAgents.Clear();
+        clientOutcomes.Clear();
+        if (EnableDependencyActions)
+        {
+            clientOutcomes.AddRange(agents.Agents
+                .Where(agent => agent.Choice != AgentChoice.NoChange)
+                .Select(agent => new ClientRunOutcome(agent.DisplayName, ClientRunState.NotAttempted)));
+        }
+
+        registrationOutcome = null;
+        hooksOutcome = EnableDependencyActions && agents.SettingsChanges
+            ? new("Claude Code", ClientRunState.NotAttempted)
+            : null;
+        reportSaveFailure = null;
+        packageOutcome = null;
+        packageInstalled = false;
+        finish.ReportPath = null;
+        finish.RollbackReport = null;
         ModelRuns.Clear();
         OnPropertyChanged(nameof(HasModelRuns));
         finish.Results.Clear();
@@ -1134,6 +1155,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             isRunning = false;
             runCancellation = null;
             PersistReport(report);
+            BuildFinishResults(requested, successfulActions, failedActions);
             RefreshAll();
         }
     }
@@ -1171,6 +1193,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 NotSupportedException or ArgumentException)
         {
             // A missing log must never turn a successful install into a failed one.
+            reportSaveFailure = exception.Message;
         }
     }
 
@@ -1296,6 +1319,10 @@ public sealed class InstallerWizardViewModel : ObservableObject
 
         var rollbackReport = await ExecuteRollbackAsync(journal);
         finish.RollbackReport = rollbackReport;
+        if (finished is { } counts)
+        {
+            BuildFinishResults(counts.Requested, counts.Installed, counts.Failed);
+        }
         RefreshAll();
     }
 
@@ -1442,6 +1469,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         }
 
         var registering = agents.RefusesTextSearch;
+        hooksOutcome = new("Claude Code", ClientRunState.Configuring);
         var placingWorktrees = agents.RegistersWorktrees;
         string? step = null;
         try
@@ -1452,6 +1480,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             var plan = adapter.PreviewSettings(registering, placingWorktrees);
             if (!plan.HasChanges)
             {
+                hooksOutcome = new("Claude Code", ClientRunState.AlreadyConfigured);
                 AppendLog(report, "Claude Code hooks: already as requested, nothing to change.");
                 return;
             }
@@ -1460,6 +1489,11 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 InstallerRunEffectKind.AgentConfiguration,
                 "Claude text-search gate");
             await adapter.ApplyAsync(plan, cancellationToken);
+            hooksOutcome = new("Claude Code", ClientRunState.Applied);
+            if (!configuredAgents.Contains("Claude Code"))
+            {
+                configuredAgents.Add("Claude Code");
+            }
             JournalComplete(
                 step,
                 "Applied to " + string.Join(", ", plan.Files.Select(file => file.Path)) + ".",
@@ -1492,6 +1526,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
+            hooksOutcome = new("Claude Code", ClientRunState.Failed, exception.Message);
             JournalFail(step, exception.Message);
             AppendLog(
                 report,
@@ -1530,6 +1565,8 @@ public sealed class InstallerWizardViewModel : ObservableObject
         foreach (var agent in requested)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            var outcomeIndex = clientOutcomes.FindIndex(outcome => outcome.Name == agent.DisplayName);
+            clientOutcomes[outcomeIndex] = new(agent.DisplayName, ClientRunState.Configuring);
             var isClaude = string.Equals(agent.Agent, "claude", StringComparison.OrdinalIgnoreCase);
             string? agentStep = null;
             try
@@ -1542,6 +1579,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
                     : codex!.Preview(choice);
                 if (!plan.HasChanges)
                 {
+                    clientOutcomes[outcomeIndex] = new(agent.DisplayName, ClientRunState.AlreadyConfigured);
                     AppendLog(report, $"{plan.AgentName}: already configured, nothing to change.");
                     continue;
                 }
@@ -1566,6 +1604,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
                     new InstallerRunUndoData(
                         Files: plan.Files.Select(BuildAgentFileUndo).ToArray()));
                 configuredAgents.Add(agent.DisplayName);
+                clientOutcomes[outcomeIndex] = new(agent.DisplayName, ClientRunState.Applied);
                 AppendLog(
                     report,
                     $"{plan.AgentName}: {agent.Choice.EnglishTitle()} applied to " +
@@ -1579,6 +1618,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 // The adapter also restores its own partial writes before throwing, which is
                 // why a failed step leaves nothing for rollback to undo.
                 JournalFail(agentStep, exception.Message);
+                clientOutcomes[outcomeIndex] = new(agent.DisplayName, ClientRunState.Failed, exception.Message);
                 AppendLog(
                     report,
                     $"{agent.DisplayName}: not configured — {exception.Message} " +
@@ -2021,7 +2061,35 @@ public sealed class InstallerWizardViewModel : ObservableObject
             packageInstalled));
         finish.Results.Add(RunResults.Prerequisites(requested, installed, failed));
         finish.Results.Add(RunResults.Models(ModelRuns));
-        finish.Results.Add(RunResults.Clients(configuredAgents));
+        foreach (var model in ModelRuns)
+        {
+            finish.Results.Add(new RunResultRow(model.Mark, model.Tag, model.Detail));
+        }
+
+        if (clientOutcomes.Count == 0)
+        {
+            finish.Results.Add(RunResults.Clients(configuredAgents));
+        }
+        else
+        {
+            foreach (var client in clientOutcomes)
+            {
+                finish.Results.Add(RunResults.Client(client));
+            }
+        }
+
+        if (registrationOutcome is { } registration)
+        {
+            finish.Results.Add(RunResults.Registration(registration));
+        }
+
+        if (hooksOutcome is { } hooks)
+        {
+            finish.Results.Add(RunResults.Client(hooks with
+            {
+                Name = InstallerCulture.Pick("Claude Code hooks", "Хуки Claude Code"),
+            }));
+        }
         if (pathMark != RunMark.None || pathOutcome is not null)
         {
             finish.Results.Add(RunResults.PathEntry(
@@ -2029,7 +2097,71 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 pathOutcome is { } path ? RunResults.PathDetail(path) : PageLabels.ResultNotAttempted));
         }
 
-        finish.NextSteps = RunResults.NextSteps(configuredAgents);
+        var next = new List<string>();
+        if (wasCancelled)
+        {
+            next.Add(InstallerCulture.Pick(
+                "Installation stopped. Changes already made are listed above.",
+                "Установка остановлена. Выполненные изменения перечислены выше."));
+        }
+        else if (hasRunError)
+        {
+            next.Add(InstallerCulture.Pick(
+                "Installation did not complete successfully. Completed and unfinished actions are listed above.",
+                "Установка завершилась с проблемами. Выполненные и незавершённые действия перечислены выше."));
+        }
+
+        if (hasRunError)
+        {
+            next.Add(InstallerCulture.Pick(
+                "Keep the report or copy the technical details below. After addressing the reported cause, close this window and run the installer again.",
+                "Сохраните отчёт или скопируйте технические сведения ниже. Устраните указанную причину, закройте это окно и снова запустите установщик."));
+        }
+
+        if (ModelRuns.Count > 0 && !ModelRuns.Any(model => model.State is ModelRunState.Ready or ModelRunState.ReadyWithLimitations))
+        {
+            next.Add(InstallerCulture.Pick(
+                "No selected model passed validation. For a memory refusal, choose a smaller model or context on the next run; for a technical failure, check its details before retrying. The memory policy has not been relaxed.",
+                "Ни одна выбранная модель не прошла проверку. При нехватке памяти в следующем запуске выберите меньшую модель или контекст; при технической ошибке изучите её сведения перед повторной попыткой. Политика памяти не ослаблялась."));
+        }
+
+        if (finish.HasRollbackReport)
+        {
+            next.Add(InstallerCulture.Pick(
+                "A rollback was attempted. Its report below identifies what was undone, retained, or failed; original installation results remain above.",
+                "Выполнена попытка отката. В отчёте ниже указано, что отменено, сохранено или завершилось ошибкой; выше остаются исходные результаты установки."));
+        }
+        else if (hasRunError)
+        {
+            next.Add(CanRollback
+                ? InstallerCulture.Pick(
+                    "The rollback button can undo recorded reversible changes only. Shared dependencies and downloaded models are retained.",
+                    "Кнопка отката отменяет только записанные обратимые изменения. Общие зависимости и скачанные модели сохраняются.")
+                : InstallerCulture.Pick(
+                    "Automatic rollback is unavailable for this run. Changes already made remain in place.",
+                    "Автоматический откат для этого запуска недоступен. Выполненные изменения остаются на месте."));
+        }
+
+        if (reportSaveFailure is { } saveFailure)
+        {
+            next.Add(string.Format(InstallerCulture.Pick(
+                "Could not save the report: {0}. Copy the technical details below before closing this window.",
+                "Не удалось сохранить отчёт: {0}. Скопируйте технические сведения ниже перед закрытием окна."), saveFailure));
+        }
+
+        if (!finish.HasRollbackReport && RunResults.NextSteps(configuredAgents) is { } restart)
+        {
+            next.Add(restart);
+        }
+
+        if (pathOutcome == PathOutcome.Added)
+        {
+            next.Add(InstallerCulture.Pick(
+                "Open a new terminal to use the updated PATH.",
+                "Откройте новый терминал, чтобы использовать обновлённый PATH."));
+        }
+
+        finish.NextSteps = next.Count == 0 ? null : string.Join("\n\n", next);
     }
 
     private async Task RefreshEnvironmentDiagnosticsAsync(CancellationToken cancellationToken)
@@ -2387,6 +2519,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             // Read back, not recalled: the line used to be composed from the values just handed
             // to the registry, so it agreed with itself whatever the registry did.
             var written = registration.Read();
+            registrationOutcome = written is null ? RegistrationOutcome.Missing : RegistrationOutcome.Registered;
             AppendLog(
                 report,
                 RunResults.AppsAndFeatures(written, registration.UninstallerPath));
@@ -2402,11 +2535,12 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 System.Security.SecurityException or InvalidOperationException or
                 InstallationLayoutException)
         {
+            registrationOutcome = RegistrationOutcome.Failed;
             JournalFail(step, exception.Message);
             AppendLog(
                 report,
                 "Apps & features: could not register this installation " +
-                $"({exception.Message}). LocalAi is installed and works; to remove it later, " +
+                $"({exception.Message}). Package installation completed; model and client results are reported separately. To remove it later, " +
                 "run this installer again and choose Remove.");
         }
     }
@@ -2486,8 +2620,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             pathOutcome = PathOutcome.Failed;
             AppendLog(
                 report,
-                $"PATH: could not be updated ({exception.Message}). LocalAi is installed and the " +
-                "MCP tools work; the command line needs the launcher's full path until this is " +
+                $"PATH: could not be updated ({exception.Message}). The command line needs the launcher's full path until this is " +
                 "fixed by hand.");
         }
     }
@@ -2617,6 +2750,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 modelProgress,
                 activation =>
                 {
+                    ApplyPackageResult(activation);
                     JournalPackageActivation(packageStep, activation);
                     if (activation.Installed && selection.Mode != ModelProvisioningMode.None)
                     {
@@ -2668,11 +2802,10 @@ public sealed class InstallerWizardViewModel : ObservableObject
 
         SetProgress(90, InstallerCulture.Pick("Installing the LocalAi package...", "Устанавливаю пакет LocalAi…"));
 
-        packageInstalled = result.Installed;
+        ApplyPackageResult(result);
         // result.Status is an enum name. It used to be printed straight into the summary a
         // person reads — "ImmutableConflict" — which is the same defect the review page fixed
         // for the residency policy, one page further on.
-        packageOutcome = new(PackageOutcomeKind.Result, result.Status, result.Version, result.Reason);
         AppendLog(
             report,
             result.Installed
@@ -2703,6 +2836,16 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 "this installer.",
                 isReversible: false);
         }
+    }
+
+    /// <summary>
+    /// Retain activation before model provisioning can fail or be cancelled.
+    /// </summary>
+    public void ApplyPackageResult(ReleaseInstallResult result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        packageInstalled = result.Installed;
+        packageOutcome = new(PackageOutcomeKind.Result, result.Status, result.Version, result.Reason);
     }
 
     /// <summary>

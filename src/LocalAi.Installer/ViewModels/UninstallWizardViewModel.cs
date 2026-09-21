@@ -77,6 +77,7 @@ public sealed class UninstallWizardViewModel : ObservableObject
     private UninstallPlan? ranPlan;
     private UninstallOutcome? outcome;
     private string? refusal;
+    private string? removalJournalPath;
     private Exception? failure;
 
     /// <summary>
@@ -316,14 +317,16 @@ public sealed class UninstallWizardViewModel : ObservableObject
     {
         RunEnd.Finished => BuildSummary(outcome!),
         RunEnd.Cancelled => InstallerCulture.Pick(
-            "Cancelled. Whatever had already been removed stays removed — the report " +
-            "below and the journal say what that was.",
-            "Отменено. Всё, что уже было удалено, удалённым и осталось — " +
-            "что именно, скажут отчёт ниже и журнал."),
-        RunEnd.Refused => refusal ?? string.Empty,
+            "Removal stopped. Data already removed has not been restored. Check the journal before closing this window and running the installer again. Journal: ",
+            "Удаление остановлено. Уже удалённые данные не восстановлены. Проверьте журнал перед закрытием окна и повторным запуском установщика. Журнал: ") + removalJournalPath,
+        RunEnd.Refused => InstallerCulture.Pick(
+            "Nothing was removed. Removal was refused before any changes. Address the reported cause, close this window and run the installer again. Technical details: ",
+            "Ничего не удалено. Удаление отклонено до внесения изменений. Устраните указанную причину, закройте это окно и снова запустите установщик. Технические сведения: ") + refusal,
         RunEnd.Failed => string.Format(
-            InstallerCulture.Pick("Removal failed: {0}", "Удаление не удалось: {0}"),
-            failure?.Message),
+            InstallerCulture.Pick(
+                "Removal failed; some changes may already have been made. Deleted data has not been restored. Keep the technical details and check the journal before retrying. Technical details: {0}. Journal: {1}",
+                "Удаление завершилось ошибкой; часть изменений могла быть выполнена. Удалённые данные не восстановлены. Сохраните технические сведения и проверьте журнал перед повторной попыткой. Технические сведения: {0}. Журнал: {1}"),
+            failure?.Message, removalJournalPath ?? InstallerCulture.Pick("unavailable", "недоступен")),
         _ => string.Empty,
     };
 
@@ -381,8 +384,8 @@ public sealed class UninstallWizardViewModel : ObservableObject
             "Применяю выбранные удаления."),
         _ => hasRunError
             ? InstallerCulture.Pick(
-                "Some things could not be removed. The report below says which, and why.",
-                "Часть удалить не удалось. Что именно и почему — в отчёте ниже.")
+                "Check the outcome below before retrying. Removal does not restore deleted data.",
+                "Перед повторной попыткой проверьте результат ниже. Удаление не восстанавливает удалённые данные.")
             : OffersInstallAfterwards
                 // Not "or close: either way". With the hook dispatchers now kept, stopping
                 // here leaves every connected repository failing its hooks until a launcher
@@ -553,6 +556,7 @@ public sealed class UninstallWizardViewModel : ObservableObject
         try
         {
             journal = InstallerRunJournal.Start(LogDirectory);
+            removalJournalPath = journal.JournalPath;
             var result = await new UninstallRunner(layout, processRunner)
                 .ApplyAsync(
                     plan,

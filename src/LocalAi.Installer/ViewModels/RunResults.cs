@@ -31,6 +31,24 @@ public enum PathOutcome
     Failed,
 }
 
+public enum ClientRunState
+{
+    NotAttempted,
+    Configuring,
+    Applied,
+    AlreadyConfigured,
+    Failed,
+}
+
+public sealed record ClientRunOutcome(string Name, ClientRunState State, string? Reason = null);
+
+public enum RegistrationOutcome
+{
+    Registered,
+    Missing,
+    Failed,
+}
+
 /// <summary>
 /// What a run did, one row per thing it touched.
 ///
@@ -51,10 +69,17 @@ public static class RunResults
 
     public static RunResultRow Prerequisites(int requested, int installed, int failed) =>
         new(
-            requested == 0 ? RunMark.None : failed > 0 ? RunMark.Failed : RunMark.Done,
+            requested == 0 ? RunMark.None : failed > 0 ? RunMark.Failed :
+                installed < requested ? RunMark.Warned : RunMark.Done,
             PageLabels.ResultPrerequisites,
             requested == 0
                 ? PageLabels.ResultNothingSelected
+                : installed + failed < requested
+                    ? string.Format(CultureInfo.InvariantCulture,
+                        InstallerCulture.Pick(
+                            "installed {0} of {1}, failed {2}, not completed: {3}",
+                            "установлено {0} из {1}, не удалось {2}, не завершено: {3}"),
+                        installed, requested, failed, requested - installed - failed)
                 : failed == 0
                     ? string.Format(
                         CultureInfo.InvariantCulture,
@@ -136,6 +161,46 @@ public static class RunResults
     public static RunResultRow PathEntry(RunMark mark, string detail) =>
         new(mark, PageLabels.ResultPath, detail);
 
+    public static RunResultRow Client(ClientRunOutcome outcome) => new(
+        outcome.State switch
+        {
+            ClientRunState.Applied or ClientRunState.AlreadyConfigured => RunMark.Done,
+            ClientRunState.Failed => RunMark.Failed,
+            ClientRunState.Configuring => RunMark.Warned,
+            _ => RunMark.None,
+        },
+        outcome.Name,
+        outcome.State switch
+        {
+            ClientRunState.Applied => InstallerCulture.Pick("settings applied", "настройки применены"),
+            ClientRunState.AlreadyConfigured => InstallerCulture.Pick(
+                "already configured; nothing changed", "уже настроен; ничего не изменено"),
+            ClientRunState.Failed => InstallerCulture.Pick(
+                "Configuration failed. Check this client's configuration and retry setup. Technical details: ",
+                "Не удалось настроить. Проверьте конфигурацию этого клиента и повторите настройку. Технические сведения: ") + outcome.Reason,
+            ClientRunState.Configuring => InstallerCulture.Pick(
+                "Setup was interrupted; the final state is unknown. Check the client configuration before retrying.",
+                "Настройка прервана; итоговое состояние неизвестно. Проверьте конфигурацию клиента перед повторной настройкой."),
+            _ => InstallerCulture.Pick(
+                "not attempted; the run stopped before client setup",
+                "не выполнялось; запуск остановился до настройки клиента"),
+        });
+
+    public static RunResultRow Registration(RegistrationOutcome outcome) => new(
+        outcome == RegistrationOutcome.Registered ? RunMark.Done : RunMark.Warned,
+        InstallerCulture.Pick("Windows app registration", "Регистрация приложения в Windows"),
+        outcome switch
+        {
+            RegistrationOutcome.Registered => InstallerCulture.Pick(
+                "the uninstall entry was read back successfully", "запись удаления проверена чтением"),
+            RegistrationOutcome.Missing => InstallerCulture.Pick(
+                "the written uninstall entry was not found; run this installer again and choose Remove when needed",
+                "записанная запись удаления не найдена; для удаления снова запустите установщик и выберите удаление"),
+            _ => InstallerCulture.Pick(
+                "could not register removal in Windows; run this installer again and choose Remove when needed",
+                "не удалось зарегистрировать удаление в Windows; для удаления снова запустите установщик и выберите удаление"),
+        });
+
     public static string PackageDetail(PackageOutcome outcome, bool installed)
     {
         ArgumentNullException.ThrowIfNull(outcome);
@@ -145,7 +210,9 @@ public static class RunResults
                 "not installed, no verified release was selected",
                 "не установлен, проверенный релиз не выбран"),
             PackageOutcomeKind.Refused => string.Format(
-                InstallerCulture.Pick("not installed — {0}", "не установлен — {0}"),
+                InstallerCulture.Pick(
+                    "not installed: the installation directory failed safety checks. Check its permissions and contents before retrying; do not delete existing data. Technical details: {0}",
+                    "не установлен: каталог установки не прошёл проверку безопасности. Перед повторной попыткой проверьте права и содержимое; не удаляйте существующие данные. Технические сведения: {0}"),
                 outcome.Reason),
             _ when installed => string.Format(
                 InstallerCulture.Pick("{0}, version {1}", "{0}, версия {1}"),
@@ -161,7 +228,9 @@ public static class RunResults
             "added for this account",
             "добавлен для этой учётной записи"),
         PathOutcome.AlreadyThere => InstallerCulture.Pick("already there", "уже был прописан"),
-        _ => InstallerCulture.Pick("could not be updated", "не удалось изменить"),
+        _ => InstallerCulture.Pick(
+            "could not be updated; use the full path to localai-launcher.exe until PATH is corrected",
+            "не удалось изменить; до исправления PATH используйте полный путь к localai-launcher.exe"),
     };
 
     /// <summary>
@@ -207,7 +276,7 @@ public static class RunResults
     public static string AppsAndFeatures(UninstallEntry? readBack, string uninstallerPath) =>
         readBack is null
             ? "Apps & features: the entry was written and is not there when read back. LocalAi " +
-                "is installed and works; to remove it later, run this installer again and " +
+                "package installation completed; model and client results are reported separately. To remove it later, run this installer again and " +
                 "choose Remove."
             : $"Apps & features: listed as \"{readBack.DisplayName}\" " +
                 $"{readBack.DisplayVersion}. Removal runs {uninstallerPath}.";
