@@ -67,8 +67,12 @@ internal static class DocumentationCommand
                         receipt.Routing?.ResidencyShortfall ?? LocalAi.Contracts.ResidencyShortfall.None, receipt.Routing?.VramResidentPercent))));
                 return generator.GenerateAsync(content, token);
             };
-            var report = await store.BuildAsync(input, generate, progress => streams.Error.WriteLine(progress.Phase == "generate" ?
-                T("DocsBuildingType", progress.Name, progress.Index, progress.Total) : T("DocsValidatingType", progress.Name)), cancellationToken).ConfigureAwait(false);
+            var report = await store.BuildAsync(input, generate, progress => streams.Error.WriteLine(progress.Phase switch
+            {
+                "generate" => T("DocsBuildingType", progress.Name, progress.Index, progress.Total),
+                "render" => T("DocsRenderingType", progress.Name),
+                _ => T("DocsValidatingType", progress.Name)
+            }), cancellationToken).ConfigureAwait(false);
             foreach (var unit in report.Units.Where(unit => !unit.Reused))
             {
                 streams.Error.WriteLine(T("DocsChangedType", unit.Name, string.Join(" ", unit.Reasons.Select(reason => T("DocsReason_" + reason)))));

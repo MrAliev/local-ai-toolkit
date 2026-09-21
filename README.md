@@ -824,10 +824,22 @@ Review the prose and translation for meaning; automatic checks prove references 
 
 Source bodies, indexed references/relationships and related definitions, and the last ten
 commit messages scoped to those files are hashed separately. Unchanged units reuse the exact
-artifact bytes without a model call. A failed unit keeps its previous valid document, if one exists, and is
+artifact bytes without a model call. Validated bilingual text is cached separately: a changed
+snapshot label or main source coordinate rerenders it with current details, and a damaged
+rendered file can be rebuilt without another generation call. A failed unit keeps its previous valid document, if one exists, and is
 named in the report. Completed units survive an interrupted build. `--json` returns the report;
 **check its `failed` count**: a completed report can contain failed units. Retained artifacts
-keep their original snapshot labels. Documentation caches are kept until the runtime is removed.
+kept after a failure keep their original snapshot labels and are marked in the report.
+Documentation caches are kept until the runtime is removed.
+
+Text checkpoints are keyed by source/reference/history hashes, generator facts/graph, and
+explicit prompt, validator and route versions. The route identity also includes the pinned
+overview model sequence and the validated routing catalogue, including content changes that
+leave `catalogVersion` unchanged. Renderer versions and the full current presentation input
+invalidate only rendered files. Changes to coordinates embedded in cited facts still invalidate
+the text. Old render-only caches remain readable and rebuild once on the next build.
+See [cache versions and measurements](scripts/quality/documentation-cache/README.md) for
+the version-bump rules, recovery behavior, and measurement boundaries.
 
 Start with the default subset and use its measured elapsed time before choosing `--all`.
 Generation uses the shared broker, its queue/progress and the configured residency policy.

@@ -13,6 +13,8 @@
   <data name="NoPrevious" xml:space="preserve"><value>No previous document exists.</value></data>
   <data name="PreviousKept" xml:space="preserve"><value>Previous document kept.</value></data>
   <data name="Reason_generator" xml:space="preserve"><value>Documentation generator changed.</value></data>
+  <data name="Reason_presentation" xml:space="preserve"><value>Source locations or snapshot details changed.</value></data>
+  <data name="Reason_renderer" xml:space="preserve"><value>Document rendering changed.</value></data>
   <data name="Reason_history" xml:space="preserve"><value>History changed.</value></data>
   <data name="Reason_new" xml:space="preserve"><value>No previous document.</value></data>
   <data name="Reason_references" xml:space="preserve"><value>References changed.</value></data>

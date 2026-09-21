@@ -35,12 +35,14 @@ public sealed record DocumentationApplyReport(
     [property: JsonPropertyName("skipped"), JsonRequired] IReadOnlyList<string> Skipped);
 public sealed record DocumentationBuildProgress(string SymbolId, string Name, int Index, int Total, string Phase);
 
-public sealed class DocumentationPackStore(string runtimeRoot, string repositoryId, string? generatorVersion = null)
+public sealed class DocumentationPackStore(string runtimeRoot, string repositoryId, string? generatorVersion = null,
+    DocumentationCacheVersions? cacheVersions = null)
 {
     private static readonly string[] FileNames = ["page.en.md", "page.ru.md", "page.en.html", "page.ru.html", "page.en.pdf", "page.ru.pdf", "diagram.svg", "diagram.png", "LICENSES.txt"];
     private string Root => Path.GetFullPath(Path.Combine(runtimeRoot, "repositories", repositoryId, "documentation"));
-    private string Version => generatorVersion ?? "documentation-1";
-    private sealed record Artifact(string SymbolId, string SourceHash, string ReferencesHash, string HistoryHash, string Version, Dictionary<string, string> Files);
+    private sealed record Artifact(string SymbolId, string SourceHash, string ReferencesHash, string HistoryHash, string Version, Dictionary<string, string> Files,
+        string TextKey = "", string PresentationHash = "", string RendererVersion = "");
+    private sealed record TextCheckpoint(int Schema, string Key, string DraftHash, DocumentationDraft Draft);
     private sealed record Pack(string RepositoryId, string Snapshot, DocumentationBuildReport Report);
 
     public async Task<DocumentationBuildReport> BuildAsync(DocumentationBuildInput input,
@@ -51,6 +53,8 @@ public sealed class DocumentationPackStore(string runtimeRoot, string repository
         Directory.CreateDirectory(Root);
         using var lease = AcquireLock();
         var timer = Stopwatch.StartNew();
+        var versions = cacheVersions ?? DocumentationCacheVersions.ForRuntime(runtimeRoot);
+        var textVersion = Hash(JsonSerializer.SerializeToUtf8Bytes(new { Schema = "documentation-text-1", generatorVersion, versions.Prompt, versions.Validator, versions.Route }));
         var results = new List<DocumentationUnitResult>();
         foreach (var unit in input.Units)
         {
@@ -59,20 +63,40 @@ public sealed class DocumentationPackStore(string runtimeRoot, string repository
             var pointer = Path.Combine(Root, "latest", key + ".json");
             var previousId = Read<string>(pointer);
             var previous = ValidArtifact(previousId, unit.Content.SymbolId);
-            var reasons = Reasons(unit, previous);
+            var textKey = Hash(JsonSerializer.SerializeToUtf8Bytes(new { textVersion, unit.SourceHash, unit.ReferencesHash, unit.HistoryHash,
+                unit.Content.SymbolId, unit.Content.Name, unit.Content.Facts, unit.Content.Nodes, unit.Content.Edges }));
+            var presentationHash = Hash(JsonSerializer.SerializeToUtf8Bytes(unit.Content));
+            var reasons = Reasons(unit, previous, textVersion, textKey, presentationHash, versions.Renderer);
             if (reasons.Length == 0)
             {
                 results.Add(new(unit.Content.SymbolId, unit.Content.Name, [], true, null, false, previousId));
                 continue;
             }
-            progress?.Invoke(new(unit.Content.SymbolId, unit.Content.Name, results.Count + 1, input.Units.Count, "generate"));
             IReadOnlyDictionary<string, byte[]> files;
             try
             {
-                var draft = await generate(unit.Content, cancellationToken).ConfigureAwait(false);
+                void Progress(string phase) => progress?.Invoke(new(unit.Content.SymbolId, unit.Content.Name, results.Count + 1, input.Units.Count, phase));
+                var draft = ReadText(textKey);
+                if (draft is not null)
+                {
+                    Progress("validate");
+                    if (DocumentationValidator.Validate(unit.Content, draft).Count != 0) draft = null;
+                }
+                if (draft is null)
+                {
+                    Progress("generate");
+                    draft = await generate(unit.Content, cancellationToken).ConfigureAwait(false);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    Progress("validate");
+                    var errors = DocumentationValidator.Validate(unit.Content, draft);
+                    if (errors.Count != 0) throw new DocumentationValidationException(errors);
+                    if (cacheVersions is null && DocumentationCacheVersions.ForRuntime(runtimeRoot).Route != versions.Route)
+                        throw new DocumentationValidationException(["documentation_route_changed"]);
+                    WriteJson(Path.Combine(Root, "texts", textKey + ".json"), new TextCheckpoint(1, textKey, Hash(JsonSerializer.SerializeToUtf8Bytes(draft)), draft));
+                }
+                Progress("render");
                 cancellationToken.ThrowIfCancellationRequested();
-                progress?.Invoke(new(unit.Content.SymbolId, unit.Content.Name, results.Count + 1, input.Units.Count, "validate"));
-                files = DocumentationRenderer.Render(unit.Content, draft);
+                files = DocumentationRenderer.RenderValidated(unit.Content, draft);
             }
             catch (Exception error) when (error is not OperationCanceledException)
             {
@@ -83,8 +107,8 @@ public sealed class DocumentationPackStore(string runtimeRoot, string repository
             var directory = Path.Combine(Root, "artifacts", id);
             Directory.CreateDirectory(directory);
             foreach (var name in FileNames) WriteBytes(Path.Combine(directory, name), files[name]);
-            WriteJson(Path.Combine(directory, "artifact.json"), new Artifact(unit.Content.SymbolId, unit.SourceHash, unit.ReferencesHash, unit.HistoryHash, Version,
-                FileNames.ToDictionary(name => name, name => Hash(files[name]), StringComparer.Ordinal)));
+            WriteJson(Path.Combine(directory, "artifact.json"), new Artifact(unit.Content.SymbolId, unit.SourceHash, unit.ReferencesHash, unit.HistoryHash, textVersion,
+                FileNames.ToDictionary(name => name, name => Hash(files[name]), StringComparer.Ordinal), textKey, presentationHash, versions.Renderer));
             // Only a completely rendered artifact becomes a resumable checkpoint.
             WriteJson(pointer, id);
             results.Add(new(unit.Content.SymbolId, unit.Content.Name, reasons, false, null, false, id));
@@ -146,15 +170,31 @@ public sealed class DocumentationPackStore(string runtimeRoot, string repository
         return new(destination, copied, unchanged, skipped);
     }
 
-    private string[] Reasons(DocumentationUnitInput unit, Artifact? previous)
+    private static string[] Reasons(DocumentationUnitInput unit, Artifact? previous, string textVersion, string textKey, string presentationHash, string rendererVersion)
     {
         if (previous is null) return ["new"];
         var result = new List<string>();
         if (previous.SourceHash != unit.SourceHash) result.Add("source");
         if (previous.ReferencesHash != unit.ReferencesHash) result.Add("references");
         if (previous.HistoryHash != unit.HistoryHash) result.Add("history");
-        if (previous.Version != Version) result.Add("generator");
+        if (previous.Version != textVersion) result.Add("generator");
+        if (previous.TextKey != textKey && result.Count == 0) result.Add("references");
+        if (previous.PresentationHash != presentationHash) result.Add("presentation");
+        if (previous.RendererVersion != rendererVersion) result.Add("renderer");
         return result.ToArray();
+    }
+
+    private DocumentationDraft? ReadText(string key)
+    {
+        var path = Path.Combine(Root, "texts", key + ".json");
+        try
+        {
+            if (!File.Exists(path) || new FileInfo(path).Length > 4 * 1024 * 1024) return null;
+            var checkpoint = Read<TextCheckpoint>(path);
+            return checkpoint is { Schema: 1, Draft: not null } && checkpoint.Key == key &&
+                checkpoint.DraftHash == Hash(JsonSerializer.SerializeToUtf8Bytes(checkpoint.Draft)) ? checkpoint.Draft : null;
+        }
+        catch (IOException) { return null; }
     }
 
     private Artifact? ValidArtifact(string? id, string symbolId)

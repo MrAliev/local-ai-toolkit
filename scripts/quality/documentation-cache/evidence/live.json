@@ -1,0 +1,54 @@
+{
+  "BrokerVersionDirectory": "f10ff0ec19a5",
+  "Samples": [
+    {
+      "Phase": "cold",
+      "BuildMs": 22818.0988,
+      "ModelRequests": 3,
+      "Failed": 0,
+      "FreshPresentation": true,
+      "Errors": []
+    },
+    {
+      "Phase": "presentation",
+      "BuildMs": 256.0809,
+      "ModelRequests": 0,
+      "Failed": 0,
+      "FreshPresentation": true,
+      "Errors": []
+    },
+    {
+      "Phase": "renderer",
+      "BuildMs": 256.5232,
+      "ModelRequests": 0,
+      "Failed": 0,
+      "FreshPresentation": true,
+      "Errors": []
+    }
+  ],
+  "Receipts": [
+    {
+      "Model": "gpt-oss:20b",
+      "QueueMs": 2245.6495,
+      "ExecutionMs": 11567.9826,
+      "Shortfall": "offload_unknown",
+      "VramResidentPercent": null
+    },
+    {
+      "Model": "qwen3.5:9b",
+      "QueueMs": 2195.2576,
+      "ExecutionMs": 5335.3439,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    },
+    {
+      "Model": "qwen3.5:9b",
+      "QueueMs": 51.043,
+      "ExecutionMs": 143.5019,
+      "Shortfall": "None",
+      "VramResidentPercent": 100
+    }
+  ],
+  "CloudTokenSavings": null,
+  "TokenReason": "No cloud comparison; model request counts and timing are separate diagnostics"
+}
