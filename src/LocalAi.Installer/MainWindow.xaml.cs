@@ -68,13 +68,6 @@ public partial class MainWindow : Window, IReturnsToStart
     }
 
     /// <summary>
-    /// A log that appends below the fold is a log nobody reads while it matters. It kept the
-    /// first screenful in view for the whole run.
-    /// </summary>
-    private void OnLogTextChanged(object sender, TextChangedEventArgs e) =>
-        ((TextBox)sender).ScrollToEnd();
-
-    /// <summary>
     /// The folder, not the file: Explorer is where somebody attaches a log from, and a run that
     /// failed twice has two of them.
     /// </summary>

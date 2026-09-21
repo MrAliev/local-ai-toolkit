@@ -690,10 +690,7 @@
                         </ScrollViewer>
 
                         <TextBlock Text="{vm:Label Log}" Margin="0,14,0,4" FontWeight="SemiBold" />
-                        <TextBox Text="{Binding Finish.Progress, Mode=OneWay}"
-                                 IsReadOnly="True" TextWrapping="Wrap" Height="120"
-                                 TextChanged="OnLogTextChanged"
-                                 VerticalScrollBarVisibility="Auto" Background="{DynamicResource Surface}" />
+                        <local:LogView LogText="{Binding Finish.Progress, Mode=OneWay}" Height="160" />
                     </StackPanel>
 
                     <!-- Finish -->
@@ -762,10 +759,7 @@
                              also a row above. -->
                         <Expander Header="{vm:Label Log}" Margin="0,14,0,0"
                                   IsExpanded="{Binding HasRunError, Mode=OneWay}">
-                            <TextBox Text="{Binding Finish.Progress, Mode=OneWay}"
-                                     IsReadOnly="True" TextWrapping="Wrap" Height="180" Margin="0,6,0,0"
-                                     TextChanged="OnLogTextChanged"
-                                     VerticalScrollBarVisibility="Auto" Background="{DynamicResource Surface}" />
+                            <local:LogView LogText="{Binding Finish.Progress, Mode=OneWay}" Height="220" Margin="0,6,0,0" />
                         </Expander>
                         <!-- Only after a failed or cancelled run with reversible effects:
                              rollback is a recovery, not an uninstaller for a good run. -->

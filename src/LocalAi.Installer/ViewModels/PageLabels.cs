@@ -13,6 +13,8 @@ namespace LocalAi.Installer.ViewModels;
 /// </summary>
 public static class PageLabels
 {
+    public static string JumpToLatestEntries => InstallerCulture.Pick("Jump to latest entries", "К последним записям");
+    public static string NewLogLines => InstallerCulture.Pick("New entries:", "Новые записи:");
     public static string ReviewRelease => InstallerCulture.Pick("Release and source", "Релиз и источник");
     public static string ReviewComponents => InstallerCulture.Pick("Components", "Компоненты");
     public static string ReviewModels => InstallerCulture.Pick("Models and memory", "Модели и память");
