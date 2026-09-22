@@ -19,15 +19,18 @@ public static class DocumentationInputs
 
     public static IReadOnlyList<DocumentationUnitInput> CreateScoped(SemanticIndex index,
         Func<string, string> readSource, Func<IReadOnlyList<string>, IReadOnlyList<DocumentationHistory>> history,
-        int limit = 5)
+        int limit = 5, string? path = null, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (limit < 1) throw new ArgumentOutOfRangeException(nameof(limit));
+        var selectedPath = DocumentationPathScope.Normalize(path);
         var definitions = index.Occurrences.Where(o => o.Precision == NavigationPrecision.Precise && o.Roles.HasFlag(SemanticOccurrenceRoles.Definition))
             .OrderBy(o => o.DocumentPath, StringComparer.Ordinal).ThenBy(o => o.Range.StartLine).ThenBy(o => o.Range.StartCharacter).ToArray();
         var symbols = index.Symbols.ToDictionary(s => s.Id, StringComparer.Ordinal);
         var files = new Dictionary<string, SourceText>(StringComparer.Ordinal);
         SourceText Source(string path)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (!files.TryGetValue(path, out var text)) files.Add(path, text = SourceText.From(readSource(path)));
             return text;
         }
@@ -50,11 +53,16 @@ public static class DocumentationInputs
             }
             return publicPositions.Contains((path, definition.Range.StartLine, definition.Range.StartCharacter));
         }
-        var selected = definitions.Where(o => symbols[o.SymbolId].Kind == SemanticSymbolKind.Type && PublicType(o))
+        var selected = definitions.Where(o =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                return DocumentationPathScope.Matches(o.DocumentPath, selectedPath) && symbols[o.SymbolId].Kind == SemanticSymbolKind.Type && PublicType(o);
+            })
             .Select(o => o.SymbolId).Distinct(StringComparer.Ordinal).Take(limit);
         var units = new List<DocumentationUnitInput>();
         foreach (var symbolId in selected)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var own = definitions.Where(o => o.SymbolId == symbolId).ToArray();
             var ownedSymbols = definitions.Where(d => own.Any(o => Inside(o, d))).Select(o => o.SymbolId).Append(symbolId).ToHashSet(StringComparer.Ordinal);
             var references = index.Occurrences.Where(o => o.Precision == NavigationPrecision.Precise && o.Roles.HasFlag(SemanticOccurrenceRoles.Reference) &&
@@ -81,8 +89,14 @@ public static class DocumentationInputs
                 Definitions = dependencyDefinitions.Select(o => new { o.DocumentPath, o.SymbolId, Body = Body(o), symbols[o.SymbolId].Signature }).ToArray(),
                 Symbols = dependencyIds.Order(StringComparer.Ordinal).Select(id => symbols.GetValueOrDefault(id)).ToArray(),
                 content.Facts, content.Nodes, content.Edges });
-            units.Add(new(content, sourceHash, referenceHash, Hash(historyItems)));
+            units.Add(new(content, sourceHash, referenceHash, Hash(historyItems))
+            {
+                SourcePaths = own.Select(o => o.DocumentPath).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray(),
+                DependencyPaths = dependencyDefinitions.Select(o => o.DocumentPath).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray(),
+            });
         }
+        cancellationToken.ThrowIfCancellationRequested();
+        if (selectedPath is not null && units.Count == 0) throw new DocumentationValidationException(["scope_empty"]);
         return units;
     }
 

@@ -1076,7 +1076,7 @@ To keep a worktree whatever its branch: git worktree lock &lt;path&gt;</value>
   <data name="DocsSelectionConflict" xml:space="preserve"><value>Choose either --limit or --all.</value></data>
   <data name="DocsSourcesChanged" xml:space="preserve"><value>Source files changed after the package was built. Run localai docs build --root {0} again before applying it.</value></data>
   <data name="DocsSubset" xml:space="preserve"><value>Selected subset: up to {0} public types.</value></data>
-  <data name="DocsUsage" xml:space="preserve"><value>Usage: localai docs build --root &lt;repo&gt; [--limit N | --all] [--standalone-html] [--json]; localai docs apply --root &lt;repo&gt; [--json]; localai docs prune --root &lt;repo&gt; [--keep N] [--dry-run | --apply] [--json]; localai docs pin|unpin --root &lt;repo&gt; --package &lt;package-id&gt; [--json]</value></data>
+  <data name="DocsUsage" xml:space="preserve"><value>Usage: localai docs build --root &lt;repo&gt; [--path &lt;relative-path&gt;] [--plan] [--limit N | --all] [--standalone-html] [--json]; localai docs apply --root &lt;repo&gt; [--json]; localai docs prune --root &lt;repo&gt; [--keep N] [--dry-run | --apply] [--json]; localai docs pin|unpin --root &lt;repo&gt; --package &lt;package-id&gt; [--json]</value></data>
   <data name="DocsValidatingType" xml:space="preserve"><value>Checking documentation for {0}.</value></data>
   <data name="DocsRenderingType" xml:space="preserve"><value>Rendering documentation for {0}.</value></data>
   <data name="DocsValidationFailed" xml:space="preserve"><value>Could not prepare documentation for {0}: {1}</value></data>
@@ -1107,4 +1107,10 @@ To keep a worktree whatever its branch: git worktree lock &lt;path&gt;</value>
   <data name="DocsRetention_unknown_entry" xml:space="preserve"><value>unrecognized entry is preserved</value></data>
   <data name="DocsRetention_outside_retention" xml:space="preserve"><value>outside retention and not protected</value></data>
   <data name="DocsRetention_unreferenced" xml:space="preserve"><value>not referenced by any retained version</value></data>
+  <data name="DocsScopeInvalid" xml:space="preserve"><value>Invalid documentation path '{0}'. Use a literal repository-relative file or directory without parent traversal.</value></data>
+  <data name="DocsScopeEmpty" xml:space="preserve"><value>No precisely indexed public C# types match documentation path '{0}'.</value></data>
+  <data name="DocsPlanHeader" xml:space="preserve"><value>Documentation selection: {0}; snapshot {1}; types {2}.</value></data>
+  <data name="DocsPlanType" xml:space="preserve"><value>Type: {0} ({1})</value></data>
+  <data name="DocsPlanSources" xml:space="preserve"><value>  Source declarations: {0}</value></data>
+  <data name="DocsPlanDependencies" xml:space="preserve"><value>  Dependency sources: {0}</value></data>
 </root>

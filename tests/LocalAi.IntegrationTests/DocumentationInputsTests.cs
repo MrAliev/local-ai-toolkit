@@ -7,6 +7,91 @@ namespace LocalAi.IntegrationTests;
 
 public sealed class DocumentationInputsTests
 {
+    [Fact]
+    public void Path_selection_applies_before_public_type_reads_and_the_limit()
+    {
+        var sources = new Dictionary<string, string>
+        {
+            ["a/Unrelated.cs"] = "public class Unrelated {}",
+            ["src/Chosen.cs"] = "public class Chosen {}",
+            ["src-extra/Other.cs"] = "public class Other {}",
+        };
+        var reads = new List<string>();
+        var unit = Assert.Single(DocumentationInputs.CreateScoped(CombinedIndex(sources), p =>
+        {
+            reads.Add(p);
+            return sources[p];
+        }, _ => [], limit: 1, path: "src", cancellationToken: TestContext.Current.CancellationToken));
+        Assert.Equal("Chosen", unit.Content.SymbolId);
+        Assert.Equal(["src/Chosen.cs"], reads);
+    }
+
+    [Theory]
+    [InlineData("src/A.cs")]
+    [InlineData("./src\\A.cs")]
+    [InlineData("src/")]
+    public void Path_scope_keeps_partial_declarations_and_external_dependency_hashes(string path)
+    {
+        var sources = new Dictionary<string, string>
+        {
+            ["src/A.cs"] = "public partial class A : B {}",
+            ["other/Partial.cs"] = "public partial class A { int Value => 1; }",
+            ["lib/B.cs"] = "public class B { int Value => 1; }",
+            ["src-extra/Unrelated.cs"] = "public class Unrelated {}",
+        };
+        DocumentationUnitInput Select()
+        {
+            var index = CombinedIndex(sources) with
+            {
+                Relationships = [new() { SourceSymbolId = "A", TargetSymbolId = "B", Kind = SemanticRelationshipKind.Implementation }],
+            };
+            return Assert.Single(DocumentationInputs.CreateScoped(index, p => sources[p], _ => [], 1, path,
+                TestContext.Current.CancellationToken));
+        }
+        var before = Select();
+        Assert.Equal(["other/Partial.cs", "src/A.cs"], before.SourcePaths);
+        Assert.Equal(["lib/B.cs"], before.DependencyPaths);
+        sources["lib/B.cs"] = "public class B { int Value => 2; }";
+        var changedDependency = Select();
+        Assert.Equal(before.SourceHash, changedDependency.SourceHash);
+        Assert.NotEqual(before.ReferencesHash, changedDependency.ReferencesHash);
+        sources["src-extra/Unrelated.cs"] = "public class Unrelated { int Value => 99; }";
+        Assert.Equal(changedDependency.ReferencesHash, Select().ReferencesHash);
+    }
+
+    [Theory]
+    [InlineData("../outside")]
+    [InlineData("src/../outside")]
+    [InlineData("/absolute")]
+    [InlineData("C:\\absolute")]
+    [InlineData("\\\\server\\share")]
+    [InlineData("")]
+    [InlineData(" ")]
+    public void Invalid_scopes_are_rejected_before_reading_sources(string path)
+    {
+        var error = Assert.Throws<DocumentationValidationException>(() => DocumentationInputs.CreateScoped(Index("public class A {}"),
+            _ => throw new InvalidOperationException("must not read"), _ => [], path: path,
+            cancellationToken: TestContext.Current.CancellationToken));
+        Assert.Contains("scope_invalid", error.Errors);
+    }
+
+    [Fact]
+    public void Empty_scope_does_not_fall_back_to_an_unrelated_type()
+    {
+        var error = Assert.Throws<DocumentationValidationException>(() => DocumentationInputs.CreateScoped(Index("public class A {}"),
+            _ => throw new InvalidOperationException("must not read"), _ => [], path: "missing",
+            cancellationToken: TestContext.Current.CancellationToken));
+        Assert.Contains("scope_empty", error.Errors);
+    }
+
+    [Fact]
+    public void Scoped_collection_observes_cancellation_during_source_reads()
+    {
+        using var cancellation = new CancellationTokenSource();
+        Assert.ThrowsAny<OperationCanceledException>(() => DocumentationInputs.CreateScoped(Index("public class A {}"),
+            _ => { cancellation.Cancel(); return "public class A {}"; }, _ => [], path: "src", cancellationToken: cancellation.Token));
+    }
+
     [Theory]
     [InlineData(1, 1)]
     [InlineData(5, 5)]
@@ -20,7 +105,7 @@ public sealed class DocumentationInputsTests
         {
             reads.Add(path);
             return sources[path];
-        }, _ => [], limit);
+        }, _ => [], limit, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(expected, units.Count);
         Assert.Equal(sources.Keys.Take(expected), reads);
@@ -45,11 +130,12 @@ public sealed class DocumentationInputsTests
         {
             reads.Add(path);
             return sources[path];
-        }, paths => { Assert.Equal(["src/A.cs", "src/AOther.cs", "src/B.cs"], paths); return []; }, 1));
+        }, paths => { Assert.Equal(["src/A.cs", "src/AOther.cs", "src/B.cs"], paths); return []; }, 1, cancellationToken: TestContext.Current.CancellationToken));
 
         Assert.Equal("A", unit.Content.SymbolId);
         Assert.Equal(["src/A.cs", "src/AOther.cs", "src/B.cs"], reads);
-        Assert.Equal(["A", "B"], DocumentationInputs.CreateScoped(index, path => sources[path], _ => [], 2).Select(u => u.Content.SymbolId));
+        Assert.Equal(["A", "B"], DocumentationInputs.CreateScoped(index, path => sources[path], _ => [], 2,
+            cancellationToken: TestContext.Current.CancellationToken).Select(u => u.Content.SymbolId));
     }
 
     [Fact]
@@ -67,7 +153,7 @@ public sealed class DocumentationInputsTests
         {
             reads.Add(path);
             return sources[path];
-        }, _ => [], 1));
+        }, _ => [], 1, cancellationToken: TestContext.Current.CancellationToken));
 
         Assert.Equal("Visible", unit.Content.SymbolId);
         Assert.Equal(["src/1.cs", "src/2.cs"], reads);

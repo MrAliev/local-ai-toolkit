@@ -42,7 +42,7 @@ public static class LocalAiCommandSyntax
     // No brackets around the flag: here it is required rather than optional. The listing is
     // for a program, and the block this line sits in is the list for a person.
     public const string Capabilities = "localai capabilities --json";
-    public const string DocsBuild = "localai docs build --root <repo> [--limit N | --all] [--standalone-html] [--json]";
+    public const string DocsBuild = "localai docs build --root <repo> [--path <relative-path>] [--plan] [--limit N | --all] [--standalone-html] [--json]";
     public const string DocsApply = "localai docs apply --root <repo> [--json]";
     public const string DocsPrune = "localai docs prune --root <repo> [--keep N] [--dry-run | --apply] [--json]";
     public const string DocsPin = "localai docs pin --root <repo> --package <package-id> [--json]";
