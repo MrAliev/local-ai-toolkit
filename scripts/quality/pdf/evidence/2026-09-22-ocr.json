@@ -1,0 +1,731 @@
+{
+  "schemaVersion": 1,
+  "provenance": {
+    "hostUnchanged": true,
+    "brokerAssemblySha256": "e181a9c947212fa115f0d805b720b85cc54eeb321aee2ca572d3ea1cff610e26",
+    "checkedIdentityFields": [
+      "ProcessId",
+      "StartedAtUtc",
+      "BrokerAssemblyPath",
+      "SchemaVersion"
+    ],
+    "heartbeatExcluded": "HeartbeatAtUtc normally advances during work; it is not process identity.",
+    "sourceContext": "AlreadyPresent",
+    "scope": "Installed RC22 OCR baseline, separate from source-tree native-parser measurements"
+  },
+  "rawResultsSha256": "a79f5d26b5c73bae10d19a4431f73262f8560b16b9c3652146c6c145d3335c10",
+  "probeSourceSha256": "b5e492c04a206dbbc2543e4c867b68bc6782cf37f390c88639e622ae315a8e50",
+  "boundaries": [
+    "Three synthetic cases, one run each; not general OCR accuracy.",
+    "Answers are untrusted model output, retained only as measurement data.",
+    "AlreadyPresent token comparisons are conditional estimates, not account usage.",
+    "Raw MCP envelopes stay in the external run directory; published answers omit only the PDF page heading."
+  ],
+  "results": [
+    {
+      "file": "text-en.pdf",
+      "sha256": "4bf020964fb8d62e564e0395afa22e79d135d82c3ca612d2931fbbdf138e2696",
+      "reference": "Invoice ALPHA-7319\nTotal: 42.50 EUR\nRepeated line\nRepeated line",
+      "answer": "Invoice ALPHA-7319\nTotal: 42.50 EUR\nRepeated line\nRepeated line",
+      "exactAfterWhitespaceNormalization": true,
+      "characterErrorRate": 0.0,
+      "tool": "read_image",
+      "clientElapsedMs": 28532.213,
+      "usage": {
+        "schemaVersion": 1,
+        "methodologyVersion": "cloud-comparison-v1",
+        "identity": {
+          "surface": "mcp",
+          "component": "locallm",
+          "operation": "read_image",
+          "callId": "6dc3afe4-ca02-4afd-ba07-1953c3ce2ae9",
+          "workflowId": null,
+          "jobIds": [
+            "2089641d-9855-4bbe-be86-2f0a36907c7f"
+          ],
+          "attemptIds": [
+            "c50dab51-7c14-4ef7-b809-8a5fa0bb4de2",
+            "a7ad0852-9b56-43f3-8915-1eaa2e705c2d"
+          ]
+        },
+        "outcome": {
+          "technical": "succeeded",
+          "validation": "not_applicable",
+          "delivery": "delivered",
+          "technicalReason": null,
+          "validationReason": "no_structural_validator",
+          "deliveryReason": null
+        },
+        "models": {
+          "state": "called",
+          "calls": {
+            "status": "measured",
+            "value": 2,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "actual": [
+            {
+              "model": "glm-ocr:bf16",
+              "calls": 1,
+              "offload": "unknown",
+              "offloadReason": "not_recorded"
+            },
+            {
+              "model": "qwen3-vl:8b-instruct-q8_0",
+              "calls": 1,
+              "offload": "none",
+              "offloadReason": null
+            }
+          ],
+          "cache": "not_applicable",
+          "cacheReason": "no_result_cache"
+        },
+        "timings": {
+          "elapsed_milliseconds": {
+            "status": "measured",
+            "value": 28350,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "queue_milliseconds": {
+            "status": "measured",
+            "value": 4258,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "load_milliseconds": {
+            "status": "measured",
+            "value": 5576,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "execution_milliseconds": {
+            "status": "measured",
+            "value": 23858,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "validation_milliseconds": {
+            "status": "unknown",
+            "value": null,
+            "reason": "not_recorded",
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "write_milliseconds": {
+            "status": "unknown",
+            "value": null,
+            "reason": "not_recorded",
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          }
+        },
+        "volumes": {
+          "input_bytes": {
+            "status": "unknown",
+            "value": null,
+            "reason": "not_recorded",
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "input_characters": {
+            "status": "unknown",
+            "value": null,
+            "reason": "not_recorded",
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "images": {
+            "status": "unknown",
+            "value": null,
+            "reason": "not_recorded",
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "pages": {
+            "status": "unknown",
+            "value": null,
+            "reason": "not_recorded",
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "backend_prompt_tokens": {
+            "status": "measured",
+            "value": 1754,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "backend_eval_tokens": {
+            "status": "measured",
+            "value": 7594,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "response_bytes": {
+            "status": "measured",
+            "value": 5121,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "response_characters": {
+            "status": "measured",
+            "value": 5121,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          }
+        },
+        "comparisonKind": "replaced_generation",
+        "comparison": {
+          "scenarioId": "runtime-source-units-v1:AlreadyPresent",
+          "tokenizerProfile": "microsoft-ml-tokenizers-2.0.0:o200k_base",
+          "visionProfile": "openai-gpt-4o-tiles-v1"
+        },
+        "cloudTokens": {
+          "input_without_delegation": {
+            "status": "measured",
+            "value": 0,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "input_with_delegation": {
+            "status": "measured",
+            "value": 1779,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "input_saved": {
+            "status": "estimated",
+            "value": -1779,
+            "reason": null,
+            "method": "runtime-source-units-v1:AlreadyPresent",
+            "range": null,
+            "rangeReason": "conditional_scenario"
+          },
+          "output_without_delegation": {
+            "status": "measured",
+            "value": 29,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "output_with_delegation": {
+            "status": "measured",
+            "value": 76,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "output_saved": {
+            "status": "estimated",
+            "value": -47,
+            "reason": null,
+            "method": "runtime-source-units-v1:AlreadyPresent",
+            "range": null,
+            "rangeReason": "conditional_scenario"
+          }
+        }
+      }
+    },
+    {
+      "file": "text-unicode.pdf",
+      "sha256": "aa2987834ffa32a2eb738019ca2054e04d8fab8602e02f37cb0dc7d110846d66",
+      "reference": "Счёт БЕТА-4826\nИтого: 42,50 €",
+      "answer": "Счёт БЕТА-4826\nИтого: 42,50 €",
+      "exactAfterWhitespaceNormalization": true,
+      "characterErrorRate": 0.0,
+      "tool": "read_image",
+      "clientElapsedMs": 25664.866,
+      "usage": {
+        "schemaVersion": 1,
+        "methodologyVersion": "cloud-comparison-v1",
+        "identity": {
+          "surface": "mcp",
+          "component": "locallm",
+          "operation": "read_image",
+          "callId": "19248dc7-5938-42ef-9205-8bc6150cae62",
+          "workflowId": null,
+          "jobIds": [
+            "f47aa4af-58f4-4841-8563-bdcba86dee43"
+          ],
+          "attemptIds": [
+            "21296784-92b3-4791-a955-5a4966800cea",
+            "608e61e7-b237-4670-8953-150da3ad0f86"
+          ]
+        },
+        "outcome": {
+          "technical": "succeeded",
+          "validation": "not_applicable",
+          "delivery": "delivered",
+          "technicalReason": null,
+          "validationReason": "no_structural_validator",
+          "deliveryReason": null
+        },
+        "models": {
+          "state": "called",
+          "calls": {
+            "status": "measured",
+            "value": 2,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "actual": [
+            {
+              "model": "glm-ocr:bf16",
+              "calls": 1,
+              "offload": "unknown",
+              "offloadReason": "not_recorded"
+            },
+            {
+              "model": "qwen3-vl:8b-instruct-q8_0",
+              "calls": 1,
+              "offload": "none",
+              "offloadReason": null
+            }
+          ],
+          "cache": "not_applicable",
+          "cacheReason": "no_result_cache"
+        },
+        "timings": {
+          "elapsed_milliseconds": {
+            "status": "measured",
+            "value": 25658,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "queue_milliseconds": {
+            "status": "measured",
+            "value": 2194,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "load_milliseconds": {
+            "status": "measured",
+            "value": 5414,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "execution_milliseconds": {
+            "status": "measured",
+            "value": 23349,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "validation_milliseconds": {
+            "status": "unknown",
+            "value": null,
+            "reason": "not_recorded",
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "write_milliseconds": {
+            "status": "unknown",
+            "value": null,
+            "reason": "not_recorded",
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          }
+        },
+        "volumes": {
+          "input_bytes": {
+            "status": "unknown",
+            "value": null,
+            "reason": "not_recorded",
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "input_characters": {
+            "status": "unknown",
+            "value": null,
+            "reason": "not_recorded",
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "images": {
+            "status": "unknown",
+            "value": null,
+            "reason": "not_recorded",
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "pages": {
+            "status": "unknown",
+            "value": null,
+            "reason": "not_recorded",
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "backend_prompt_tokens": {
+            "status": "measured",
+            "value": 1754,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "backend_eval_tokens": {
+            "status": "measured",
+            "value": 7593,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "response_bytes": {
+            "status": "measured",
+            "value": 5166,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "response_characters": {
+            "status": "measured",
+            "value": 5166,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          }
+        },
+        "comparisonKind": "replaced_generation",
+        "comparison": {
+          "scenarioId": "runtime-source-units-v1:AlreadyPresent",
+          "tokenizerProfile": "microsoft-ml-tokenizers-2.0.0:o200k_base",
+          "visionProfile": "openai-gpt-4o-tiles-v1"
+        },
+        "cloudTokens": {
+          "input_without_delegation": {
+            "status": "measured",
+            "value": 0,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "input_with_delegation": {
+            "status": "measured",
+            "value": 1812,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "input_saved": {
+            "status": "estimated",
+            "value": -1812,
+            "reason": null,
+            "method": "runtime-source-units-v1:AlreadyPresent",
+            "range": null,
+            "rangeReason": "conditional_scenario"
+          },
+          "output_without_delegation": {
+            "status": "measured",
+            "value": 27,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "output_with_delegation": {
+            "status": "measured",
+            "value": 77,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "output_saved": {
+            "status": "estimated",
+            "value": -50,
+            "reason": null,
+            "method": "runtime-source-units-v1:AlreadyPresent",
+            "range": null,
+            "rangeReason": "conditional_scenario"
+          }
+        }
+      }
+    },
+    {
+      "file": "scan-en.pdf",
+      "sha256": "6d88d6b961d9221e844525ad3dd541908dbf5cb72e58c44a986b42e7ce55e1a3",
+      "reference": "Invoice ALPHA-7319\nTotal: 42.50 EUR\nRepeated line\nRepeated line",
+      "answer": "Invoice ALPHA-7319\nTotal: 42.50 EUR\nRepeated line\nRepeated line",
+      "exactAfterWhitespaceNormalization": true,
+      "characterErrorRate": 0.0,
+      "tool": "read_image",
+      "clientElapsedMs": 25752.466,
+      "usage": {
+        "schemaVersion": 1,
+        "methodologyVersion": "cloud-comparison-v1",
+        "identity": {
+          "surface": "mcp",
+          "component": "locallm",
+          "operation": "read_image",
+          "callId": "4bca2a9c-955a-44e4-93fc-d030c9f38645",
+          "workflowId": null,
+          "jobIds": [
+            "b1f9d77f-3c2e-4bde-887f-b71bc7fd8698"
+          ],
+          "attemptIds": [
+            "faa52390-a4ac-49c9-ae23-23c2700d8529",
+            "0f0b3a50-524c-4af3-8b56-cb5136cc271a"
+          ]
+        },
+        "outcome": {
+          "technical": "succeeded",
+          "validation": "not_applicable",
+          "delivery": "delivered",
+          "technicalReason": null,
+          "validationReason": "no_structural_validator",
+          "deliveryReason": null
+        },
+        "models": {
+          "state": "called",
+          "calls": {
+            "status": "measured",
+            "value": 2,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "actual": [
+            {
+              "model": "glm-ocr:bf16",
+              "calls": 1,
+              "offload": "unknown",
+              "offloadReason": "not_recorded"
+            },
+            {
+              "model": "qwen3-vl:8b-instruct-q8_0",
+              "calls": 1,
+              "offload": "none",
+              "offloadReason": null
+            }
+          ],
+          "cache": "not_applicable",
+          "cacheReason": "no_result_cache"
+        },
+        "timings": {
+          "elapsed_milliseconds": {
+            "status": "measured",
+            "value": 25746,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "queue_milliseconds": {
+            "status": "measured",
+            "value": 2210,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "load_milliseconds": {
+            "status": "measured",
+            "value": 5664,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "execution_milliseconds": {
+            "status": "measured",
+            "value": 23418,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "validation_milliseconds": {
+            "status": "unknown",
+            "value": null,
+            "reason": "not_recorded",
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "write_milliseconds": {
+            "status": "unknown",
+            "value": null,
+            "reason": "not_recorded",
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          }
+        },
+        "volumes": {
+          "input_bytes": {
+            "status": "unknown",
+            "value": null,
+            "reason": "not_recorded",
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "input_characters": {
+            "status": "unknown",
+            "value": null,
+            "reason": "not_recorded",
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "images": {
+            "status": "unknown",
+            "value": null,
+            "reason": "not_recorded",
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "pages": {
+            "status": "unknown",
+            "value": null,
+            "reason": "not_recorded",
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "backend_prompt_tokens": {
+            "status": "measured",
+            "value": 1754,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "backend_eval_tokens": {
+            "status": "measured",
+            "value": 7594,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "response_bytes": {
+            "status": "measured",
+            "value": 5122,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "response_characters": {
+            "status": "measured",
+            "value": 5122,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          }
+        },
+        "comparisonKind": "replaced_generation",
+        "comparison": {
+          "scenarioId": "runtime-source-units-v1:AlreadyPresent",
+          "tokenizerProfile": "microsoft-ml-tokenizers-2.0.0:o200k_base",
+          "visionProfile": "openai-gpt-4o-tiles-v1"
+        },
+        "cloudTokens": {
+          "input_without_delegation": {
+            "status": "measured",
+            "value": 0,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "input_with_delegation": {
+            "status": "measured",
+            "value": 1791,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "input_saved": {
+            "status": "estimated",
+            "value": -1791,
+            "reason": null,
+            "method": "runtime-source-units-v1:AlreadyPresent",
+            "range": null,
+            "rangeReason": "conditional_scenario"
+          },
+          "output_without_delegation": {
+            "status": "measured",
+            "value": 29,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "output_with_delegation": {
+            "status": "measured",
+            "value": 76,
+            "reason": null,
+            "method": null,
+            "range": null,
+            "rangeReason": null
+          },
+          "output_saved": {
+            "status": "estimated",
+            "value": -47,
+            "reason": null,
+            "method": "runtime-source-units-v1:AlreadyPresent",
+            "range": null,
+            "rangeReason": "conditional_scenario"
+          }
+        }
+      }
+    }
+  ]
+}
