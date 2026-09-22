@@ -1,0 +1,3580 @@
+{
+  "schemaVersion": 1,
+  "complete": true,
+  "implementation": "d719062-exact-symbol-pilot",
+  "coreSha256": "c17d42e7dfd84e8844065fb7d5d1395c7b137237c6c656204aae85632c4eb951",
+  "probeSha256": "5f67b2357087238d0cf0c906757830ede41a229e88b74ec706397991bf78ae61",
+  "brokerSha256": "e181a9c947212fa115f0d805b720b85cc54eeb321aee2ca572d3ea1cff610e26",
+  "broker": {
+    "processId": 15408,
+    "startedAtUtc": "2026-09-22T02:22:11.3962443+03:00"
+  },
+  "sourceCommit": "2a9b6285b7a7bbecf2c826ae41d3bdd53aabf94e",
+  "sourceTree": "4d6f312ef41ca1372a3816738ab9afaa5a1e5ec5",
+  "generation": "1364bc2a1d1891bae169bc138d397cc633055e64e824193014fd010383fd364b",
+  "corpusSha256": "0990bd3f1e0c1041c7c633913126b3de57adb8a3d7d413180c905eb43d5cf994",
+  "model": "qwen3-embedding:8b-q8_0",
+  "digestBefore": "9704fd987c12aa746934ea9f99dc85527c83c6e4b98b3a10b94689332ee866bb",
+  "digestAfter": "9704fd987c12aa746934ea9f99dc85527c83c6e4b98b3a10b94689332ee866bb",
+  "policy": {
+    "SchemaVersion": 1,
+    "ModelResidency": "RequireFullVram",
+    "IdleModelKeepAliveSeconds": 10,
+    "MaxEmbeddingBatchItems": 128
+  },
+  "caseCount": 73,
+  "boundaries": "Prototype: one fresh Git inspection, cached base index, conservative exact-name decision, lexical scoring and verified snippet when unique. Hybrid: whole SearchAsync. Model startup/cache state is uncontrolled; pass 1 repeats queries. Prototype timing excludes any hybrid fallback. No production shortcut is enabled.",
+  "samples": [
+    {
+      "id": "natural:cs-weight-en",
+      "query": "Calculate the parcel delivery charge using kilograms and an extra fee for large parcels",
+      "category": "original-corpus",
+      "pass": 0,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 161.8827,
+      "hybridMs": 5575.9038,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/pricing/WeightPricing.cs",
+        "symbol": "WeightPricing.Quote",
+        "startLine": 6,
+        "endLine": 11
+      },
+      "hybridHitCount": 6,
+      "hybridHitsSha256": "91be7dc78359c2941da065c9ce1bdfb67b1c785e5469af364758fde9d4a0fec1",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:cs-weight-ru",
+      "query": "Где рассчитывается доставка по весу с надбавкой за негабарит?",
+      "category": "original-corpus",
+      "pass": 0,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 164.9501,
+      "hybridMs": 294.4225,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/pricing/WeightPricing.cs",
+        "symbol": "WeightPricing",
+        "startLine": 3,
+        "endLine": 12
+      },
+      "hybridHitCount": 6,
+      "hybridHitsSha256": "647846269417c374267d532f343b86c90ace9b7f82fa7ca27fea38c000239d31",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:cs-volume-en",
+      "query": "Compute warehouse storage cost from three dimensions instead of mass",
+      "category": "original-corpus",
+      "pass": 0,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 163.0918,
+      "hybridMs": 290.6862,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/features/warehouse/lib/formatWarehouse.ts",
+        "symbol": "formatWarehouse.ts",
+        "startLine": 1,
+        "endLine": 4
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "965063e2f7f5506f2c50be1b5496bc54f65b06a3dc1a0daa1269b40dc34545e1",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:cs-volume-ru",
+      "query": "Как получить стоимость хранения по объёму помещения?",
+      "category": "original-corpus",
+      "pass": 0,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 166.1459,
+      "hybridMs": 281.1258,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/pricing/VolumePricing.cs",
+        "symbol": "VolumePricing",
+        "startLine": 3,
+        "endLine": 13
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "bac401366f01a68c2882888b15ac8f0b7d3acf9fe7641b8b14e50036d1162f42",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:cs-retry-en",
+      "query": "Find the retry delay that suppresses permanent errors and caps temporary failures at sixty seconds",
+      "category": "original-corpus",
+      "pass": 0,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 159.8226,
+      "hybridMs": 284.7572,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/retries/RetrySchedule.cs",
+        "symbol": "RetrySchedule.GetDelaySeconds",
+        "startLine": 6,
+        "endLine": 11
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "c7a028c44f7022673b0b5b1a5cee416a9cf3098d8a982ea4d2c9ce6a6d80ccff",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:cs-retry-ru",
+      "query": "Где повторные попытки прекращаются при постоянной ошибке?",
+      "category": "original-corpus",
+      "pass": 0,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 158.5439,
+      "hybridMs": 379.6451,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/api/retryPolicy.ts",
+        "symbol": "retryPolicy.ts",
+        "startLine": 1,
+        "endLine": 7
+      },
+      "hybridHitCount": 5,
+      "hybridHitsSha256": "2e76af1abce83ae1396d964befb8cbd83b8b849d8f60022d60c014fb7587572e",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:cs-manifest-en",
+      "query": "Return every missing column in a thirty-two-field manifest instead of stopping at the first error",
+      "category": "original-corpus",
+      "pass": 0,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 173.6382,
+      "hybridMs": 386.6274,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/manifests/ManifestReader.cs",
+        "symbol": "ManifestReader.ValidateAllFields",
+        "startLine": 7,
+        "endLine": 141
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "b368706f74721fa31cd76c3ae5bf5974e219a04322c0a8cbee70413a3c6886af",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:cs-manifest-ru",
+      "query": "Найти проверку всех 32 полей накладной, которая собирает сразу все ошибки",
+      "category": "original-corpus",
+      "pass": 0,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 160.0513,
+      "hybridMs": 393.9076,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/manifests/ManifestReader.cs",
+        "symbol": "ManifestReader.ValidateAllFields",
+        "startLine": 7,
+        "endLine": 141
+      },
+      "hybridHitCount": 4,
+      "hybridHitsSha256": "6298e71ce062367bbbeb3d489011e1704f33d72e8e099d2d5f211045dad0adf1",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:cs-invoice-en",
+      "query": "Find an invoice label using its stable record key",
+      "category": "original-corpus",
+      "pass": 0,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 160.5312,
+      "hybridMs": 292.5915,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/features/InvoiceLookup.cs",
+        "symbol": "InvoiceLookup.FindByKey",
+        "startLine": 6,
+        "endLine": 9
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "273a8870f71f90e92f87d41d442175de17de8194475eb93ff4a9d043cf93c3f7",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:cs-inventory-ru",
+      "query": "Где найти название складского остатка inventory по ключу записи?",
+      "category": "original-corpus",
+      "pass": 0,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 162.8936,
+      "hybridMs": 306.8504,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/features/InventoryLookup.cs",
+        "symbol": "InventoryLookup",
+        "startLine": 3,
+        "endLine": 15
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "9274c64e632dfb5be519bece2a1d85f9f9486d2b0f3e3d56d32ee9fdc91ca63f",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:ts-token-en",
+      "query": "Save the current browser authentication credential in a cookie",
+      "category": "original-corpus",
+      "pass": 0,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 162.8755,
+      "hybridMs": 279.9581,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/auth/cookies.ts",
+        "symbol": "writeCookie",
+        "startLine": 1,
+        "endLine": 4
+      },
+      "hybridHitCount": 5,
+      "hybridHitsSha256": "849bcab9c8f1c48b9a39326b4ead7717cca850b7dbe84c1f57e4aa59f1b06a4b",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:ts-token-ru",
+      "query": "Где при выходе из учётной записи удаляется токен браузера?",
+      "category": "original-corpus",
+      "pass": 0,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 163.5593,
+      "hybridMs": 284.7307,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/auth/tokenStorage.ts",
+        "symbol": "clearAccessToken",
+        "startLine": 18,
+        "endLine": 20
+      },
+      "hybridHitCount": 5,
+      "hybridHitsSha256": "28b670156df54788d96361dacf3b6a565c3111cc6b8172096deac0ec54e27bc7",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:ts-retry-en",
+      "query": "Decide if a failed HTTP request may be retried based on status and attempt count",
+      "category": "original-corpus",
+      "pass": 0,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 159.0081,
+      "hybridMs": 291.5516,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/api/retryPolicy.ts",
+        "symbol": "shouldRetryRequest",
+        "startLine": 8,
+        "endLine": 14
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "0148d325f53cd76bfc5cb69c953127c6de408d5feadb151f5763a403f7bf741a",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:ts-retry-ru",
+      "query": "Где задержка повторного HTTP-запроса ограничивается восемью секундами?",
+      "category": "original-corpus",
+      "pass": 0,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 160.6619,
+      "hybridMs": 375.0893,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/api/retryPolicy.ts",
+        "symbol": "backoffDelayMilliseconds",
+        "startLine": 16,
+        "endLine": 18
+      },
+      "hybridHitCount": 5,
+      "hybridHitsSha256": "e7755e89ab8e8d0c6fdd90eeb9e32a7f5bbefc9e624ca692837528e546e964ff",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:ts-menu-en",
+      "query": "Filter a nested navigation tree according to granted permissions",
+      "category": "original-corpus",
+      "pass": 0,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 164.0681,
+      "hybridMs": 300.6673,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/access/menuVisibility.ts",
+        "symbol": "visibleMenu",
+        "startLine": 9,
+        "endLine": 13
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "d06cf532fa1798e433a0d3f7561f29089d88b1fb809593fb2d6985f2d5745de9",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:ts-menu-ru",
+      "query": "Как убрать из меню разделы, к которым у пользователя нет доступа?",
+      "category": "original-corpus",
+      "pass": 0,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 160.5818,
+      "hybridMs": 286.1725,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/access/menuVisibility.ts",
+        "symbol": "visibleMenu",
+        "startLine": 9,
+        "endLine": 13
+      },
+      "hybridHitCount": 4,
+      "hybridHitsSha256": "86b10a9d57daa349fa4e869f0c4bdbcf92dc9a3c8882e7d4d44bc522b0449b33",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:ts-empty-en",
+      "query": "Render a memoized placeholder when a filtered table has no records",
+      "category": "original-corpus",
+      "pass": 0,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 162.9589,
+      "hybridMs": 273.1643,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/ui/EmptyState.tsx",
+        "symbol": "EmptyState.tsx [2/2]",
+        "startLine": 7,
+        "endLine": 11
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "fe992753dfe6cfdfd4338364a031535f6bb6f954b4be67b2e60c44b8d8290dac",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:ts-empty-ru",
+      "query": "Какой компонент показывает подсказку для пустого списка?",
+      "category": "original-corpus",
+      "pass": 0,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 159.4749,
+      "hybridMs": 443.4971,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/ui/EmptyState.tsx",
+        "symbol": "EmptyState",
+        "startLine": 12,
+        "endLine": 23
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "1c96dfba43dc3986564041f14028ac1a22ad7087da3cef854169f492f079d09f",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:ts-invoice-en",
+      "query": "Locate the API object that lists, creates, updates and removes invoice records",
+      "category": "original-corpus",
+      "pass": 0,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 159.7248,
+      "hybridMs": 297.6579,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/features/invoice/api/invoice.api.ts",
+        "symbol": "invoiceApi",
+        "startLine": 4,
+        "endLine": 11
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "6fbc6a8f1cb059d2233fbaeba5f44adeecf63be6d0b351e2ff8f20b1af88c476",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:ts-inventory-ru",
+      "query": "Где хук загружает и сортирует список inventory по имени?",
+      "category": "original-corpus",
+      "pass": 0,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 158.9082,
+      "hybridMs": 273.0543,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/features/inventory/model/useInventory.ts",
+        "symbol": "useInventoryList",
+        "startLine": 6,
+        "endLine": 12
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "8dede3c9890c730974958989730ed961230f189a5bc18d6d58393e55d88034ba",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:py-halfup-en",
+      "query": "Convert an invoice amount into whole cents using half-up rounding",
+      "category": "original-corpus",
+      "pass": 0,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 164.7902,
+      "hybridMs": 290.0406,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/lib/money.py",
+        "symbol": "to_minor_units",
+        "startLine": 8,
+        "endLine": 10
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "552098b3451dce0fbbdeaa3a05425992aa7884795513cfbf7c85f8d3eb2e6cf2",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:py-halfup-ru",
+      "query": "Где сумма счёта переводится в целое число копеек с округлением половины вверх?",
+      "category": "original-corpus",
+      "pass": 0,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 159.4184,
+      "hybridMs": 385.3061,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/lib/money.py",
+        "symbol": "to_minor_units",
+        "startLine": 8,
+        "endLine": 10
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "c6a7e420b2546ba50f02e9a4f954593dbb0e6a2d25c6164bc17a12835e1e355b",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:py-even-en",
+      "query": "Round a statistical monetary value to two decimals using ties-to-even",
+      "category": "original-corpus",
+      "pass": 0,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 165.0257,
+      "hybridMs": 391.7067,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/lib/currency_policy.py",
+        "symbol": "round_for_statistics",
+        "startLine": 3,
+        "endLine": 5
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "a29863d5814ac1c1139522840525b8485acfb2c5032be7b089f55cc942e25637",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:py-even-ru",
+      "query": "Где применяется банковское округление для статистического отчёта?",
+      "category": "original-corpus",
+      "pass": 0,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 165.0232,
+      "hybridMs": 270.8744,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/lib/currency_policy.py",
+        "symbol": "round_for_statistics",
+        "startLine": 3,
+        "endLine": 5
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "9f129f333c258f8be32a424d8f3ad3158ec53417a112710c890ef7c41e478ad4",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:py-missing-en",
+      "query": "Collect required columns that are absent or contain only spaces, preserving their declared order",
+      "category": "original-corpus",
+      "pass": 0,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 164.2593,
+      "hybridMs": 283.091,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/lib/manifest.py",
+        "symbol": "missing_fields",
+        "startLine": 1,
+        "endLine": 3
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "27d8db8490d1ea1ecbc45f0fdf71c960daa580c26bcb2cb53d509dca80e82a75",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:py-missing-ru",
+      "query": "Как найти пустые обязательные поля строки в порядке объявления столбцов?",
+      "category": "original-corpus",
+      "pass": 0,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 165.276,
+      "hybridMs": 392.5359,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/lib/manifest.py",
+        "symbol": "missing_fields",
+        "startLine": 1,
+        "endLine": 3
+      },
+      "hybridHitCount": 4,
+      "hybridHitsSha256": "f84b7b82b77a5fcb23ea4d02a6e873b66768cd00515cfe8e44ccf3fd4bf95c56",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:py-accepted-en",
+      "query": "Keep only manifest rows whose required columns are all populated",
+      "category": "original-corpus",
+      "pass": 0,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 170.621,
+      "hybridMs": 378.7811,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/lib/manifest.py",
+        "symbol": "accepted_rows",
+        "startLine": 5,
+        "endLine": 7
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "44f45e94c851782f67b78476c3d026509c02b2d38b893faab1969c6865a6d7a6",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:py-accepted-ru",
+      "query": "Где строки с незаполненными обязательными полями исключаются из результата?",
+      "category": "original-corpus",
+      "pass": 0,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 161.7025,
+      "hybridMs": 378.8356,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/lib/manifest.py",
+        "symbol": "accepted_rows",
+        "startLine": 5,
+        "endLine": 7
+      },
+      "hybridHitCount": 4,
+      "hybridHitsSha256": "09f2aa8ea7f8f4985cae844c806f054a6792571e3656007bde8b345d63a87c3f",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:py-invoice-en",
+      "query": "Sum invoice amounts with exact decimal arithmetic while excluding cancelled records",
+      "category": "original-corpus",
+      "pass": 0,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 160.5363,
+      "hybridMs": 283.9944,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/features/invoice_ledger.py",
+        "symbol": "total_invoice",
+        "startLine": 3,
+        "endLine": 6
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "1e2fd9006fada65e4fdae6bb79771be3d14ef7a1b7520ab044f1ebc891769e50",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:py-inventory-ru",
+      "query": "Где найти первую запись inventory по её идентификатору?",
+      "category": "original-corpus",
+      "pass": 0,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 162.5732,
+      "hybridMs": 280.3804,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/features/InventoryLookup.cs",
+        "symbol": "InventoryLookup.FindByKey",
+        "startLine": 6,
+        "endLine": 9
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "5ee2c6aeb461506ef0dbfa70973b477960fd6e111e1e7f20df60445c47ec9aff",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:absent-encryption-en",
+      "query": "Rotate the AES encryption key and re-encrypt stored files",
+      "category": "original-corpus",
+      "pass": 0,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 161.0989,
+      "hybridMs": 374.747,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/features/CatalogLookup.cs",
+        "symbol": "CatalogLookup.FindByKey",
+        "startLine": 6,
+        "endLine": 9
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "a384b60059b5b033f1e10db5afadda685e64f7d8897905efab316e052a94cc16",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:absent-migration-ru",
+      "query": "Где выполняется откат миграции схемы базы данных?",
+      "category": "original-corpus",
+      "pass": 0,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 157.552,
+      "hybridMs": 393.3684,
+      "exact": [],
+      "hybridFirst": null,
+      "hybridHitCount": 0,
+      "hybridHitsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sameFirstHit": false,
+      "sameOrderedLocations": true
+    },
+    {
+      "id": "natural:absent-audio-en",
+      "query": "Decode speech from a microphone and remove background noise",
+      "category": "original-corpus",
+      "pass": 0,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 157.1878,
+      "hybridMs": 280.4229,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/features/catalog/api/catalog.api.ts",
+        "symbol": "catalogApi",
+        "startLine": 4,
+        "endLine": 11
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "36738d9e96af4d0c11b2702cdabe916b32d69835c464162df1405e779fc01380",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:absent-signature-ru",
+      "query": "Как проверить цифровую подпись пакета перед установкой?",
+      "category": "original-corpus",
+      "pass": 0,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 161.5681,
+      "hybridMs": 297.3959,
+      "exact": [],
+      "hybridFirst": null,
+      "hybridHitCount": 0,
+      "hybridHitsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sameFirstHit": false,
+      "sameOrderedLocations": true
+    },
+    {
+      "id": "qualified:EmptyState",
+      "query": "EmptyState",
+      "category": "qualified-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 164.5742,
+      "hybridMs": 378.112,
+      "exact": [
+        {
+          "path": "src/shared/ui/EmptyState.tsx",
+          "symbol": "EmptyState",
+          "startLine": 12,
+          "endLine": 23
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/ui/EmptyState.tsx",
+        "symbol": "EmptyState",
+        "startLine": 12,
+        "endLine": 23
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "e16a12cf76d4ae5ef62d65b0cebe56a0394c958ef88461e4d66009b635448dcc",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:InventoryLookup.FindByKey",
+      "query": "InventoryLookup.FindByKey",
+      "category": "qualified-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 163.7038,
+      "hybridMs": 376.6088,
+      "exact": [
+        {
+          "path": "src/features/InventoryLookup.cs",
+          "symbol": "InventoryLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/features/InventoryLookup.cs",
+        "symbol": "InventoryLookup.FindByKey",
+        "startLine": 6,
+        "endLine": 9
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "76631b8d5ab01dcbb1962b9f6a1a401a582ad2903c6a9cf4c337e17e1b420d7c",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:InvoiceLookup.FindByKey",
+      "query": "InvoiceLookup.FindByKey",
+      "category": "qualified-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 165.0586,
+      "hybridMs": 283.5724,
+      "exact": [
+        {
+          "path": "src/features/InvoiceLookup.cs",
+          "symbol": "InvoiceLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/features/InvoiceLookup.cs",
+        "symbol": "InvoiceLookup.FindByKey",
+        "startLine": 6,
+        "endLine": 9
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "aa14050f8c690da6d6415c0e0d164c8087aa5a6afff3047ebacd2838d75d2ff7",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:ManifestReader.ValidateAllFields",
+      "query": "ManifestReader.ValidateAllFields",
+      "category": "qualified-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 169.0415,
+      "hybridMs": 286.3776,
+      "exact": [
+        {
+          "path": "src/manifests/ManifestReader.cs",
+          "symbol": "ManifestReader.ValidateAllFields",
+          "startLine": 7,
+          "endLine": 141
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/manifests/ManifestReader.cs",
+        "symbol": "ManifestReader",
+        "startLine": 3,
+        "endLine": 142
+      },
+      "hybridHitCount": 4,
+      "hybridHitsSha256": "fdb1183a46d62fc7b7f47207794c60cf3ce1e86dd50c95f11e166ec162e40c33",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:RetrySchedule.GetDelaySeconds",
+      "query": "RetrySchedule.GetDelaySeconds",
+      "category": "qualified-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 160.5485,
+      "hybridMs": 277.3773,
+      "exact": [
+        {
+          "path": "src/retries/RetrySchedule.cs",
+          "symbol": "RetrySchedule.GetDelaySeconds",
+          "startLine": 6,
+          "endLine": 11
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/retries/RetrySchedule.cs",
+        "symbol": "RetrySchedule",
+        "startLine": 3,
+        "endLine": 12
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "aa814b6b20b5d136a1b0fc7aec10f7935331ff333fab6d4bb88cd535674d046d",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:VolumePricing.Quote",
+      "query": "VolumePricing.Quote",
+      "category": "qualified-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 159.0941,
+      "hybridMs": 393.6217,
+      "exact": [
+        {
+          "path": "src/pricing/VolumePricing.cs",
+          "symbol": "VolumePricing.Quote",
+          "startLine": 6,
+          "endLine": 12
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/pricing/VolumePricing.cs",
+        "symbol": "VolumePricing",
+        "startLine": 3,
+        "endLine": 13
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "729ecfb8047e355aaa0db67584c5c59fac4ed7c7a140ae5c0ab93d8bc8d2b0a8",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:WeightPricing.Quote",
+      "query": "WeightPricing.Quote",
+      "category": "qualified-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 167.9021,
+      "hybridMs": 390.3559,
+      "exact": [
+        {
+          "path": "src/pricing/WeightPricing.cs",
+          "symbol": "WeightPricing.Quote",
+          "startLine": 6,
+          "endLine": 11
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/pricing/WeightPricing.cs",
+        "symbol": "WeightPricing",
+        "startLine": 3,
+        "endLine": 12
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "905ff4fc2b2a06cca5d124a80fc37bdd13b52cc7045f1883f1c6d6752488af1f",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:accepted_rows",
+      "query": "accepted_rows",
+      "category": "qualified-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 158.9365,
+      "hybridMs": 385.7207,
+      "exact": [
+        {
+          "path": "src/shared/lib/manifest.py",
+          "symbol": "accepted_rows",
+          "startLine": 5,
+          "endLine": 7
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/lib/manifest.py",
+        "symbol": "accepted_rows",
+        "startLine": 5,
+        "endLine": 7
+      },
+      "hybridHitCount": 3,
+      "hybridHitsSha256": "1987ec319ffb2f8a1dcfbfa9dae4ebe6d99906aee7287f06d154c272cf8ef5bc",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:backoffDelayMilliseconds",
+      "query": "backoffDelayMilliseconds",
+      "category": "qualified-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 165.608,
+      "hybridMs": 299.6632,
+      "exact": [
+        {
+          "path": "src/shared/api/retryPolicy.ts",
+          "symbol": "backoffDelayMilliseconds",
+          "startLine": 16,
+          "endLine": 18
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/api/retryPolicy.ts",
+        "symbol": "backoffDelayMilliseconds",
+        "startLine": 16,
+        "endLine": 18
+      },
+      "hybridHitCount": 5,
+      "hybridHitsSha256": "2c2b4d13c56c7c848954c2c0a4f844b52da7bc1a444c9ea66ca0426dfb826076",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:clearAccessToken",
+      "query": "clearAccessToken",
+      "category": "qualified-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 158.9868,
+      "hybridMs": 282.1507,
+      "exact": [
+        {
+          "path": "src/shared/auth/tokenStorage.ts",
+          "symbol": "clearAccessToken",
+          "startLine": 18,
+          "endLine": 20
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/auth/tokenStorage.ts",
+        "symbol": "clearAccessToken",
+        "startLine": 18,
+        "endLine": 20
+      },
+      "hybridHitCount": 8,
+      "hybridHitsSha256": "ed2299e13547e50374f1625566aa8a32d1024a82b3527b7f3d5aaf21e68966d3",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:find_inventory",
+      "query": "find_inventory",
+      "category": "qualified-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 158.5903,
+      "hybridMs": 285.5548,
+      "exact": [
+        {
+          "path": "src/features/inventory_ledger.py",
+          "symbol": "find_inventory",
+          "startLine": 8,
+          "endLine": 10
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/features/inventory_ledger.py",
+        "symbol": "find_inventory",
+        "startLine": 8,
+        "endLine": 10
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "cde5157a3bb2ec232ef0ec8834c541c81a72cbcf3c95fa16ded99090f1ffafeb",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:invoiceApi",
+      "query": "invoiceApi",
+      "category": "qualified-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 159.2484,
+      "hybridMs": 289.0863,
+      "exact": [
+        {
+          "path": "src/features/invoice/api/invoice.api.ts",
+          "symbol": "invoiceApi",
+          "startLine": 4,
+          "endLine": 11
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/features/invoice/api/invoice.api.ts",
+        "symbol": "invoiceApi",
+        "startLine": 4,
+        "endLine": 11
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "458d6cef04e531ad387d46ef97a862eaa80e79ff291a1281bd707b2903b06561",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:missing_fields",
+      "query": "missing_fields",
+      "category": "qualified-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 164.9293,
+      "hybridMs": 392.2092,
+      "exact": [
+        {
+          "path": "src/shared/lib/manifest.py",
+          "symbol": "missing_fields",
+          "startLine": 1,
+          "endLine": 3
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/lib/manifest.py",
+        "symbol": "missing_fields",
+        "startLine": 1,
+        "endLine": 3
+      },
+      "hybridHitCount": 4,
+      "hybridHitsSha256": "fed1ccb5f22ecac520b8935b6a21f1e42fc0617f7ccd222296db59758e815a31",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:round_for_statistics",
+      "query": "round_for_statistics",
+      "category": "qualified-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 161.012,
+      "hybridMs": 390.3985,
+      "exact": [
+        {
+          "path": "src/shared/lib/currency_policy.py",
+          "symbol": "round_for_statistics",
+          "startLine": 3,
+          "endLine": 5
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/lib/currency_policy.py",
+        "symbol": "round_for_statistics",
+        "startLine": 3,
+        "endLine": 5
+      },
+      "hybridHitCount": 5,
+      "hybridHitsSha256": "73b9101857476f4cc278bd4752633f376495187b26f07325e2a116287d0e6af2",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:shouldRetryRequest",
+      "query": "shouldRetryRequest",
+      "category": "qualified-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 159.9218,
+      "hybridMs": 390.6129,
+      "exact": [
+        {
+          "path": "src/shared/api/retryPolicy.ts",
+          "symbol": "shouldRetryRequest",
+          "startLine": 8,
+          "endLine": 14
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/api/retryPolicy.ts",
+        "symbol": "shouldRetryRequest",
+        "startLine": 8,
+        "endLine": 14
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "73ebcf9af0536007f0994e184e91e70ff980fc33fd500636fa0715245d757a14",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:storeAccessToken",
+      "query": "storeAccessToken",
+      "category": "qualified-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 160.5879,
+      "hybridMs": 284.9569,
+      "exact": [
+        {
+          "path": "src/shared/auth/tokenStorage.ts",
+          "symbol": "storeAccessToken",
+          "startLine": 10,
+          "endLine": 12
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/auth/tokenStorage.ts",
+        "symbol": "storeAccessToken",
+        "startLine": 10,
+        "endLine": 12
+      },
+      "hybridHitCount": 8,
+      "hybridHitsSha256": "4db0e469f66c9ef7f024590d152ac9fed77168dd5aeedc7d1556216b4acf6ae6",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:to_minor_units",
+      "query": "to_minor_units",
+      "category": "qualified-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 160.0102,
+      "hybridMs": 300.9888,
+      "exact": [
+        {
+          "path": "src/shared/lib/money.py",
+          "symbol": "to_minor_units",
+          "startLine": 8,
+          "endLine": 10
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/lib/money.py",
+        "symbol": "to_minor_units",
+        "startLine": 8,
+        "endLine": 10
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "b38aa1dfeff046eee82e50842c21817688977131fdf11c907367093894ff37d8",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:total_invoice",
+      "query": "total_invoice",
+      "category": "qualified-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 163.5809,
+      "hybridMs": 277.9001,
+      "exact": [
+        {
+          "path": "src/features/invoice_ledger.py",
+          "symbol": "total_invoice",
+          "startLine": 3,
+          "endLine": 6
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/features/invoice_ledger.py",
+        "symbol": "total_invoice",
+        "startLine": 3,
+        "endLine": 6
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "2d84161e6cefb37c7b6d02af92e5cdc410b734579ffaf7ad453ff3a03921fe54",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:useInventoryList",
+      "query": "useInventoryList",
+      "category": "qualified-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 165.9127,
+      "hybridMs": 275.8472,
+      "exact": [
+        {
+          "path": "src/features/inventory/model/useInventory.ts",
+          "symbol": "useInventoryList",
+          "startLine": 6,
+          "endLine": 12
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/features/inventory/model/useInventory.ts",
+        "symbol": "useInventoryList",
+        "startLine": 6,
+        "endLine": 12
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "c761844732386d8e098f6f1fcbb1db87cebe4de1414eef148c59eed299635de3",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:visibleMenu",
+      "query": "visibleMenu",
+      "category": "qualified-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 160.5525,
+      "hybridMs": 384.123,
+      "exact": [
+        {
+          "path": "src/shared/access/menuVisibility.ts",
+          "symbol": "visibleMenu",
+          "startLine": 9,
+          "endLine": 13
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/access/menuVisibility.ts",
+        "symbol": "visibleMenu",
+        "startLine": 9,
+        "endLine": 13
+      },
+      "hybridHitCount": 4,
+      "hybridHitsSha256": "4b5018dbec87dd6fbed1a972db661ff8c9a40290bc4b771b865b5642fd501377",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:EmptyState",
+      "query": "EmptyState",
+      "category": "short-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 158.4918,
+      "hybridMs": 284.8423,
+      "exact": [
+        {
+          "path": "src/shared/ui/EmptyState.tsx",
+          "symbol": "EmptyState",
+          "startLine": 12,
+          "endLine": 23
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/ui/EmptyState.tsx",
+        "symbol": "EmptyState",
+        "startLine": 12,
+        "endLine": 23
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "e16a12cf76d4ae5ef62d65b0cebe56a0394c958ef88461e4d66009b635448dcc",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:FindByKey",
+      "query": "FindByKey",
+      "category": "short-label",
+      "pass": 0,
+      "decision": "ambiguous-chunks",
+      "matchingChunks": 10,
+      "prototypeMs": 162.9388,
+      "hybridMs": 383.6125,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/features/CustomerLookup.cs",
+        "symbol": "CustomerLookup.FindByKey",
+        "startLine": 6,
+        "endLine": 9
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "53e618f751b8dc35ebbed18b1729575a9e1abd485539c8327428afae8101398a",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:GetDelaySeconds",
+      "query": "GetDelaySeconds",
+      "category": "short-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 161.49,
+      "hybridMs": 387.8884,
+      "exact": [
+        {
+          "path": "src/retries/RetrySchedule.cs",
+          "symbol": "RetrySchedule.GetDelaySeconds",
+          "startLine": 6,
+          "endLine": 11
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/retries/RetrySchedule.cs",
+        "symbol": "RetrySchedule.GetDelaySeconds",
+        "startLine": 6,
+        "endLine": 11
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "c4e35879ece509dd15c9c37060fab948354919e39bc2701a3041d916711f5d0d",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:Quote",
+      "query": "Quote",
+      "category": "short-label",
+      "pass": 0,
+      "decision": "ambiguous-chunks",
+      "matchingChunks": 2,
+      "prototypeMs": 167.1882,
+      "hybridMs": 279.8973,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/pricing/VolumePricing.cs",
+        "symbol": "VolumePricing.Quote",
+        "startLine": 6,
+        "endLine": 12
+      },
+      "hybridHitCount": 4,
+      "hybridHitsSha256": "ce886176db012f75e87a4569a4ebd482028c296e72ae175c0f7fed2f6f877f5b",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:ValidateAllFields",
+      "query": "ValidateAllFields",
+      "category": "short-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 160.2001,
+      "hybridMs": 272.2998,
+      "exact": [
+        {
+          "path": "src/manifests/ManifestReader.cs",
+          "symbol": "ManifestReader.ValidateAllFields",
+          "startLine": 7,
+          "endLine": 141
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/manifests/ManifestReader.cs",
+        "symbol": "ManifestReader.ValidateAllFields",
+        "startLine": 7,
+        "endLine": 141
+      },
+      "hybridHitCount": 4,
+      "hybridHitsSha256": "3051952e65deba99d8be7f3416769b7a5b765da87206bc298a9333ed298d4018",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:accepted_rows",
+      "query": "accepted_rows",
+      "category": "short-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 155.1395,
+      "hybridMs": 285.0659,
+      "exact": [
+        {
+          "path": "src/shared/lib/manifest.py",
+          "symbol": "accepted_rows",
+          "startLine": 5,
+          "endLine": 7
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/lib/manifest.py",
+        "symbol": "accepted_rows",
+        "startLine": 5,
+        "endLine": 7
+      },
+      "hybridHitCount": 3,
+      "hybridHitsSha256": "1987ec319ffb2f8a1dcfbfa9dae4ebe6d99906aee7287f06d154c272cf8ef5bc",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:backoffDelayMilliseconds",
+      "query": "backoffDelayMilliseconds",
+      "category": "short-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 158.5207,
+      "hybridMs": 272.6998,
+      "exact": [
+        {
+          "path": "src/shared/api/retryPolicy.ts",
+          "symbol": "backoffDelayMilliseconds",
+          "startLine": 16,
+          "endLine": 18
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/api/retryPolicy.ts",
+        "symbol": "backoffDelayMilliseconds",
+        "startLine": 16,
+        "endLine": 18
+      },
+      "hybridHitCount": 5,
+      "hybridHitsSha256": "2c2b4d13c56c7c848954c2c0a4f844b52da7bc1a444c9ea66ca0426dfb826076",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:clearAccessToken",
+      "query": "clearAccessToken",
+      "category": "short-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 158.3702,
+      "hybridMs": 277.9794,
+      "exact": [
+        {
+          "path": "src/shared/auth/tokenStorage.ts",
+          "symbol": "clearAccessToken",
+          "startLine": 18,
+          "endLine": 20
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/auth/tokenStorage.ts",
+        "symbol": "clearAccessToken",
+        "startLine": 18,
+        "endLine": 20
+      },
+      "hybridHitCount": 8,
+      "hybridHitsSha256": "ed2299e13547e50374f1625566aa8a32d1024a82b3527b7f3d5aaf21e68966d3",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:find_inventory",
+      "query": "find_inventory",
+      "category": "short-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 157.6734,
+      "hybridMs": 283.2771,
+      "exact": [
+        {
+          "path": "src/features/inventory_ledger.py",
+          "symbol": "find_inventory",
+          "startLine": 8,
+          "endLine": 10
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/features/inventory_ledger.py",
+        "symbol": "find_inventory",
+        "startLine": 8,
+        "endLine": 10
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "cde5157a3bb2ec232ef0ec8834c541c81a72cbcf3c95fa16ded99090f1ffafeb",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:invoiceApi",
+      "query": "invoiceApi",
+      "category": "short-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 163.0721,
+      "hybridMs": 297.3591,
+      "exact": [
+        {
+          "path": "src/features/invoice/api/invoice.api.ts",
+          "symbol": "invoiceApi",
+          "startLine": 4,
+          "endLine": 11
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/features/invoice/api/invoice.api.ts",
+        "symbol": "invoiceApi",
+        "startLine": 4,
+        "endLine": 11
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "458d6cef04e531ad387d46ef97a862eaa80e79ff291a1281bd707b2903b06561",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:missing_fields",
+      "query": "missing_fields",
+      "category": "short-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 158.9819,
+      "hybridMs": 295.0409,
+      "exact": [
+        {
+          "path": "src/shared/lib/manifest.py",
+          "symbol": "missing_fields",
+          "startLine": 1,
+          "endLine": 3
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/lib/manifest.py",
+        "symbol": "missing_fields",
+        "startLine": 1,
+        "endLine": 3
+      },
+      "hybridHitCount": 4,
+      "hybridHitsSha256": "fed1ccb5f22ecac520b8935b6a21f1e42fc0617f7ccd222296db59758e815a31",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:round_for_statistics",
+      "query": "round_for_statistics",
+      "category": "short-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 162.0841,
+      "hybridMs": 286.3171,
+      "exact": [
+        {
+          "path": "src/shared/lib/currency_policy.py",
+          "symbol": "round_for_statistics",
+          "startLine": 3,
+          "endLine": 5
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/lib/currency_policy.py",
+        "symbol": "round_for_statistics",
+        "startLine": 3,
+        "endLine": 5
+      },
+      "hybridHitCount": 5,
+      "hybridHitsSha256": "73b9101857476f4cc278bd4752633f376495187b26f07325e2a116287d0e6af2",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:shouldRetryRequest",
+      "query": "shouldRetryRequest",
+      "category": "short-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 164.673,
+      "hybridMs": 278.6205,
+      "exact": [
+        {
+          "path": "src/shared/api/retryPolicy.ts",
+          "symbol": "shouldRetryRequest",
+          "startLine": 8,
+          "endLine": 14
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/api/retryPolicy.ts",
+        "symbol": "shouldRetryRequest",
+        "startLine": 8,
+        "endLine": 14
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "73ebcf9af0536007f0994e184e91e70ff980fc33fd500636fa0715245d757a14",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:storeAccessToken",
+      "query": "storeAccessToken",
+      "category": "short-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 154.275,
+      "hybridMs": 267.6258,
+      "exact": [
+        {
+          "path": "src/shared/auth/tokenStorage.ts",
+          "symbol": "storeAccessToken",
+          "startLine": 10,
+          "endLine": 12
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/auth/tokenStorage.ts",
+        "symbol": "storeAccessToken",
+        "startLine": 10,
+        "endLine": 12
+      },
+      "hybridHitCount": 8,
+      "hybridHitsSha256": "4db0e469f66c9ef7f024590d152ac9fed77168dd5aeedc7d1556216b4acf6ae6",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:to_minor_units",
+      "query": "to_minor_units",
+      "category": "short-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 156.4603,
+      "hybridMs": 287.8955,
+      "exact": [
+        {
+          "path": "src/shared/lib/money.py",
+          "symbol": "to_minor_units",
+          "startLine": 8,
+          "endLine": 10
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/lib/money.py",
+        "symbol": "to_minor_units",
+        "startLine": 8,
+        "endLine": 10
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "b38aa1dfeff046eee82e50842c21817688977131fdf11c907367093894ff37d8",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:total_invoice",
+      "query": "total_invoice",
+      "category": "short-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 164.759,
+      "hybridMs": 284.2647,
+      "exact": [
+        {
+          "path": "src/features/invoice_ledger.py",
+          "symbol": "total_invoice",
+          "startLine": 3,
+          "endLine": 6
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/features/invoice_ledger.py",
+        "symbol": "total_invoice",
+        "startLine": 3,
+        "endLine": 6
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "2d84161e6cefb37c7b6d02af92e5cdc410b734579ffaf7ad453ff3a03921fe54",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:useInventoryList",
+      "query": "useInventoryList",
+      "category": "short-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 162.8494,
+      "hybridMs": 285.6785,
+      "exact": [
+        {
+          "path": "src/features/inventory/model/useInventory.ts",
+          "symbol": "useInventoryList",
+          "startLine": 6,
+          "endLine": 12
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/features/inventory/model/useInventory.ts",
+        "symbol": "useInventoryList",
+        "startLine": 6,
+        "endLine": 12
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "c761844732386d8e098f6f1fcbb1db87cebe4de1414eef148c59eed299635de3",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:visibleMenu",
+      "query": "visibleMenu",
+      "category": "short-label",
+      "pass": 0,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 163.2505,
+      "hybridMs": 283.1773,
+      "exact": [
+        {
+          "path": "src/shared/access/menuVisibility.ts",
+          "symbol": "visibleMenu",
+          "startLine": 9,
+          "endLine": 13
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/access/menuVisibility.ts",
+        "symbol": "visibleMenu",
+        "startLine": 9,
+        "endLine": 13
+      },
+      "hybridHitCount": 4,
+      "hybridHitsSha256": "4b5018dbec87dd6fbed1a972db661ff8c9a40290bc4b771b865b5642fd501377",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "missing",
+      "query": "MissingSymbolForExactPilot",
+      "category": "absent-symbol",
+      "pass": 0,
+      "decision": "not-found",
+      "matchingChunks": 0,
+      "prototypeMs": 156.2749,
+      "hybridMs": 473.1254,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/lib/manifest.py",
+        "symbol": "missing_fields",
+        "startLine": 1,
+        "endLine": 3
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "f06765e81509f3e425c104ae2b801bc80a13548d7fd56d892594d5aa7a87d80b",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:cs-weight-en",
+      "query": "Calculate the parcel delivery charge using kilograms and an extra fee for large parcels",
+      "category": "original-corpus",
+      "pass": 1,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 160.1701,
+      "hybridMs": 282.9736,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/pricing/WeightPricing.cs",
+        "symbol": "WeightPricing.Quote",
+        "startLine": 6,
+        "endLine": 11
+      },
+      "hybridHitCount": 6,
+      "hybridHitsSha256": "91be7dc78359c2941da065c9ce1bdfb67b1c785e5469af364758fde9d4a0fec1",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:cs-weight-ru",
+      "query": "Где рассчитывается доставка по весу с надбавкой за негабарит?",
+      "category": "original-corpus",
+      "pass": 1,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 160.3699,
+      "hybridMs": 285.3762,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/pricing/WeightPricing.cs",
+        "symbol": "WeightPricing",
+        "startLine": 3,
+        "endLine": 12
+      },
+      "hybridHitCount": 6,
+      "hybridHitsSha256": "647846269417c374267d532f343b86c90ace9b7f82fa7ca27fea38c000239d31",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:cs-volume-en",
+      "query": "Compute warehouse storage cost from three dimensions instead of mass",
+      "category": "original-corpus",
+      "pass": 1,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 167.3476,
+      "hybridMs": 288.2757,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/features/warehouse/lib/formatWarehouse.ts",
+        "symbol": "formatWarehouse.ts",
+        "startLine": 1,
+        "endLine": 4
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "965063e2f7f5506f2c50be1b5496bc54f65b06a3dc1a0daa1269b40dc34545e1",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:cs-volume-ru",
+      "query": "Как получить стоимость хранения по объёму помещения?",
+      "category": "original-corpus",
+      "pass": 1,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 164.8622,
+      "hybridMs": 284.4684,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/pricing/VolumePricing.cs",
+        "symbol": "VolumePricing",
+        "startLine": 3,
+        "endLine": 13
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "bac401366f01a68c2882888b15ac8f0b7d3acf9fe7641b8b14e50036d1162f42",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:cs-retry-en",
+      "query": "Find the retry delay that suppresses permanent errors and caps temporary failures at sixty seconds",
+      "category": "original-corpus",
+      "pass": 1,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 164.6724,
+      "hybridMs": 376.897,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/retries/RetrySchedule.cs",
+        "symbol": "RetrySchedule.GetDelaySeconds",
+        "startLine": 6,
+        "endLine": 11
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "c7a028c44f7022673b0b5b1a5cee416a9cf3098d8a982ea4d2c9ce6a6d80ccff",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:cs-retry-ru",
+      "query": "Где повторные попытки прекращаются при постоянной ошибке?",
+      "category": "original-corpus",
+      "pass": 1,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 170.3953,
+      "hybridMs": 277.4899,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/api/retryPolicy.ts",
+        "symbol": "retryPolicy.ts",
+        "startLine": 1,
+        "endLine": 7
+      },
+      "hybridHitCount": 5,
+      "hybridHitsSha256": "2e76af1abce83ae1396d964befb8cbd83b8b849d8f60022d60c014fb7587572e",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:cs-manifest-en",
+      "query": "Return every missing column in a thirty-two-field manifest instead of stopping at the first error",
+      "category": "original-corpus",
+      "pass": 1,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 159.8551,
+      "hybridMs": 278.6947,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/manifests/ManifestReader.cs",
+        "symbol": "ManifestReader.ValidateAllFields",
+        "startLine": 7,
+        "endLine": 141
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "b368706f74721fa31cd76c3ae5bf5974e219a04322c0a8cbee70413a3c6886af",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:cs-manifest-ru",
+      "query": "Найти проверку всех 32 полей накладной, которая собирает сразу все ошибки",
+      "category": "original-corpus",
+      "pass": 1,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 162.2791,
+      "hybridMs": 285.4429,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/manifests/ManifestReader.cs",
+        "symbol": "ManifestReader.ValidateAllFields",
+        "startLine": 7,
+        "endLine": 141
+      },
+      "hybridHitCount": 4,
+      "hybridHitsSha256": "6298e71ce062367bbbeb3d489011e1704f33d72e8e099d2d5f211045dad0adf1",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:cs-invoice-en",
+      "query": "Find an invoice label using its stable record key",
+      "category": "original-corpus",
+      "pass": 1,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 164.1624,
+      "hybridMs": 281.0864,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/features/InvoiceLookup.cs",
+        "symbol": "InvoiceLookup.FindByKey",
+        "startLine": 6,
+        "endLine": 9
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "273a8870f71f90e92f87d41d442175de17de8194475eb93ff4a9d043cf93c3f7",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:cs-inventory-ru",
+      "query": "Где найти название складского остатка inventory по ключу записи?",
+      "category": "original-corpus",
+      "pass": 1,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 157.1826,
+      "hybridMs": 285.0283,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/features/InventoryLookup.cs",
+        "symbol": "InventoryLookup",
+        "startLine": 3,
+        "endLine": 15
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "9274c64e632dfb5be519bece2a1d85f9f9486d2b0f3e3d56d32ee9fdc91ca63f",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:ts-token-en",
+      "query": "Save the current browser authentication credential in a cookie",
+      "category": "original-corpus",
+      "pass": 1,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 162.749,
+      "hybridMs": 275.4151,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/auth/cookies.ts",
+        "symbol": "writeCookie",
+        "startLine": 1,
+        "endLine": 4
+      },
+      "hybridHitCount": 5,
+      "hybridHitsSha256": "849bcab9c8f1c48b9a39326b4ead7717cca850b7dbe84c1f57e4aa59f1b06a4b",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:ts-token-ru",
+      "query": "Где при выходе из учётной записи удаляется токен браузера?",
+      "category": "original-corpus",
+      "pass": 1,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 161.9372,
+      "hybridMs": 286.713,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/auth/tokenStorage.ts",
+        "symbol": "clearAccessToken",
+        "startLine": 18,
+        "endLine": 20
+      },
+      "hybridHitCount": 5,
+      "hybridHitsSha256": "28b670156df54788d96361dacf3b6a565c3111cc6b8172096deac0ec54e27bc7",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:ts-retry-en",
+      "query": "Decide if a failed HTTP request may be retried based on status and attempt count",
+      "category": "original-corpus",
+      "pass": 1,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 166.0687,
+      "hybridMs": 279.4951,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/api/retryPolicy.ts",
+        "symbol": "shouldRetryRequest",
+        "startLine": 8,
+        "endLine": 14
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "0148d325f53cd76bfc5cb69c953127c6de408d5feadb151f5763a403f7bf741a",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:ts-retry-ru",
+      "query": "Где задержка повторного HTTP-запроса ограничивается восемью секундами?",
+      "category": "original-corpus",
+      "pass": 1,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 158.5265,
+      "hybridMs": 296.9717,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/api/retryPolicy.ts",
+        "symbol": "backoffDelayMilliseconds",
+        "startLine": 16,
+        "endLine": 18
+      },
+      "hybridHitCount": 5,
+      "hybridHitsSha256": "e7755e89ab8e8d0c6fdd90eeb9e32a7f5bbefc9e624ca692837528e546e964ff",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:ts-menu-en",
+      "query": "Filter a nested navigation tree according to granted permissions",
+      "category": "original-corpus",
+      "pass": 1,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 162.9135,
+      "hybridMs": 382.9375,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/access/menuVisibility.ts",
+        "symbol": "visibleMenu",
+        "startLine": 9,
+        "endLine": 13
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "d06cf532fa1798e433a0d3f7561f29089d88b1fb809593fb2d6985f2d5745de9",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:ts-menu-ru",
+      "query": "Как убрать из меню разделы, к которым у пользователя нет доступа?",
+      "category": "original-corpus",
+      "pass": 1,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 162.7113,
+      "hybridMs": 280.2398,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/access/menuVisibility.ts",
+        "symbol": "visibleMenu",
+        "startLine": 9,
+        "endLine": 13
+      },
+      "hybridHitCount": 4,
+      "hybridHitsSha256": "86b10a9d57daa349fa4e869f0c4bdbcf92dc9a3c8882e7d4d44bc522b0449b33",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:ts-empty-en",
+      "query": "Render a memoized placeholder when a filtered table has no records",
+      "category": "original-corpus",
+      "pass": 1,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 157.0829,
+      "hybridMs": 282.6946,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/ui/EmptyState.tsx",
+        "symbol": "EmptyState.tsx [2/2]",
+        "startLine": 7,
+        "endLine": 11
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "fe992753dfe6cfdfd4338364a031535f6bb6f954b4be67b2e60c44b8d8290dac",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:ts-empty-ru",
+      "query": "Какой компонент показывает подсказку для пустого списка?",
+      "category": "original-corpus",
+      "pass": 1,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 153.4677,
+      "hybridMs": 283.3623,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/ui/EmptyState.tsx",
+        "symbol": "EmptyState",
+        "startLine": 12,
+        "endLine": 23
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "1c96dfba43dc3986564041f14028ac1a22ad7087da3cef854169f492f079d09f",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:ts-invoice-en",
+      "query": "Locate the API object that lists, creates, updates and removes invoice records",
+      "category": "original-corpus",
+      "pass": 1,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 163.0661,
+      "hybridMs": 280.3272,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/features/invoice/api/invoice.api.ts",
+        "symbol": "invoiceApi",
+        "startLine": 4,
+        "endLine": 11
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "6fbc6a8f1cb059d2233fbaeba5f44adeecf63be6d0b351e2ff8f20b1af88c476",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:ts-inventory-ru",
+      "query": "Где хук загружает и сортирует список inventory по имени?",
+      "category": "original-corpus",
+      "pass": 1,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 163.8699,
+      "hybridMs": 281.595,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/features/inventory/model/useInventory.ts",
+        "symbol": "useInventoryList",
+        "startLine": 6,
+        "endLine": 12
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "8dede3c9890c730974958989730ed961230f189a5bc18d6d58393e55d88034ba",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:py-halfup-en",
+      "query": "Convert an invoice amount into whole cents using half-up rounding",
+      "category": "original-corpus",
+      "pass": 1,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 154.6733,
+      "hybridMs": 280.5583,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/lib/money.py",
+        "symbol": "to_minor_units",
+        "startLine": 8,
+        "endLine": 10
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "552098b3451dce0fbbdeaa3a05425992aa7884795513cfbf7c85f8d3eb2e6cf2",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:py-halfup-ru",
+      "query": "Где сумма счёта переводится в целое число копеек с округлением половины вверх?",
+      "category": "original-corpus",
+      "pass": 1,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 169.2289,
+      "hybridMs": 288.4268,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/lib/money.py",
+        "symbol": "to_minor_units",
+        "startLine": 8,
+        "endLine": 10
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "c6a7e420b2546ba50f02e9a4f954593dbb0e6a2d25c6164bc17a12835e1e355b",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:py-even-en",
+      "query": "Round a statistical monetary value to two decimals using ties-to-even",
+      "category": "original-corpus",
+      "pass": 1,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 160.6176,
+      "hybridMs": 292.2556,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/lib/currency_policy.py",
+        "symbol": "round_for_statistics",
+        "startLine": 3,
+        "endLine": 5
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "a29863d5814ac1c1139522840525b8485acfb2c5032be7b089f55cc942e25637",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:py-even-ru",
+      "query": "Где применяется банковское округление для статистического отчёта?",
+      "category": "original-corpus",
+      "pass": 1,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 166.8305,
+      "hybridMs": 285.0874,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/lib/currency_policy.py",
+        "symbol": "round_for_statistics",
+        "startLine": 3,
+        "endLine": 5
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "9f129f333c258f8be32a424d8f3ad3158ec53417a112710c890ef7c41e478ad4",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:py-missing-en",
+      "query": "Collect required columns that are absent or contain only spaces, preserving their declared order",
+      "category": "original-corpus",
+      "pass": 1,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 162.6654,
+      "hybridMs": 274.7173,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/lib/manifest.py",
+        "symbol": "missing_fields",
+        "startLine": 1,
+        "endLine": 3
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "27d8db8490d1ea1ecbc45f0fdf71c960daa580c26bcb2cb53d509dca80e82a75",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:py-missing-ru",
+      "query": "Как найти пустые обязательные поля строки в порядке объявления столбцов?",
+      "category": "original-corpus",
+      "pass": 1,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 163.7843,
+      "hybridMs": 283.4729,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/lib/manifest.py",
+        "symbol": "missing_fields",
+        "startLine": 1,
+        "endLine": 3
+      },
+      "hybridHitCount": 4,
+      "hybridHitsSha256": "f84b7b82b77a5fcb23ea4d02a6e873b66768cd00515cfe8e44ccf3fd4bf95c56",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:py-accepted-en",
+      "query": "Keep only manifest rows whose required columns are all populated",
+      "category": "original-corpus",
+      "pass": 1,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 164.6321,
+      "hybridMs": 276.7033,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/lib/manifest.py",
+        "symbol": "accepted_rows",
+        "startLine": 5,
+        "endLine": 7
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "44f45e94c851782f67b78476c3d026509c02b2d38b893faab1969c6865a6d7a6",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:py-accepted-ru",
+      "query": "Где строки с незаполненными обязательными полями исключаются из результата?",
+      "category": "original-corpus",
+      "pass": 1,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 168.6048,
+      "hybridMs": 289.5539,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/lib/manifest.py",
+        "symbol": "accepted_rows",
+        "startLine": 5,
+        "endLine": 7
+      },
+      "hybridHitCount": 4,
+      "hybridHitsSha256": "09f2aa8ea7f8f4985cae844c806f054a6792571e3656007bde8b345d63a87c3f",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:py-invoice-en",
+      "query": "Sum invoice amounts with exact decimal arithmetic while excluding cancelled records",
+      "category": "original-corpus",
+      "pass": 1,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 165.5603,
+      "hybridMs": 288.1967,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/features/invoice_ledger.py",
+        "symbol": "total_invoice",
+        "startLine": 3,
+        "endLine": 6
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "1e2fd9006fada65e4fdae6bb79771be3d14ef7a1b7520ab044f1ebc891769e50",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:py-inventory-ru",
+      "query": "Где найти первую запись inventory по её идентификатору?",
+      "category": "original-corpus",
+      "pass": 1,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 161.7636,
+      "hybridMs": 385.5958,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/features/InventoryLookup.cs",
+        "symbol": "InventoryLookup.FindByKey",
+        "startLine": 6,
+        "endLine": 9
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "5ee2c6aeb461506ef0dbfa70973b477960fd6e111e1e7f20df60445c47ec9aff",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:absent-encryption-en",
+      "query": "Rotate the AES encryption key and re-encrypt stored files",
+      "category": "original-corpus",
+      "pass": 1,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 157.9429,
+      "hybridMs": 284.2395,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/features/CatalogLookup.cs",
+        "symbol": "CatalogLookup.FindByKey",
+        "startLine": 6,
+        "endLine": 9
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "a384b60059b5b033f1e10db5afadda685e64f7d8897905efab316e052a94cc16",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:absent-migration-ru",
+      "query": "Где выполняется откат миграции схемы базы данных?",
+      "category": "original-corpus",
+      "pass": 1,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 160.8781,
+      "hybridMs": 382.8107,
+      "exact": [],
+      "hybridFirst": null,
+      "hybridHitCount": 0,
+      "hybridHitsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sameFirstHit": false,
+      "sameOrderedLocations": true
+    },
+    {
+      "id": "natural:absent-audio-en",
+      "query": "Decode speech from a microphone and remove background noise",
+      "category": "original-corpus",
+      "pass": 1,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 162.8675,
+      "hybridMs": 376.6006,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/features/catalog/api/catalog.api.ts",
+        "symbol": "catalogApi",
+        "startLine": 4,
+        "endLine": 11
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "36738d9e96af4d0c11b2702cdabe916b32d69835c464162df1405e779fc01380",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "natural:absent-signature-ru",
+      "query": "Как проверить цифровую подпись пакета перед установкой?",
+      "category": "original-corpus",
+      "pass": 1,
+      "decision": "ineligible",
+      "matchingChunks": 0,
+      "prototypeMs": 162.5579,
+      "hybridMs": 278.8091,
+      "exact": [],
+      "hybridFirst": null,
+      "hybridHitCount": 0,
+      "hybridHitsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "sameFirstHit": false,
+      "sameOrderedLocations": true
+    },
+    {
+      "id": "qualified:EmptyState",
+      "query": "EmptyState",
+      "category": "qualified-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 166.0071,
+      "hybridMs": 281.839,
+      "exact": [
+        {
+          "path": "src/shared/ui/EmptyState.tsx",
+          "symbol": "EmptyState",
+          "startLine": 12,
+          "endLine": 23
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/ui/EmptyState.tsx",
+        "symbol": "EmptyState",
+        "startLine": 12,
+        "endLine": 23
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "e16a12cf76d4ae5ef62d65b0cebe56a0394c958ef88461e4d66009b635448dcc",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:InventoryLookup.FindByKey",
+      "query": "InventoryLookup.FindByKey",
+      "category": "qualified-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 157.4017,
+      "hybridMs": 275.5322,
+      "exact": [
+        {
+          "path": "src/features/InventoryLookup.cs",
+          "symbol": "InventoryLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/features/InventoryLookup.cs",
+        "symbol": "InventoryLookup.FindByKey",
+        "startLine": 6,
+        "endLine": 9
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "76631b8d5ab01dcbb1962b9f6a1a401a582ad2903c6a9cf4c337e17e1b420d7c",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:InvoiceLookup.FindByKey",
+      "query": "InvoiceLookup.FindByKey",
+      "category": "qualified-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 162.5942,
+      "hybridMs": 287.4025,
+      "exact": [
+        {
+          "path": "src/features/InvoiceLookup.cs",
+          "symbol": "InvoiceLookup.FindByKey",
+          "startLine": 6,
+          "endLine": 9
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/features/InvoiceLookup.cs",
+        "symbol": "InvoiceLookup.FindByKey",
+        "startLine": 6,
+        "endLine": 9
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "aa14050f8c690da6d6415c0e0d164c8087aa5a6afff3047ebacd2838d75d2ff7",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:ManifestReader.ValidateAllFields",
+      "query": "ManifestReader.ValidateAllFields",
+      "category": "qualified-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 166.9046,
+      "hybridMs": 288.0286,
+      "exact": [
+        {
+          "path": "src/manifests/ManifestReader.cs",
+          "symbol": "ManifestReader.ValidateAllFields",
+          "startLine": 7,
+          "endLine": 141
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/manifests/ManifestReader.cs",
+        "symbol": "ManifestReader",
+        "startLine": 3,
+        "endLine": 142
+      },
+      "hybridHitCount": 4,
+      "hybridHitsSha256": "fdb1183a46d62fc7b7f47207794c60cf3ce1e86dd50c95f11e166ec162e40c33",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:RetrySchedule.GetDelaySeconds",
+      "query": "RetrySchedule.GetDelaySeconds",
+      "category": "qualified-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 161.611,
+      "hybridMs": 273.9178,
+      "exact": [
+        {
+          "path": "src/retries/RetrySchedule.cs",
+          "symbol": "RetrySchedule.GetDelaySeconds",
+          "startLine": 6,
+          "endLine": 11
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/retries/RetrySchedule.cs",
+        "symbol": "RetrySchedule",
+        "startLine": 3,
+        "endLine": 12
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "aa814b6b20b5d136a1b0fc7aec10f7935331ff333fab6d4bb88cd535674d046d",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:VolumePricing.Quote",
+      "query": "VolumePricing.Quote",
+      "category": "qualified-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 164.4898,
+      "hybridMs": 302.6396,
+      "exact": [
+        {
+          "path": "src/pricing/VolumePricing.cs",
+          "symbol": "VolumePricing.Quote",
+          "startLine": 6,
+          "endLine": 12
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/pricing/VolumePricing.cs",
+        "symbol": "VolumePricing",
+        "startLine": 3,
+        "endLine": 13
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "729ecfb8047e355aaa0db67584c5c59fac4ed7c7a140ae5c0ab93d8bc8d2b0a8",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:WeightPricing.Quote",
+      "query": "WeightPricing.Quote",
+      "category": "qualified-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 172.6658,
+      "hybridMs": 281.7382,
+      "exact": [
+        {
+          "path": "src/pricing/WeightPricing.cs",
+          "symbol": "WeightPricing.Quote",
+          "startLine": 6,
+          "endLine": 11
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/pricing/WeightPricing.cs",
+        "symbol": "WeightPricing",
+        "startLine": 3,
+        "endLine": 12
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "905ff4fc2b2a06cca5d124a80fc37bdd13b52cc7045f1883f1c6d6752488af1f",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:accepted_rows",
+      "query": "accepted_rows",
+      "category": "qualified-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 158.6432,
+      "hybridMs": 276.709,
+      "exact": [
+        {
+          "path": "src/shared/lib/manifest.py",
+          "symbol": "accepted_rows",
+          "startLine": 5,
+          "endLine": 7
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/lib/manifest.py",
+        "symbol": "accepted_rows",
+        "startLine": 5,
+        "endLine": 7
+      },
+      "hybridHitCount": 3,
+      "hybridHitsSha256": "1987ec319ffb2f8a1dcfbfa9dae4ebe6d99906aee7287f06d154c272cf8ef5bc",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:backoffDelayMilliseconds",
+      "query": "backoffDelayMilliseconds",
+      "category": "qualified-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 159.9024,
+      "hybridMs": 287.323,
+      "exact": [
+        {
+          "path": "src/shared/api/retryPolicy.ts",
+          "symbol": "backoffDelayMilliseconds",
+          "startLine": 16,
+          "endLine": 18
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/api/retryPolicy.ts",
+        "symbol": "backoffDelayMilliseconds",
+        "startLine": 16,
+        "endLine": 18
+      },
+      "hybridHitCount": 5,
+      "hybridHitsSha256": "2c2b4d13c56c7c848954c2c0a4f844b52da7bc1a444c9ea66ca0426dfb826076",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:clearAccessToken",
+      "query": "clearAccessToken",
+      "category": "qualified-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 163.2389,
+      "hybridMs": 282.7507,
+      "exact": [
+        {
+          "path": "src/shared/auth/tokenStorage.ts",
+          "symbol": "clearAccessToken",
+          "startLine": 18,
+          "endLine": 20
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/auth/tokenStorage.ts",
+        "symbol": "clearAccessToken",
+        "startLine": 18,
+        "endLine": 20
+      },
+      "hybridHitCount": 8,
+      "hybridHitsSha256": "ed2299e13547e50374f1625566aa8a32d1024a82b3527b7f3d5aaf21e68966d3",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:find_inventory",
+      "query": "find_inventory",
+      "category": "qualified-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 161.3415,
+      "hybridMs": 275.7621,
+      "exact": [
+        {
+          "path": "src/features/inventory_ledger.py",
+          "symbol": "find_inventory",
+          "startLine": 8,
+          "endLine": 10
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/features/inventory_ledger.py",
+        "symbol": "find_inventory",
+        "startLine": 8,
+        "endLine": 10
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "cde5157a3bb2ec232ef0ec8834c541c81a72cbcf3c95fa16ded99090f1ffafeb",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:invoiceApi",
+      "query": "invoiceApi",
+      "category": "qualified-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 158.8918,
+      "hybridMs": 278.8149,
+      "exact": [
+        {
+          "path": "src/features/invoice/api/invoice.api.ts",
+          "symbol": "invoiceApi",
+          "startLine": 4,
+          "endLine": 11
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/features/invoice/api/invoice.api.ts",
+        "symbol": "invoiceApi",
+        "startLine": 4,
+        "endLine": 11
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "458d6cef04e531ad387d46ef97a862eaa80e79ff291a1281bd707b2903b06561",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:missing_fields",
+      "query": "missing_fields",
+      "category": "qualified-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 167.9203,
+      "hybridMs": 298.5923,
+      "exact": [
+        {
+          "path": "src/shared/lib/manifest.py",
+          "symbol": "missing_fields",
+          "startLine": 1,
+          "endLine": 3
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/lib/manifest.py",
+        "symbol": "missing_fields",
+        "startLine": 1,
+        "endLine": 3
+      },
+      "hybridHitCount": 4,
+      "hybridHitsSha256": "fed1ccb5f22ecac520b8935b6a21f1e42fc0617f7ccd222296db59758e815a31",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:round_for_statistics",
+      "query": "round_for_statistics",
+      "category": "qualified-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 163.9334,
+      "hybridMs": 279.71,
+      "exact": [
+        {
+          "path": "src/shared/lib/currency_policy.py",
+          "symbol": "round_for_statistics",
+          "startLine": 3,
+          "endLine": 5
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/lib/currency_policy.py",
+        "symbol": "round_for_statistics",
+        "startLine": 3,
+        "endLine": 5
+      },
+      "hybridHitCount": 5,
+      "hybridHitsSha256": "73b9101857476f4cc278bd4752633f376495187b26f07325e2a116287d0e6af2",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:shouldRetryRequest",
+      "query": "shouldRetryRequest",
+      "category": "qualified-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 163.7291,
+      "hybridMs": 278.0307,
+      "exact": [
+        {
+          "path": "src/shared/api/retryPolicy.ts",
+          "symbol": "shouldRetryRequest",
+          "startLine": 8,
+          "endLine": 14
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/api/retryPolicy.ts",
+        "symbol": "shouldRetryRequest",
+        "startLine": 8,
+        "endLine": 14
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "73ebcf9af0536007f0994e184e91e70ff980fc33fd500636fa0715245d757a14",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:storeAccessToken",
+      "query": "storeAccessToken",
+      "category": "qualified-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 167.3244,
+      "hybridMs": 291.9262,
+      "exact": [
+        {
+          "path": "src/shared/auth/tokenStorage.ts",
+          "symbol": "storeAccessToken",
+          "startLine": 10,
+          "endLine": 12
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/auth/tokenStorage.ts",
+        "symbol": "storeAccessToken",
+        "startLine": 10,
+        "endLine": 12
+      },
+      "hybridHitCount": 8,
+      "hybridHitsSha256": "4db0e469f66c9ef7f024590d152ac9fed77168dd5aeedc7d1556216b4acf6ae6",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:to_minor_units",
+      "query": "to_minor_units",
+      "category": "qualified-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 170.3371,
+      "hybridMs": 277.2583,
+      "exact": [
+        {
+          "path": "src/shared/lib/money.py",
+          "symbol": "to_minor_units",
+          "startLine": 8,
+          "endLine": 10
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/lib/money.py",
+        "symbol": "to_minor_units",
+        "startLine": 8,
+        "endLine": 10
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "b38aa1dfeff046eee82e50842c21817688977131fdf11c907367093894ff37d8",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:total_invoice",
+      "query": "total_invoice",
+      "category": "qualified-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 166.5969,
+      "hybridMs": 396.754,
+      "exact": [
+        {
+          "path": "src/features/invoice_ledger.py",
+          "symbol": "total_invoice",
+          "startLine": 3,
+          "endLine": 6
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/features/invoice_ledger.py",
+        "symbol": "total_invoice",
+        "startLine": 3,
+        "endLine": 6
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "2d84161e6cefb37c7b6d02af92e5cdc410b734579ffaf7ad453ff3a03921fe54",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:useInventoryList",
+      "query": "useInventoryList",
+      "category": "qualified-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 250.024,
+      "hybridMs": 282.5794,
+      "exact": [
+        {
+          "path": "src/features/inventory/model/useInventory.ts",
+          "symbol": "useInventoryList",
+          "startLine": 6,
+          "endLine": 12
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/features/inventory/model/useInventory.ts",
+        "symbol": "useInventoryList",
+        "startLine": 6,
+        "endLine": 12
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "c761844732386d8e098f6f1fcbb1db87cebe4de1414eef148c59eed299635de3",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "qualified:visibleMenu",
+      "query": "visibleMenu",
+      "category": "qualified-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 170.4159,
+      "hybridMs": 285.5609,
+      "exact": [
+        {
+          "path": "src/shared/access/menuVisibility.ts",
+          "symbol": "visibleMenu",
+          "startLine": 9,
+          "endLine": 13
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/access/menuVisibility.ts",
+        "symbol": "visibleMenu",
+        "startLine": 9,
+        "endLine": 13
+      },
+      "hybridHitCount": 4,
+      "hybridHitsSha256": "4b5018dbec87dd6fbed1a972db661ff8c9a40290bc4b771b865b5642fd501377",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:EmptyState",
+      "query": "EmptyState",
+      "category": "short-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 164.4699,
+      "hybridMs": 276.2086,
+      "exact": [
+        {
+          "path": "src/shared/ui/EmptyState.tsx",
+          "symbol": "EmptyState",
+          "startLine": 12,
+          "endLine": 23
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/ui/EmptyState.tsx",
+        "symbol": "EmptyState",
+        "startLine": 12,
+        "endLine": 23
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "e16a12cf76d4ae5ef62d65b0cebe56a0394c958ef88461e4d66009b635448dcc",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:FindByKey",
+      "query": "FindByKey",
+      "category": "short-label",
+      "pass": 1,
+      "decision": "ambiguous-chunks",
+      "matchingChunks": 10,
+      "prototypeMs": 161.7197,
+      "hybridMs": 280.5624,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/features/CustomerLookup.cs",
+        "symbol": "CustomerLookup.FindByKey",
+        "startLine": 6,
+        "endLine": 9
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "53e618f751b8dc35ebbed18b1729575a9e1abd485539c8327428afae8101398a",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:GetDelaySeconds",
+      "query": "GetDelaySeconds",
+      "category": "short-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 169.2733,
+      "hybridMs": 276.6412,
+      "exact": [
+        {
+          "path": "src/retries/RetrySchedule.cs",
+          "symbol": "RetrySchedule.GetDelaySeconds",
+          "startLine": 6,
+          "endLine": 11
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/retries/RetrySchedule.cs",
+        "symbol": "RetrySchedule.GetDelaySeconds",
+        "startLine": 6,
+        "endLine": 11
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "c4e35879ece509dd15c9c37060fab948354919e39bc2701a3041d916711f5d0d",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:Quote",
+      "query": "Quote",
+      "category": "short-label",
+      "pass": 1,
+      "decision": "ambiguous-chunks",
+      "matchingChunks": 2,
+      "prototypeMs": 161.5477,
+      "hybridMs": 283.9173,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/pricing/VolumePricing.cs",
+        "symbol": "VolumePricing.Quote",
+        "startLine": 6,
+        "endLine": 12
+      },
+      "hybridHitCount": 4,
+      "hybridHitsSha256": "ce886176db012f75e87a4569a4ebd482028c296e72ae175c0f7fed2f6f877f5b",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:ValidateAllFields",
+      "query": "ValidateAllFields",
+      "category": "short-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 161.1228,
+      "hybridMs": 287.0872,
+      "exact": [
+        {
+          "path": "src/manifests/ManifestReader.cs",
+          "symbol": "ManifestReader.ValidateAllFields",
+          "startLine": 7,
+          "endLine": 141
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/manifests/ManifestReader.cs",
+        "symbol": "ManifestReader.ValidateAllFields",
+        "startLine": 7,
+        "endLine": 141
+      },
+      "hybridHitCount": 4,
+      "hybridHitsSha256": "3051952e65deba99d8be7f3416769b7a5b765da87206bc298a9333ed298d4018",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:accepted_rows",
+      "query": "accepted_rows",
+      "category": "short-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 164.0167,
+      "hybridMs": 281.8976,
+      "exact": [
+        {
+          "path": "src/shared/lib/manifest.py",
+          "symbol": "accepted_rows",
+          "startLine": 5,
+          "endLine": 7
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/lib/manifest.py",
+        "symbol": "accepted_rows",
+        "startLine": 5,
+        "endLine": 7
+      },
+      "hybridHitCount": 3,
+      "hybridHitsSha256": "1987ec319ffb2f8a1dcfbfa9dae4ebe6d99906aee7287f06d154c272cf8ef5bc",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:backoffDelayMilliseconds",
+      "query": "backoffDelayMilliseconds",
+      "category": "short-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 170.7546,
+      "hybridMs": 291.2093,
+      "exact": [
+        {
+          "path": "src/shared/api/retryPolicy.ts",
+          "symbol": "backoffDelayMilliseconds",
+          "startLine": 16,
+          "endLine": 18
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/api/retryPolicy.ts",
+        "symbol": "backoffDelayMilliseconds",
+        "startLine": 16,
+        "endLine": 18
+      },
+      "hybridHitCount": 5,
+      "hybridHitsSha256": "2c2b4d13c56c7c848954c2c0a4f844b52da7bc1a444c9ea66ca0426dfb826076",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:clearAccessToken",
+      "query": "clearAccessToken",
+      "category": "short-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 164.9464,
+      "hybridMs": 276.6323,
+      "exact": [
+        {
+          "path": "src/shared/auth/tokenStorage.ts",
+          "symbol": "clearAccessToken",
+          "startLine": 18,
+          "endLine": 20
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/auth/tokenStorage.ts",
+        "symbol": "clearAccessToken",
+        "startLine": 18,
+        "endLine": 20
+      },
+      "hybridHitCount": 8,
+      "hybridHitsSha256": "ed2299e13547e50374f1625566aa8a32d1024a82b3527b7f3d5aaf21e68966d3",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:find_inventory",
+      "query": "find_inventory",
+      "category": "short-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 161.3536,
+      "hybridMs": 276.794,
+      "exact": [
+        {
+          "path": "src/features/inventory_ledger.py",
+          "symbol": "find_inventory",
+          "startLine": 8,
+          "endLine": 10
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/features/inventory_ledger.py",
+        "symbol": "find_inventory",
+        "startLine": 8,
+        "endLine": 10
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "cde5157a3bb2ec232ef0ec8834c541c81a72cbcf3c95fa16ded99090f1ffafeb",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:invoiceApi",
+      "query": "invoiceApi",
+      "category": "short-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 162.2621,
+      "hybridMs": 296.8895,
+      "exact": [
+        {
+          "path": "src/features/invoice/api/invoice.api.ts",
+          "symbol": "invoiceApi",
+          "startLine": 4,
+          "endLine": 11
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/features/invoice/api/invoice.api.ts",
+        "symbol": "invoiceApi",
+        "startLine": 4,
+        "endLine": 11
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "458d6cef04e531ad387d46ef97a862eaa80e79ff291a1281bd707b2903b06561",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:missing_fields",
+      "query": "missing_fields",
+      "category": "short-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 171.5671,
+      "hybridMs": 278.1222,
+      "exact": [
+        {
+          "path": "src/shared/lib/manifest.py",
+          "symbol": "missing_fields",
+          "startLine": 1,
+          "endLine": 3
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/lib/manifest.py",
+        "symbol": "missing_fields",
+        "startLine": 1,
+        "endLine": 3
+      },
+      "hybridHitCount": 4,
+      "hybridHitsSha256": "fed1ccb5f22ecac520b8935b6a21f1e42fc0617f7ccd222296db59758e815a31",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:round_for_statistics",
+      "query": "round_for_statistics",
+      "category": "short-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 163.3477,
+      "hybridMs": 272.3124,
+      "exact": [
+        {
+          "path": "src/shared/lib/currency_policy.py",
+          "symbol": "round_for_statistics",
+          "startLine": 3,
+          "endLine": 5
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/lib/currency_policy.py",
+        "symbol": "round_for_statistics",
+        "startLine": 3,
+        "endLine": 5
+      },
+      "hybridHitCount": 5,
+      "hybridHitsSha256": "73b9101857476f4cc278bd4752633f376495187b26f07325e2a116287d0e6af2",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:shouldRetryRequest",
+      "query": "shouldRetryRequest",
+      "category": "short-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 163.7252,
+      "hybridMs": 287.6505,
+      "exact": [
+        {
+          "path": "src/shared/api/retryPolicy.ts",
+          "symbol": "shouldRetryRequest",
+          "startLine": 8,
+          "endLine": 14
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/api/retryPolicy.ts",
+        "symbol": "shouldRetryRequest",
+        "startLine": 8,
+        "endLine": 14
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "73ebcf9af0536007f0994e184e91e70ff980fc33fd500636fa0715245d757a14",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:storeAccessToken",
+      "query": "storeAccessToken",
+      "category": "short-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 171.3219,
+      "hybridMs": 287.8102,
+      "exact": [
+        {
+          "path": "src/shared/auth/tokenStorage.ts",
+          "symbol": "storeAccessToken",
+          "startLine": 10,
+          "endLine": 12
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/auth/tokenStorage.ts",
+        "symbol": "storeAccessToken",
+        "startLine": 10,
+        "endLine": 12
+      },
+      "hybridHitCount": 8,
+      "hybridHitsSha256": "4db0e469f66c9ef7f024590d152ac9fed77168dd5aeedc7d1556216b4acf6ae6",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:to_minor_units",
+      "query": "to_minor_units",
+      "category": "short-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 159.7025,
+      "hybridMs": 275.1263,
+      "exact": [
+        {
+          "path": "src/shared/lib/money.py",
+          "symbol": "to_minor_units",
+          "startLine": 8,
+          "endLine": 10
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/lib/money.py",
+        "symbol": "to_minor_units",
+        "startLine": 8,
+        "endLine": 10
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "b38aa1dfeff046eee82e50842c21817688977131fdf11c907367093894ff37d8",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:total_invoice",
+      "query": "total_invoice",
+      "category": "short-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 165.3588,
+      "hybridMs": 292.282,
+      "exact": [
+        {
+          "path": "src/features/invoice_ledger.py",
+          "symbol": "total_invoice",
+          "startLine": 3,
+          "endLine": 6
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/features/invoice_ledger.py",
+        "symbol": "total_invoice",
+        "startLine": 3,
+        "endLine": 6
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "2d84161e6cefb37c7b6d02af92e5cdc410b734579ffaf7ad453ff3a03921fe54",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:useInventoryList",
+      "query": "useInventoryList",
+      "category": "short-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 165.1682,
+      "hybridMs": 278.0153,
+      "exact": [
+        {
+          "path": "src/features/inventory/model/useInventory.ts",
+          "symbol": "useInventoryList",
+          "startLine": 6,
+          "endLine": 12
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/features/inventory/model/useInventory.ts",
+        "symbol": "useInventoryList",
+        "startLine": 6,
+        "endLine": 12
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "c761844732386d8e098f6f1fcbb1db87cebe4de1414eef148c59eed299635de3",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "short:visibleMenu",
+      "query": "visibleMenu",
+      "category": "short-label",
+      "pass": 1,
+      "decision": "unique-chunk",
+      "matchingChunks": 1,
+      "prototypeMs": 160.6839,
+      "hybridMs": 376.0019,
+      "exact": [
+        {
+          "path": "src/shared/access/menuVisibility.ts",
+          "symbol": "visibleMenu",
+          "startLine": 9,
+          "endLine": 13
+        }
+      ],
+      "hybridFirst": {
+        "path": "src/shared/access/menuVisibility.ts",
+        "symbol": "visibleMenu",
+        "startLine": 9,
+        "endLine": 13
+      },
+      "hybridHitCount": 4,
+      "hybridHitsSha256": "4b5018dbec87dd6fbed1a972db661ff8c9a40290bc4b771b865b5642fd501377",
+      "sameFirstHit": true,
+      "sameOrderedLocations": false
+    },
+    {
+      "id": "missing",
+      "query": "MissingSymbolForExactPilot",
+      "category": "absent-symbol",
+      "pass": 1,
+      "decision": "not-found",
+      "matchingChunks": 0,
+      "prototypeMs": 157.2221,
+      "hybridMs": 452.3343,
+      "exact": [],
+      "hybridFirst": {
+        "path": "src/shared/lib/manifest.py",
+        "symbol": "missing_fields",
+        "startLine": 1,
+        "endLine": 3
+      },
+      "hybridHitCount": 10,
+      "hybridHitsSha256": "f06765e81509f3e425c104ae2b801bc80a13548d7fd56d892594d5aa7a87d80b",
+      "sameFirstHit": false,
+      "sameOrderedLocations": false
+    }
+  ],
+  "distinctQueries": 59
+}

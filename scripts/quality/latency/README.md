@@ -12,6 +12,8 @@ The [embedding timing diagnostics](embedding-timings.md) then separate backend-r
 load/total time and cache hits without changing public response contracts.
 The [cold and concurrent measurements](cold-concurrent.md) check confirmed model
 absence and four simultaneous clients against the same retrievals.
+The [exact-symbol pilot](../exact-symbol/README.md) evaluates a separate no-embedding
+lookup and explains why it must not silently replace hybrid results.
 
 Build and run from PowerShell (substitute the existing clean corpus and broker paths):
 
