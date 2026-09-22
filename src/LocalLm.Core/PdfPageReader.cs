@@ -17,18 +17,23 @@ internal sealed class PdfPageReader : IAsyncDisposable
     private readonly string path;
     private IAsyncEnumerator<string>? rendered;
 
-    private PdfPageReader(string path, FileStream input, IReadOnlyList<ImageInfo> pages)
+    private PdfPageReader(string path, FileStream input, IReadOnlyList<ImageInfo> pages, IReadOnlyList<int> pageNumbers)
     {
         this.path = path;
         this.input = input;
-        Pages = pages;
+        TotalPageCount = pages.Count;
+        PageNumbers = pageNumbers;
+        Pages = pageNumbers.Select(number => pages[number - 1]).ToArray();
     }
 
     public IReadOnlyList<ImageInfo> Pages { get; }
+    public IReadOnlyList<int> PageNumbers { get; }
+    public int TotalPageCount { get; }
 
-    public static async Task<PdfPageReader> OpenAsync(string path, CancellationToken cancellationToken)
+    public static async Task<PdfPageReader> OpenAsync(string path, CancellationToken cancellationToken, string? selectedPages = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        var selection = selectedPages is null ? null : PdfPageSelection.Parse(selectedPages);
         if (!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux() && !OperatingSystem.IsMacOS())
             throw new PlatformNotSupportedException();
         var input = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
@@ -48,7 +53,8 @@ internal sealed class PdfPageReader : IAsyncDisposable
             if (sizes.Length == 0) throw new InvalidDataException("PDF has no pages.");
             var pages = sizes.Select(size => BoundedRaster(size.Width, size.Height)).ToArray();
             input.Position = 0;
-            return new PdfPageReader(path, input, pages);
+            return new PdfPageReader(path, input, pages,
+                selection?.Resolve(pages.Length) ?? Enumerable.Range(1, pages.Length).ToArray());
         }
         catch (Exception error) when (error is PdfException or InvalidDataException)
         {
@@ -92,9 +98,9 @@ internal sealed class PdfPageReader : IAsyncDisposable
             // rendering; a change of page size starts a new, still bounded group.
             var size = Pages[first];
             var end = first + 1;
-            while (end < Pages.Count && Pages[end] == size) end++;
+            while (end < Pages.Count && Pages[end] == size && PageNumbers[end] == PageNumbers[end - 1] + 1) end++;
             input.Position = 0;
-            await foreach (var bitmap in Conversion.ToImagesAsync(input, Enumerable.Range(first, end - first),
+            await foreach (var bitmap in Conversion.ToImagesAsync(input, Enumerable.Range(PageNumbers[first] - 1, end - first),
                                leaveOpen: true, options: new RenderOptions(Dpi: 150, Width: size.Width, Height: size.Height,
                                    WithAnnotations: true, WithFormFill: true), cancellationToken: cancellationToken))
             {

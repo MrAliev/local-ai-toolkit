@@ -100,7 +100,8 @@ public sealed class LocalRunProgress : ILocalRunObserver
                 break;
 
             case ReadingPdfPage page:
-                ReportCounted(page.Index, page.Total, CliText.ProgressReadingPdfPage, now);
+                ReportCounted(page.SelectedIndex ?? page.Index, page.SelectedTotal ?? page.Total,
+                    (_, _, left) => CliText.ProgressReadingPdfPage(page.Index, page.Total, left), now);
                 break;
 
             case TranslationRetrying retry:

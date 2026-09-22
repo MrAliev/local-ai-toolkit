@@ -16,7 +16,8 @@ public sealed record ReadImageRequest(
     LocalTaskProfile Profile,
     string? Model,
     bool Together = false,
-    string? Language = null);
+    string? Language = null,
+    string? PdfPages = null);
 
 /// <summary>
 /// Images on disk, read by a local vision model: a screenshot, a scanned page, a photographed
@@ -43,6 +44,7 @@ public static class ReadImageCommand
         var profile = LocalTaskProfile.VisualAnalysis;
         string? model = null;
         string? language = null;
+        string? pdfPages = null;
         var together = false;
 
         for (var index = 0; index < arguments.Count; index++)
@@ -59,6 +61,7 @@ public static class ReadImageCommand
                 case "--profile":
                 case "--model":
                 case "--language":
+                case "--pages":
                     if (index + 1 >= arguments.Count)
                     {
                         refusal = new CommandRefusal(
@@ -71,6 +74,17 @@ public static class ReadImageCommand
                     }
 
                     var value = arguments[++index];
+                    if (argument == "--pages")
+                    {
+                        try { _ = PdfPageSelection.Parse(value); }
+                        catch (ArgumentException error)
+                        {
+                            refusal = new CommandRefusal("pdf_pages_invalid", error.Message);
+                            return false;
+                        }
+                        pdfPages = value;
+                        break;
+                    }
                     if (argument == "--model")
                     {
                         model = value;
@@ -185,7 +199,13 @@ public static class ReadImageCommand
             }
         }
 
-        request = new ReadImageRequest(question, images, profile, model, together, language);
+        else if (pdfPages is not null)
+        {
+            refusal = new CommandRefusal("pdf_pages_requires_pdf", LocalLmText.PdfPagesOnly);
+            return false;
+        }
+
+        request = new ReadImageRequest(question, images, profile, model, together, language, pdfPages);
         return true;
     }
 
