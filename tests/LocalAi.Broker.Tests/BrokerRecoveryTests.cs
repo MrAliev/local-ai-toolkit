@@ -944,6 +944,16 @@ public sealed class BrokerRecoveryTests
         using var root = new TemporaryRuntimeRoot();
         var acl = new RuntimeAcl();
         acl.Ensure(root.Path);
+        // A repair is needed: keep the same trusted principals, but restrict the
+        // administrator entry. An already exact DACL no longer needs a setter call.
+        var restrictive = new DirectoryInfo(root.Path).GetAccessControl();
+        restrictive.SetAccessRule(new FileSystemAccessRule(
+            new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null),
+            FileSystemRights.ReadAndExecute,
+            InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
+            PropagationFlags.None,
+            AccessControlType.Allow));
+        new DirectoryInfo(root.Path).SetAccessControl(restrictive);
         var before = new DirectoryInfo(root.Path)
             .GetAccessControl()
             .GetSecurityDescriptorSddlForm(AccessControlSections.Access);
