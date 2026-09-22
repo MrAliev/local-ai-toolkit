@@ -8,7 +8,11 @@ using System.Text.Json.Serialization;
 
 namespace LocalAi.Documentation;
 
-public sealed record DocumentationUnitInput(DocumentationInput Content, string SourceHash, string ReferencesHash, string HistoryHash);
+public sealed record DocumentationUnitInput(DocumentationInput Content, string SourceHash, string ReferencesHash, string HistoryHash)
+{
+    public IReadOnlyList<string> SourcePaths { get; init; } = [];
+    public IReadOnlyList<string> DependencyPaths { get; init; } = [];
+}
 public sealed record DocumentationBuildInput(string WorkingRoot, string Snapshot, IReadOnlyList<DocumentationUnitInput> Units);
 public sealed record DocumentationUnitResult(
     [property: JsonPropertyName("symbolId"), JsonRequired] string SymbolId,

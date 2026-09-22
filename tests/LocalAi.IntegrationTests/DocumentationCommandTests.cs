@@ -8,6 +8,77 @@ namespace LocalAi.IntegrationTests;
 public sealed class DocumentationCommandTests
 {
     [Fact]
+    public async Task A_path_plan_lists_required_sources_without_generating_a_package()
+    {
+        using var repo = new DocumentationRepositoryFixture(source: "public class A : B {}", relationship: true,
+            extraSources: new Dictionary<string, string> { ["lib/B.cs"] = "public class B {}" });
+        var output = new StringWriter(); var error = new StringWriter(); var calls = 0;
+        var exit = await DocumentationCommand.ExecuteAsync(["build", "--root", repo.Root, "--path", "src/Types.cs", "--plan"],
+            new(output, error), true, TestContext.Current.CancellationToken, repo.Runtime,
+            (_, _) => { calls++; throw new InvalidOperationException(); });
+        Assert.Equal(0, exit);
+        Assert.Equal(0, calls);
+        using var response = JsonDocument.Parse(output.ToString());
+        var plan = response.RootElement.GetProperty("data");
+        Assert.Equal("src/Types.cs", plan.GetProperty("path").GetString());
+        var unit = Assert.Single(plan.GetProperty("units").EnumerateArray());
+        Assert.Equal("A", unit.GetProperty("symbolId").GetString());
+        Assert.Equal("src/Types.cs", Assert.Single(unit.GetProperty("sourcePaths").EnumerateArray()).GetString());
+        Assert.Equal("lib/B.cs", Assert.Single(unit.GetProperty("dependencyPaths").EnumerateArray()).GetString());
+        Assert.False(Directory.Exists(Path.Combine(repo.Identity.RepositoryRuntimeRoot.Value, "documentation")));
+    }
+
+    [Fact]
+    public async Task Scoped_build_and_apply_preserve_manual_edits_and_do_not_generate_unselected_types()
+    {
+        using var repo = new DocumentationRepositoryFixture(extraSources: new Dictionary<string, string>
+        { ["other/B.cs"] = "public class B {}" });
+        var output = new StringWriter(); var error = new StringWriter();
+        var generated = new List<string>();
+        Task<DocumentationDraft> Generate(DocumentationInput input, CancellationToken _)
+        { generated.Add(input.SymbolId); return Task.FromResult(Draft(input)); }
+        async Task Run(string operation)
+        {
+            var args = operation == "build" ? new[] { "build", "--root", repo.Root, "--path", "src/Types.cs" }
+                : new[] { "apply", "--root", repo.Root };
+            Assert.Equal(0, await DocumentationCommand.ExecuteAsync(args, new(output, error), false,
+                TestContext.Current.CancellationToken, repo.Runtime, Generate));
+        }
+        await Run("build"); await Run("apply");
+        var document = Assert.Single(Directory.GetFiles(repo.Root, "page.en.md", SearchOption.AllDirectories));
+        await File.WriteAllTextAsync(document, "manual editorial change", TestContext.Current.CancellationToken);
+        await Run("build"); await Run("apply");
+        Assert.Equal(["A"], generated);
+        Assert.Equal("manual editorial change", await File.ReadAllTextAsync(document, TestContext.Current.CancellationToken));
+        Assert.Contains("src/Types.cs", error.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Empty_path_scope_is_an_explicit_refusal_without_generation()
+    {
+        using var repo = new DocumentationRepositoryFixture();
+        var output = new StringWriter(); var calls = 0;
+        var exit = await DocumentationCommand.ExecuteAsync(["build", "--root", repo.Root, "--path", "missing", "--plan"],
+            new(output, new StringWriter()), true, TestContext.Current.CancellationToken, repo.Runtime,
+            (_, _) => { calls++; throw new InvalidOperationException(); });
+        Assert.Equal(65, exit); Assert.Equal(0, calls);
+        using var response = JsonDocument.Parse(output.ToString());
+        Assert.Equal("scope_empty", response.RootElement.GetProperty("error").GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task Cancelled_path_planning_does_not_publish_a_package()
+    {
+        using var repo = new DocumentationRepositoryFixture();
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => DocumentationCommand.ExecuteAsync(
+            ["build", "--root", repo.Root, "--path", "src", "--plan"], new(new StringWriter(), new StringWriter()), true,
+            cancellation.Token, repo.Runtime, (_, _) => throw new InvalidOperationException("must not generate")));
+        Assert.False(Directory.Exists(Path.Combine(repo.Identity.RepositoryRuntimeRoot.Value, "documentation")));
+    }
+
+    [Fact]
     public async Task Prune_defaults_to_a_read_only_preview_without_model_calls()
     {
         using var repo = new DocumentationRepositoryFixture();
@@ -30,6 +101,12 @@ public sealed class DocumentationCommandTests
     [InlineData("apply --root ignored --standalone-html")]
     [InlineData("build --root ignored --standalone-html --standalone-html")]
     [InlineData("build --root ignored --unknown")]
+    [InlineData("build --root ignored --path")]
+    [InlineData("build --root ignored --path ../outside")]
+    [InlineData("build --root ignored --path src --path other")]
+    [InlineData("build --root ignored --plan --plan")]
+    [InlineData("apply --root ignored --path src")]
+    [InlineData("apply --root ignored --plan")]
     [InlineData("prune --root ignored --keep 0")]
     [InlineData("prune --root ignored --keep -1")]
     [InlineData("prune --root ignored --apply --dry-run")]
@@ -71,6 +148,8 @@ public sealed class DocumentationCommandTests
         Assert.Contains("docs apply", MachineOutput.Commands);
         Assert.Contains("localai docs build", CliUsage.Text);
         Assert.Contains("--standalone-html", CliUsage.Text);
+        Assert.Contains("--path", CliUsage.Text);
+        Assert.Contains("--plan", CliUsage.Text);
         foreach (var operation in new[] { "prune", "pin", "unpin" })
         {
             Assert.Contains("docs " + operation, MachineOutput.Commands);
