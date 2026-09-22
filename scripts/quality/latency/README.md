@@ -16,6 +16,8 @@ The [exact-symbol pilot](../exact-symbol/README.md) evaluates a separate no-embe
 lookup and explains why it must not silently replace hybrid results.
 The [alternating search/file/OCR experiment](retention.md) measures complete MCP
 calls and observed residency under the unchanged 10-second idle policy.
+The [runtime ACL comparison](acl.md) addresses repeated permission writes on the
+full MCP path while continuing to inspect every real ACL.
 
 Build and run from PowerShell (substitute the existing clean corpus and broker paths):
 

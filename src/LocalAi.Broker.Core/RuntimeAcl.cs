@@ -72,6 +72,17 @@ public sealed class RuntimeAcl
     {
         try
         {
+            // Recheck every real ACL, even on repeated client creation. Rewriting an already
+            // exact directory ACL can propagate through its descendants and turn this walk
+            // into repeated filesystem work. Only repair a mismatch; never cache the verdict.
+            RuntimeAclSnapshot? existing = null;
+            try { existing = _readAclSnapshot(path); }
+            catch (UnauthorizedAccessException)
+            {
+                // The owner may be allowed to repair a DACL they cannot currently read.
+                // Preserve that recovery path, then require the ordinary post-write check.
+            }
+            if (existing is not null && IsExactSnapshot(path, existing, expected)) return;
             var isDirectory = Directory.Exists(path);
             _applyExactAcl(path, isDirectory, false, currentUserSid, AdministratorsSid);
             ValidateSnapshot(path, _readAclSnapshot(path), expected);
@@ -85,6 +96,12 @@ public sealed class RuntimeAcl
             // secured runtime tree and will be normalized by a subsequent pass if this traversal
             // already passed it.
         }
+    }
+
+    private static bool IsExactSnapshot(string path, RuntimeAclSnapshot snapshot, IReadOnlySet<string> expected)
+    {
+        try { ValidateSnapshot(path, snapshot, expected); return true; }
+        catch (InvalidOperationException) { return false; }
     }
 
     private void EnsureDirectory(string path, string currentUserSid)

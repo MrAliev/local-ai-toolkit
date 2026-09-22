@@ -10,6 +10,94 @@ namespace LocalAi.Broker.Tests;
 public sealed class RuntimeAclTests
 {
     [Fact]
+    public void Ensure_rechecks_a_secured_tree_without_spending_any_acl_write_operations()
+    {
+        using var root = new TemporaryRuntimeRoot();
+        new RuntimeAcl().Ensure(root.Path);
+        var file = Path.Combine(root.Path, "jobs", "request.json");
+        File.WriteAllText(file, "{}");
+        new RuntimeAcl().Ensure(root.Path);
+        var read = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var acl = new RuntimeAcl(
+            applyExactAcl: (_, _, _, _, _) => throw new InvalidOperationException("ACL write budget exceeded"),
+            readAclSnapshot: path =>
+            {
+                read.Add(path);
+                return ReadRealAclSnapshot(path);
+            });
+
+        acl.Ensure(root.Path);
+
+        var expected = Directory.EnumerateFileSystemEntries(root.Path, "*", SearchOption.AllDirectories)
+            .Append(root.Path).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        Assert.True(expected.SetEquals(read), "Every existing path must still have its real ACL checked.");
+        Assert.Equal("{}", File.ReadAllText(file));
+    }
+
+    [Fact]
+    public void Ensure_repairs_a_changed_child_without_rewriting_unchanged_siblings()
+    {
+        using var root = new TemporaryRuntimeRoot();
+        new RuntimeAcl().Ensure(root.Path);
+        var changed = Path.Combine(root.Path, "jobs", "changed.json");
+        var unchanged = Path.Combine(root.Path, "jobs", "unchanged.json");
+        File.WriteAllText(changed, "changed");
+        File.WriteAllText(unchanged, "unchanged");
+        var writes = new List<string>();
+        var acl = new RuntimeAcl(
+            applyExactAcl: (path, directory, create, user, administrators) =>
+            {
+                writes.Add(path);
+                ApplyRealAcl(path, directory, create, user, administrators);
+            },
+            readAclSnapshot: ReadRealAclSnapshot);
+        acl.Ensure(root.Path);
+        var security = new FileInfo(changed).GetAccessControl();
+        security.AddAccessRule(new FileSystemAccessRule(new SecurityIdentifier("S-1-1-0"),
+            FileSystemRights.Read, AccessControlType.Allow));
+        new FileInfo(changed).SetAccessControl(security);
+        writes.Clear();
+
+        acl.Ensure(root.Path);
+
+        Assert.Equal([changed], writes);
+        Assert.DoesNotContain(ReadRealAclSnapshot(changed).Entries, entry => entry.SecurityIdentifier == "S-1-1-0");
+        Assert.Equal("changed", File.ReadAllText(changed));
+        Assert.Equal("unchanged", File.ReadAllText(unchanged));
+    }
+
+    [Fact]
+    public void Ensure_attempts_repair_when_the_initial_acl_cannot_be_read_and_validates_afterwards()
+    {
+        using var root = new TemporaryRuntimeRoot();
+        new RuntimeAcl().Ensure(root.Path);
+        var unreadable = true;
+        var repaired = false;
+        var verified = false;
+        var acl = new RuntimeAcl(
+            applyExactAcl: (path, directory, create, user, administrators) =>
+            {
+                Assert.Equal(root.Path, path);
+                ApplyRealAcl(path, directory, create, user, administrators);
+                repaired = true;
+            },
+            readAclSnapshot: path =>
+            {
+                if (path == root.Path && unreadable)
+                {
+                    unreadable = false;
+                    throw new UnauthorizedAccessException("Initial DACL read denied");
+                }
+                if (path == root.Path) verified = repaired;
+                return ReadRealAclSnapshot(path);
+            });
+
+        acl.Ensure(root.Path);
+
+        Assert.True(verified);
+    }
+
+    [Fact]
     public void Ensure_ignores_a_job_directory_moved_during_acl_application()
     {
         using var root = new TemporaryRuntimeRoot();
@@ -113,17 +201,17 @@ public sealed class RuntimeAclTests
                 return ReadRealAclSnapshot(path);
             });
 
-        // Should not throw: every applied path is immediately re-validated before moving on,
+        // Initial read-only checks are allowed. Every repaired path is immediately re-validated before moving on,
         // so a path created by someone else after this call finishes can never be caught
         // mid-way between an "apply everywhere" pass and a separate "validate everywhere" pass.
         acl.Ensure(root.Path);
 
-        Assert.True(callOrder.Count >= 2);
-        Assert.Equal(0, callOrder.Count % 2);
-        for (var i = 0; i < callOrder.Count; i += 2)
+        Assert.Contains(callOrder, item => item.StartsWith("apply:", StringComparison.Ordinal));
+        for (var i = 0; i < callOrder.Count; i++)
         {
+            if (!callOrder[i].StartsWith("apply:", StringComparison.Ordinal)) continue;
             var path = callOrder[i]["apply:".Length..];
-            Assert.Equal("apply:" + path, callOrder[i]);
+            Assert.True(i + 1 < callOrder.Count);
             Assert.Equal(
                 "validate:" + path,
                 callOrder[i + 1]);
