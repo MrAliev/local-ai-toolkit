@@ -1,0 +1,2136 @@
+{
+  "schemaVersion": 1,
+  "sourceCommit": "8e4ffb06bca2402160a5a1c0f1d9e17ae69bfe16",
+  "probeSourceSha256": {
+    "run_probe.py": "d5c1c327fb611059896c3ce0e4c50c0dbf4ad1b2a30e627f808e89e8abedc5c9",
+    "Program.cs": "8232080559fae16bd946b0e03ee6657f6de90c4e1bda63f74b030e2a596a439f"
+  },
+  "binarySha256": {
+    "PdfProbe.dll": "3efb9b40d1029f54c283613276092cc5288eebd4ba31248c87f06d2b090c40e2",
+    "LocalLm.Core.dll": "f398a6770278133d8cc2dc84f310c7fab2b9d3daae5b32f04f4c4775ea55e979",
+    "PDFtoImage.dll": "ad36738c7f9431adfb1cf3e2e683226ff5ec0e437cb4ef92144c36e0df200ad7",
+    "pdfium.dll": "d3d9f4b7c9dabe3363f30779c5c3c715c47332749fa590e4b4a2b8b6780cb1c4"
+  },
+  "host": {
+    "system": "Windows-10-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+    "logicalProcessors": 32
+  },
+  "repeats": 3,
+  "workerTimeoutSeconds": 10,
+  "boundaries": [
+    "Synthetic fixtures, one Windows host; not a security proof or a general PDF-quality score.",
+    "Native loading/text extraction and the product raster pipeline run in separate processes.",
+    "Raster mode replaces only the model client with a capture sink; there is no inference or OCR-accuracy score.",
+    "Process wall time includes startup; inner timings have their own narrower boundary.",
+    "The OS file cache may be warm. Worker peak working set is measured, not a hard memory limit.",
+    "Visible-reference comparison collapses whitespace but retains characters, repetitions and order."
+  ],
+  "fixtures": [
+    {
+      "file": "text-en.pdf",
+      "kind": "text",
+      "referencePages": [
+        "Invoice ALPHA-7319\nTotal: 42.50 EUR\nRepeated line\nRepeated line"
+      ],
+      "sha256": "4bf020964fb8d62e564e0395afa22e79d135d82c3ca612d2931fbbdf138e2696",
+      "bytes": 550544
+    },
+    {
+      "file": "text-unicode.pdf",
+      "kind": "text",
+      "referencePages": [
+        "Счёт БЕТА-4826\nИтого: 42,50 €"
+      ],
+      "sha256": "aa2987834ffa32a2eb738019ca2054e04d8fab8602e02f37cb0dc7d110846d66",
+      "bytes": 550423
+    },
+    {
+      "file": "scan-en.pdf",
+      "kind": "scan",
+      "referencePages": [
+        "Invoice ALPHA-7319\nTotal: 42.50 EUR\nRepeated line\nRepeated line"
+      ],
+      "sha256": "6d88d6b961d9221e844525ad3dd541908dbf5cb72e58c44a986b42e7ce55e1a3",
+      "bytes": 5201
+    },
+    {
+      "file": "mixed.pdf",
+      "kind": "mixed",
+      "referencePages": [
+        "Invoice ALPHA-7319\nTotal: 42.50 EUR\nRepeated line\nRepeated line",
+        "Счёт БЕТА-4826\nИтого: 42,50 €"
+      ],
+      "sha256": "eaa2afccaa9fd0b9bba5d0bcae9ea4ce8759bd6de187a46b01f060effe00cc81",
+      "bytes": 554516
+    },
+    {
+      "file": "hidden-text.pdf",
+      "kind": "hidden-text",
+      "referencePages": [
+        "Invoice ALPHA-7319\nTotal: 42.50 EUR\nRepeated line\nRepeated line"
+      ],
+      "sha256": "eea9ebe90705bdc2034f77a3fb2adefbb6138d99ec5a9569b7d72a5a42609d20",
+      "bytes": 550622
+    },
+    {
+      "file": "large-page.pdf",
+      "kind": "text",
+      "referencePages": [
+        "Invoice ALPHA-7319\nTotal: 42.50 EUR\nRepeated line\nRepeated line"
+      ],
+      "sha256": "ae455d4f3360527425a39f3970ed1149856f890ce4c83a6d0d718d2723d7f1b7",
+      "bytes": 550549
+    },
+    {
+      "file": "wide-page.pdf",
+      "kind": "text",
+      "referencePages": [
+        "Invoice ALPHA-7319\nTotal: 42.50 EUR"
+      ],
+      "sha256": "f78418376b05131f332a46c9ce915b11b1360f065e365c8fb95c2f6ed41313f3",
+      "bytes": 550497
+    },
+    {
+      "file": "truncated-25.pdf",
+      "kind": "damaged",
+      "referencePages": [],
+      "sha256": "d81c1cd8238ce67ceeac8ca8c8f62205ebccb6e8f79d8b3b4909cc9da55b78d2",
+      "bytes": 137636
+    },
+    {
+      "file": "truncated-75.pdf",
+      "kind": "damaged",
+      "referencePages": [],
+      "sha256": "0b91df08afe7750aa222c5c88b466534a90747f159fb98dff4bc8d8f1ac4dd64",
+      "bytes": 412908
+    },
+    {
+      "file": "truncated-95.pdf",
+      "kind": "damaged",
+      "referencePages": [],
+      "sha256": "3e29329c5d0e2dedfa22229313262f008ca66a180c3c993b1ef1417f4ca0a8d5",
+      "bytes": 523016
+    },
+    {
+      "file": "wrong-xref.pdf",
+      "kind": "damaged",
+      "referencePages": [
+        "Invoice ALPHA-7319\nTotal: 42.50 EUR\nRepeated line\nRepeated line"
+      ],
+      "sha256": "bb927756e11d939df26c7dcd0362205828ec8670b8a6fd1bbc0805e669c53ff7",
+      "bytes": 550539
+    },
+    {
+      "file": "not-pdf.pdf",
+      "kind": "damaged",
+      "referencePages": [],
+      "sha256": "f097aa79015a9639fb68112ec977d4593d2dd400b63397a4be0162697852ca81",
+      "bytes": 524297
+    },
+    {
+      "file": "cyclic-pages.pdf",
+      "kind": "damaged",
+      "referencePages": [],
+      "sha256": "2be504dd8c38e9d591bc901a0d9369cd3b46776f2ba8f17f4ba55a5a343a4d5f",
+      "bytes": 262
+    }
+  ],
+  "runs": [
+    {
+      "file": "text-en.pdf",
+      "mode": "text",
+      "repeat": 1,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 75.772,
+      "data": {
+        "result": {
+          "status": "read",
+          "loadMs": 0.0744,
+          "textMs": 2.821,
+          "pages": [
+            "Invoice ALPHA-7319\r\nTotal: 42.50 EUR\r\nRepeated line\r\nRepeated line"
+          ],
+          "zeroMappings": 0,
+          "matchesVisibleReference": true,
+          "pageMatchesVisibleReference": [
+            true
+          ]
+        },
+        "elapsedMs": 6.731,
+        "peakWorkingSetBytes": 24064000,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "text-en.pdf",
+      "mode": "text",
+      "repeat": 2,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 74.645,
+      "data": {
+        "result": {
+          "status": "read",
+          "loadMs": 0.0777,
+          "textMs": 2.8091,
+          "pages": [
+            "Invoice ALPHA-7319\r\nTotal: 42.50 EUR\r\nRepeated line\r\nRepeated line"
+          ],
+          "zeroMappings": 0,
+          "matchesVisibleReference": true,
+          "pageMatchesVisibleReference": [
+            true
+          ]
+        },
+        "elapsedMs": 6.54,
+        "peakWorkingSetBytes": 24408064,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "text-en.pdf",
+      "mode": "text",
+      "repeat": 3,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 75.842,
+      "data": {
+        "result": {
+          "status": "read",
+          "loadMs": 0.0843,
+          "textMs": 2.8085,
+          "pages": [
+            "Invoice ALPHA-7319\r\nTotal: 42.50 EUR\r\nRepeated line\r\nRepeated line"
+          ],
+          "zeroMappings": 0,
+          "matchesVisibleReference": true,
+          "pageMatchesVisibleReference": [
+            true
+          ]
+        },
+        "elapsedMs": 6.531,
+        "peakWorkingSetBytes": 24080384,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "text-en.pdf",
+      "mode": "raster",
+      "repeat": 1,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 136.037,
+      "data": {
+        "result": {
+          "status": "read",
+          "pipelineMs": 62.9266,
+          "pages": [
+            {
+              "number": 1,
+              "Width": 833,
+              "Height": 500,
+              "pixels": 416500,
+              "pngSha256": "aba1706ba50a3718e97612537233e5e597ec7e6ea21f00ae9a130e4691392376"
+            }
+          ],
+          "withinProductRasterLimits": true
+        },
+        "elapsedMs": 64.562,
+        "peakWorkingSetBytes": 40783872,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "text-en.pdf",
+      "mode": "raster",
+      "repeat": 2,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 125.506,
+      "data": {
+        "result": {
+          "status": "read",
+          "pipelineMs": 60.4955,
+          "pages": [
+            {
+              "number": 1,
+              "Width": 833,
+              "Height": 500,
+              "pixels": 416500,
+              "pngSha256": "aba1706ba50a3718e97612537233e5e597ec7e6ea21f00ae9a130e4691392376"
+            }
+          ],
+          "withinProductRasterLimits": true
+        },
+        "elapsedMs": 61.972,
+        "peakWorkingSetBytes": 40644608,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "text-en.pdf",
+      "mode": "raster",
+      "repeat": 3,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 129.099,
+      "data": {
+        "result": {
+          "status": "read",
+          "pipelineMs": 62.2406,
+          "pages": [
+            {
+              "number": 1,
+              "Width": 833,
+              "Height": 500,
+              "pixels": 416500,
+              "pngSha256": "aba1706ba50a3718e97612537233e5e597ec7e6ea21f00ae9a130e4691392376"
+            }
+          ],
+          "withinProductRasterLimits": true
+        },
+        "elapsedMs": 63.732,
+        "peakWorkingSetBytes": 40701952,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "text-unicode.pdf",
+      "mode": "text",
+      "repeat": 1,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 72.584,
+      "data": {
+        "result": {
+          "status": "read",
+          "loadMs": 0.0845,
+          "textMs": 2.7279,
+          "pages": [
+            "Счёт БЕТА-4826\r\nИтого: 42,50 €"
+          ],
+          "zeroMappings": 0,
+          "matchesVisibleReference": true,
+          "pageMatchesVisibleReference": [
+            true
+          ]
+        },
+        "elapsedMs": 6.288,
+        "peakWorkingSetBytes": 24051712,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "text-unicode.pdf",
+      "mode": "text",
+      "repeat": 2,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 80.976,
+      "data": {
+        "result": {
+          "status": "read",
+          "loadMs": 0.0954,
+          "textMs": 2.7432,
+          "pages": [
+            "Счёт БЕТА-4826\r\nИтого: 42,50 €"
+          ],
+          "zeroMappings": 0,
+          "matchesVisibleReference": true,
+          "pageMatchesVisibleReference": [
+            true
+          ]
+        },
+        "elapsedMs": 6.335,
+        "peakWorkingSetBytes": 24035328,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "text-unicode.pdf",
+      "mode": "text",
+      "repeat": 3,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 72.923,
+      "data": {
+        "result": {
+          "status": "read",
+          "loadMs": 0.0843,
+          "textMs": 2.793,
+          "pages": [
+            "Счёт БЕТА-4826\r\nИтого: 42,50 €"
+          ],
+          "zeroMappings": 0,
+          "matchesVisibleReference": true,
+          "pageMatchesVisibleReference": [
+            true
+          ]
+        },
+        "elapsedMs": 6.45,
+        "peakWorkingSetBytes": 24051712,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "text-unicode.pdf",
+      "mode": "raster",
+      "repeat": 1,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 125.152,
+      "data": {
+        "result": {
+          "status": "read",
+          "pipelineMs": 60.3342,
+          "pages": [
+            {
+              "number": 1,
+              "Width": 833,
+              "Height": 500,
+              "pixels": 416500,
+              "pngSha256": "8f46995114adea1fd549db056182cfb6b628b847418eab5541a4e4adc7ad1709"
+            }
+          ],
+          "withinProductRasterLimits": true
+        },
+        "elapsedMs": 61.8,
+        "peakWorkingSetBytes": 40861696,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "text-unicode.pdf",
+      "mode": "raster",
+      "repeat": 2,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 128.79,
+      "data": {
+        "result": {
+          "status": "read",
+          "pipelineMs": 62.3515,
+          "pages": [
+            {
+              "number": 1,
+              "Width": 833,
+              "Height": 500,
+              "pixels": 416500,
+              "pngSha256": "8f46995114adea1fd549db056182cfb6b628b847418eab5541a4e4adc7ad1709"
+            }
+          ],
+          "withinProductRasterLimits": true
+        },
+        "elapsedMs": 63.881,
+        "peakWorkingSetBytes": 40534016,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "text-unicode.pdf",
+      "mode": "raster",
+      "repeat": 3,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 131.159,
+      "data": {
+        "result": {
+          "status": "read",
+          "pipelineMs": 60.662,
+          "pages": [
+            {
+              "number": 1,
+              "Width": 833,
+              "Height": 500,
+              "pixels": 416500,
+              "pngSha256": "8f46995114adea1fd549db056182cfb6b628b847418eab5541a4e4adc7ad1709"
+            }
+          ],
+          "withinProductRasterLimits": true
+        },
+        "elapsedMs": 62.205,
+        "peakWorkingSetBytes": 40820736,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "scan-en.pdf",
+      "mode": "text",
+      "repeat": 1,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 74.416,
+      "data": {
+        "result": {
+          "status": "read",
+          "loadMs": 0.0886,
+          "textMs": 0.2861,
+          "pages": [
+            ""
+          ],
+          "zeroMappings": 0,
+          "matchesVisibleReference": false,
+          "pageMatchesVisibleReference": [
+            false
+          ]
+        },
+        "elapsedMs": 4.013,
+        "peakWorkingSetBytes": 22634496,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "scan-en.pdf",
+      "mode": "text",
+      "repeat": 2,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 72.933,
+      "data": {
+        "result": {
+          "status": "read",
+          "loadMs": 0.0814,
+          "textMs": 0.2819,
+          "pages": [
+            ""
+          ],
+          "zeroMappings": 0,
+          "matchesVisibleReference": false,
+          "pageMatchesVisibleReference": [
+            false
+          ]
+        },
+        "elapsedMs": 4.188,
+        "peakWorkingSetBytes": 22630400,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "scan-en.pdf",
+      "mode": "text",
+      "repeat": 3,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 78.791,
+      "data": {
+        "result": {
+          "status": "read",
+          "loadMs": 0.0728,
+          "textMs": 0.2889,
+          "pages": [
+            ""
+          ],
+          "zeroMappings": 0,
+          "matchesVisibleReference": false,
+          "pageMatchesVisibleReference": [
+            false
+          ]
+        },
+        "elapsedMs": 3.832,
+        "peakWorkingSetBytes": 22667264,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "scan-en.pdf",
+      "mode": "raster",
+      "repeat": 1,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 133.263,
+      "data": {
+        "result": {
+          "status": "read",
+          "pipelineMs": 65.4524,
+          "pages": [
+            {
+              "number": 1,
+              "Width": 833,
+              "Height": 500,
+              "pixels": 416500,
+              "pngSha256": "87c1bcf33e5668265313e1003e96739e74597a27e7ebf071b607c2685c706994"
+            }
+          ],
+          "withinProductRasterLimits": true
+        },
+        "elapsedMs": 66.941,
+        "peakWorkingSetBytes": 36892672,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "scan-en.pdf",
+      "mode": "raster",
+      "repeat": 2,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 132.542,
+      "data": {
+        "result": {
+          "status": "read",
+          "pipelineMs": 64.2237,
+          "pages": [
+            {
+              "number": 1,
+              "Width": 833,
+              "Height": 500,
+              "pixels": 416500,
+              "pngSha256": "87c1bcf33e5668265313e1003e96739e74597a27e7ebf071b607c2685c706994"
+            }
+          ],
+          "withinProductRasterLimits": true
+        },
+        "elapsedMs": 66.329,
+        "peakWorkingSetBytes": 37105664,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "scan-en.pdf",
+      "mode": "raster",
+      "repeat": 3,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 139.896,
+      "data": {
+        "result": {
+          "status": "read",
+          "pipelineMs": 65.3261,
+          "pages": [
+            {
+              "number": 1,
+              "Width": 833,
+              "Height": 500,
+              "pixels": 416500,
+              "pngSha256": "87c1bcf33e5668265313e1003e96739e74597a27e7ebf071b607c2685c706994"
+            }
+          ],
+          "withinProductRasterLimits": true
+        },
+        "elapsedMs": 66.805,
+        "peakWorkingSetBytes": 37138432,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "mixed.pdf",
+      "mode": "text",
+      "repeat": 1,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 74.979,
+      "data": {
+        "result": {
+          "status": "read",
+          "loadMs": 0.0856,
+          "textMs": 2.9959,
+          "pages": [
+            "Invoice ALPHA-7319\r\nTotal: 42.50 EUR\r\nRepeated line\r\nRepeated line",
+            ""
+          ],
+          "zeroMappings": 0,
+          "matchesVisibleReference": false,
+          "pageMatchesVisibleReference": [
+            true,
+            false
+          ]
+        },
+        "elapsedMs": 6.639,
+        "peakWorkingSetBytes": 24182784,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "mixed.pdf",
+      "mode": "text",
+      "repeat": 2,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 85.657,
+      "data": {
+        "result": {
+          "status": "read",
+          "loadMs": 0.0738,
+          "textMs": 3.0218,
+          "pages": [
+            "Invoice ALPHA-7319\r\nTotal: 42.50 EUR\r\nRepeated line\r\nRepeated line",
+            ""
+          ],
+          "zeroMappings": 0,
+          "matchesVisibleReference": false,
+          "pageMatchesVisibleReference": [
+            true,
+            false
+          ]
+        },
+        "elapsedMs": 6.65,
+        "peakWorkingSetBytes": 24072192,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "mixed.pdf",
+      "mode": "text",
+      "repeat": 3,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 82.295,
+      "data": {
+        "result": {
+          "status": "read",
+          "loadMs": 0.0774,
+          "textMs": 3.1298,
+          "pages": [
+            "Invoice ALPHA-7319\r\nTotal: 42.50 EUR\r\nRepeated line\r\nRepeated line",
+            ""
+          ],
+          "zeroMappings": 0,
+          "matchesVisibleReference": false,
+          "pageMatchesVisibleReference": [
+            true,
+            false
+          ]
+        },
+        "elapsedMs": 7.161,
+        "peakWorkingSetBytes": 24236032,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "mixed.pdf",
+      "mode": "raster",
+      "repeat": 1,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 155.921,
+      "data": {
+        "result": {
+          "status": "read",
+          "pipelineMs": 78.0645,
+          "pages": [
+            {
+              "number": 1,
+              "Width": 833,
+              "Height": 500,
+              "pixels": 416500,
+              "pngSha256": "aba1706ba50a3718e97612537233e5e597ec7e6ea21f00ae9a130e4691392376"
+            },
+            {
+              "number": 2,
+              "Width": 833,
+              "Height": 500,
+              "pixels": 416500,
+              "pngSha256": "be5fe140ee921cea06224bd5ededb5edaa54f8e2207d2051ea13142997c0f1d0"
+            }
+          ],
+          "withinProductRasterLimits": true
+        },
+        "elapsedMs": 79.796,
+        "peakWorkingSetBytes": 43409408,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "mixed.pdf",
+      "mode": "raster",
+      "repeat": 2,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 148.305,
+      "data": {
+        "result": {
+          "status": "read",
+          "pipelineMs": 80.4374,
+          "pages": [
+            {
+              "number": 1,
+              "Width": 833,
+              "Height": 500,
+              "pixels": 416500,
+              "pngSha256": "aba1706ba50a3718e97612537233e5e597ec7e6ea21f00ae9a130e4691392376"
+            },
+            {
+              "number": 2,
+              "Width": 833,
+              "Height": 500,
+              "pixels": 416500,
+              "pngSha256": "be5fe140ee921cea06224bd5ededb5edaa54f8e2207d2051ea13142997c0f1d0"
+            }
+          ],
+          "withinProductRasterLimits": true
+        },
+        "elapsedMs": 82.4,
+        "peakWorkingSetBytes": 43184128,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "mixed.pdf",
+      "mode": "raster",
+      "repeat": 3,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 153.279,
+      "data": {
+        "result": {
+          "status": "read",
+          "pipelineMs": 76.157,
+          "pages": [
+            {
+              "number": 1,
+              "Width": 833,
+              "Height": 500,
+              "pixels": 416500,
+              "pngSha256": "aba1706ba50a3718e97612537233e5e597ec7e6ea21f00ae9a130e4691392376"
+            },
+            {
+              "number": 2,
+              "Width": 833,
+              "Height": 500,
+              "pixels": 416500,
+              "pngSha256": "be5fe140ee921cea06224bd5ededb5edaa54f8e2207d2051ea13142997c0f1d0"
+            }
+          ],
+          "withinProductRasterLimits": true
+        },
+        "elapsedMs": 77.769,
+        "peakWorkingSetBytes": 43053056,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "hidden-text.pdf",
+      "mode": "text",
+      "repeat": 1,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 75.429,
+      "data": {
+        "result": {
+          "status": "read",
+          "loadMs": 0.0809,
+          "textMs": 3.3156,
+          "pages": [
+            "Invoice ALPHA-7319\r\nTotal: 42.50 EUR\r\nRepeated line\r\nRepeated line\r\nHIDDEN UNRELATED TEXT"
+          ],
+          "zeroMappings": 0,
+          "matchesVisibleReference": false,
+          "pageMatchesVisibleReference": [
+            false
+          ]
+        },
+        "elapsedMs": 6.936,
+        "peakWorkingSetBytes": 24035328,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "hidden-text.pdf",
+      "mode": "text",
+      "repeat": 2,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 76.637,
+      "data": {
+        "result": {
+          "status": "read",
+          "loadMs": 0.0811,
+          "textMs": 2.8604,
+          "pages": [
+            "Invoice ALPHA-7319\r\nTotal: 42.50 EUR\r\nRepeated line\r\nRepeated line\r\nHIDDEN UNRELATED TEXT"
+          ],
+          "zeroMappings": 0,
+          "matchesVisibleReference": false,
+          "pageMatchesVisibleReference": [
+            false
+          ]
+        },
+        "elapsedMs": 6.593,
+        "peakWorkingSetBytes": 24158208,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "hidden-text.pdf",
+      "mode": "text",
+      "repeat": 3,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 80.906,
+      "data": {
+        "result": {
+          "status": "read",
+          "loadMs": 0.079,
+          "textMs": 2.8456,
+          "pages": [
+            "Invoice ALPHA-7319\r\nTotal: 42.50 EUR\r\nRepeated line\r\nRepeated line\r\nHIDDEN UNRELATED TEXT"
+          ],
+          "zeroMappings": 0,
+          "matchesVisibleReference": false,
+          "pageMatchesVisibleReference": [
+            false
+          ]
+        },
+        "elapsedMs": 6.877,
+        "peakWorkingSetBytes": 24018944,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "hidden-text.pdf",
+      "mode": "raster",
+      "repeat": 1,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 133.117,
+      "data": {
+        "result": {
+          "status": "read",
+          "pipelineMs": 63.0553,
+          "pages": [
+            {
+              "number": 1,
+              "Width": 833,
+              "Height": 500,
+              "pixels": 416500,
+              "pngSha256": "aba1706ba50a3718e97612537233e5e597ec7e6ea21f00ae9a130e4691392376"
+            }
+          ],
+          "withinProductRasterLimits": true
+        },
+        "elapsedMs": 64.715,
+        "peakWorkingSetBytes": 40648704,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "hidden-text.pdf",
+      "mode": "raster",
+      "repeat": 2,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 132.445,
+      "data": {
+        "result": {
+          "status": "read",
+          "pipelineMs": 65.0049,
+          "pages": [
+            {
+              "number": 1,
+              "Width": 833,
+              "Height": 500,
+              "pixels": 416500,
+              "pngSha256": "aba1706ba50a3718e97612537233e5e597ec7e6ea21f00ae9a130e4691392376"
+            }
+          ],
+          "withinProductRasterLimits": true
+        },
+        "elapsedMs": 66.893,
+        "peakWorkingSetBytes": 40706048,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "hidden-text.pdf",
+      "mode": "raster",
+      "repeat": 3,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 139.66,
+      "data": {
+        "result": {
+          "status": "read",
+          "pipelineMs": 64.523,
+          "pages": [
+            {
+              "number": 1,
+              "Width": 833,
+              "Height": 500,
+              "pixels": 416500,
+              "pngSha256": "aba1706ba50a3718e97612537233e5e597ec7e6ea21f00ae9a130e4691392376"
+            }
+          ],
+          "withinProductRasterLimits": true
+        },
+        "elapsedMs": 65.982,
+        "peakWorkingSetBytes": 40665088,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "large-page.pdf",
+      "mode": "text",
+      "repeat": 1,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 79.234,
+      "data": {
+        "result": {
+          "status": "read",
+          "loadMs": 0.0812,
+          "textMs": 3.3939,
+          "pages": [
+            "Invoice ALPHA-7319\r\nTotal: 42.50 EUR\r\nRepeated line\r\nRepeated line"
+          ],
+          "zeroMappings": 0,
+          "matchesVisibleReference": true,
+          "pageMatchesVisibleReference": [
+            true
+          ]
+        },
+        "elapsedMs": 7.58,
+        "peakWorkingSetBytes": 24031232,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "large-page.pdf",
+      "mode": "text",
+      "repeat": 2,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 83.709,
+      "data": {
+        "result": {
+          "status": "read",
+          "loadMs": 0.0795,
+          "textMs": 2.8846,
+          "pages": [
+            "Invoice ALPHA-7319\r\nTotal: 42.50 EUR\r\nRepeated line\r\nRepeated line"
+          ],
+          "zeroMappings": 0,
+          "matchesVisibleReference": true,
+          "pageMatchesVisibleReference": [
+            true
+          ]
+        },
+        "elapsedMs": 6.488,
+        "peakWorkingSetBytes": 24064000,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "large-page.pdf",
+      "mode": "text",
+      "repeat": 3,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 79.69,
+      "data": {
+        "result": {
+          "status": "read",
+          "loadMs": 0.0814,
+          "textMs": 2.8473,
+          "pages": [
+            "Invoice ALPHA-7319\r\nTotal: 42.50 EUR\r\nRepeated line\r\nRepeated line"
+          ],
+          "zeroMappings": 0,
+          "matchesVisibleReference": true,
+          "pageMatchesVisibleReference": [
+            true
+          ]
+        },
+        "elapsedMs": 6.383,
+        "peakWorkingSetBytes": 24023040,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "large-page.pdf",
+      "mode": "raster",
+      "repeat": 1,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 201.97,
+      "data": {
+        "result": {
+          "status": "read",
+          "pipelineMs": 135.7193,
+          "pages": [
+            {
+              "number": 1,
+              "Width": 2000,
+              "Height": 2000,
+              "pixels": 4000000,
+              "pngSha256": "cf149abce2cf4d2a1054cb0809b884e51f107c82856ee0f0a438e3fee0e4c4b0"
+            }
+          ],
+          "withinProductRasterLimits": true
+        },
+        "elapsedMs": 137.325,
+        "peakWorkingSetBytes": 69513216,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "large-page.pdf",
+      "mode": "raster",
+      "repeat": 2,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 208.364,
+      "data": {
+        "result": {
+          "status": "read",
+          "pipelineMs": 137.4962,
+          "pages": [
+            {
+              "number": 1,
+              "Width": 2000,
+              "Height": 2000,
+              "pixels": 4000000,
+              "pngSha256": "cf149abce2cf4d2a1054cb0809b884e51f107c82856ee0f0a438e3fee0e4c4b0"
+            }
+          ],
+          "withinProductRasterLimits": true
+        },
+        "elapsedMs": 138.938,
+        "peakWorkingSetBytes": 69144576,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "large-page.pdf",
+      "mode": "raster",
+      "repeat": 3,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 219.806,
+      "data": {
+        "result": {
+          "status": "read",
+          "pipelineMs": 136.1847,
+          "pages": [
+            {
+              "number": 1,
+              "Width": 2000,
+              "Height": 2000,
+              "pixels": 4000000,
+              "pngSha256": "cf149abce2cf4d2a1054cb0809b884e51f107c82856ee0f0a438e3fee0e4c4b0"
+            }
+          ],
+          "withinProductRasterLimits": true
+        },
+        "elapsedMs": 137.704,
+        "peakWorkingSetBytes": 69316608,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "wide-page.pdf",
+      "mode": "text",
+      "repeat": 1,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 73.043,
+      "data": {
+        "result": {
+          "status": "read",
+          "loadMs": 0.0926,
+          "textMs": 2.7844,
+          "pages": [
+            "Invoice ALPHA-7319\r\nTotal: 42.50 EUR"
+          ],
+          "zeroMappings": 0,
+          "matchesVisibleReference": true,
+          "pageMatchesVisibleReference": [
+            true
+          ]
+        },
+        "elapsedMs": 6.657,
+        "peakWorkingSetBytes": 24031232,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "wide-page.pdf",
+      "mode": "text",
+      "repeat": 2,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 71.995,
+      "data": {
+        "result": {
+          "status": "read",
+          "loadMs": 0.0832,
+          "textMs": 2.7366,
+          "pages": [
+            "Invoice ALPHA-7319\r\nTotal: 42.50 EUR"
+          ],
+          "zeroMappings": 0,
+          "matchesVisibleReference": true,
+          "pageMatchesVisibleReference": [
+            true
+          ]
+        },
+        "elapsedMs": 6.51,
+        "peakWorkingSetBytes": 24137728,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "wide-page.pdf",
+      "mode": "text",
+      "repeat": 3,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 78.363,
+      "data": {
+        "result": {
+          "status": "read",
+          "loadMs": 0.0825,
+          "textMs": 2.7839,
+          "pages": [
+            "Invoice ALPHA-7319\r\nTotal: 42.50 EUR"
+          ],
+          "zeroMappings": 0,
+          "matchesVisibleReference": true,
+          "pageMatchesVisibleReference": [
+            true
+          ]
+        },
+        "elapsedMs": 6.427,
+        "peakWorkingSetBytes": 24023040,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "wide-page.pdf",
+      "mode": "raster",
+      "repeat": 1,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 118.352,
+      "data": {
+        "result": {
+          "status": "read",
+          "pipelineMs": 52.0851,
+          "pages": [
+            {
+              "number": 1,
+              "Width": 4096,
+              "Height": 10,
+              "pixels": 40960,
+              "pngSha256": "f7a42227b34fd0281bc94843e4fa1767f702698fe0085034b7118d2ec38d0771"
+            }
+          ],
+          "withinProductRasterLimits": true
+        },
+        "elapsedMs": 53.575,
+        "peakWorkingSetBytes": 38899712,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "wide-page.pdf",
+      "mode": "raster",
+      "repeat": 2,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 126.861,
+      "data": {
+        "result": {
+          "status": "read",
+          "pipelineMs": 52.8596,
+          "pages": [
+            {
+              "number": 1,
+              "Width": 4096,
+              "Height": 10,
+              "pixels": 40960,
+              "pngSha256": "f7a42227b34fd0281bc94843e4fa1767f702698fe0085034b7118d2ec38d0771"
+            }
+          ],
+          "withinProductRasterLimits": true
+        },
+        "elapsedMs": 54.556,
+        "peakWorkingSetBytes": 38756352,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "wide-page.pdf",
+      "mode": "raster",
+      "repeat": 3,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 125.461,
+      "data": {
+        "result": {
+          "status": "read",
+          "pipelineMs": 53.1876,
+          "pages": [
+            {
+              "number": 1,
+              "Width": 4096,
+              "Height": 10,
+              "pixels": 40960,
+              "pngSha256": "f7a42227b34fd0281bc94843e4fa1767f702698fe0085034b7118d2ec38d0771"
+            }
+          ],
+          "withinProductRasterLimits": true
+        },
+        "elapsedMs": 54.674,
+        "peakWorkingSetBytes": 38883328,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "truncated-25.pdf",
+      "mode": "text",
+      "repeat": 1,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 70.559,
+      "data": {
+        "result": {
+          "status": "rejected",
+          "nativeError": 3,
+          "loadMs": 1.5037
+        },
+        "elapsedMs": 4.943,
+        "peakWorkingSetBytes": 22913024,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "truncated-25.pdf",
+      "mode": "text",
+      "repeat": 2,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 71.683,
+      "data": {
+        "result": {
+          "status": "rejected",
+          "nativeError": 3,
+          "loadMs": 1.5186
+        },
+        "elapsedMs": 4.919,
+        "peakWorkingSetBytes": 22441984,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "truncated-25.pdf",
+      "mode": "text",
+      "repeat": 3,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 76.648,
+      "data": {
+        "result": {
+          "status": "rejected",
+          "nativeError": 3,
+          "loadMs": 1.5716
+        },
+        "elapsedMs": 4.919,
+        "peakWorkingSetBytes": 22720512,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "truncated-25.pdf",
+      "mode": "raster",
+      "repeat": 1,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 87.064,
+      "data": {
+        "result": {
+          "status": "rejected",
+          "error": "ArgumentException",
+          "message": "Не удалось прочитать PDF '<fixtures>\\truncated-25.pdf': File not in PDF format or corrupted. (Parameter 'path')"
+        },
+        "elapsedMs": 25.293,
+        "peakWorkingSetBytes": 31969280,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "truncated-25.pdf",
+      "mode": "raster",
+      "repeat": 2,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 86.969,
+      "data": {
+        "result": {
+          "status": "rejected",
+          "error": "ArgumentException",
+          "message": "Не удалось прочитать PDF '<fixtures>\\truncated-25.pdf': File not in PDF format or corrupted. (Parameter 'path')"
+        },
+        "elapsedMs": 25.991,
+        "peakWorkingSetBytes": 31883264,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "truncated-25.pdf",
+      "mode": "raster",
+      "repeat": 3,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 95.344,
+      "data": {
+        "result": {
+          "status": "rejected",
+          "error": "ArgumentException",
+          "message": "Не удалось прочитать PDF '<fixtures>\\truncated-25.pdf': File not in PDF format or corrupted. (Parameter 'path')"
+        },
+        "elapsedMs": 26.404,
+        "peakWorkingSetBytes": 31985664,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "truncated-75.pdf",
+      "mode": "text",
+      "repeat": 1,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 75.593,
+      "data": {
+        "result": {
+          "status": "rejected",
+          "nativeError": 3,
+          "loadMs": 4.1245
+        },
+        "elapsedMs": 7.555,
+        "peakWorkingSetBytes": 22708224,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "truncated-75.pdf",
+      "mode": "text",
+      "repeat": 2,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 73.32,
+      "data": {
+        "result": {
+          "status": "rejected",
+          "nativeError": 3,
+          "loadMs": 4.0683
+        },
+        "elapsedMs": 7.706,
+        "peakWorkingSetBytes": 22872064,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "truncated-75.pdf",
+      "mode": "text",
+      "repeat": 3,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 79.065,
+      "data": {
+        "result": {
+          "status": "rejected",
+          "nativeError": 3,
+          "loadMs": 4.0126
+        },
+        "elapsedMs": 7.602,
+        "peakWorkingSetBytes": 22855680,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "truncated-75.pdf",
+      "mode": "raster",
+      "repeat": 1,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 94.271,
+      "data": {
+        "result": {
+          "status": "rejected",
+          "error": "ArgumentException",
+          "message": "Не удалось прочитать PDF '<fixtures>\\truncated-75.pdf': File not in PDF format or corrupted. (Parameter 'path')"
+        },
+        "elapsedMs": 29.749,
+        "peakWorkingSetBytes": 31895552,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "truncated-75.pdf",
+      "mode": "raster",
+      "repeat": 2,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 90.276,
+      "data": {
+        "result": {
+          "status": "rejected",
+          "error": "ArgumentException",
+          "message": "Не удалось прочитать PDF '<fixtures>\\truncated-75.pdf': File not in PDF format or corrupted. (Parameter 'path')"
+        },
+        "elapsedMs": 28.303,
+        "peakWorkingSetBytes": 31907840,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "truncated-75.pdf",
+      "mode": "raster",
+      "repeat": 3,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 97.403,
+      "data": {
+        "result": {
+          "status": "rejected",
+          "error": "ArgumentException",
+          "message": "Не удалось прочитать PDF '<fixtures>\\truncated-75.pdf': File not in PDF format or corrupted. (Parameter 'path')"
+        },
+        "elapsedMs": 29.344,
+        "peakWorkingSetBytes": 31756288,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "truncated-95.pdf",
+      "mode": "text",
+      "repeat": 1,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 76.303,
+      "data": {
+        "result": {
+          "status": "rejected",
+          "nativeError": 3,
+          "loadMs": 5.4477
+        },
+        "elapsedMs": 9.202,
+        "peakWorkingSetBytes": 23023616,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "truncated-95.pdf",
+      "mode": "text",
+      "repeat": 2,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 74.301,
+      "data": {
+        "result": {
+          "status": "rejected",
+          "nativeError": 3,
+          "loadMs": 5.5714
+        },
+        "elapsedMs": 9.196,
+        "peakWorkingSetBytes": 22982656,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "truncated-95.pdf",
+      "mode": "text",
+      "repeat": 3,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 83.513,
+      "data": {
+        "result": {
+          "status": "rejected",
+          "nativeError": 3,
+          "loadMs": 5.2907
+        },
+        "elapsedMs": 8.867,
+        "peakWorkingSetBytes": 22827008,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "truncated-95.pdf",
+      "mode": "raster",
+      "repeat": 1,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 94.889,
+      "data": {
+        "result": {
+          "status": "rejected",
+          "error": "ArgumentException",
+          "message": "Не удалось прочитать PDF '<fixtures>\\truncated-95.pdf': File not in PDF format or corrupted. (Parameter 'path')"
+        },
+        "elapsedMs": 30.867,
+        "peakWorkingSetBytes": 31723520,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "truncated-95.pdf",
+      "mode": "raster",
+      "repeat": 2,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 90.114,
+      "data": {
+        "result": {
+          "status": "rejected",
+          "error": "ArgumentException",
+          "message": "Не удалось прочитать PDF '<fixtures>\\truncated-95.pdf': File not in PDF format or corrupted. (Parameter 'path')"
+        },
+        "elapsedMs": 29.568,
+        "peakWorkingSetBytes": 31940608,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "truncated-95.pdf",
+      "mode": "raster",
+      "repeat": 3,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 95.699,
+      "data": {
+        "result": {
+          "status": "rejected",
+          "error": "ArgumentException",
+          "message": "Не удалось прочитать PDF '<fixtures>\\truncated-95.pdf': File not in PDF format or corrupted. (Parameter 'path')"
+        },
+        "elapsedMs": 29.211,
+        "peakWorkingSetBytes": 31830016,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "wrong-xref.pdf",
+      "mode": "text",
+      "repeat": 1,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 73.772,
+      "data": {
+        "result": {
+          "status": "read",
+          "loadMs": 0.2568,
+          "textMs": 2.7745,
+          "pages": [
+            "Invoice ALPHA-7319\r\nTotal: 42.50 EUR\r\nRepeated line\r\nRepeated line"
+          ],
+          "zeroMappings": 0,
+          "matchesVisibleReference": true,
+          "pageMatchesVisibleReference": [
+            true
+          ]
+        },
+        "elapsedMs": 6.88,
+        "peakWorkingSetBytes": 24199168,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "wrong-xref.pdf",
+      "mode": "text",
+      "repeat": 2,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 73.411,
+      "data": {
+        "result": {
+          "status": "read",
+          "loadMs": 0.2646,
+          "textMs": 2.7517,
+          "pages": [
+            "Invoice ALPHA-7319\r\nTotal: 42.50 EUR\r\nRepeated line\r\nRepeated line"
+          ],
+          "zeroMappings": 0,
+          "matchesVisibleReference": true,
+          "pageMatchesVisibleReference": [
+            true
+          ]
+        },
+        "elapsedMs": 6.822,
+        "peakWorkingSetBytes": 24055808,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "wrong-xref.pdf",
+      "mode": "text",
+      "repeat": 3,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 81.894,
+      "data": {
+        "result": {
+          "status": "read",
+          "loadMs": 0.313,
+          "textMs": 2.6717,
+          "pages": [
+            "Invoice ALPHA-7319\r\nTotal: 42.50 EUR\r\nRepeated line\r\nRepeated line"
+          ],
+          "zeroMappings": 0,
+          "matchesVisibleReference": true,
+          "pageMatchesVisibleReference": [
+            true
+          ]
+        },
+        "elapsedMs": 6.966,
+        "peakWorkingSetBytes": 24076288,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "wrong-xref.pdf",
+      "mode": "raster",
+      "repeat": 1,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 131.516,
+      "data": {
+        "result": {
+          "status": "read",
+          "pipelineMs": 64.5813,
+          "pages": [
+            {
+              "number": 1,
+              "Width": 833,
+              "Height": 500,
+              "pixels": 416500,
+              "pngSha256": "aba1706ba50a3718e97612537233e5e597ec7e6ea21f00ae9a130e4691392376"
+            }
+          ],
+          "withinProductRasterLimits": true
+        },
+        "elapsedMs": 66.191,
+        "peakWorkingSetBytes": 41295872,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "wrong-xref.pdf",
+      "mode": "raster",
+      "repeat": 2,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 129.829,
+      "data": {
+        "result": {
+          "status": "read",
+          "pipelineMs": 64.2788,
+          "pages": [
+            {
+              "number": 1,
+              "Width": 833,
+              "Height": 500,
+              "pixels": 416500,
+              "pngSha256": "aba1706ba50a3718e97612537233e5e597ec7e6ea21f00ae9a130e4691392376"
+            }
+          ],
+          "withinProductRasterLimits": true
+        },
+        "elapsedMs": 65.777,
+        "peakWorkingSetBytes": 40734720,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "wrong-xref.pdf",
+      "mode": "raster",
+      "repeat": 3,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 134.72,
+      "data": {
+        "result": {
+          "status": "read",
+          "pipelineMs": 62.8466,
+          "pages": [
+            {
+              "number": 1,
+              "Width": 833,
+              "Height": 500,
+              "pixels": 416500,
+              "pngSha256": "aba1706ba50a3718e97612537233e5e597ec7e6ea21f00ae9a130e4691392376"
+            }
+          ],
+          "withinProductRasterLimits": true
+        },
+        "elapsedMs": 64.417,
+        "peakWorkingSetBytes": 40718336,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "not-pdf.pdf",
+      "mode": "text",
+      "repeat": 1,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 69.825,
+      "data": {
+        "result": {
+          "status": "rejected",
+          "nativeError": 3,
+          "loadMs": 0.9806
+        },
+        "elapsedMs": 4.452,
+        "peakWorkingSetBytes": 22753280,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "not-pdf.pdf",
+      "mode": "text",
+      "repeat": 2,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 71.349,
+      "data": {
+        "result": {
+          "status": "rejected",
+          "nativeError": 3,
+          "loadMs": 0.9706
+        },
+        "elapsedMs": 4.637,
+        "peakWorkingSetBytes": 22880256,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "not-pdf.pdf",
+      "mode": "text",
+      "repeat": 3,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 75.974,
+      "data": {
+        "result": {
+          "status": "rejected",
+          "nativeError": 3,
+          "loadMs": 0.9655
+        },
+        "elapsedMs": 4.39,
+        "peakWorkingSetBytes": 22761472,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "not-pdf.pdf",
+      "mode": "raster",
+      "repeat": 1,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 90.603,
+      "data": {
+        "result": {
+          "status": "rejected",
+          "error": "ArgumentException",
+          "message": "Не удалось прочитать PDF '<fixtures>\\not-pdf.pdf': File not in PDF format or corrupted. (Parameter 'path')"
+        },
+        "elapsedMs": 27.863,
+        "peakWorkingSetBytes": 31866880,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "not-pdf.pdf",
+      "mode": "raster",
+      "repeat": 2,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 92.827,
+      "data": {
+        "result": {
+          "status": "rejected",
+          "error": "ArgumentException",
+          "message": "Не удалось прочитать PDF '<fixtures>\\not-pdf.pdf': File not in PDF format or corrupted. (Parameter 'path')"
+        },
+        "elapsedMs": 28.016,
+        "peakWorkingSetBytes": 31870976,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "not-pdf.pdf",
+      "mode": "raster",
+      "repeat": 3,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 98.687,
+      "data": {
+        "result": {
+          "status": "rejected",
+          "error": "ArgumentException",
+          "message": "Не удалось прочитать PDF '<fixtures>\\not-pdf.pdf': File not in PDF format or corrupted. (Parameter 'path')"
+        },
+        "elapsedMs": 27.9,
+        "peakWorkingSetBytes": 31858688,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "cyclic-pages.pdf",
+      "mode": "text",
+      "repeat": 1,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 68.522,
+      "data": {
+        "result": {
+          "status": "rejected",
+          "error": "IOException",
+          "message": "Native page load failed."
+        },
+        "elapsedMs": 3.695,
+        "peakWorkingSetBytes": 22437888,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "cyclic-pages.pdf",
+      "mode": "text",
+      "repeat": 2,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 68.728,
+      "data": {
+        "result": {
+          "status": "rejected",
+          "error": "IOException",
+          "message": "Native page load failed."
+        },
+        "elapsedMs": 3.631,
+        "peakWorkingSetBytes": 22466560,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "cyclic-pages.pdf",
+      "mode": "text",
+      "repeat": 3,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 75.52,
+      "data": {
+        "result": {
+          "status": "rejected",
+          "error": "IOException",
+          "message": "Native page load failed."
+        },
+        "elapsedMs": 3.818,
+        "peakWorkingSetBytes": 22417408,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "cyclic-pages.pdf",
+      "mode": "raster",
+      "repeat": 1,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 91.77,
+      "data": {
+        "result": {
+          "status": "rejected",
+          "error": "ArgumentException",
+          "message": "Не удалось прочитать PDF '<fixtures>\\cyclic-pages.pdf': Page not found or content error. (Parameter 'path')"
+        },
+        "elapsedMs": 29.048,
+        "peakWorkingSetBytes": 32055296,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "cyclic-pages.pdf",
+      "mode": "raster",
+      "repeat": 2,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 91.027,
+      "data": {
+        "result": {
+          "status": "rejected",
+          "error": "ArgumentException",
+          "message": "Не удалось прочитать PDF '<fixtures>\\cyclic-pages.pdf': Page not found or content error. (Parameter 'path')"
+        },
+        "elapsedMs": 29.168,
+        "peakWorkingSetBytes": 32059392,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    },
+    {
+      "file": "cyclic-pages.pdf",
+      "mode": "raster",
+      "repeat": 3,
+      "processOutcome": "completed",
+      "exitCode": 0,
+      "wallMs": 98.145,
+      "data": {
+        "result": {
+          "status": "rejected",
+          "error": "ArgumentException",
+          "message": "Не удалось прочитать PDF '<fixtures>\\cyclic-pages.pdf': Page not found or content error. (Parameter 'path')"
+        },
+        "elapsedMs": 28.507,
+        "peakWorkingSetBytes": 32022528,
+        "platform": "Microsoft Windows 10.0.26200",
+        "pdfToImage": "5.4.0.0",
+        "inference": false
+      }
+    }
+  ]
+}
