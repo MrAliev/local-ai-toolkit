@@ -173,7 +173,8 @@ public sealed class LocalTasks
         string? model,
         bool together,
         CancellationToken ct,
-        string? pdfPages = null)
+        string? pdfPages = null,
+        string? pdfOutputPath = null)
     {
         ct.ThrowIfCancellationRequested();
         if (!IsImageProfile(profile))
@@ -195,6 +196,9 @@ public sealed class LocalTasks
             throw new ArgumentException(LocalLmText.PdfTogetherUnsupported, nameof(together));
         if (!isPdf && pdfPages is not null)
             throw new ArgumentException(LocalLmText.PdfPagesOnly, nameof(pdfPages));
+        if (pdfOutputPath is not null && (!isPdf || profile != LocalTaskProfile.Ocr))
+            throw new ArgumentException(LocalLmText.PdfOutputOnly, nameof(pdfOutputPath));
+        var pdfOutput = pdfOutputPath is null ? null : PdfOcrOutput.Prepare(Resolve(paths[0]), pdfOutputPath);
         await using var pdf = isPdf ? await PdfPageReader.OpenAsync(Resolve(paths[0]), ct, pdfPages) : null;
 
         if (paths.Count > MaxImageCount)
@@ -482,8 +486,9 @@ public sealed class LocalTasks
         }
 
         UsageCall.Current?.Comparison.GeneratedText(result.Value);
+        var deliveredAnswer = pdfOutput is null ? result.Value : await pdfOutput.WriteAsync(result.Value, ct);
         return new LocalResult(
-            result.Value,
+            deliveredAnswer,
             TokenEstimator.Saved(wouldHaveCost, result.Value),
             chosen,
             // Which form ran, because the two are different claims about the answer: one look at

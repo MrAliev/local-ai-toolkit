@@ -679,6 +679,14 @@ are refused before calling a model. Omit the option to read every page.
 lai localai read-image "Transcribe the text" manual.pdf --profile Ocr --pages "1,3-5"
 ```
 
+For PDF OCR, add `--out transcript.txt` (MCP: `outPath`) to save the complete UTF-8
+transcript and receive a short file pointer. The output directory must already
+exist. An existing output file is replaced atomically after every selected page
+finishes; errors or cancellation keep the old file. The source PDF cannot be the
+output. Nothing is silently shortened or returned inline on a write failure.
+File contents remain untrusted data. Without an output path, OCR returns the
+transcript inline as before. This option does not yet resume interrupted OCR.
+
 Pages are rendered at up to 150 DPI, with at most 4 million pixels per page.
 Encrypted or malformed PDFs report an error with the file path; password input
 is not supported.

@@ -1,11 +1,52 @@
 using LocalAi.Cli;
 using LocalAi.Contracts;
 using LocalAi.Tests.Shared;
+using LocalLm.Core;
+using System.Text.Json;
 
 namespace LocalAi.IntegrationTests;
 
 public sealed class PdfCommandTests
 {
+    [Fact]
+    public async Task Failed_pdf_output_has_a_delivery_error_and_cannot_create_exit_code()
+    {
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+        using var usage = new UsageCall(UsageSurface.Cli, "localai", "read-image");
+        var exit = await LocalModelRun.ExecuteAsync("read-image", "fixture.pdf", LocalTaskProfile.Ocr,
+            (_, _) => Task.FromException<LocalResult>(new PdfOutputWriteException("output.txt", new IOException("locked"))),
+            true, TestContext.Current.CancellationToken, new CommandStreams(output, error));
+        Assert.Equal(73, exit);
+        Assert.Contains("output_not_written", output.ToString(), StringComparison.Ordinal);
+        using var envelope = JsonDocument.Parse(output.ToString());
+        Assert.False(envelope.RootElement.GetProperty("ok").GetBoolean());
+        Assert.Equal(UsageDelivery.Failed, usage.Complete().Outcome.Delivery);
+    }
+
+    [Fact]
+    public void Pdf_ocr_accepts_a_complete_output_file()
+    {
+        Assert.True(ReadImageCommand.TryParse(["Read", "manual.pdf", "--profile", "Ocr", "--out", "result.txt"], out var request, out _));
+        Assert.Equal("result.txt", request!.PdfOutputPath);
+    }
+
+    [Theory]
+    [InlineData("image.png", "Ocr")]
+    [InlineData("manual.pdf", "VisualAnalysis")]
+    public void Output_file_requires_pdf_ocr(string path, string profile)
+    {
+        Assert.False(ReadImageCommand.TryParse(["Read", path, "--profile", profile, "--out", "result.txt"], out _, out var refusal));
+        Assert.Equal("pdf_output_requires_ocr", refusal!.Code);
+    }
+
+    [Fact]
+    public void Pdf_output_requires_a_value()
+    {
+        Assert.False(ReadImageCommand.TryParse(["Read", "manual.pdf", "--profile", "Ocr", "--out"], out _, out var refusal));
+        Assert.Equal("out_value_missing", refusal!.Code);
+    }
+
     [Fact]
     public void Pdf_page_selection_is_accepted_without_renumbering_the_request()
     {

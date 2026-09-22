@@ -2,9 +2,9 @@ using System.ComponentModel;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 
-namespace LocalLm.Mcp;
+namespace LocalLm.Core;
 
-internal static class TranslationOutput
+public static class OutputFileIdentity
 {
     public static bool IsSource(string source, string destination)
     {
