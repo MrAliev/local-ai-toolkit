@@ -47,12 +47,14 @@ public static class LocalLmTools
         [Description("PDF only: one-based page numbers and inclusive ranges, such as 1,3-5. Pages are read in document order without duplicates; omitted means all pages.")]
         string? pages = null,
         [Description("PDF in Ocr mode only: absolute path for the complete UTF-8 transcript. Replaces an existing output file atomically; the source PDF cannot be overwritten. Returns a concise file pointer instead of the transcript.")]
-        string? outPath = null)
+        string? outPath = null,
+        [Description("PDF in Ocr mode only: directory for durable page checkpoints. Create a new session in an empty directory, or resume the same PDF/pages/request/model/route/processor. Completed pages are reused without rendering or inference. Contains OCR text; output file must be outside this directory.")]
+        string? checkpointDirectory = null)
     {
         if (sourceContext is { } context) UsageCall.Current?.Comparison.SourceContext(context);
         var profile = ParseProfile(mode, nameof(mode));
         return await Run(
-            () => tasks.ReadImageAsync(paths, question, profile, model, together, cancellationToken, pages, outPath),
+            () => tasks.ReadImageAsync(paths, question, profile, model, together, cancellationToken, pages, outPath, checkpointDirectory),
             "read_image:" + PrimarySource(paths),
             cancellationToken,
             profile);

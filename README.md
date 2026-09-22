@@ -685,7 +685,21 @@ exist. An existing output file is replaced atomically after every selected page
 finishes; errors or cancellation keep the old file. The source PDF cannot be the
 output. Nothing is silently shortened or returned inline on a write failure.
 File contents remain untrusted data. Without an output path, OCR returns the
-transcript inline as before. This option does not yet resume interrupted OCR.
+transcript inline as before.
+
+Add `--checkpoint ocr-progress` (MCP: `checkpointDirectory`) to resume PDF OCR.
+Repeat the same request after a stop: completed pages are loaded from disk without
+rendering or calling a model again; only unfinished pages are processed. A fully
+completed session can publish the transcript to another output file without inference.
+The checkpoint contains page text and receipts, and allows only one active writer.
+Use an empty directory for a new session and keep the output file outside it.
+Changes to PDF bytes, selected pages, question, language, model override, routing
+catalog or processor build are refused; use a new directory for those requests.
+Each checkpoint record is limited to 4 MiB; oversized records fail without truncation.
+
+```powershell
+lai localai read-image "Transcribe the text" manual.pdf --profile Ocr --checkpoint ocr-progress --out transcript.txt
+```
 
 Pages are rendered at up to 150 DPI, with at most 4 million pixels per page.
 Encrypted or malformed PDFs report an error with the file path; password input
