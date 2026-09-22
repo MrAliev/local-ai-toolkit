@@ -9,6 +9,29 @@ namespace LocalAi.IntegrationTests;
 public sealed class PdfCommandTests
 {
     [Fact]
+    public void Pdf_ocr_accepts_a_checkpoint_directory()
+    {
+        Assert.True(ReadImageCommand.TryParse(["Read", "manual.pdf", "--profile", "Ocr", "--checkpoint", "progress"], out var request, out _));
+        Assert.Equal("progress", request!.PdfCheckpointDirectory);
+    }
+
+    [Theory]
+    [InlineData("image.png", "Ocr")]
+    [InlineData("manual.pdf", "VisualAnalysis")]
+    public void Checkpoints_require_pdf_ocr(string path, string profile)
+    {
+        Assert.False(ReadImageCommand.TryParse(["Read", path, "--profile", profile, "--checkpoint", "progress"], out _, out var refusal));
+        Assert.Equal("pdf_checkpoint_requires_ocr", refusal!.Code);
+    }
+
+    [Fact]
+    public void Pdf_checkpoint_requires_a_value()
+    {
+        Assert.False(ReadImageCommand.TryParse(["Read", "manual.pdf", "--profile", "Ocr", "--checkpoint"], out _, out var refusal));
+        Assert.Equal("checkpoint_value_missing", refusal!.Code);
+    }
+
+    [Fact]
     public async Task Failed_pdf_output_has_a_delivery_error_and_cannot_create_exit_code()
     {
         using var output = new StringWriter();

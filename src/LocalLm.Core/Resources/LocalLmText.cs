@@ -62,6 +62,11 @@ public static class LocalLmText
     public static string PdfOnlyInput => Get(nameof(PdfOnlyInput));
     public static string PdfPagesOnly => Get(nameof(PdfPagesOnly));
     public static string PdfOutputOnly => Get(nameof(PdfOutputOnly));
+    public static string PdfCheckpointOnly => Get(nameof(PdfCheckpointOnly));
+    public static string PdfCheckpointMismatch(string path) => Format(nameof(PdfCheckpointMismatch), path);
+    public static string PdfCheckpointUnavailable(string path) => Format(nameof(PdfCheckpointUnavailable), path);
+    public static string PdfCheckpointReused(int count) => Format(nameof(PdfCheckpointReused), count);
+    public static string PdfCheckpointOutputConflict(string path) => Format(nameof(PdfCheckpointOutputConflict), path);
     public static string PdfOutputIsSource(string path) => Format(nameof(PdfOutputIsSource), path);
     public static string PdfOutputIsDirectory(string path) => Format(nameof(PdfOutputIsDirectory), path);
     public static string PdfOutputDirectoryMissing(string path) => Format(nameof(PdfOutputDirectoryMissing), path);

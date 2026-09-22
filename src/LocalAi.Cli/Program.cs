@@ -404,7 +404,8 @@ static async Task<int> RunAsync(string[] args, bool machineReadable, CommandStre
                 image.Together,
                 inner,
                 image.PdfPages,
-                image.PdfOutputPath),
+                image.PdfOutputPath,
+                image.PdfCheckpointDirectory),
             machineReadable,
             token, streams));
     }

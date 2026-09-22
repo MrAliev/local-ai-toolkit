@@ -330,6 +330,11 @@
   </data>
   <data name="PdfPagesOnly" xml:space="preserve"><value>Выбор страниц доступен только для одного PDF.</value></data>
   <data name="PdfOutputOnly" xml:space="preserve"><value>Запись в файл доступна для одного PDF в режиме Ocr.</value></data>
+  <data name="PdfCheckpointOnly" xml:space="preserve"><value>Контрольные точки доступны для одного PDF в режиме Ocr.</value></data>
+  <data name="PdfCheckpointOutputConflict" xml:space="preserve"><value>Выходной файл должен находиться вне папки контрольной точки '{0}' и не ссылаться на её файлы.</value></data>
+  <data name="PdfCheckpointMismatch" xml:space="preserve"><value>Контрольная точка '{0}' неполна, повреждена или относится к другому PDF, выбору страниц, запросу OCR, маршруту или версии обработчика. Укажите новую папку контрольной точки.</value></data>
+  <data name="PdfCheckpointUnavailable" xml:space="preserve"><value>Контрольная точка '{0}' уже используется или недоступна для исключительного открытия. Завершите другой запуск перед возобновлением.</value></data>
+  <data name="PdfCheckpointReused" xml:space="preserve"><value>Повторно использовано страниц из контрольной точки: {0}</value></data>
   <data name="PdfOutputIsSource" xml:space="preserve"><value>Результат OCR не должен заменять исходный PDF: '{0}'. Укажите другой выходной путь.</value></data>
   <data name="PdfOutputIsDirectory" xml:space="preserve"><value>Выходной путь OCR указывает на папку: '{0}'. Укажите путь к файлу.</value></data>
   <data name="PdfOutputDirectoryMissing" xml:space="preserve"><value>Папка для результата OCR '{0}' не существует. Создайте её до запуска OCR.</value></data>

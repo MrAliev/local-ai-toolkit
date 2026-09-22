@@ -18,7 +18,8 @@ public sealed record ReadImageRequest(
     bool Together = false,
     string? Language = null,
     string? PdfPages = null,
-    string? PdfOutputPath = null);
+    string? PdfOutputPath = null,
+    string? PdfCheckpointDirectory = null);
 
 /// <summary>
 /// Images on disk, read by a local vision model: a screenshot, a scanned page, a photographed
@@ -47,6 +48,7 @@ public static class ReadImageCommand
         string? language = null;
         string? pdfPages = null;
         string? pdfOutputPath = null;
+        string? pdfCheckpointDirectory = null;
         var together = false;
 
         for (var index = 0; index < arguments.Count; index++)
@@ -65,6 +67,7 @@ public static class ReadImageCommand
                 case "--language":
                 case "--pages":
                 case "--out":
+                case "--checkpoint":
                     if (index + 1 >= arguments.Count)
                     {
                         refusal = new CommandRefusal(
@@ -77,14 +80,15 @@ public static class ReadImageCommand
                     }
 
                     var value = arguments[++index];
-                    if (argument == "--out")
+                    if (argument is "--out" or "--checkpoint")
                     {
                         if (string.IsNullOrWhiteSpace(value))
                         {
-                            refusal = new CommandRefusal("out_value_missing", CliText.OptionValueMissing("read-image", argument, CliUsage.ReadImage));
+                            refusal = new CommandRefusal(argument.TrimStart('-') + "_value_missing", CliText.OptionValueMissing("read-image", argument, CliUsage.ReadImage));
                             return false;
                         }
-                        pdfOutputPath = value;
+                        if (argument == "--out") pdfOutputPath = value;
+                        else pdfCheckpointDirectory = value;
                         break;
                     }
                     if (argument == "--pages")
@@ -223,7 +227,12 @@ public static class ReadImageCommand
             refusal = new CommandRefusal("pdf_output_requires_ocr", LocalLmText.PdfOutputOnly);
             return false;
         }
-        request = new ReadImageRequest(question, images, profile, model, together, language, pdfPages, pdfOutputPath);
+        if (pdfCheckpointDirectory is not null && (!images.Any(LocalTasks.IsPdfFile) || profile != LocalTaskProfile.Ocr))
+        {
+            refusal = new CommandRefusal("pdf_checkpoint_requires_ocr", LocalLmText.PdfCheckpointOnly);
+            return false;
+        }
+        request = new ReadImageRequest(question, images, profile, model, together, language, pdfPages, pdfOutputPath, pdfCheckpointDirectory);
         return true;
     }
 
