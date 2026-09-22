@@ -613,6 +613,37 @@ lai localai semantic implementations --path src/LocalAi.Broker.Core/DurableQueue
 lai localai ask "List the public members of this class, one per line." src/CodeSearch.Core/Chunking/GenericTextChunker.cs
 ```
 
+For extraction/classification, opt into a checked flat JSON object with
+`--profile Extraction` (or `Classification`) and `--schema contract.json`.
+MCP `ask_local` accepts the same JSON as the optional `outputSchema` string.
+For example, classify a supplied issue into `bug` or `question` with this contract:
+
+```json
+{"schemaVersion":1,"fields":[{"name":"label","type":"String","allowedValues":["bug","question"]}]}
+```
+
+```powershell
+lai localai ask "Classify this issue." issue.txt --profile Classification --schema contract.json --json
+```
+
+Version 1 is a bounded flat-object contract, **not general JSON Schema**: up to 64
+case-sensitive fields, `String`, `Integer` (signed Int64), `Number`, or `Boolean`;
+`required` defaults to true, `allowedValues` is an exact string enum. Nested values,
+nulls, extra/duplicate fields, code fences and extra prose fail validation. The schema
+is limited to 32,768 characters and the response to 1,048,576 characters. Unknown
+schema keywords are rejected before inference. Cancellation is preserved.
+
+The broker checks each attempt, including fallback. CLI success adds `data.validation`;
+failure exits 65 with `error.code=result_rejected` and `error.validation`, without
+usable answer data. MCP returns `{answer,validation}` inside its untrusted-content
+boundary. Statuses are `Valid`, `Empty`, `InvalidJson`, `SchemaMismatch`; only `Valid`
+carries a parsed `value`. Rejected output earns no cloud-token savings estimate.
+**Valid means the structure matches, not that the classification or extracted facts
+are correct**: check them against the supplied source. Without a schema, legacy
+CLI/MCP output is unchanged and the broker records `NotRequested`. This opt-in feature
+requires an updated broker as well as the client. Full translation retains its own
+validator; a broker success does not replace it.
+
 The model's answer is written to stdout. A separate usage notice on stderr identifies the
 call and the models actually used, reports elapsed time, and shows cloud INPUT and OUTPUT
 token savings separately. Runtime calls use a **conditional first-read comparison**, not

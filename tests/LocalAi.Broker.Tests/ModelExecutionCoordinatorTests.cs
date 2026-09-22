@@ -9,6 +9,32 @@ public sealed class ModelExecutionCoordinatorTests : IDisposable
         Path.GetTempPath(),
         "localai-coordinator-" + Guid.NewGuid().ToString("N"));
 
+    [Theory]
+    [InlineData("{\"label\":\"bug\"}", ModelExecutionOutcome.Success)]
+    [InlineData("{\"label\":5}", ModelExecutionOutcome.StructuralFailure)]
+    public async Task Structured_contract_survives_fallback_and_records_each_attempt(string fallback, ModelExecutionOutcome outcome)
+    {
+        var catalog = ModelRoutingCatalog.LoadEmbedded();
+        var executions = 0;
+        var coordinator = Create(new FakeRuntime(), (request, _) =>
+        {
+            Assert.NotNull(Assert.IsType<ChatJobPayload>(request.Payload).OutputSchema);
+            return Task.FromResult(Result(++executions == 1 ? "{}" : fallback));
+        }, (request, selection, result) => OutputValidation.For(catalog, request, selection, result));
+        var request = LocalJobRequestFactory.CreateRoutedChat("structured", LocalJobPriority.Foreground,
+            LocalTaskProfile.Classification, "Classify", null, null,
+            new LocalWorkloadMetadata(20, 100, 0, 0, 0, LocalDurationClass.Short),
+            outputSchema: new StructuredOutputSchema(1, [new("label", StructuredFieldType.String)]));
+        var restored = JsonSerializer.Deserialize<LocalJobRequest>(JsonSerializer.Serialize(request, LocalAiJson.Strict), LocalAiJson.Strict)!;
+        var models = catalog.Models.Select(model => model.Tag).ToArray();
+        var result = await coordinator.ExecuteAsync(restored, new ModelAvailability(models, [], []), TestContext.Current.CancellationToken);
+        Assert.Equal(2, executions);
+        Assert.True(result.Routing!.UsedFallback);
+        var telemetry = await new ModelTelemetryStore(_root).ReadAllAsync(TestContext.Current.CancellationToken);
+        Assert.Equal([ModelExecutionOutcome.StructuralFailure, outcome], telemetry.Select(record => record.Outcome));
+        Assert.EndsWith(outcome == ModelExecutionOutcome.Success ? ":pass" : ":fail", result.Routing.ValidatorResult, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task Successful_execution_records_attempt_identity_workflow_and_observed_usage_without_claiming_delivery()
     {
