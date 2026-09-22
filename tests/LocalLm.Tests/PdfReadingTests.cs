@@ -22,6 +22,176 @@ public sealed class PdfReadingTests : IDisposable
     public PdfReadingTests() => Directory.CreateDirectory(root);
 
     [Fact]
+    public async Task Interrupted_pdf_ocr_reuses_completed_pages_in_a_new_task_instance()
+    {
+        var path = Pdf(3);
+        var checkpoint = Path.Combine(root, "checkpoint");
+        var calls = 0;
+        var interrupted = new RecordingClient
+        {
+            AfterImage = () => { if (++calls == 2) throw new OperationCanceledException(); },
+        };
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => new LocalTasks(interrupted).ReadImageAsync([path], "Read",
+            LocalTaskProfile.Ocr, null, false, TestContext.Current.CancellationToken, pdfCheckpointDirectory: checkpoint));
+
+        var resumed = new RecordingClient { Answer = (number, _) => $"resumed {number}" };
+        var result = await new LocalTasks(resumed).ReadImageAsync([path], "Read", LocalTaskProfile.Ocr,
+            null, false, TestContext.Current.CancellationToken, pdfCheckpointDirectory: checkpoint);
+        Assert.Equal(2, resumed.Calls.Count);
+        Assert.Equal("PDF page 1 of 3\n\nreply 1\n\nPDF page 2 of 3\n\nresumed 1\n\nPDF page 3 of 3\n\nresumed 2", result.Answer);
+    }
+
+    [Fact]
+    public async Task A_page_returned_just_before_cancellation_is_committed_before_stopping()
+    {
+        var path = Pdf(2);
+        var checkpoint = Path.Combine(root, "checkpoint");
+        using var cancellation = new CancellationTokenSource();
+        var first = new RecordingClient { AfterImage = cancellation.Cancel };
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => new LocalTasks(first).ReadImageAsync([path], "Read",
+            LocalTaskProfile.Ocr, null, false, cancellation.Token, pdfCheckpointDirectory: checkpoint));
+        var next = new RecordingClient();
+        await new LocalTasks(next).ReadImageAsync([path], "Read", LocalTaskProfile.Ocr, null, false,
+            TestContext.Current.CancellationToken, pdfCheckpointDirectory: checkpoint);
+        Assert.Single(next.Calls);
+    }
+
+    [Fact]
+    public async Task A_complete_checkpoint_delivers_unicode_without_replaying_old_model_usage()
+    {
+        var path = Pdf(2);
+        var checkpoint = Path.Combine(root, "checkpoint");
+        var first = await new LocalTasks(new RecordingClient { Answer = (_, _) => "日本語 / Привет 😀" }).ReadImageAsync([path], "Read",
+            LocalTaskProfile.Ocr, null, false, TestContext.Current.CancellationToken, pdfCheckpointDirectory: checkpoint);
+        using var usage = new UsageCall(UsageSurface.Mcp, "locallm", "read_image");
+        var next = new RecordingClient();
+        var result = await new LocalTasks(next).ReadImageAsync([path], "Read", LocalTaskProfile.Ocr, null, false,
+            TestContext.Current.CancellationToken, pdfCheckpointDirectory: checkpoint);
+        Assert.Equal(first.Answer, result.Answer);
+        Assert.Empty(next.Calls);
+        Assert.Equal(TimeSpan.Zero, result.Receipt.QueueDuration);
+        Assert.Equal(TimeSpan.Zero, result.Receipt.ExecutionDuration);
+        Assert.Equal(string.Empty, result.Model);
+        var report = usage.Complete();
+        Assert.Equal(UsageCache.Hit, report.Models.Cache);
+        Assert.Equal(UsageModelState.NotCalled, report.Models.State);
+        Assert.Empty(report.Models.Actual);
+        using var released = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+    }
+
+    [Theory]
+    [InlineData("pdf")]
+    [InlineData("question")]
+    [InlineData("pages")]
+    [InlineData("model")]
+    [InlineData("route")]
+    [InlineData("processor")]
+    [InlineData("language")]
+    public async Task A_changed_checkpoint_identity_is_refused_before_inference(string changed)
+    {
+        var path = Pdf(2);
+        var checkpoint = Path.Combine(root, "checkpoint");
+        await new LocalTasks(new RecordingClient()).ReadImageAsync([path], "Read", LocalTaskProfile.Ocr, null, false,
+            TestContext.Current.CancellationToken, pdfCheckpointDirectory: checkpoint);
+        if (changed == "pdf") await File.AppendAllTextAsync(path, "\n% changed\n", TestContext.Current.CancellationToken);
+        if (changed is "route" or "processor" or "language")
+        {
+            var manifestPath = Path.Combine(checkpoint, "session.json");
+            var manifest = JsonSerializer.Deserialize<PdfOcrCheckpoint.Manifest>(await File.ReadAllTextAsync(manifestPath,
+                TestContext.Current.CancellationToken), LocalAiJson.Strict)!;
+            manifest = changed switch
+            {
+                "route" => manifest with { RouteVersion = "old-route" },
+                "processor" => manifest with { ProcessorVersion = "old-processor" },
+                _ => manifest with { Language = "other-language" },
+            };
+            await File.WriteAllTextAsync(manifestPath, JsonSerializer.Serialize(manifest, LocalAiJson.Strict), TestContext.Current.CancellationToken);
+        }
+        var next = new RecordingClient();
+        var error = await Assert.ThrowsAsync<ArgumentException>(() => new LocalTasks(next).ReadImageAsync([path],
+            changed == "question" ? "Different request" : "Read", LocalTaskProfile.Ocr, changed == "model" ? "other-model" : null,
+            false, TestContext.Current.CancellationToken, pdfPages: changed == "pages" ? "2" : null, pdfCheckpointDirectory: checkpoint));
+        Assert.Contains("Use a new checkpoint directory", error.Message, StringComparison.Ordinal);
+        Assert.Empty(next.Calls);
+    }
+
+    [Fact]
+    public async Task A_missing_checkpoint_page_is_recomputed_without_repeating_others()
+    {
+        var path = Pdf(3);
+        var checkpoint = Path.Combine(root, "checkpoint");
+        await new LocalTasks(new RecordingClient()).ReadImageAsync([path], "Read", LocalTaskProfile.Ocr, null, false,
+            TestContext.Current.CancellationToken, pdfCheckpointDirectory: checkpoint);
+        File.Delete(Path.Combine(checkpoint, "page-2.json"));
+        var next = new RecordingClient();
+        await new LocalTasks(next).ReadImageAsync([path], "Read", LocalTaskProfile.Ocr, null, false,
+            TestContext.Current.CancellationToken, pdfCheckpointDirectory: checkpoint);
+        var call = Assert.Single(next.Calls);
+        using var bitmap = SKBitmap.Decode(Convert.FromBase64String(Assert.Single(call.Images)));
+        Assert.Equal(SKColors.Blue, bitmap.GetPixel(bitmap.Width / 2, bitmap.Height / 2));
+    }
+
+    [Fact]
+    public async Task Corrupt_checkpoint_text_is_not_returned_as_completed_work()
+    {
+        var path = Pdf(1);
+        var checkpoint = Path.Combine(root, "checkpoint");
+        await new LocalTasks(new RecordingClient()).ReadImageAsync([path], "Read", LocalTaskProfile.Ocr, null, false,
+            TestContext.Current.CancellationToken, pdfCheckpointDirectory: checkpoint);
+        var pagePath = Path.Combine(checkpoint, "page-1.json");
+        var stored = await File.ReadAllTextAsync(pagePath, TestContext.Current.CancellationToken);
+        await File.WriteAllTextAsync(pagePath, stored.Replace("reply 1", "altered"), TestContext.Current.CancellationToken);
+        var next = new RecordingClient();
+        await Assert.ThrowsAsync<ArgumentException>(() => new LocalTasks(next).ReadImageAsync([path], "Read", LocalTaskProfile.Ocr,
+            null, false, TestContext.Current.CancellationToken, pdfCheckpointDirectory: checkpoint));
+        Assert.Empty(next.Calls);
+    }
+
+    [Fact]
+    public async Task A_concurrent_checkpoint_owner_is_refused_before_model_work()
+    {
+        var path = Pdf(1);
+        var checkpoint = Path.Combine(root, "checkpoint");
+        Directory.CreateDirectory(checkpoint);
+        using var owner = new FileStream(Path.Combine(checkpoint, "session.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+        var next = new RecordingClient();
+        await Assert.ThrowsAsync<ArgumentException>(() => new LocalTasks(next).ReadImageAsync([path], "Read", LocalTaskProfile.Ocr,
+            null, false, TestContext.Current.CancellationToken, pdfCheckpointDirectory: checkpoint));
+        Assert.Empty(next.Calls);
+    }
+
+    [Fact]
+    public async Task A_failed_output_write_can_be_retried_without_repeating_ocr()
+    {
+        var path = Pdf(2);
+        var checkpoint = Path.Combine(root, "checkpoint");
+        var target = Path.Combine(root, "result.txt");
+        var first = new RecordingClient { AfterImage = () => Directory.CreateDirectory(target) };
+        await Assert.ThrowsAsync<PdfOutputWriteException>(() => new LocalTasks(first).ReadImageAsync([path], "Read",
+            LocalTaskProfile.Ocr, null, false, TestContext.Current.CancellationToken, pdfOutputPath: target,
+            pdfCheckpointDirectory: checkpoint));
+        Directory.Delete(target);
+        var next = new RecordingClient();
+        await new LocalTasks(next).ReadImageAsync([path], "Read", LocalTaskProfile.Ocr, null, false,
+            TestContext.Current.CancellationToken, pdfOutputPath: target, pdfCheckpointDirectory: checkpoint);
+        Assert.Empty(next.Calls);
+        Assert.Equal("PDF page 1 of 2\n\nreply 1\n\nPDF page 2 of 2\n\nreply 2",
+            await File.ReadAllTextAsync(target, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task Output_may_not_overwrite_the_checkpoint()
+    {
+        var checkpoint = Path.Combine(root, "checkpoint");
+        Directory.CreateDirectory(checkpoint);
+        var next = new RecordingClient();
+        await Assert.ThrowsAsync<ArgumentException>(() => new LocalTasks(next).ReadImageAsync([Pdf(1)], "Read", LocalTaskProfile.Ocr,
+            null, false, TestContext.Current.CancellationToken, pdfOutputPath: Path.Combine(checkpoint, "session.json"),
+            pdfCheckpointDirectory: checkpoint));
+        Assert.Empty(next.Calls);
+    }
+
+    [Fact]
     public async Task Selected_pdf_ocr_is_written_in_full_without_returning_the_transcript()
     {
         var text = string.Concat(Enumerable.Repeat("Текст 日本語 😀\n", 4000));
@@ -60,7 +230,7 @@ public sealed class PdfReadingTests : IDisposable
             await using var client = await McpClient.CreateAsync(
                 new StreamClientTransport(incoming.Writer.AsStream(), outgoing.Reader.AsStream()),
                 cancellationToken: TestContext.Current.CancellationToken);
-            var result = await client.CallToolAsync(new CallToolRequestParams
+            var request = new CallToolRequestParams
             {
                 Name = "read_image",
                 Arguments = new Dictionary<string, JsonElement>
@@ -70,8 +240,10 @@ public sealed class PdfReadingTests : IDisposable
                     ["mode"] = JsonSerializer.SerializeToElement("Ocr"),
                     ["pages"] = JsonSerializer.SerializeToElement("4,2,2"),
                     ["outPath"] = JsonSerializer.SerializeToElement(toFile ? outputPath : null),
+                    ["checkpointDirectory"] = JsonSerializer.SerializeToElement(toFile ? Path.Combine(root, "mcp-checkpoint") : null),
                 },
-            }, TestContext.Current.CancellationToken);
+            };
+            var result = await client.CallToolAsync(request, TestContext.Current.CancellationToken);
             Assert.NotEqual(true, result.IsError);
             Assert.Equal(2, model.Calls.Count);
             var answer = string.Join("\n", result.Content.OfType<TextContentBlock>().Select(block => block.Text));
@@ -81,6 +253,11 @@ public sealed class PdfReadingTests : IDisposable
                 Assert.Equal(expected, await File.ReadAllTextAsync(outputPath, TestContext.Current.CancellationToken));
                 Assert.Contains(outputPath, answer, StringComparison.Ordinal);
                 Assert.DoesNotContain("reply 1", answer, StringComparison.Ordinal);
+                File.Delete(outputPath);
+                var repeated = await client.CallToolAsync(request, TestContext.Current.CancellationToken);
+                Assert.NotEqual(true, repeated.IsError);
+                Assert.Equal(2, model.Calls.Count);
+                Assert.Equal(expected, await File.ReadAllTextAsync(outputPath, TestContext.Current.CancellationToken));
             }
             else Assert.Contains(expected, answer, StringComparison.Ordinal);
             Assert.Contains("<untrusted-content", answer, StringComparison.Ordinal);

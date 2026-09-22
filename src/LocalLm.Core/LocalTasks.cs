@@ -174,7 +174,8 @@ public sealed class LocalTasks
         bool together,
         CancellationToken ct,
         string? pdfPages = null,
-        string? pdfOutputPath = null)
+        string? pdfOutputPath = null,
+        string? pdfCheckpointDirectory = null)
     {
         ct.ThrowIfCancellationRequested();
         if (!IsImageProfile(profile))
@@ -198,6 +199,8 @@ public sealed class LocalTasks
             throw new ArgumentException(LocalLmText.PdfPagesOnly, nameof(pdfPages));
         if (pdfOutputPath is not null && (!isPdf || profile != LocalTaskProfile.Ocr))
             throw new ArgumentException(LocalLmText.PdfOutputOnly, nameof(pdfOutputPath));
+        if (pdfCheckpointDirectory is not null && (!isPdf || profile != LocalTaskProfile.Ocr))
+            throw new ArgumentException(LocalLmText.PdfCheckpointOnly, nameof(pdfCheckpointDirectory));
         var pdfOutput = pdfOutputPath is null ? null : PdfOcrOutput.Prepare(Resolve(paths[0]), pdfOutputPath);
         await using var pdf = isPdf ? await PdfPageReader.OpenAsync(Resolve(paths[0]), ct, pdfPages) : null;
 
@@ -293,6 +296,21 @@ public sealed class LocalTasks
         var imageSystem = profile == LocalTaskProfile.ImageTranslation
             ? imageTranslationSystem
             : imageReadingSystem;
+        var checkpointCatalog = pdfCheckpointDirectory is null ? null : modelCatalog.Read();
+        var pdfHash = checkpointCatalog is null ? null : await pdf!.HashAsync(ct);
+        await using var checkpoint = checkpointCatalog is null ? null : await PdfOcrCheckpoint.OpenAsync(
+            pdfCheckpointDirectory!,
+            new PdfOcrCheckpoint.Manifest(1, pdfHash!, checkpointCatalog.CatalogVersion,
+                typeof(LocalTasks).Module.ModuleVersionId.ToString("N") + ":" + typeof(PDFtoImage.Conversion).Module.ModuleVersionId.ToString("N"),
+                PdfOcrCheckpoint.Hash(question + "\0" + imageSystem), model, CultureInfo.CurrentUICulture.Name,
+                totalPdfPages, pdf!.PageNumbers.ToArray()), ct);
+        var reusedPages = checkpoint?.Count ?? 0;
+        if (checkpoint is not null)
+        {
+            pdf!.ExcludeCompletedPages(checkpoint.CompletedPages);
+            checkpoint.ValidateOutput(pdfOutputPath);
+            if (reusedPages > 0) UsageCall.Current?.CacheHit("pdf_page_checkpoint");
+        }
         var workflowId = profile == LocalTaskProfile.ImageTranslation
             ? Guid.NewGuid()
             : (Guid?)null;
@@ -320,7 +338,9 @@ public sealed class LocalTasks
                     batch?.Count ?? 0,
                     batchPixels,
                     LocalDurationClass.Medium),
-                workflowId is { } imageWorkflowId
+                checkpointCatalog is not null
+                    ? new LocalWorkflowHint(Guid.NewGuid(), 0, 1, [profile], true, checkpointCatalog.CatalogVersion)
+                    : workflowId is { } imageWorkflowId
                     ? new LocalWorkflowHint(
                         imageWorkflowId,
                         stepIndex,
@@ -363,17 +383,37 @@ public sealed class LocalTasks
             // page count determine its heading. Only one encoded page is held at a time.
             var transcript = new StringBuilder();
             LocalUsageReceipt? receipt = null;
+            var processedPages = 0;
             for (var index = 0; index < frameCount; index++)
             {
                 ct.ThrowIfCancellationRequested();
-                observer?.Report(PageStep(index));
-                var one = await AskAsync(question, [await EncodeAsync(index, ct)],
-                    pixels[index], index, frameCount);
+                LocalJobResult<string> one;
+                if (checkpoint?.Find(PageNumber(index)) is { } saved)
+                {
+                    one = new LocalJobResult<string>(saved.Text, saved.Receipt);
+                    receipt ??= saved.Receipt;
+                    UsageCall.Current?.Comparison.SourceImage(pdfHash + ":page:" + PageNumber(index),
+                        pdf!.Pages[index].Width, pdf.Pages[index].Height);
+                }
+                else
+                {
+                    observer?.Report(checkpoint is null ? PageStep(index)
+                        : new ReadingPdfPage(PageNumber(index), totalPdfPages)
+                        { SelectedIndex = ++processedPages, SelectedTotal = frameCount - reusedPages });
+                    one = await AskAsync(question, [await EncodeAsync(index, ct)],
+                        pixels[index], index, frameCount);
+                    receipt = one.Receipt;
+                    if (checkpoint is not null) await checkpoint.SaveAsync(PageNumber(index), one);
+                }
                 ct.ThrowIfCancellationRequested();
                 if (index != 0) transcript.Append("\n\n");
                 transcript.Append(LocalLmText.PdfPageHeading(PageNumber(index), totalPdfPages))
                     .Append("\n\n").Append(one.Value);
-                receipt = one.Receipt;
+            }
+            if (reusedPages == frameCount)
+            {
+                UsageCall.Current?.NoInference();
+                receipt = receipt! with { Model = string.Empty, Routing = null };
             }
             result = new LocalJobResult<string>(transcript.ToString(),
                 receipt ?? throw new InvalidOperationException(LocalLmText.LogTriageNoReceipt));
@@ -486,6 +526,7 @@ public sealed class LocalTasks
         }
 
         UsageCall.Current?.Comparison.GeneratedText(result.Value);
+        checkpoint?.ValidateOutput(pdfOutputPath);
         var deliveredAnswer = pdfOutput is null ? result.Value : await pdfOutput.WriteAsync(result.Value, ct);
         return new LocalResult(
             deliveredAnswer,
@@ -495,7 +536,8 @@ public sealed class LocalTasks
             // five images can compare them and five merged readings cannot — the merge prompt
             // forbids exactly that. A reader deciding whether to trust a statement spanning the
             // images has only this line to go on.
-            isPdf ? LocalLmText.PdfPagesRead(Path.GetFileName(paths[0]), frameCount) : inOneCall
+            isPdf ? LocalLmText.PdfPagesRead(Path.GetFileName(paths[0]), frameCount) +
+                (reusedPages > 0 ? "; " + LocalLmText.PdfCheckpointReused(reusedPages) : string.Empty) : inOneCall
                 ? LocalLmText.ImagesRead(fullPaths.Count, string.Join(", ", described))
                 : LocalLmText.ImagesReadOneAtATime(
                     fullPaths.Count,

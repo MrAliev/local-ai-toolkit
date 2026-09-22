@@ -38,7 +38,7 @@ public static class LocalAiCommandSyntax
         "[--out file] [--json]";
     public const string ReadImage =
         "localai read-image <question> <file> [file ...] [--profile name] "  +
-        "[--model model] [--together] [--pages ranges] [--out file] [--language en|ru] [--json]";
+        "[--model model] [--together] [--pages ranges] [--out file] [--checkpoint dir] [--language en|ru] [--json]";
     // No brackets around the flag: here it is required rather than optional. The listing is
     // for a program, and the block this line sits in is the list for a person.
     public const string Capabilities = "localai capabilities --json";
