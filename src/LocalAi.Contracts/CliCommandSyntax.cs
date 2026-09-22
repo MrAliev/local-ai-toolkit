@@ -38,6 +38,7 @@ internal static class CliCommandSyntax
         ["policy"] = "localai policy <show|set> [options]",
         ["update"] = "localai update [--wait] [--force]",
         ["semantic"] = "localai semantic <operation> [options]",
+        ["semantic impact"] = LocalAiCommandSyntax.SemanticImpact,
         ["bootstrap"] = "localai bootstrap --dry-run",
         ["sync"] = "localai sync [--root dir] [--base-only] [--require-semantics] [--max-inline-files n]",
         ["hooks install"] = "localai hooks install [--root dir]",

@@ -336,6 +336,14 @@ public sealed class SemanticNavigationGateway
             context.Snapshot);
     }
 
+    public SemanticImpactReport AnalyzeImpact(string documentPath, int line, int utf16Column, int limit = 200,
+        string? root = null, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var context = _contextFactory(root);
+        return context.Service.AnalyzeImpact(documentPath, line, utf16Column, context.Snapshot, limit, cancellationToken);
+    }
+
     public IReadOnlyList<SemanticRelatedLocation> FindRelationships(
         string documentPath,
         int line,

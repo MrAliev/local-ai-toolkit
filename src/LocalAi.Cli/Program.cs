@@ -565,6 +565,11 @@ static async Task<int> RunAsync(string[] args, bool machineReadable, CommandStre
         return await UpdateCommand.ExecuteAsync(args.AsSpan(1).ToArray(), ModelResidencyPolicyStore.DefaultRuntimeRoot, streams.Out, streams.Error);
     }
 
+    if (args is ["semantic", "impact", .. var impactArguments])
+    {
+        return await Interruptible(token => Task.FromResult(SemanticImpactCommand.Execute(impactArguments, streams, machineReadable, token)));
+    }
+
     if (args is ["semantic", .. var semanticArguments])
     {
         return SemanticNavigationCommand.Execute(semanticArguments, streams);

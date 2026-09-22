@@ -64,6 +64,7 @@ public static class McpToolNames
         new("find_references", McpToolApproval.Approve) { Usage = UsagePolicy.Context },
         new("find_implementations", McpToolApproval.Approve) { Usage = UsagePolicy.Context },
         new("find_relationships", McpToolApproval.Approve) { Usage = UsagePolicy.Context },
+        new("analyze_impact", McpToolApproval.Approve) { Usage = UsagePolicy.Context },
         // Session-scoped, and inert until the user opts into live servers in their own
         // settings file — that opt-in is the real approval.
         new("lsp_open_document", McpToolApproval.Approve) { Usage = UsagePolicy.Administration },

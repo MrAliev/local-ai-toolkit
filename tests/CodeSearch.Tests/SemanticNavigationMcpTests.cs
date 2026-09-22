@@ -5,6 +5,53 @@ namespace CodeSearch.Tests;
 
 public class SemanticNavigationMcpTests
 {
+    [Fact]
+    public void Impact_wraps_one_based_evidence_with_snapshot_and_hashes()
+    {
+        var response = CodeSearchTools.AnalyzeImpact(Gateway(), NoBuildRunning.Notice, "Src/A.cs", 3,
+            limit: 1, cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Contains("<untrusted-content", response, StringComparison.Ordinal);
+        Assert.Contains("origin=\"analyze_impact\"", response, StringComparison.Ordinal);
+        using var json = System.Text.Json.JsonDocument.Parse(response[response.IndexOf('{')..(response.LastIndexOf('}') + 1)]);
+        var data = json.RootElement;
+        Assert.Equal(1, data.GetProperty("coordinateBase").GetInt32());
+        Assert.True(data.GetProperty("truncated").GetBoolean());
+        Assert.Equal(2, data.GetProperty("totalEvidence").GetInt32());
+        var edge = Assert.Single(data.GetProperty("evidence").EnumerateArray());
+        Assert.Equal("implementation", edge.GetProperty("kind").GetString());
+        Assert.Equal(4, edge.GetProperty("source").GetProperty("startLine").GetInt32());
+        Assert.Equal(17, edge.GetProperty("source").GetProperty("startColumn").GetInt32());
+        Assert.Equal(string.Concat(Enumerable.Repeat("03", 32)), edge.GetProperty("source").GetProperty("documentSha256").GetString());
+        Assert.Equal("tree", data.GetProperty("snapshot").GetProperty("gitTree").GetString());
+    }
+
+    [Theory]
+    [InlineData("../outside.cs", 1, 1, 10, "invalid_path:")]
+    [InlineData("Src/A.cs", 0, 1, 10, "invalid_position:")]
+    [InlineData("Src/A.cs", 1, 0, 10, "invalid_position:")]
+    [InlineData("Src/A.cs", 1, 1, 0, "invalid_limit:")]
+    [InlineData("Src/A.cs", 1, 1, 10001, "invalid_limit:")]
+    public void Impact_rejects_invalid_inputs_before_loading(string path, int line, int column, int limit, string code)
+    {
+        var gateway = new SemanticNavigationGateway(_ => throw new InvalidOperationException("must not load"));
+        Assert.StartsWith(code, CodeSearchTools.AnalyzeImpact(gateway, NoBuildRunning.Notice, path, line, column, limit,
+            cancellationToken: TestContext.Current.CancellationToken), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Impact_cancellation_propagates_and_readiness_is_not_a_graph()
+    {
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        var gateway = new SemanticNavigationGateway(_ => throw new SemanticNavigationNotReadyException("stale snapshot"));
+        Assert.ThrowsAny<OperationCanceledException>(() => CodeSearchTools.AnalyzeImpact(gateway, NoBuildRunning.Notice,
+            "Src/A.cs", 3, cancellationToken: cancellation.Token));
+        var refused = CodeSearchTools.AnalyzeImpact(gateway, NoBuildRunning.Notice, "Src/A.cs", 3,
+            cancellationToken: TestContext.Current.CancellationToken);
+        Assert.StartsWith("semantic_navigation_not_ready:", refused, StringComparison.Ordinal);
+        Assert.DoesNotContain("<untrusted-content", refused, StringComparison.Ordinal);
+    }
+
     /// <summary>
     /// The navigation tools blocked on an awaitable and carried no cancellation token, so the
     /// gateway was called with <see cref="CancellationToken.None"/> whatever the client sent: a
