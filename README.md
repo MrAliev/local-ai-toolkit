@@ -705,6 +705,9 @@ Pages are rendered at up to 150 DPI, with at most 4 million pixels per page.
 Encrypted or malformed PDFs report an error with the file path; password input
 is not supported.
 
+See the [PDF parser and OCR measurements](scripts/quality/pdf/README.md) for separate
+text-layer, damaged-document and raster-limit checks, plus the limits of that evidence.
+
 Languages are given as **names**, not codes: `--to Russian`, not `--to ru`.
 
 With `--markdown`, a document containing only fenced code blocks and whitespace is
