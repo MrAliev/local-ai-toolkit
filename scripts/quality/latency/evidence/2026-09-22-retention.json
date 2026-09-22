@@ -1,0 +1,2449 @@
+{
+  "schemaVersion": 1,
+  "corpusCommit": "2a9b6285b7a7bbecf2c826ae41d3bdd53aabf94e",
+  "policy": {
+    "SchemaVersion": 1,
+    "ModelResidency": "RequireFullVram",
+    "IdleModelKeepAliveSeconds": 10,
+    "MaxEmbeddingBatchItems": 128
+  },
+  "hostBefore": {
+    "ProcessId": 15408,
+    "StartedAtUtc": "2026-09-21T23:22:11.3962443+00:00",
+    "BrokerAssemblyPath": "C:\\Users\\Mr.Aliev\\AppData\\Local\\LocalAi\\bin\\versions\\25e36df726599\\LocalAi.Broker.exe"
+  },
+  "binaryHashes": {
+    "LocalAi.Broker.exe": "e181a9c947212fa115f0d805b720b85cc54eeb321aee2ca572d3ea1cff610e26",
+    "codesearch-mcp.exe": "0621d5b3f93fb4dc836ba22f2d11972439e1fd099621cff4c2f42419482c5131",
+    "locallm-mcp.exe": "3622045e51963317484868dafaf2e84823dc539f6acb8bd5cf0b87ee2493907d"
+  },
+  "probeSha256": "44bd2f4e03b25055ce2b0bf1a43c661a7039e2834b5e561560ada13a769ea4c9",
+  "imageSha256": "499cac150e31b00223a18473241545c8586b4f7139c768445acbf2651e7c7920",
+  "referenceSha256": "47bf67ff0ff718c726870c08abc0b713e671a429ec51281f8fd00c004237393a",
+  "servers": [
+    {
+      "protocolVersion": "2024-11-05",
+      "capabilities": {
+        "logging": {},
+        "tools": {
+          "listChanged": true
+        }
+      },
+      "serverInfo": {
+        "name": "codesearch-mcp",
+        "version": "0.2.1.0"
+      }
+    },
+    {
+      "protocolVersion": "2024-11-05",
+      "capabilities": {
+        "logging": {},
+        "tools": {
+          "listChanged": true
+        }
+      },
+      "serverInfo": {
+        "name": "locallm-mcp",
+        "version": "0.2.1.0"
+      }
+    }
+  ],
+  "complete": true,
+  "rawSha256": "bd548e2742b8ffaff2f28e6be811867ca2a7618ced1b73ed4105b516dc665894",
+  "observations": [
+    {
+      "label": "index-before",
+      "tool": "index_status",
+      "elapsedMs": 623.47,
+      "models": {
+        "state": "not_called",
+        "calls": {
+          "status": "measured",
+          "value": 0,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "actual": [],
+        "cache": "not_applicable",
+        "cacheReason": "no_result_cache"
+      },
+      "timings": {
+        "elapsed_milliseconds": {
+          "status": "measured",
+          "value": 544,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "queue_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "load_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "execution_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "validation_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "write_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        }
+      },
+      "usageNotice": "Вызов 2f643c04-0559-4e91-b001-153873dd01c4 | модели: Модель не вызывалась | длительность: 0.544 s | экономия облачных токенов: INPUT Неприменимо (administrative_operation); OUTPUT Неприменимо (administrative_operation).",
+      "indexPath": "C:\\Users\\Mr.Aliev\\AppData\\Local\\LocalAi\\repositories\\8704d4a325e0f73735090dceff459b018f93e6121150621cd87d60c712cf095a\\generations\\1364bc2a1d1891bae169bc138d397cc633055e64e824193014fd010383fd364b\\base.cidx"
+    },
+    {
+      "label": "prime",
+      "tool": "search_code",
+      "elapsedMs": 4548.038,
+      "models": {
+        "state": "called",
+        "calls": {
+          "status": "measured",
+          "value": 1,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "actual": [
+          {
+            "model": "qwen3-embedding:8b-q8_0",
+            "calls": 1,
+            "offload": "unknown",
+            "offloadReason": "not_recorded"
+          }
+        ],
+        "cache": "not_applicable",
+        "cacheReason": "no_result_cache"
+      },
+      "timings": {
+        "elapsed_milliseconds": {
+          "status": "measured",
+          "value": 4525,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "queue_milliseconds": {
+          "status": "measured",
+          "value": 2198,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "load_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "execution_milliseconds": {
+          "status": "measured",
+          "value": 3,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "validation_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "write_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        }
+      },
+      "usageNotice": "Вызов 10e06b17-14c0-421e-b013-0ca1efbcc505 | модели: qwen3-embedding:8b-q8_0 [offload_unknown] | длительность: 4.525 s | экономия облачных токенов: INPUT Оценка: -3706; OUTPUT Оценка: -69. Источник уже в контексте; текст: microsoft-ml-tokenizers-2.0.0:o200k_base; изображения: openai-gpt-4o-tiles-v1. Не расход аккаунта.",
+      "displayedHitSha256": "0d684a2786c0431193d76b6e790605d5ed31fadd3d376abed5f077e06ca4ffe5",
+      "hitCount": 5,
+      "firstHit": "1. src\\pricing\\WeightPricing.cs:6-11  [Method]  cos=0.696"
+    },
+    {
+      "label": "0:immediate",
+      "tool": "search_code",
+      "elapsedMs": 2150.102,
+      "models": {
+        "state": "called",
+        "calls": {
+          "status": "measured",
+          "value": 1,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "actual": [
+          {
+            "model": "qwen3-embedding:8b-q8_0",
+            "calls": 1,
+            "offload": "unknown",
+            "offloadReason": "not_recorded"
+          }
+        ],
+        "cache": "hit",
+        "cacheReason": "index_memory_cache"
+      },
+      "timings": {
+        "elapsed_milliseconds": {
+          "status": "measured",
+          "value": 2136,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "queue_milliseconds": {
+          "status": "measured",
+          "value": 54,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "load_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "execution_milliseconds": {
+          "status": "measured",
+          "value": 2,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "validation_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "write_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        }
+      },
+      "usageNotice": "Вызов d57876d7-54b2-4c55-853b-632b2a0872eb | модели: qwen3-embedding:8b-q8_0 [offload_unknown] | длительность: 2.136 s | экономия облачных токенов: INPUT Оценка: -3711; OUTPUT Оценка: -69. Источник уже в контексте; текст: microsoft-ml-tokenizers-2.0.0:o200k_base; изображения: openai-gpt-4o-tiles-v1. Не расход аккаунта.",
+      "displayedHitSha256": "0d684a2786c0431193d76b6e790605d5ed31fadd3d376abed5f077e06ca4ffe5",
+      "hitCount": 5,
+      "firstHit": "1. src\\pricing\\WeightPricing.cs:6-11  [Method]  cos=0.696"
+    },
+    {
+      "label": "0:file",
+      "tool": "ask_local",
+      "elapsedMs": 7396.252,
+      "models": {
+        "state": "called",
+        "calls": {
+          "status": "measured",
+          "value": 1,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "actual": [
+          {
+            "model": "qwen3.5:9b",
+            "calls": 1,
+            "offload": "none",
+            "offloadReason": null
+          }
+        ],
+        "cache": "not_applicable",
+        "cacheReason": "no_result_cache"
+      },
+      "timings": {
+        "elapsed_milliseconds": {
+          "status": "measured",
+          "value": 7317,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "queue_milliseconds": {
+          "status": "measured",
+          "value": 2134,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "load_milliseconds": {
+          "status": "measured",
+          "value": 4558,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "execution_milliseconds": {
+          "status": "measured",
+          "value": 4950,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "validation_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "write_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        }
+      },
+      "usageNotice": "Вызов 460e2016-f8f9-4961-811c-1d2dc178d6b2 | модели: qwen3.5:9b | длительность: 7.317 s | экономия облачных токенов: INPUT Оценка: -1652; OUTPUT Оценка: -27. Источник уже в контексте; текст: microsoft-ml-tokenizers-2.0.0:o200k_base; изображения: openai-gpt-4o-tiles-v1. Не расход аккаунта.",
+      "exactReferenceMatch": false,
+      "referenceOccursOnce": true,
+      "answerSha256": "3a1b9e63b1081ec14197f4d1661d238cebb14e669cdf4e6eec337a31a0f139df"
+    },
+    {
+      "label": "0:resident-after-file",
+      "tool": "local_models_status",
+      "elapsedMs": 2256.526,
+      "models": {
+        "state": "not_called",
+        "calls": {
+          "status": "measured",
+          "value": 0,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "actual": [],
+        "cache": "not_applicable",
+        "cacheReason": "no_result_cache"
+      },
+      "timings": {
+        "elapsed_milliseconds": {
+          "status": "measured",
+          "value": 2249,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "queue_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "load_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "execution_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "validation_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "write_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        }
+      },
+      "usageNotice": "Вызов 100f8cc7-f130-4b60-b770-0709bc3203c9 | модели: Модель не вызывалась | длительность: 2.249 s | экономия облачных токенов: INPUT Неприменимо (administrative_operation); OUTPUT Неприменимо (administrative_operation).",
+      "residentModels": [
+        "qwen3.5:9b"
+      ],
+      "residency": [
+        {
+          "Model": "qwen3.5:9b",
+          "ContextTokens": 2048,
+          "SizeBytes": 5420875774,
+          "SizeVramBytes": 5420875774,
+          "FullyResident": true,
+          "ExpiresAtUtc": "2026-09-22T01:21:07.1837209+00:00"
+        }
+      ]
+    },
+    {
+      "label": "0:after-file",
+      "tool": "search_code",
+      "elapsedMs": 4377.715,
+      "models": {
+        "state": "called",
+        "calls": {
+          "status": "measured",
+          "value": 1,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "actual": [
+          {
+            "model": "qwen3-embedding:8b-q8_0",
+            "calls": 1,
+            "offload": "unknown",
+            "offloadReason": "not_recorded"
+          }
+        ],
+        "cache": "hit",
+        "cacheReason": "index_memory_cache"
+      },
+      "timings": {
+        "elapsed_milliseconds": {
+          "status": "measured",
+          "value": 4373,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "queue_milliseconds": {
+          "status": "measured",
+          "value": 2212,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "load_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "execution_milliseconds": {
+          "status": "measured",
+          "value": 6,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "validation_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "write_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        }
+      },
+      "usageNotice": "Вызов 70695714-348e-44b1-95c6-714a2acb2216 | модели: qwen3-embedding:8b-q8_0 [offload_unknown] | длительность: 4.373 s | экономия облачных токенов: INPUT Оценка: -3712; OUTPUT Оценка: -69. Источник уже в контексте; текст: microsoft-ml-tokenizers-2.0.0:o200k_base; изображения: openai-gpt-4o-tiles-v1. Не расход аккаунта.",
+      "displayedHitSha256": "0d684a2786c0431193d76b6e790605d5ed31fadd3d376abed5f077e06ca4ffe5",
+      "hitCount": 5,
+      "firstHit": "1. src\\pricing\\WeightPricing.cs:6-11  [Method]  cos=0.696"
+    },
+    {
+      "label": "0:ocr",
+      "tool": "read_image",
+      "elapsedMs": 34414.383,
+      "models": {
+        "state": "called",
+        "calls": {
+          "status": "measured",
+          "value": 2,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "actual": [
+          {
+            "model": "glm-ocr:bf16",
+            "calls": 1,
+            "offload": "unknown",
+            "offloadReason": "not_recorded"
+          },
+          {
+            "model": "qwen3-vl:8b-instruct-q8_0",
+            "calls": 1,
+            "offload": "none",
+            "offloadReason": null
+          }
+        ],
+        "cache": "not_applicable",
+        "cacheReason": "no_result_cache"
+      },
+      "timings": {
+        "elapsed_milliseconds": {
+          "status": "measured",
+          "value": 34408,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "queue_milliseconds": {
+          "status": "measured",
+          "value": 2172,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "load_milliseconds": {
+          "status": "measured",
+          "value": 8473,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "execution_milliseconds": {
+          "status": "measured",
+          "value": 32140,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "validation_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "write_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        }
+      },
+      "usageNotice": "Вызов 52807caf-b421-4318-bb74-43fc5de47ffe | модели: glm-ocr:bf16 [offload_unknown], qwen3-vl:8b-instruct-q8_0 | длительность: 34.408 s | экономия облачных токенов: INPUT Оценка: -1706; OUTPUT Оценка: -51. Источник уже в контексте; текст: microsoft-ml-tokenizers-2.0.0:o200k_base; изображения: openai-gpt-4o-tiles-v1. Не расход аккаунта.",
+      "exactReferenceMatch": true,
+      "referenceOccursOnce": true,
+      "answerSha256": "e2e485fc3361f2cb5b4db985f904fab4f9aec3333e275c7b9d8610c0f133dd6a"
+    },
+    {
+      "label": "0:resident-after-ocr",
+      "tool": "local_models_status",
+      "elapsedMs": 2234.89,
+      "models": {
+        "state": "not_called",
+        "calls": {
+          "status": "measured",
+          "value": 0,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "actual": [],
+        "cache": "not_applicable",
+        "cacheReason": "no_result_cache"
+      },
+      "timings": {
+        "elapsed_milliseconds": {
+          "status": "measured",
+          "value": 2232,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "queue_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "load_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "execution_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "validation_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "write_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        }
+      },
+      "usageNotice": "Вызов 4d7212d0-b186-4f7f-a446-06fa972d9b68 | модели: Модель не вызывалась | длительность: 2.232 s | экономия облачных токенов: INPUT Неприменимо (administrative_operation); OUTPUT Неприменимо (administrative_operation).",
+      "residentModels": [
+        "qwen3-vl:8b-instruct-q8_0"
+      ],
+      "residency": [
+        {
+          "Model": "qwen3-vl:8b-instruct-q8_0",
+          "ContextTokens": 8192,
+          "SizeBytes": 9908917370,
+          "SizeVramBytes": 9908917370,
+          "FullyResident": true,
+          "ExpiresAtUtc": "2026-09-22T01:21:48.3384177+00:00"
+        }
+      ]
+    },
+    {
+      "label": "0:after-ocr",
+      "tool": "search_code",
+      "elapsedMs": 4178.134,
+      "models": {
+        "state": "called",
+        "calls": {
+          "status": "measured",
+          "value": 1,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "actual": [
+          {
+            "model": "qwen3-embedding:8b-q8_0",
+            "calls": 1,
+            "offload": "unknown",
+            "offloadReason": "not_recorded"
+          }
+        ],
+        "cache": "hit",
+        "cacheReason": "index_memory_cache"
+      },
+      "timings": {
+        "elapsed_milliseconds": {
+          "status": "measured",
+          "value": 4172,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "queue_milliseconds": {
+          "status": "measured",
+          "value": 2168,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "load_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "execution_milliseconds": {
+          "status": "measured",
+          "value": 4,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "validation_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "write_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        }
+      },
+      "usageNotice": "Вызов dd939bfb-e64f-4324-a52c-1407fbc65d9d | модели: qwen3-embedding:8b-q8_0 [offload_unknown] | длительность: 4.172 s | экономия облачных токенов: INPUT Оценка: -3721; OUTPUT Оценка: -69. Источник уже в контексте; текст: microsoft-ml-tokenizers-2.0.0:o200k_base; изображения: openai-gpt-4o-tiles-v1. Не расход аккаунта.",
+      "displayedHitSha256": "0d684a2786c0431193d76b6e790605d5ed31fadd3d376abed5f077e06ca4ffe5",
+      "hitCount": 5,
+      "firstHit": "1. src\\pricing\\WeightPricing.cs:6-11  [Method]  cos=0.696"
+    },
+    {
+      "label": "0:resident-after-idle",
+      "tool": "local_models_status",
+      "elapsedMs": 2252.569,
+      "models": {
+        "state": "not_called",
+        "calls": {
+          "status": "measured",
+          "value": 0,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "actual": [],
+        "cache": "not_applicable",
+        "cacheReason": "no_result_cache"
+      },
+      "timings": {
+        "elapsed_milliseconds": {
+          "status": "measured",
+          "value": 2246,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "queue_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "load_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "execution_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "validation_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "write_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        }
+      },
+      "usageNotice": "Вызов d29cf08f-bda8-493f-aee2-17786864f71f | модели: Модель не вызывалась | длительность: 2.246 s | экономия облачных токенов: INPUT Неприменимо (administrative_operation); OUTPUT Неприменимо (administrative_operation).",
+      "residentModels": [],
+      "residency": []
+    },
+    {
+      "label": "0:after-idle",
+      "tool": "search_code",
+      "elapsedMs": 4194.347,
+      "models": {
+        "state": "called",
+        "calls": {
+          "status": "measured",
+          "value": 1,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "actual": [
+          {
+            "model": "qwen3-embedding:8b-q8_0",
+            "calls": 1,
+            "offload": "unknown",
+            "offloadReason": "not_recorded"
+          }
+        ],
+        "cache": "hit",
+        "cacheReason": "index_memory_cache"
+      },
+      "timings": {
+        "elapsed_milliseconds": {
+          "status": "measured",
+          "value": 4181,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "queue_milliseconds": {
+          "status": "measured",
+          "value": 2192,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "load_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "execution_milliseconds": {
+          "status": "measured",
+          "value": 5,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "validation_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "write_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        }
+      },
+      "usageNotice": "Вызов 2a358c01-bb7d-4f7d-83c7-402708564d8b | модели: qwen3-embedding:8b-q8_0 [offload_unknown] | длительность: 4.181 s | экономия облачных токенов: INPUT Оценка: -3713; OUTPUT Оценка: -69. Источник уже в контексте; текст: microsoft-ml-tokenizers-2.0.0:o200k_base; изображения: openai-gpt-4o-tiles-v1. Не расход аккаунта.",
+      "displayedHitSha256": "0d684a2786c0431193d76b6e790605d5ed31fadd3d376abed5f077e06ca4ffe5",
+      "hitCount": 5,
+      "firstHit": "1. src\\pricing\\WeightPricing.cs:6-11  [Method]  cos=0.696"
+    },
+    {
+      "label": "1:immediate",
+      "tool": "search_code",
+      "elapsedMs": 2073.629,
+      "models": {
+        "state": "called",
+        "calls": {
+          "status": "measured",
+          "value": 1,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "actual": [
+          {
+            "model": "qwen3-embedding:8b-q8_0",
+            "calls": 1,
+            "offload": "unknown",
+            "offloadReason": "not_recorded"
+          }
+        ],
+        "cache": "hit",
+        "cacheReason": "index_memory_cache"
+      },
+      "timings": {
+        "elapsed_milliseconds": {
+          "status": "measured",
+          "value": 2060,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "queue_milliseconds": {
+          "status": "measured",
+          "value": 38,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "load_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "execution_milliseconds": {
+          "status": "measured",
+          "value": 4,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "validation_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "write_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        }
+      },
+      "usageNotice": "Вызов 08a4dc93-374d-4850-88ae-68e7d507ae6b | модели: qwen3-embedding:8b-q8_0 [offload_unknown] | длительность: 2.06 s | экономия облачных токенов: INPUT Оценка: -3704; OUTPUT Оценка: -69. Источник уже в контексте; текст: microsoft-ml-tokenizers-2.0.0:o200k_base; изображения: openai-gpt-4o-tiles-v1. Не расход аккаунта.",
+      "displayedHitSha256": "0d684a2786c0431193d76b6e790605d5ed31fadd3d376abed5f077e06ca4ffe5",
+      "hitCount": 5,
+      "firstHit": "1. src\\pricing\\WeightPricing.cs:6-11  [Method]  cos=0.696"
+    },
+    {
+      "label": "1:file",
+      "tool": "ask_local",
+      "elapsedMs": 7196.281,
+      "models": {
+        "state": "called",
+        "calls": {
+          "status": "measured",
+          "value": 1,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "actual": [
+          {
+            "model": "qwen3.5:9b",
+            "calls": 1,
+            "offload": "none",
+            "offloadReason": null
+          }
+        ],
+        "cache": "not_applicable",
+        "cacheReason": "no_result_cache"
+      },
+      "timings": {
+        "elapsed_milliseconds": {
+          "status": "measured",
+          "value": 7192,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "queue_milliseconds": {
+          "status": "measured",
+          "value": 2150,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "load_milliseconds": {
+          "status": "measured",
+          "value": 4531,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "execution_milliseconds": {
+          "status": "measured",
+          "value": 4964,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "validation_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "write_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        }
+      },
+      "usageNotice": "Вызов 3e5a3c83-99fe-4604-a797-9441297e04a8 | модели: qwen3.5:9b | длительность: 7.192 s | экономия облачных токенов: INPUT Оценка: -1714; OUTPUT Оценка: -21. Источник уже в контексте; текст: microsoft-ml-tokenizers-2.0.0:o200k_base; изображения: openai-gpt-4o-tiles-v1. Не расход аккаунта.",
+      "exactReferenceMatch": false,
+      "referenceOccursOnce": true,
+      "answerSha256": "3f03edb20b45710c81e21e8d8b14747f94de9fb94a9914729b7575120bb8eff1"
+    },
+    {
+      "label": "1:resident-after-file",
+      "tool": "local_models_status",
+      "elapsedMs": 2250.109,
+      "models": {
+        "state": "not_called",
+        "calls": {
+          "status": "measured",
+          "value": 0,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "actual": [],
+        "cache": "not_applicable",
+        "cacheReason": "no_result_cache"
+      },
+      "timings": {
+        "elapsed_milliseconds": {
+          "status": "measured",
+          "value": 2244,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "queue_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "load_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "execution_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "validation_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "write_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        }
+      },
+      "usageNotice": "Вызов 55d4e7e3-6b73-4cfa-800d-2280a30c7228 | модели: Модель не вызывалась | длительность: 2.244 s | экономия облачных токенов: INPUT Неприменимо (administrative_operation); OUTPUT Неприменимо (administrative_operation).",
+      "residentModels": [
+        "qwen3.5:9b"
+      ],
+      "residency": [
+        {
+          "Model": "qwen3.5:9b",
+          "ContextTokens": 2048,
+          "SizeBytes": 5420875774,
+          "SizeVramBytes": 5420875774,
+          "FullyResident": true,
+          "ExpiresAtUtc": "2026-09-22T01:22:25.4997837+00:00"
+        }
+      ]
+    },
+    {
+      "label": "1:after-file",
+      "tool": "search_code",
+      "elapsedMs": 4156.575,
+      "models": {
+        "state": "called",
+        "calls": {
+          "status": "measured",
+          "value": 1,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "actual": [
+          {
+            "model": "qwen3-embedding:8b-q8_0",
+            "calls": 1,
+            "offload": "unknown",
+            "offloadReason": "not_recorded"
+          }
+        ],
+        "cache": "hit",
+        "cacheReason": "index_memory_cache"
+      },
+      "timings": {
+        "elapsed_milliseconds": {
+          "status": "measured",
+          "value": 4152,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "queue_milliseconds": {
+          "status": "measured",
+          "value": 2191,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "load_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "execution_milliseconds": {
+          "status": "measured",
+          "value": 4,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "validation_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "write_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        }
+      },
+      "usageNotice": "Вызов af07304a-84df-42d7-8fc6-918a5d04ff89 | модели: qwen3-embedding:8b-q8_0 [offload_unknown] | длительность: 4.152 s | экономия облачных токенов: INPUT Оценка: -3719; OUTPUT Оценка: -69. Источник уже в контексте; текст: microsoft-ml-tokenizers-2.0.0:o200k_base; изображения: openai-gpt-4o-tiles-v1. Не расход аккаунта.",
+      "displayedHitSha256": "0d684a2786c0431193d76b6e790605d5ed31fadd3d376abed5f077e06ca4ffe5",
+      "hitCount": 5,
+      "firstHit": "1. src\\pricing\\WeightPricing.cs:6-11  [Method]  cos=0.696"
+    },
+    {
+      "label": "1:ocr",
+      "tool": "read_image",
+      "elapsedMs": 28594.005,
+      "models": {
+        "state": "called",
+        "calls": {
+          "status": "measured",
+          "value": 2,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "actual": [
+          {
+            "model": "glm-ocr:bf16",
+            "calls": 1,
+            "offload": "unknown",
+            "offloadReason": "not_recorded"
+          },
+          {
+            "model": "qwen3-vl:8b-instruct-q8_0",
+            "calls": 1,
+            "offload": "none",
+            "offloadReason": null
+          }
+        ],
+        "cache": "not_applicable",
+        "cacheReason": "no_result_cache"
+      },
+      "timings": {
+        "elapsed_milliseconds": {
+          "status": "measured",
+          "value": 28590,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "queue_milliseconds": {
+          "status": "measured",
+          "value": 2204,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "load_milliseconds": {
+          "status": "measured",
+          "value": 8465,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "execution_milliseconds": {
+          "status": "measured",
+          "value": 26299,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "validation_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "write_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        }
+      },
+      "usageNotice": "Вызов 3c519d80-eb58-40a6-8901-eb1f31d091f6 | модели: glm-ocr:bf16 [offload_unknown], qwen3-vl:8b-instruct-q8_0 | длительность: 28.59 s | экономия облачных токенов: INPUT Оценка: -1718; OUTPUT Оценка: -51. Источник уже в контексте; текст: microsoft-ml-tokenizers-2.0.0:o200k_base; изображения: openai-gpt-4o-tiles-v1. Не расход аккаунта.",
+      "exactReferenceMatch": true,
+      "referenceOccursOnce": true,
+      "answerSha256": "e2e485fc3361f2cb5b4db985f904fab4f9aec3333e275c7b9d8610c0f133dd6a"
+    },
+    {
+      "label": "1:resident-after-ocr",
+      "tool": "local_models_status",
+      "elapsedMs": 2235.818,
+      "models": {
+        "state": "not_called",
+        "calls": {
+          "status": "measured",
+          "value": 0,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "actual": [],
+        "cache": "not_applicable",
+        "cacheReason": "no_result_cache"
+      },
+      "timings": {
+        "elapsed_milliseconds": {
+          "status": "measured",
+          "value": 2233,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "queue_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "load_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "execution_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "validation_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "write_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        }
+      },
+      "usageNotice": "Вызов 45a0115d-8030-4892-9a86-e78b4420ca30 | модели: Модель не вызывалась | длительность: 2.233 s | экономия облачных токенов: INPUT Неприменимо (administrative_operation); OUTPUT Неприменимо (administrative_operation).",
+      "residentModels": [
+        "qwen3-vl:8b-instruct-q8_0"
+      ],
+      "residency": [
+        {
+          "Model": "qwen3-vl:8b-instruct-q8_0",
+          "ContextTokens": 8192,
+          "SizeBytes": 9908917370,
+          "SizeVramBytes": 9908917370,
+          "FullyResident": true,
+          "ExpiresAtUtc": "2026-09-22T01:23:00.4971169+00:00"
+        }
+      ]
+    },
+    {
+      "label": "1:after-ocr",
+      "tool": "search_code",
+      "elapsedMs": 4243.418,
+      "models": {
+        "state": "called",
+        "calls": {
+          "status": "measured",
+          "value": 1,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "actual": [
+          {
+            "model": "qwen3-embedding:8b-q8_0",
+            "calls": 1,
+            "offload": "unknown",
+            "offloadReason": "not_recorded"
+          }
+        ],
+        "cache": "hit",
+        "cacheReason": "index_memory_cache"
+      },
+      "timings": {
+        "elapsed_milliseconds": {
+          "status": "measured",
+          "value": 4231,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "queue_milliseconds": {
+          "status": "measured",
+          "value": 2214,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "load_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "execution_milliseconds": {
+          "status": "measured",
+          "value": 2,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "validation_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "write_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        }
+      },
+      "usageNotice": "Вызов 044defe0-7d7a-412a-a9bd-e9b9e768e7ab | модели: qwen3-embedding:8b-q8_0 [offload_unknown] | длительность: 4.231 s | экономия облачных токенов: INPUT Оценка: -3714; OUTPUT Оценка: -69. Источник уже в контексте; текст: microsoft-ml-tokenizers-2.0.0:o200k_base; изображения: openai-gpt-4o-tiles-v1. Не расход аккаунта.",
+      "displayedHitSha256": "0d684a2786c0431193d76b6e790605d5ed31fadd3d376abed5f077e06ca4ffe5",
+      "hitCount": 5,
+      "firstHit": "1. src\\pricing\\WeightPricing.cs:6-11  [Method]  cos=0.696"
+    },
+    {
+      "label": "1:resident-after-idle",
+      "tool": "local_models_status",
+      "elapsedMs": 2272.31,
+      "models": {
+        "state": "not_called",
+        "calls": {
+          "status": "measured",
+          "value": 0,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "actual": [],
+        "cache": "not_applicable",
+        "cacheReason": "no_result_cache"
+      },
+      "timings": {
+        "elapsed_milliseconds": {
+          "status": "measured",
+          "value": 2266,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "queue_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "load_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "execution_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "validation_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "write_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        }
+      },
+      "usageNotice": "Вызов d8e1ee11-46c4-4854-a658-d7a1e2258c50 | модели: Модель не вызывалась | длительность: 2.266 s | экономия облачных токенов: INPUT Неприменимо (administrative_operation); OUTPUT Неприменимо (administrative_operation).",
+      "residentModels": [],
+      "residency": []
+    },
+    {
+      "label": "1:after-idle",
+      "tool": "search_code",
+      "elapsedMs": 4201.182,
+      "models": {
+        "state": "called",
+        "calls": {
+          "status": "measured",
+          "value": 1,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "actual": [
+          {
+            "model": "qwen3-embedding:8b-q8_0",
+            "calls": 1,
+            "offload": "unknown",
+            "offloadReason": "not_recorded"
+          }
+        ],
+        "cache": "hit",
+        "cacheReason": "index_memory_cache"
+      },
+      "timings": {
+        "elapsed_milliseconds": {
+          "status": "measured",
+          "value": 4188,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "queue_milliseconds": {
+          "status": "measured",
+          "value": 2142,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "load_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "execution_milliseconds": {
+          "status": "measured",
+          "value": 2,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "validation_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "write_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        }
+      },
+      "usageNotice": "Вызов 5c5f0d0a-8918-4bd7-ad71-557ce9afa535 | модели: qwen3-embedding:8b-q8_0 [offload_unknown] | длительность: 4.188 s | экономия облачных токенов: INPUT Оценка: -3717; OUTPUT Оценка: -69. Источник уже в контексте; текст: microsoft-ml-tokenizers-2.0.0:o200k_base; изображения: openai-gpt-4o-tiles-v1. Не расход аккаунта.",
+      "displayedHitSha256": "0d684a2786c0431193d76b6e790605d5ed31fadd3d376abed5f077e06ca4ffe5",
+      "hitCount": 5,
+      "firstHit": "1. src\\pricing\\WeightPricing.cs:6-11  [Method]  cos=0.696"
+    },
+    {
+      "label": "2:immediate",
+      "tool": "search_code",
+      "elapsedMs": 2056.159,
+      "models": {
+        "state": "called",
+        "calls": {
+          "status": "measured",
+          "value": 1,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "actual": [
+          {
+            "model": "qwen3-embedding:8b-q8_0",
+            "calls": 1,
+            "offload": "unknown",
+            "offloadReason": "not_recorded"
+          }
+        ],
+        "cache": "hit",
+        "cacheReason": "index_memory_cache"
+      },
+      "timings": {
+        "elapsed_milliseconds": {
+          "status": "measured",
+          "value": 2052,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "queue_milliseconds": {
+          "status": "measured",
+          "value": 94,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "load_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "execution_milliseconds": {
+          "status": "measured",
+          "value": 7,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "validation_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "write_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        }
+      },
+      "usageNotice": "Вызов be735ff5-83aa-4057-91ee-3fc624eec9b1 | модели: qwen3-embedding:8b-q8_0 [offload_unknown] | длительность: 2.052 s | экономия облачных токенов: INPUT Оценка: -3715; OUTPUT Оценка: -69. Источник уже в контексте; текст: microsoft-ml-tokenizers-2.0.0:o200k_base; изображения: openai-gpt-4o-tiles-v1. Не расход аккаунта.",
+      "displayedHitSha256": "0d684a2786c0431193d76b6e790605d5ed31fadd3d376abed5f077e06ca4ffe5",
+      "hitCount": 5,
+      "firstHit": "1. src\\pricing\\WeightPricing.cs:6-11  [Method]  cos=0.696"
+    },
+    {
+      "label": "2:file",
+      "tool": "ask_local",
+      "elapsedMs": 7259.446,
+      "models": {
+        "state": "called",
+        "calls": {
+          "status": "measured",
+          "value": 1,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "actual": [
+          {
+            "model": "qwen3.5:9b",
+            "calls": 1,
+            "offload": "none",
+            "offloadReason": null
+          }
+        ],
+        "cache": "not_applicable",
+        "cacheReason": "no_result_cache"
+      },
+      "timings": {
+        "elapsed_milliseconds": {
+          "status": "measured",
+          "value": 7256,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "queue_milliseconds": {
+          "status": "measured",
+          "value": 2214,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "load_milliseconds": {
+          "status": "measured",
+          "value": 4537,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "execution_milliseconds": {
+          "status": "measured",
+          "value": 5029,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "validation_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "write_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        }
+      },
+      "usageNotice": "Вызов bbe7922b-5ddc-4931-b4fb-2b890cbb2491 | модели: qwen3.5:9b | длительность: 7.256 s | экономия облачных токенов: INPUT Оценка: -1800; OUTPUT Оценка: -17. Источник уже в контексте; текст: microsoft-ml-tokenizers-2.0.0:o200k_base; изображения: openai-gpt-4o-tiles-v1. Не расход аккаунта.",
+      "exactReferenceMatch": false,
+      "referenceOccursOnce": true,
+      "answerSha256": "f444b368660895f647f2c1b927f4bcddc55ce0aa379f1222bac349678135f185"
+    },
+    {
+      "label": "2:resident-after-file",
+      "tool": "local_models_status",
+      "elapsedMs": 2237.09,
+      "models": {
+        "state": "not_called",
+        "calls": {
+          "status": "measured",
+          "value": 0,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "actual": [],
+        "cache": "not_applicable",
+        "cacheReason": "no_result_cache"
+      },
+      "timings": {
+        "elapsed_milliseconds": {
+          "status": "measured",
+          "value": 2234,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "queue_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "load_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "execution_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "validation_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "write_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        }
+      },
+      "usageNotice": "Вызов b128ab4e-ced1-4006-9311-21d868b53a96 | модели: Модель не вызывалась | длительность: 2.234 s | экономия облачных токенов: INPUT Неприменимо (administrative_operation); OUTPUT Неприменимо (administrative_operation).",
+      "residentModels": [
+        "qwen3.5:9b"
+      ],
+      "residency": [
+        {
+          "Model": "qwen3.5:9b",
+          "ContextTokens": 2048,
+          "SizeBytes": 5420875774,
+          "SizeVramBytes": 5420875774,
+          "FullyResident": true,
+          "ExpiresAtUtc": "2026-09-22T01:23:37.8713651+00:00"
+        }
+      ]
+    },
+    {
+      "label": "2:after-file",
+      "tool": "search_code",
+      "elapsedMs": 4145.32,
+      "models": {
+        "state": "called",
+        "calls": {
+          "status": "measured",
+          "value": 1,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "actual": [
+          {
+            "model": "qwen3-embedding:8b-q8_0",
+            "calls": 1,
+            "offload": "unknown",
+            "offloadReason": "not_recorded"
+          }
+        ],
+        "cache": "hit",
+        "cacheReason": "index_memory_cache"
+      },
+      "timings": {
+        "elapsed_milliseconds": {
+          "status": "measured",
+          "value": 4133,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "queue_milliseconds": {
+          "status": "measured",
+          "value": 2128,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "load_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "execution_milliseconds": {
+          "status": "measured",
+          "value": 3,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "validation_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "write_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        }
+      },
+      "usageNotice": "Вызов 0ccf14a1-2a5f-4014-bafb-3d3119a4d763 | модели: qwen3-embedding:8b-q8_0 [offload_unknown] | длительность: 4.133 s | экономия облачных токенов: INPUT Оценка: -3715; OUTPUT Оценка: -69. Источник уже в контексте; текст: microsoft-ml-tokenizers-2.0.0:o200k_base; изображения: openai-gpt-4o-tiles-v1. Не расход аккаунта.",
+      "displayedHitSha256": "0d684a2786c0431193d76b6e790605d5ed31fadd3d376abed5f077e06ca4ffe5",
+      "hitCount": 5,
+      "firstHit": "1. src\\pricing\\WeightPricing.cs:6-11  [Method]  cos=0.696"
+    },
+    {
+      "label": "2:ocr",
+      "tool": "read_image",
+      "elapsedMs": 28827.985,
+      "models": {
+        "state": "called",
+        "calls": {
+          "status": "measured",
+          "value": 2,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "actual": [
+          {
+            "model": "glm-ocr:bf16",
+            "calls": 1,
+            "offload": "unknown",
+            "offloadReason": "not_recorded"
+          },
+          {
+            "model": "qwen3-vl:8b-instruct-q8_0",
+            "calls": 1,
+            "offload": "none",
+            "offloadReason": null
+          }
+        ],
+        "cache": "not_applicable",
+        "cacheReason": "no_result_cache"
+      },
+      "timings": {
+        "elapsed_milliseconds": {
+          "status": "measured",
+          "value": 28824,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "queue_milliseconds": {
+          "status": "measured",
+          "value": 2198,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "load_milliseconds": {
+          "status": "measured",
+          "value": 8484,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "execution_milliseconds": {
+          "status": "measured",
+          "value": 26537,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "validation_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "write_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        }
+      },
+      "usageNotice": "Вызов 3bbd8388-dccd-4289-9390-f8fbd7b8cf9e | модели: glm-ocr:bf16 [offload_unknown], qwen3-vl:8b-instruct-q8_0 | длительность: 28.824 s | экономия облачных токенов: INPUT Оценка: -1711; OUTPUT Оценка: -51. Источник уже в контексте; текст: microsoft-ml-tokenizers-2.0.0:o200k_base; изображения: openai-gpt-4o-tiles-v1. Не расход аккаунта.",
+      "exactReferenceMatch": true,
+      "referenceOccursOnce": true,
+      "answerSha256": "e2e485fc3361f2cb5b4db985f904fab4f9aec3333e275c7b9d8610c0f133dd6a"
+    },
+    {
+      "label": "2:resident-after-ocr",
+      "tool": "local_models_status",
+      "elapsedMs": 2236.718,
+      "models": {
+        "state": "not_called",
+        "calls": {
+          "status": "measured",
+          "value": 0,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "actual": [],
+        "cache": "not_applicable",
+        "cacheReason": "no_result_cache"
+      },
+      "timings": {
+        "elapsed_milliseconds": {
+          "status": "measured",
+          "value": 2234,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "queue_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "load_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "execution_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "validation_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "write_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        }
+      },
+      "usageNotice": "Вызов 9e9bb185-da02-4d3e-aa99-bc6b006a47a9 | модели: Модель не вызывалась | длительность: 2.234 s | экономия облачных токенов: INPUT Неприменимо (administrative_operation); OUTPUT Неприменимо (administrative_operation).",
+      "residentModels": [
+        "qwen3-vl:8b-instruct-q8_0"
+      ],
+      "residency": [
+        {
+          "Model": "qwen3-vl:8b-instruct-q8_0",
+          "ContextTokens": 8192,
+          "SizeBytes": 9908917370,
+          "SizeVramBytes": 9908917370,
+          "FullyResident": true,
+          "ExpiresAtUtc": "2026-09-22T01:24:13.029209+00:00"
+        }
+      ]
+    },
+    {
+      "label": "2:after-ocr",
+      "tool": "search_code",
+      "elapsedMs": 4230.882,
+      "models": {
+        "state": "called",
+        "calls": {
+          "status": "measured",
+          "value": 1,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "actual": [
+          {
+            "model": "qwen3-embedding:8b-q8_0",
+            "calls": 1,
+            "offload": "unknown",
+            "offloadReason": "not_recorded"
+          }
+        ],
+        "cache": "hit",
+        "cacheReason": "index_memory_cache"
+      },
+      "timings": {
+        "elapsed_milliseconds": {
+          "status": "measured",
+          "value": 4216,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "queue_milliseconds": {
+          "status": "measured",
+          "value": 2198,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "load_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "execution_milliseconds": {
+          "status": "measured",
+          "value": 2,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "validation_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "write_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        }
+      },
+      "usageNotice": "Вызов 74883efb-3371-49f8-a6f6-2260e92f5553 | модели: qwen3-embedding:8b-q8_0 [offload_unknown] | длительность: 4.216 s | экономия облачных токенов: INPUT Оценка: -3706; OUTPUT Оценка: -69. Источник уже в контексте; текст: microsoft-ml-tokenizers-2.0.0:o200k_base; изображения: openai-gpt-4o-tiles-v1. Не расход аккаунта.",
+      "displayedHitSha256": "0d684a2786c0431193d76b6e790605d5ed31fadd3d376abed5f077e06ca4ffe5",
+      "hitCount": 5,
+      "firstHit": "1. src\\pricing\\WeightPricing.cs:6-11  [Method]  cos=0.696"
+    },
+    {
+      "label": "2:resident-after-idle",
+      "tool": "local_models_status",
+      "elapsedMs": 2252.468,
+      "models": {
+        "state": "not_called",
+        "calls": {
+          "status": "measured",
+          "value": 0,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "actual": [],
+        "cache": "not_applicable",
+        "cacheReason": "no_result_cache"
+      },
+      "timings": {
+        "elapsed_milliseconds": {
+          "status": "measured",
+          "value": 2248,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "queue_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "load_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "execution_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "validation_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "write_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        }
+      },
+      "usageNotice": "Вызов 4f448416-d89f-4860-aad8-8d0d8bf4a04e | модели: Модель не вызывалась | длительность: 2.248 s | экономия облачных токенов: INPUT Неприменимо (administrative_operation); OUTPUT Неприменимо (administrative_operation).",
+      "residentModels": [],
+      "residency": []
+    },
+    {
+      "label": "2:after-idle",
+      "tool": "search_code",
+      "elapsedMs": 4245.186,
+      "models": {
+        "state": "called",
+        "calls": {
+          "status": "measured",
+          "value": 1,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "actual": [
+          {
+            "model": "qwen3-embedding:8b-q8_0",
+            "calls": 1,
+            "offload": "unknown",
+            "offloadReason": "not_recorded"
+          }
+        ],
+        "cache": "hit",
+        "cacheReason": "index_memory_cache"
+      },
+      "timings": {
+        "elapsed_milliseconds": {
+          "status": "measured",
+          "value": 4241,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "queue_milliseconds": {
+          "status": "measured",
+          "value": 2173,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "load_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "execution_milliseconds": {
+          "status": "measured",
+          "value": 8,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "validation_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "write_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        }
+      },
+      "usageNotice": "Вызов e7b1b042-6dc9-4fdf-bb86-2ee6e8fe2a8e | модели: qwen3-embedding:8b-q8_0 [offload_unknown] | длительность: 4.241 s | экономия облачных токенов: INPUT Оценка: -3713; OUTPUT Оценка: -69. Источник уже в контексте; текст: microsoft-ml-tokenizers-2.0.0:o200k_base; изображения: openai-gpt-4o-tiles-v1. Не расход аккаунта.",
+      "displayedHitSha256": "0d684a2786c0431193d76b6e790605d5ed31fadd3d376abed5f077e06ca4ffe5",
+      "hitCount": 5,
+      "firstHit": "1. src\\pricing\\WeightPricing.cs:6-11  [Method]  cos=0.696"
+    },
+    {
+      "label": "index-after",
+      "tool": "index_status",
+      "elapsedMs": 405.318,
+      "models": {
+        "state": "not_called",
+        "calls": {
+          "status": "measured",
+          "value": 0,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "actual": [],
+        "cache": "not_applicable",
+        "cacheReason": "no_result_cache"
+      },
+      "timings": {
+        "elapsed_milliseconds": {
+          "status": "measured",
+          "value": 402,
+          "reason": null,
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "queue_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "load_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "execution_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "validation_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        },
+        "write_milliseconds": {
+          "status": "unknown",
+          "value": null,
+          "reason": "not_recorded",
+          "method": null,
+          "range": null,
+          "rangeReason": null
+        }
+      },
+      "usageNotice": "Вызов 2abd3b19-9fdb-4d23-874b-3cc5bf24e943 | модели: Модель не вызывалась | длительность: 0.402 s | экономия облачных токенов: INPUT Неприменимо (administrative_operation); OUTPUT Неприменимо (administrative_operation).",
+      "indexPath": "C:\\Users\\Mr.Aliev\\AppData\\Local\\LocalAi\\repositories\\8704d4a325e0f73735090dceff459b018f93e6121150621cd87d60c712cf095a\\generations\\1364bc2a1d1891bae169bc138d397cc633055e64e824193014fd010383fd364b\\base.cidx"
+    }
+  ]
+}
