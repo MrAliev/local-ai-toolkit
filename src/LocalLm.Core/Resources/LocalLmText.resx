@@ -330,6 +330,11 @@
   </data>
   <data name="PdfPagesOnly" xml:space="preserve"><value>Page selection requires one PDF input.</value></data>
   <data name="PdfOutputOnly" xml:space="preserve"><value>File output requires one PDF in Ocr mode.</value></data>
+  <data name="PdfCheckpointOnly" xml:space="preserve"><value>Checkpoints require one PDF in Ocr mode.</value></data>
+  <data name="PdfCheckpointOutputConflict" xml:space="preserve"><value>The output file must be outside checkpoint directory '{0}' and must not alias its files.</value></data>
+  <data name="PdfCheckpointMismatch" xml:space="preserve"><value>Checkpoint '{0}' is incomplete, corrupt, or belongs to a different PDF, page selection, OCR request, route or processor version. Use a new checkpoint directory.</value></data>
+  <data name="PdfCheckpointUnavailable" xml:space="preserve"><value>Checkpoint '{0}' is already in use or cannot be opened exclusively. Finish the other run before resuming.</value></data>
+  <data name="PdfCheckpointReused" xml:space="preserve"><value>Pages reused from checkpoint: {0}</value></data>
   <data name="PdfOutputIsSource" xml:space="preserve"><value>The OCR output must not overwrite the source PDF: '{0}'. Choose a different output path.</value></data>
   <data name="PdfOutputIsDirectory" xml:space="preserve"><value>The OCR output path names a directory: '{0}'. Choose a file path.</value></data>
   <data name="PdfOutputDirectoryMissing" xml:space="preserve"><value>The directory for OCR output '{0}' does not exist. Create it before starting OCR.</value></data>

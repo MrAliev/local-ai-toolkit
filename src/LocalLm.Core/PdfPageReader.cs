@@ -16,6 +16,7 @@ internal sealed class PdfPageReader : IAsyncDisposable
     private readonly FileStream input;
     private readonly string path;
     private IAsyncEnumerator<string>? rendered;
+    private int[]? renderIndexes;
 
     private PdfPageReader(string path, FileStream input, IReadOnlyList<ImageInfo> pages, IReadOnlyList<int> pageNumbers)
     {
@@ -29,6 +30,20 @@ internal sealed class PdfPageReader : IAsyncDisposable
     public IReadOnlyList<ImageInfo> Pages { get; }
     public IReadOnlyList<int> PageNumbers { get; }
     public int TotalPageCount { get; }
+
+    public async Task<string> HashAsync(CancellationToken cancellationToken)
+    {
+        input.Position = 0;
+        var hash = await System.Security.Cryptography.SHA256.HashDataAsync(input, cancellationToken);
+        input.Position = 0;
+        return Convert.ToHexStringLower(hash);
+    }
+
+    public void ExcludeCompletedPages(IReadOnlySet<int> completed)
+    {
+        if (rendered is not null) throw new InvalidOperationException("Rendering has already started.");
+        renderIndexes = Enumerable.Range(0, Pages.Count).Where(index => !completed.Contains(PageNumbers[index])).ToArray();
+    }
 
     public static async Task<PdfPageReader> OpenAsync(string path, CancellationToken cancellationToken, string? selectedPages = null)
     {
@@ -91,16 +106,17 @@ internal sealed class PdfPageReader : IAsyncDisposable
     [SupportedOSPlatform("macos")]
     private async IAsyncEnumerable<string> RenderAsync([EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        for (var first = 0; first < Pages.Count;)
+        var indexes = renderIndexes ?? Enumerable.Range(0, Pages.Count).ToArray();
+        for (var first = 0; first < indexes.Length;)
         {
             // The library accepts one render size per enumerator. Consecutive equal-sized
             // pages share it, so an ordinary hundred-page document is opened only once for
             // rendering; a change of page size starts a new, still bounded group.
-            var size = Pages[first];
+            var size = Pages[indexes[first]];
             var end = first + 1;
-            while (end < Pages.Count && Pages[end] == size && PageNumbers[end] == PageNumbers[end - 1] + 1) end++;
+            while (end < indexes.Length && Pages[indexes[end]] == size && PageNumbers[indexes[end]] == PageNumbers[indexes[end - 1]] + 1) end++;
             input.Position = 0;
-            await foreach (var bitmap in Conversion.ToImagesAsync(input, Enumerable.Range(PageNumbers[first] - 1, end - first),
+            await foreach (var bitmap in Conversion.ToImagesAsync(input, Enumerable.Range(PageNumbers[indexes[first]] - 1, end - first),
                                leaveOpen: true, options: new RenderOptions(Dpi: 150, Width: size.Width, Height: size.Height,
                                    WithAnnotations: true, WithFormFill: true), cancellationToken: cancellationToken))
             {
