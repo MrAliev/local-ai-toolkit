@@ -869,6 +869,26 @@ Preparation reads and parses candidate files until the requested number of publi
 selected, then also reads their partial declarations and required indexed definitions.
 Git/index freshness checks still cover the worktree; `--limit` does not bypass them.
 
+The first scope pilot selects a literal repository-relative file or directory:
+
+```powershell
+lai localai docs build --root R:\YourRepo --path src/YourLibrary --plan --json
+lai localai docs build --root R:\YourRepo --path src/YourLibrary --all
+```
+
+`--path` is case-sensitive, accepts either slash, and matches complete path segments;
+it does not expand globs or accept absolute paths or `..`. Selection happens before
+the default five-type limit (`--limit` or `--all` can change it). Partial declarations
+and required indexed dependencies can lie outside the selected path. An empty selection
+is reported as `scope_empty`. Symbol and commit-difference selectors are outside this pilot.
+`--plan` lists selected symbol IDs, declaration paths and dependency paths without model
+inference or creating a documentation package. Its JSON also includes the repository
+snapshot and source/reference/history hashes, so the selection can be checked against
+the indexed sources. A scoped build prints its plan before generation. Changed dependency
+definitions invalidate the affected text cache; applying a scoped package preserves manual
+edits and leaves other units in the destination untouched. Existing commands and MCP
+interfaces retain their behavior; this pilot adds CLI options only.
+
 Build writes under the runtime's `repositories/<repository-id>/documentation` directory,
 outside the worktree. The identity is the same Git common-directory identity used by the index.
 Each unit contains EN/RU Markdown, HTML and PDF, SVG/PNG diagrams, and third-party notices.
