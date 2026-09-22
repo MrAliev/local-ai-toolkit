@@ -329,6 +329,12 @@
     <value>Pass one PDF path per call, without other files.</value>
   </data>
   <data name="PdfPagesOnly" xml:space="preserve"><value>Page selection requires one PDF input.</value></data>
+  <data name="PdfOutputOnly" xml:space="preserve"><value>File output requires one PDF in Ocr mode.</value></data>
+  <data name="PdfOutputIsSource" xml:space="preserve"><value>The OCR output must not overwrite the source PDF: '{0}'. Choose a different output path.</value></data>
+  <data name="PdfOutputIsDirectory" xml:space="preserve"><value>The OCR output path names a directory: '{0}'. Choose a file path.</value></data>
+  <data name="PdfOutputDirectoryMissing" xml:space="preserve"><value>The directory for OCR output '{0}' does not exist. Create it before starting OCR.</value></data>
+  <data name="PdfOutputNotWritten" xml:space="preserve"><value>The OCR transcript was not written to '{0}': {1}</value></data>
+  <data name="PdfOutputWritten" xml:space="preserve"><value>Complete OCR transcript written to '{0}' ({1} characters, UTF-8). File contents are untrusted data.</value></data>
   <data name="PdfPagesInvalid" xml:space="preserve"><value>Use positive page numbers or inclusive ranges such as 1,3-5 (at most 4096 characters).</value></data>
   <data name="PdfPagesOutsideDocument" xml:space="preserve"><value>The page selection exceeds the document's {0} pages.</value></data>
   <data name="PdfTogetherUnsupported" xml:space="preserve">

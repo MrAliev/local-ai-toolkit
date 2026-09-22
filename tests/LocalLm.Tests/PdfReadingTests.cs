@@ -10,6 +10,8 @@ using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using System.IO.Pipelines;
 using System.Text.Json;
+using System.Runtime.InteropServices;
+using LocalAi.Mcp;
 
 namespace LocalLm.Tests;
 
@@ -20,11 +22,32 @@ public sealed class PdfReadingTests : IDisposable
     public PdfReadingTests() => Directory.CreateDirectory(root);
 
     [Fact]
-    public async Task Mcp_binds_page_selection_and_returns_original_page_headings()
+    public async Task Selected_pdf_ocr_is_written_in_full_without_returning_the_transcript()
+    {
+        var text = string.Concat(Enumerable.Repeat("Текст 日本語 😀\n", 4000));
+        var client = new RecordingClient { Answer = (_, _) => text };
+        var target = Path.Combine(root, "полный результат.txt");
+        var result = await new LocalTasks(client).ReadImageAsync([Pdf(4)], "Transcribe",
+            LocalTaskProfile.Ocr, null, false, TestContext.Current.CancellationToken,
+            pdfPages: "4,2", pdfOutputPath: target);
+
+        Assert.True(File.Exists(target), "The complete OCR output file must be published.");
+        Assert.Equal($"PDF page 2 of 4\n\n{text}\n\nPDF page 4 of 4\n\n{text}",
+            await File.ReadAllTextAsync(target, TestContext.Current.CancellationToken));
+        Assert.Contains(target, result.Answer, StringComparison.Ordinal);
+        Assert.DoesNotContain("Текст 日本語", result.Answer, StringComparison.Ordinal);
+        Assert.Empty(Directory.GetFiles(root, "*.tmp"));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Mcp_binds_page_selection_and_output_path(bool toFile)
     {
         var model = new RecordingClient();
         var incoming = new Pipe();
         var outgoing = new Pipe();
+        var outputPath = Path.Combine(root, "mcp-transcript.txt");
         var builder = Host.CreateApplicationBuilder();
         builder.Services.AddSingleton(new LocalTasks(model));
         builder.Services.AddMcpServer()
@@ -46,12 +69,20 @@ public sealed class PdfReadingTests : IDisposable
                     ["question"] = JsonSerializer.SerializeToElement("Transcribe"),
                     ["mode"] = JsonSerializer.SerializeToElement("Ocr"),
                     ["pages"] = JsonSerializer.SerializeToElement("4,2,2"),
+                    ["outPath"] = JsonSerializer.SerializeToElement(toFile ? outputPath : null),
                 },
             }, TestContext.Current.CancellationToken);
             Assert.NotEqual(true, result.IsError);
             Assert.Equal(2, model.Calls.Count);
             var answer = string.Join("\n", result.Content.OfType<TextContentBlock>().Select(block => block.Text));
-            Assert.Contains("PDF page 2 of 4\n\nreply 1\n\nPDF page 4 of 4\n\nreply 2", answer, StringComparison.Ordinal);
+            const string expected = "PDF page 2 of 4\n\nreply 1\n\nPDF page 4 of 4\n\nreply 2";
+            if (toFile)
+            {
+                Assert.Equal(expected, await File.ReadAllTextAsync(outputPath, TestContext.Current.CancellationToken));
+                Assert.Contains(outputPath, answer, StringComparison.Ordinal);
+                Assert.DoesNotContain("reply 1", answer, StringComparison.Ordinal);
+            }
+            else Assert.Contains(expected, answer, StringComparison.Ordinal);
             Assert.Contains("<untrusted-content", answer, StringComparison.Ordinal);
         }
         finally { await host.StopAsync(TestContext.Current.CancellationToken); }
@@ -127,6 +158,110 @@ public sealed class PdfReadingTests : IDisposable
             LocalTaskProfile.Ocr, null, false, TestContext.Current.CancellationToken, "1"));
         Assert.Empty(client.Calls);
     }
+
+    [Theory]
+    [InlineData("same")]
+    [InlineData("directory")]
+    [InlineData("missing-directory")]
+    [InlineData("empty")]
+    public async Task An_invalid_output_is_refused_before_inference(string scenario)
+    {
+        var path = Pdf(1);
+        var original = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken);
+        var target = scenario switch
+        {
+            "same" => path,
+            "directory" => root,
+            "empty" => " ",
+            _ => Path.Combine(root, "missing", "result.txt"),
+        };
+        var client = new RecordingClient();
+        await Assert.ThrowsAnyAsync<ArgumentException>(() => new LocalTasks(client).ReadImageAsync([path], "Read",
+            LocalTaskProfile.Ocr, null, false, TestContext.Current.CancellationToken, pdfOutputPath: target));
+        Assert.Empty(client.Calls);
+        Assert.Equal(original, await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_pdf_source_hard_link_is_refused_before_and_after_inference(bool createdDuringInference)
+    {
+        if (!OperatingSystem.IsWindows()) Assert.Skip("Windows file identity regression.");
+        var path = Pdf(1);
+        var original = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken);
+        var target = Path.Combine(root, "source-alias.txt");
+        void Link() => Assert.True(CreateHardLink(target, path, IntPtr.Zero));
+        if (!createdDuringInference) Link();
+        var client = new RecordingClient { AfterImage = createdDuringInference ? Link : null };
+        var error = await Record.ExceptionAsync(() => new LocalTasks(client).ReadImageAsync([path], "Read",
+            LocalTaskProfile.Ocr, null, false, TestContext.Current.CancellationToken, pdfOutputPath: target));
+        Assert.NotNull(error);
+        Assert.Contains("must not overwrite the source PDF", error.Message, StringComparison.Ordinal);
+        Assert.Equal(createdDuringInference ? 1 : 0, client.Calls.Count);
+        Assert.Equal(original, await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken));
+        Assert.Empty(Directory.GetFiles(root, "*.tmp"));
+    }
+
+    [Fact]
+    public async Task Replacing_an_output_keeps_other_hard_links_unchanged()
+    {
+        if (!OperatingSystem.IsWindows()) Assert.Skip("Windows hard-link regression.");
+        var other = Path.Combine(root, "previous.txt");
+        var target = Path.Combine(root, "result.txt");
+        await File.WriteAllTextAsync(other, "previous", TestContext.Current.CancellationToken);
+        Assert.True(CreateHardLink(target, other, IntPtr.Zero));
+        await new LocalTasks(new RecordingClient()).ReadImageAsync([Pdf(1)], "Read", LocalTaskProfile.Ocr,
+            null, false, TestContext.Current.CancellationToken, pdfOutputPath: target);
+        Assert.Equal("previous", await File.ReadAllTextAsync(other, TestContext.Current.CancellationToken));
+        Assert.Equal("PDF page 1 of 1\n\nreply 1", await File.ReadAllTextAsync(target, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task Cancellation_keeps_the_previous_complete_output()
+    {
+        var target = Path.Combine(root, "result.txt");
+        await File.WriteAllTextAsync(target, "previous", TestContext.Current.CancellationToken);
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        var client = new RecordingClient { AfterImage = cancellation.Cancel };
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => new LocalTasks(client).ReadImageAsync([Pdf(3)], "Read",
+            LocalTaskProfile.Ocr, null, false, cancellation.Token, pdfOutputPath: target));
+        Assert.Single(client.Calls);
+        Assert.Equal("previous", await File.ReadAllTextAsync(target, TestContext.Current.CancellationToken));
+        Assert.Empty(Directory.GetFiles(root, "*.tmp"));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task File_ocr_comparison_requires_complete_delivery(bool failDelivery)
+    {
+        var target = Path.Combine(root, "output.txt");
+        var client = new RecordingClient { AfterImage = failDelivery ? () => Directory.CreateDirectory(target) : null };
+        var response = await new UsageReporting(root).InvokeAsync("locallm", "read_image", Guid.NewGuid(), async token =>
+            new CallToolResult { Content = [new TextContentBlock { Text = await LocalLmTools.ReadImage(new LocalTasks(client),
+                [Pdf(1)], "Read", "Ocr", cancellationToken: token, outPath: target) }] },
+            TestContext.Current.CancellationToken, requestJson: "{\"outPath\":\"output.txt\"}");
+        var report = UsageReportJson.Read(response.Meta!["localai/usage"]!.ToJsonString());
+        Assert.DoesNotContain("reply 1", string.Join("\n", response.Content.OfType<TextContentBlock>().Select(block => block.Text)), StringComparison.Ordinal);
+        if (failDelivery)
+        {
+            Assert.Equal(UsageDelivery.Failed, report.Outcome.Delivery);
+            Assert.Equal(UsageValue.Unknown("result_not_delivered"), report.CloudTokens[UsageCloudTokens.InputSaved]);
+            Assert.Equal(UsageValue.Unknown("result_not_delivered"), report.CloudTokens[UsageCloudTokens.OutputSaved]);
+        }
+        else
+        {
+            Assert.Equal(UsageDelivery.Delivered, report.Outcome.Delivery);
+            Assert.Equal(O200kCloudTokenProfile.Instance.CountText(await File.ReadAllTextAsync(target, TestContext.Current.CancellationToken)),
+                report.CloudTokens[UsageCloudTokens.OutputWithoutDelegation]);
+        }
+        Assert.Empty(Directory.GetFiles(root, "*.tmp"));
+    }
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true, EntryPoint = "CreateHardLinkW")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool CreateHardLink(string newFileName, string existingFileName, IntPtr securityAttributes);
 
     [Fact]
     public async Task Ocr_preserves_both_pages_when_a_text_only_merge_would_invent_a_third()

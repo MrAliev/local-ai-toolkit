@@ -45,12 +45,14 @@ public static class LocalLmTools
         [Description("Context comparison: NotPresent assumes first reading (default); AlreadyPresent excludes images already in the cloud context; Unknown reports that uncertainty.")]
         CloudContextPresence? sourceContext = null,
         [Description("PDF only: one-based page numbers and inclusive ranges, such as 1,3-5. Pages are read in document order without duplicates; omitted means all pages.")]
-        string? pages = null)
+        string? pages = null,
+        [Description("PDF in Ocr mode only: absolute path for the complete UTF-8 transcript. Replaces an existing output file atomically; the source PDF cannot be overwritten. Returns a concise file pointer instead of the transcript.")]
+        string? outPath = null)
     {
         if (sourceContext is { } context) UsageCall.Current?.Comparison.SourceContext(context);
         var profile = ParseProfile(mode, nameof(mode));
         return await Run(
-            () => tasks.ReadImageAsync(paths, question, profile, model, together, cancellationToken, pages),
+            () => tasks.ReadImageAsync(paths, question, profile, model, together, cancellationToken, pages, outPath),
             "read_image:" + PrimarySource(paths),
             cancellationToken,
             profile);
@@ -206,7 +208,7 @@ public static class LocalLmTools
 
             try
             {
-                if (document is not null && TranslationOutput.IsSource(document, target))
+                if (document is not null && OutputFileIdentity.IsSource(document, target))
                 {
                     UsageCall.Current?.Refused("output_is_source");
                     return LocalLmText.TranslateOutputIsSource("path", "outPath", document);
@@ -303,7 +305,7 @@ public static class LocalLmTools
             {
                 // The destination may have changed while the model was running. Recheck,
                 // then publish by replacement so a late hard link cannot truncate its source.
-                if (document is not null && TranslationOutput.IsSource(document, target))
+                if (document is not null && OutputFileIdentity.IsSource(document, target))
                 {
                     UsageCall.Current?.DeliveryFailed("output_is_source");
                     return LocalLmText.TranslateOutputIsSource("path", "outPath", document);
@@ -536,6 +538,11 @@ public static class LocalLmTools
         {
             ObserveFailure(ex);
             return MissingModelAdvice.ForIneligibleRequest(wanted);
+        }
+        catch (PdfOutputWriteException ex)
+        {
+            UsageCall.Current?.DeliveryFailed("output_not_written");
+            return ex.Message;
         }
         catch (FileNotFoundException ex)
         {
