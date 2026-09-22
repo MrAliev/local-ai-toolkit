@@ -61,6 +61,12 @@ public static class LocalLmText
 
     public static string PdfOnlyInput => Get(nameof(PdfOnlyInput));
     public static string PdfPagesOnly => Get(nameof(PdfPagesOnly));
+    public static string PdfOutputOnly => Get(nameof(PdfOutputOnly));
+    public static string PdfOutputIsSource(string path) => Format(nameof(PdfOutputIsSource), path);
+    public static string PdfOutputIsDirectory(string path) => Format(nameof(PdfOutputIsDirectory), path);
+    public static string PdfOutputDirectoryMissing(string path) => Format(nameof(PdfOutputDirectoryMissing), path);
+    public static string PdfOutputNotWritten(string path, string reason) => Format(nameof(PdfOutputNotWritten), path, reason);
+    public static string PdfOutputWritten(string path, int characters) => Format(nameof(PdfOutputWritten), path, characters);
     public static string PdfPagesInvalid => Get(nameof(PdfPagesInvalid));
     public static string PdfPagesOutsideDocument(int count) => Format(nameof(PdfPagesOutsideDocument), count);
     public static string PdfTogetherUnsupported => Get(nameof(PdfTogetherUnsupported));
