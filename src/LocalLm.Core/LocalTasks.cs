@@ -802,6 +802,8 @@ public sealed class LocalTasks
     /// Translates a document, and is told where it is going: a translation handed back to
     /// the caller lands in a context and one written to a file does not, which is the
     /// whole of the difference between the two figures the notice can print.
+    /// An optional checkpoint reuses structurally validated fragments; it does not
+    /// certify translation accuracy. Protected fenced source ranges are never translated.
     /// </summary>
     public async Task<LocalTranslationResult> TranslateAsync(
         string source,
@@ -809,7 +811,8 @@ public sealed class LocalTasks
         string targetLanguage,
         bool markdown,
         TranslationDelivery delivery,
-        CancellationToken ct)
+        CancellationToken ct,
+        string? checkpointDirectory = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(source);
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceLanguage);
@@ -853,6 +856,11 @@ public sealed class LocalTasks
         // Keep one snapshot through all fragments and retries. A later call can read
         // a changed file, but an in-flight translation cannot mix catalog versions.
         var catalog = modelCatalog.Read();
+        await using var checkpoint = checkpointDirectory is null ? null : await TranslationCheckpoint.OpenAsync(
+            checkpointDirectory, new TranslationCheckpoint.Manifest(1, TranslationCheckpoint.Hash(source),
+                sourceLanguage, targetLanguage, markdown, catalog.CatalogVersion,
+                typeof(LocalTasks).Module.ModuleVersionId.ToString("D"), CultureInfo.CurrentUICulture.Name, modelStepCount),
+            work.Where(item => item.IsTranslatable).Select(item => item.Text).ToArray(), markdown, ct);
         var fallbackModels = catalog.Routes.Single(route => route.Profile == profile)
             .Fallbacks.Distinct(StringComparer.Ordinal).ToArray();
         var profiles = Enumerable.Repeat(profile, modelStepCount).ToArray();
@@ -873,9 +881,19 @@ public sealed class LocalTasks
             var modelStep = 0;
             foreach (var item in work)
             {
+                ct.ThrowIfCancellationRequested();
                 if (!item.IsTranslatable)
                 {
                     translated.Append(item.Text);
+                    continue;
+                }
+
+                if (checkpoint?.Find(modelStep) is { } cached)
+                {
+                    UsageCall.Current?.CacheHit("translation_segment_checkpoint");
+                    translated.Append(cached.Text);
+                    lastReceipt = cached.Receipt;
+                    modelStep++;
                     continue;
                 }
 
@@ -941,10 +959,10 @@ public sealed class LocalTasks
                 var returnedTokens = TokenEstimator.ForText(result.Value);
                 totalOutputTokens = checked(totalOutputTokens + returnedTokens);
                 outputTokens = checked(outputTokens + returnedTokens);
-                translated
-                    .Append(leadingLineBreaks)
-                    .Append(result.Value.Trim('\r', '\n'))
-                    .Append(trailingLineBreaks);
+                var fragment = leadingLineBreaks + result.Value.Trim('\r', '\n') + trailingLineBreaks;
+                if (checkpoint is not null && TranslationCheckpoint.Validate(item.Text, fragment, markdown).Passed)
+                    await checkpoint.SaveAsync(modelStep, item.Text, fragment, result.Receipt);
+                translated.Append(fragment);
                 lastReceipt = result.Receipt;
                 modelStep++;
             }
@@ -1063,7 +1081,7 @@ public sealed class LocalTasks
                 LocalLmText.TranslationValidationFailed(validation.Detail));
         }
 
-        var receipt = attempt.Receipt with
+        var receipt = allReceipts.Count == 0 ? null : allReceipts[^1] with
         {
             QueueDuration = allReceipts.Aggregate(
                 TimeSpan.Zero,
@@ -1072,11 +1090,15 @@ public sealed class LocalTasks
                 TimeSpan.Zero,
                 (total, each) => total + each.ExecutionDuration),
         };
-        var model = receipt.Routing?.SelectedModel ?? receipt.Model;
+        // Cached receipts identify the original attribution only. They must never replay
+        // old inference tokens, timing, routing or experiment outcomes into this call.
+        if (allReceipts.Count == 0) UsageCall.Current?.NoInference();
+        var attributionModel = attempt.Receipt.Routing?.SelectedModel ?? attempt.Receipt.Model;
+        var model = receipt?.Routing?.SelectedModel ?? receipt?.Model;
         var answer = TranslationAttribution.Append(
             attempt.Text,
             targetLanguage,
-            model,
+            attributionModel,
             markdown);
         UsageCall.Current?.Comparison.GeneratedText(answer);
         return new LocalTranslationResult(
@@ -1086,7 +1108,7 @@ public sealed class LocalTasks
             tokenMetrics.EstimatedNetCloudContextTokensSaved,
             model,
             validation,
-            receipt);
+            receipt) { FromCheckpoint = allReceipts.Count == 0 };
     }
 
     private sealed record TranslationAttempt(
@@ -1190,10 +1212,13 @@ public sealed record LocalTranslationResult(
     TranslationValidationResult Validation,
     LocalUsageReceipt? Receipt)
 {
-    /// <summary>No model call was needed; nullable model and savings fields are not applicable.</summary>
-    public bool NoTranslatableText => Receipt is null;
+    /// <summary>The complete translation was recovered without a new inference call.</summary>
+    public bool FromCheckpoint { get; init; }
 
-    public string Notice => Receipt is null
+    /// <summary>The input contained only protected source; no translation was required.</summary>
+    public bool NoTranslatableText => Receipt is null && !FromCheckpoint;
+
+    public string Notice => FromCheckpoint ? LocalLmText.TranslationCheckpointReturned : Receipt is null
         ? LocalLmText.TranslationNoTranslatableText
         : UsageCall.Current is not null ? Validation.Detail + LocalResult.DescribeResidency(Receipt)
         : LocalLmText.TranslationNotice(

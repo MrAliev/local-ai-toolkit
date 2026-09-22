@@ -363,4 +363,13 @@
   <data name="TranslationNotRequired" xml:space="preserve">
     <value>Перевод не требуется; защищённый код и пробельные символы сохранены в точности.</value>
   </data>
+  <data name="TranslationCheckpointMismatch" xml:space="preserve">
+    <value>Контрольная точка перевода «{0}» несовместима или повреждена. При изменении исходника, языков, маршрутизации или версии обработчика используйте новую папку контрольной точки.</value>
+  </data>
+  <data name="TranslationCheckpointUnavailable" xml:space="preserve">
+    <value>Контрольная точка перевода «{0}» занята или недоступна. Дождитесь завершения текущей записи.</value>
+  </data>
+  <data name="TranslationCheckpointReturned" xml:space="preserve">
+    <value>Перевод восстановлен из контрольной точки. Модель не вызывалась; новых локальных токенов: 0. Сравнение облачных токенов относится к этой выдаче, а не к исходному переводу.</value>
+  </data>
 </root>
