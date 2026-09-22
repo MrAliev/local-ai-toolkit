@@ -12,6 +12,141 @@ public sealed class RoslynSemanticIndexerTests : IDisposable
         "localai-roslyn-indexer-" + Guid.NewGuid().ToString("N"));
 
     [Fact]
+    public async Task Impact_evidence_preserves_exact_overload_reference_and_override_coordinates()
+    {
+        var (solution, appSource, libSource) = Solution();
+        var index = await new RoslynSemanticIndexer().BuildAsync(solution, _root, Identity(),
+            cancellationToken: TestContext.Current.CancellationToken);
+        var position = Position(libSource, "Work(int value) =>");
+        var report = SemanticImpactAnalysis.Analyze(index, "Lib/Base.cs", position.Line, position.Character,
+            new("repo", "generation", "tree", null), cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Equal(2, report.Evidence.Count);
+        var reference = Assert.Single(report.Evidence, edge => edge.Kind == "reference");
+        Assert.Equal(Position(appSource, "Work(value);"), new LinePosition(
+            reference.Source.Location.Range.StartLine, reference.Source.Location.Range.StartCharacter));
+        var overridden = Assert.Single(report.Evidence, edge => edge.Kind == "override");
+        Assert.Equal(Position(appSource, "Work(int"), new LinePosition(
+            overridden.Source.Location.Range.StartLine, overridden.Source.Location.Range.StartCharacter));
+        Assert.All(report.Evidence, edge =>
+        {
+            Assert.Equal(report.SymbolId, edge.TargetSymbolId);
+            Assert.Equal("App/Worker.cs", edge.Source.Location.DocumentPath);
+            Assert.Equal(NavigationPrecision.Precise, edge.Source.Location.Precision);
+            Assert.Equal(Convert.ToHexStringLower(index.Documents.Single(d => d.RelPath == "App/Worker.cs").Hash),
+                edge.Source.DocumentHash);
+        });
+        Assert.Equal("Lib/Base.cs", Assert.Single(report.Definitions).Location.DocumentPath);
+        Assert.False(report.Truncated);
+
+        var callPosition = Position(appSource, "Work(value);");
+        var fromReference = SemanticImpactAnalysis.Analyze(index, "App/Worker.cs", callPosition.Line, callPosition.Character,
+            report.Snapshot, cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Equal(report.SymbolId, fromReference.SymbolId);
+        Assert.Equal(report.Evidence, fromReference.Evidence);
+    }
+
+    [Fact]
+    public async Task Impact_pilot_labels_incoming_interface_and_base_type_declarations()
+    {
+        var (solution, _, libSource) = Solution();
+        var index = await new RoslynSemanticIndexer().BuildAsync(solution, _root, Identity(),
+            cancellationToken: TestContext.Current.CancellationToken);
+        SemanticImpactReport Analyze(string name)
+        {
+            var position = Position(libSource, name);
+            return SemanticImpactAnalysis.Analyze(index, "Lib/Base.cs", position.Line, position.Character,
+                new("repo", "generation", "tree", null), cancellationToken: TestContext.Current.CancellationToken);
+        }
+        var implementation = Assert.Single(Analyze("IWorker").Evidence, edge => edge.Kind == "implementation");
+        var derived = Assert.Single(Analyze("Base").Evidence, edge => edge.Kind == "type-definition");
+        Assert.Equal(implementation.RelatedSymbolId, derived.RelatedSymbolId);
+        Assert.Equal(SemanticOccurrenceRoles.Definition, implementation.Source.Location.Roles);
+        Assert.Equal("App/Worker.cs", implementation.Source.Location.DocumentPath);
+    }
+
+    [Fact]
+    public async Task Impact_limit_is_explicit_and_deterministic_across_index_order()
+    {
+        var (solution, _, libSource) = Solution();
+        var index = await new RoslynSemanticIndexer().BuildAsync(solution, _root, Identity(),
+            cancellationToken: TestContext.Current.CancellationToken);
+        var position = Position(libSource, "Work(int value) =>");
+        SemanticImpactReport Analyze(SemanticIndex value) => SemanticImpactAnalysis.Analyze(value, "Lib/Base.cs",
+            position.Line, position.Character, new("repo", "generation", "tree", null), limit: 1,
+            cancellationToken: TestContext.Current.CancellationToken);
+        var before = Analyze(index);
+        Assert.True(before.Truncated);
+        Assert.Equal(2, before.TotalEvidence);
+        Assert.Single(before.Evidence);
+        var after = Analyze(index with
+        {
+            Occurrences = index.Occurrences.AsEnumerable().Reverse().Concat(index.Occurrences).ToList(),
+            Relationships = index.Relationships.AsEnumerable().Reverse().Concat(index.Relationships).ToList(),
+        });
+        Assert.Equal(before.Evidence, after.Evidence);
+        Assert.Equal(before.TotalEvidence, after.TotalEvidence);
+    }
+
+    [Fact]
+    public async Task Impact_never_promotes_heuristics_or_unhashed_or_other_language_locations()
+    {
+        var (solution, _, libSource) = Solution();
+        var index = await new RoslynSemanticIndexer().BuildAsync(solution, _root, Identity(),
+            cancellationToken: TestContext.Current.CancellationToken);
+        var position = Position(libSource, "Work(int value) =>");
+        SemanticImpactReport Analyze(SemanticIndex value) => SemanticImpactAnalysis.Analyze(value, "Lib/Base.cs",
+            position.Line, position.Character, new("repo", "generation", "tree", null),
+            cancellationToken: TestContext.Current.CancellationToken);
+        var before = Analyze(index);
+        var reference = index.Occurrences.Single(o => o.SymbolId == before.SymbolId && o.Roles.HasFlag(SemanticOccurrenceRoles.Reference));
+        var extras = new[]
+        {
+            reference with { Precision = NavigationPrecision.Heuristic, Range = new(90, 0, 90, 4) },
+            reference with { Precision = NavigationPrecision.Inferred, Range = new(91, 0, 91, 4) },
+            reference with { DocumentPath = "Unknown.cs" },
+            reference with { DocumentPath = "other.py" },
+        };
+        var after = Analyze(index with
+        {
+            Occurrences = [.. index.Occurrences, .. extras],
+            Documents = [.. index.Documents, new() { RelPath = "other.py", Hash = new byte[32] }],
+        });
+        Assert.Equal(before.Evidence, after.Evidence);
+        var withoutEvidence = Analyze(index with { Documents = index.Documents.Where(d => d.RelPath != "App/Worker.cs").ToList() });
+        Assert.Empty(withoutEvidence.Evidence);
+        Assert.Equal(0, withoutEvidence.TotalEvidence);
+    }
+
+    [Fact]
+    public async Task Impact_rejects_a_different_snapshot_and_unverifiable_selection()
+    {
+        var (solution, _, libSource) = Solution();
+        var index = await new RoslynSemanticIndexer().BuildAsync(solution, _root, Identity(),
+            cancellationToken: TestContext.Current.CancellationToken);
+        var position = Position(libSource, "Work(int value) =>");
+        Assert.Throws<SemanticSnapshotMismatchException>(() => SemanticImpactAnalysis.Analyze(index, "Lib/Base.cs",
+            position.Line, position.Character, new("repo", "generation", "different", null),
+            cancellationToken: TestContext.Current.CancellationToken));
+        var error = Assert.Throws<InvalidOperationException>(() => SemanticImpactAnalysis.Analyze(
+            index with { Documents = [] }, "Lib/Base.cs", position.Line, position.Character,
+            new("repo", "generation", "tree", null), cancellationToken: TestContext.Current.CancellationToken));
+        Assert.Equal("impact_source_hash_required", error.Message);
+        var imprecise = index with { Occurrences = index.Occurrences.Select(o => o with { Precision = NavigationPrecision.Heuristic }).ToList() };
+        Assert.Equal("impact_precise_csharp_required", Assert.Throws<InvalidOperationException>(() => SemanticImpactAnalysis.Analyze(
+            imprecise, "Lib/Base.cs", position.Line, position.Character, new("repo", "generation", "tree", null),
+            cancellationToken: TestContext.Current.CancellationToken)).Message);
+    }
+
+    [Fact]
+    public void Impact_honors_precancelled_requests_before_loading_the_index()
+    {
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        Assert.ThrowsAny<OperationCanceledException>(() => SemanticImpactAnalysis.Analyze(null!, "Missing.cs", 0, 0,
+            new("repo", "generation", "tree", null), cancellationToken: cancellation.Token));
+    }
+
+    [Fact]
     public async Task Resolves_overloads_and_cross_project_references_precisely()
     {
         var (solution, appSource, _) = Solution();
@@ -105,6 +240,11 @@ public sealed class RoslynSemanticIndexerTests : IDisposable
 
         Assert.Equal(2, pairDefinitions.Length);
         Assert.Single(pairDefinitions.Select(occurrence => occurrence.SymbolId).Distinct());
+        var position = Position("namespace Demo; public partial class Pair { }", "Pair");
+        var impact = SemanticImpactAnalysis.Analyze(index, "One.cs", position.Line, position.Character,
+            new("repo", "generation", "tree", null), cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Equal(["One.cs", "Two.cs"], impact.Definitions.Select(source => source.Location.DocumentPath));
+        Assert.All(impact.Definitions, source => Assert.Equal(64, source.DocumentHash.Length));
     }
 
     [Fact]

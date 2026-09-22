@@ -25,6 +25,7 @@ public sealed class SemanticSnapshotMismatchException(string message) : InvalidO
 /// <summary>Exact position, definition, and reference queries over one immutable semantic snapshot.</summary>
 public sealed class SemanticNavigationService
 {
+    private readonly SemanticIndex _index;
     private readonly SemanticSnapshotIdentity _identity;
     private readonly Dictionary<string, List<SemanticOccurrence>> _byDocument;
     private readonly Dictionary<string, List<SemanticOccurrence>> _definitions;
@@ -35,6 +36,7 @@ public sealed class SemanticNavigationService
     public SemanticNavigationService(SemanticIndex index)
     {
         ArgumentNullException.ThrowIfNull(index);
+        _index = index;
         _identity = new SemanticSnapshotIdentity(
             index.RepositoryId,
             index.GenerationId,
@@ -66,6 +68,10 @@ public sealed class SemanticNavigationService
                 group => group.ToList(),
                 StringComparer.Ordinal);
     }
+
+    public SemanticImpactReport AnalyzeImpact(string documentPath, int line, int utf16Column,
+        SemanticSnapshotIdentity snapshot, int limit = 200, CancellationToken cancellationToken = default) =>
+        SemanticImpactAnalysis.Analyze(_index, documentPath, line, utf16Column, snapshot, limit, cancellationToken);
 
     public SemanticLocation? ResolveOccurrence(
         string documentPath,

@@ -48,7 +48,7 @@ when you ask for them.
 
 ## What a cloud agent gets
 
-Twenty tools over MCP. The agent calls them itself, whenever a question is cheaper to ask
+Twenty-one tools over MCP. The agent calls them itself, whenever a question is cheaper to ask
 locally.
 
 | Tool | What it does |
@@ -59,6 +59,7 @@ locally.
 | `find_references` | who calls it and where it is used |
 | `find_implementations` | who implements or overrides it |
 | `find_relationships` | the relationship graph: implementation, override, type |
+| `analyze_impact` | direct C# impact evidence with source coordinates, hashes and snapshot |
 | `lsp_open_document` | hand navigation the text of an unsaved file |
 | `lsp_close_document` | give navigation back to the indexed snapshot |
 | `ask_local` | mechanical work over files you name |
@@ -93,6 +94,7 @@ The set is **not the same**: some tools exist only here, some only over MCP.
 | `codesearch index` / `overlay` | build an index by hand, outside LocalAi's management |
 | `codesearch evaluate --cases …` | run the search-quality corpus |
 | `localai semantic definition` / `references` / `implementations` / `relationships` | navigate by symbol |
+| `localai semantic impact --path src/Type.cs --line 12 --json` | direct indexed C# references and incoming relationships |
 | `localai ask "…" <file> …` | mechanical work over files |
 | `localai triage <log>` | make sense of a log |
 | `localai read-image "…" <file>` | read images or one PDF |
@@ -851,6 +853,29 @@ something else. Remove those through Ollama.
 the log of what installs did to this machine.
 
 ---
+
+## Impact evidence: C# pilot
+
+```powershell
+lai localai semantic impact --root R:\YourRepo --path src/Type.cs --line 12 --column 1 --limit 200 --json
+```
+
+The matching MCP tool is `analyze_impact`. The position selects one precise C# symbol
+in the current index; refresh with `localai sync` after saved edits. Lines and UTF-16
+columns start at 1, with end-exclusive ranges. The report contains the snapshot,
+all indexed partial definitions, and direct references plus incoming implementation,
+override and base-type relationships. Each evidence item includes its ID, source
+coordinate and indexed document SHA-256. Relationship coordinates point to declarations,
+not to an invented call site. The default limit is 200 (maximum 10000); `totalEvidence`
+and `truncated` disclose omitted results. MCP and human-readable CLI output protect
+source-derived data with nonce-bound untrusted-content markers.
+
+This first pilot excludes transitive reachability, unsaved buffers, other languages
+and unverified locations. It does not predict runtime breakage, and an absent edge
+does not prove that code is unaffected. The tool invokes no model: an agent explaining
+the graph must cite the supplied evidence IDs and label any additional hypotheses
+separately. No automatic local-model explanation or measured token saving is claimed.
+Existing navigation commands and their JSON contracts remain unchanged.
 
 ## Documentation packages
 
