@@ -60,6 +60,9 @@ public static class LocalLmText
         Format(nameof(ImagesRead), count, described);
 
     public static string PdfOnlyInput => Get(nameof(PdfOnlyInput));
+    public static string PdfPagesOnly => Get(nameof(PdfPagesOnly));
+    public static string PdfPagesInvalid => Get(nameof(PdfPagesInvalid));
+    public static string PdfPagesOutsideDocument(int count) => Format(nameof(PdfPagesOutsideDocument), count);
     public static string PdfTogetherUnsupported => Get(nameof(PdfTogetherUnsupported));
     public static string PdfTooLarge(string path, long limitMiB) => Format(nameof(PdfTooLarge), path, limitMiB);
     public static string PdfUnreadable(string path, string reason) => Format(nameof(PdfUnreadable), path, reason);
