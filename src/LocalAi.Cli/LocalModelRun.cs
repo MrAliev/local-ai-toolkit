@@ -125,6 +125,7 @@ internal static class LocalModelRun
         catch (Exception exception) when (Classify(exception, profile) is not null)
         {
             var (code, message, exit) = Classify(exception, profile)!.Value;
+            if (exception is PdfOutputWriteException) UsageCall.Current?.DeliveryFailed("output_not_written");
             return Fail(command, code, message, exit, machineReadable, streams);
         }
     }
@@ -278,6 +279,7 @@ internal static class LocalModelRun
             // These are already tokens in this vocabulary — broker_start_timeout,
             // broker_executable_missing — so four distinguishable failures stay four.
             BrokerBootstrapException bootstrap => (bootstrap.Code, bootstrap.Message, 75),
+            PdfOutputWriteException output => ("output_not_written", output.Message, 73),
             FileNotFoundException missing => ("file_missing", missing.Message, 2),
             // Before ArgumentException, which it derives from: a profile the task will not run is
             // not the same failure as a bound that was exceeded.

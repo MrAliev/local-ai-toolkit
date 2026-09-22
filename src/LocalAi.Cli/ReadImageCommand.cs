@@ -17,7 +17,8 @@ public sealed record ReadImageRequest(
     string? Model,
     bool Together = false,
     string? Language = null,
-    string? PdfPages = null);
+    string? PdfPages = null,
+    string? PdfOutputPath = null);
 
 /// <summary>
 /// Images on disk, read by a local vision model: a screenshot, a scanned page, a photographed
@@ -45,6 +46,7 @@ public static class ReadImageCommand
         string? model = null;
         string? language = null;
         string? pdfPages = null;
+        string? pdfOutputPath = null;
         var together = false;
 
         for (var index = 0; index < arguments.Count; index++)
@@ -62,6 +64,7 @@ public static class ReadImageCommand
                 case "--model":
                 case "--language":
                 case "--pages":
+                case "--out":
                     if (index + 1 >= arguments.Count)
                     {
                         refusal = new CommandRefusal(
@@ -74,6 +77,16 @@ public static class ReadImageCommand
                     }
 
                     var value = arguments[++index];
+                    if (argument == "--out")
+                    {
+                        if (string.IsNullOrWhiteSpace(value))
+                        {
+                            refusal = new CommandRefusal("out_value_missing", CliText.OptionValueMissing("read-image", argument, CliUsage.ReadImage));
+                            return false;
+                        }
+                        pdfOutputPath = value;
+                        break;
+                    }
                     if (argument == "--pages")
                     {
                         try { _ = PdfPageSelection.Parse(value); }
@@ -205,7 +218,12 @@ public static class ReadImageCommand
             return false;
         }
 
-        request = new ReadImageRequest(question, images, profile, model, together, language, pdfPages);
+        if (pdfOutputPath is not null && (!images.Any(LocalTasks.IsPdfFile) || profile != LocalTaskProfile.Ocr))
+        {
+            refusal = new CommandRefusal("pdf_output_requires_ocr", LocalLmText.PdfOutputOnly);
+            return false;
+        }
+        request = new ReadImageRequest(question, images, profile, model, together, language, pdfPages, pdfOutputPath);
         return true;
     }
 

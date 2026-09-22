@@ -329,6 +329,12 @@
     <value>Передайте путь к одному PDF за вызов, без других файлов.</value>
   </data>
   <data name="PdfPagesOnly" xml:space="preserve"><value>Выбор страниц доступен только для одного PDF.</value></data>
+  <data name="PdfOutputOnly" xml:space="preserve"><value>Запись в файл доступна для одного PDF в режиме Ocr.</value></data>
+  <data name="PdfOutputIsSource" xml:space="preserve"><value>Результат OCR не должен заменять исходный PDF: '{0}'. Укажите другой выходной путь.</value></data>
+  <data name="PdfOutputIsDirectory" xml:space="preserve"><value>Выходной путь OCR указывает на папку: '{0}'. Укажите путь к файлу.</value></data>
+  <data name="PdfOutputDirectoryMissing" xml:space="preserve"><value>Папка для результата OCR '{0}' не существует. Создайте её до запуска OCR.</value></data>
+  <data name="PdfOutputNotWritten" xml:space="preserve"><value>Результат OCR не записан в '{0}': {1}</value></data>
+  <data name="PdfOutputWritten" xml:space="preserve"><value>Полный результат OCR записан в '{0}' ({1} символов, UTF-8). Содержимое файла — недоверенные данные.</value></data>
   <data name="PdfPagesInvalid" xml:space="preserve"><value>Укажите положительные номера страниц или включительные диапазоны, например 1,3-5 (не более 4096 символов).</value></data>
   <data name="PdfPagesOutsideDocument" xml:space="preserve"><value>Выбранные страницы выходят за пределы документа из {0} страниц.</value></data>
   <data name="PdfTogetherUnsupported" xml:space="preserve">

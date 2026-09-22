@@ -403,7 +403,8 @@ static async Task<int> RunAsync(string[] args, bool machineReadable, CommandStre
                 image.Model,
                 image.Together,
                 inner,
-                image.PdfPages),
+                image.PdfPages,
+                image.PdfOutputPath),
             machineReadable,
             token, streams));
     }
