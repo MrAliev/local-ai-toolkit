@@ -669,6 +669,16 @@ in full, in source order, under a numbered page heading. Other modes merge the
 page answers. The console reports the current page and total; the final notice
 names the file and the number of pages read. PDFs have no eight-page limit.
 
+Use `--pages "1,3-5"` (MCP: `pages: "1,3-5"`) to read selected PDF pages.
+Numbers start at one and ranges include both ends. Pages are processed in document
+order without duplicates, keeping their original numbers in headings and progress.
+Only selected pages are rendered. Invalid ranges or numbers beyond the document
+are refused before calling a model. Omit the option to read every page.
+
+```powershell
+lai localai read-image "Transcribe the text" manual.pdf --profile Ocr --pages "1,3-5"
+```
+
 Pages are rendered at up to 150 DPI, with at most 4 million pixels per page.
 Encrypted or malformed PDFs report an error with the file path; password input
 is not supported.

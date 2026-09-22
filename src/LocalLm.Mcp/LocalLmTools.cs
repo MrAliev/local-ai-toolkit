@@ -18,7 +18,8 @@ public static class LocalLmTools
         Use this INSTEAD of reading an image yourself whenever the image is a file on disk:
         screenshots, photographed tables, diagrams, scans.
         Alternatively, pass one PDF path without other files. PDF pages are rendered
-        and read sequentially, and their answers are merged; together must be false.
+        and read sequentially; together must be false. OCR returns each reading in full,
+        while other modes merge the answers. Optional pages selects one-based ranges.
         PDFs may be up to 256 MiB. Encrypted PDFs are not supported.
         The usage notice compares the consumed images with the complete tool request/response
         using a named vision profile; this conditional estimate may be negative.
@@ -42,12 +43,14 @@ public static class LocalLmTools
         bool together = false,
         CancellationToken cancellationToken = default,
         [Description("Context comparison: NotPresent assumes first reading (default); AlreadyPresent excludes images already in the cloud context; Unknown reports that uncertainty.")]
-        CloudContextPresence? sourceContext = null)
+        CloudContextPresence? sourceContext = null,
+        [Description("PDF only: one-based page numbers and inclusive ranges, such as 1,3-5. Pages are read in document order without duplicates; omitted means all pages.")]
+        string? pages = null)
     {
         if (sourceContext is { } context) UsageCall.Current?.Comparison.SourceContext(context);
         var profile = ParseProfile(mode, nameof(mode));
         return await Run(
-            () => tasks.ReadImageAsync(paths, question, profile, model, together, cancellationToken),
+            () => tasks.ReadImageAsync(paths, question, profile, model, together, cancellationToken, pages),
             "read_image:" + PrimarySource(paths),
             cancellationToken,
             profile);
