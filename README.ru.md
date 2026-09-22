@@ -628,6 +628,38 @@ lai localai semantic implementations --path src/LocalAi.Broker.Core/DurableQueue
 lai localai ask "Перечисли публичные члены этого класса, по одному в строке." src/CodeSearch.Core/Chunking/GenericTextChunker.cs
 ```
 
+Для извлечения и классификации можно включить проверку плоского JSON-объекта:
+`--profile Extraction` (или `Classification`) и `--schema contract.json`.
+В MCP `ask_local` тот же JSON передаётся строкой в необязательном `outputSchema`.
+Например, для классификации переданного issue в `bug` или `question`:
+
+```json
+{"schemaVersion":1,"fields":[{"name":"label","type":"String","allowedValues":["bug","question"]}]}
+```
+
+```powershell
+lai localai ask "Классифицируй issue." issue.txt --profile Classification --schema contract.json --json
+```
+
+Версия 1 — ограниченный контракт плоского объекта, **не общий JSON Schema**:
+до 64 полей с учётом регистра, типы `String`, `Integer` (знаковый Int64), `Number`,
+`Boolean`. `required` по умолчанию true; `allowedValues` задаёт точный список строк.
+Вложенные значения, null, лишние или повторные поля, Markdown-ограждения и текст
+вокруг JSON не проходят проверку. Схема ограничена 32 768 символами, ответ —
+1 048 576. Неизвестные параметры схемы отклоняются до вызова модели. Отмена сохраняется.
+
+Брокер проверяет каждую попытку, включая fallback. При успехе CLI добавляет
+`data.validation`; при ошибке возвращает код 65, `error.code=result_rejected` и
+`error.validation`, без пригодных к использованию данных ответа. MCP возвращает
+`{answer,validation}` внутри границы untrusted-content. Статусы: `Valid`, `Empty`,
+`InvalidJson`, `SchemaMismatch`; разобранное `value` есть только при `Valid`.
+Отклонённый ответ не получает оценки экономии облачных токенов.
+**Valid подтверждает структуру, а не правильность классификации или фактов** —
+их нужно сверять с источником. Без схемы формат CLI/MCP сохраняется, а брокер
+фиксирует `NotRequested`. Для нового режима нужно обновить и клиент, и брокер.
+Полный перевод по-прежнему использует собственный валидатор; успешный ответ
+брокера его не заменяет.
+
 Ответ модели выводится в stdout. Отдельное сообщение об использовании токенов в stderr
 содержит идентификатор вызова, фактически использованные модели, длительность и раздельную
 экономию облачных токенов INPUT и OUTPUT. Это **условное сравнение при первом чтении**, а не

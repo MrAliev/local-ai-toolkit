@@ -7,6 +7,8 @@ public sealed record ModelValidationResult(
     ModelExecutionOutcome Outcome,
     string Code)
 {
+    public StructuredValidationResult? StructuredValidation { get; init; }
+
     public static ModelValidationResult Pass(string code) =>
         new(true, ModelExecutionOutcome.Success, code);
 

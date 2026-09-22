@@ -109,6 +109,10 @@ public static class MachineEnvelope
     public static string Refusal(string command, string code, string message) =>
         Write(new Envelope(Schema, command, false, null, new Failure(code, message)));
 
+    public static string StructuredRefusal(string command, StructuredValidationResult validation) =>
+        Write(new Envelope(Schema, command, false, null,
+            new Failure("result_rejected", "The model response did not satisfy the output contract.", validation)));
+
     private static string Write(Envelope envelope) =>
         JsonSerializer.Serialize(envelope, LocalAiJson.Strict);
 
@@ -134,5 +138,7 @@ public static class MachineEnvelope
         [property: JsonRequired, JsonPropertyName("code"), JsonPropertyOrder(0)]
         string Code,
         [property: JsonRequired, JsonPropertyName("message"), JsonPropertyOrder(1)]
-        string Message);
+        string Message,
+        [property: JsonPropertyName("validation"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        StructuredValidationResult? Validation = null);
 }
