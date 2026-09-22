@@ -35,7 +35,7 @@ public static class LocalAiCommandSyntax
     // here — the bare `-` in the same bracket already stands for standard input.
     public const string Translate =
         "localai translate [text|-|--in file] --from language --to language [--markdown] " +
-        "[--out file] [--json]";
+        "[--out file] [--checkpoint dir] [--json]";
     public const string ReadImage =
         "localai read-image <question> <file> [file ...] [--profile name] "  +
         "[--model model] [--together] [--pages ranges] [--out file] [--checkpoint dir] [--language en|ru] [--json]";

@@ -372,4 +372,7 @@
   <data name="TranslationCheckpointReturned" xml:space="preserve">
     <value>Перевод восстановлен из контрольной точки. Модель не вызывалась; новых локальных токенов: 0. Сравнение облачных токенов относится к этой выдаче, а не к исходному переводу.</value>
   </data>
+  <data name="TranslationCheckpointOutputConflict" xml:space="preserve">
+    <value>Выходной файл должен находиться вне контрольной точки перевода «{0}» и не ссылаться на её файлы.</value>
+  </data>
 </root>

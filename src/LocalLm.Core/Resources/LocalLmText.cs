@@ -67,6 +67,7 @@ public static class LocalLmText
     public static string TranslationCheckpointMismatch(string path) => Format(nameof(TranslationCheckpointMismatch), path);
     public static string TranslationCheckpointUnavailable(string path) => Format(nameof(TranslationCheckpointUnavailable), path);
     public static string TranslationCheckpointReturned => Get(nameof(TranslationCheckpointReturned));
+    public static string TranslationCheckpointOutputConflict(string path) => Format(nameof(TranslationCheckpointOutputConflict), path);
     public static string PdfCheckpointUnavailable(string path) => Format(nameof(PdfCheckpointUnavailable), path);
     public static string PdfCheckpointReused(int count) => Format(nameof(PdfCheckpointReused), count);
     public static string PdfCheckpointOutputConflict(string path) => Format(nameof(PdfCheckpointOutputConflict), path);

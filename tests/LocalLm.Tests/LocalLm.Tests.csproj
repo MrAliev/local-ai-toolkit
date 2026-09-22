@@ -6,6 +6,8 @@
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
 
+  <Import Project="..\..\src\BrokerBinary.props" />
+
   <ItemGroup>
     <PackageReference Include="xunit.v3" Version="4.0.0" />
   </ItemGroup>

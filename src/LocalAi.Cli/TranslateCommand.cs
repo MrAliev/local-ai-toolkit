@@ -12,7 +12,8 @@ public sealed record TranslateRequest(
     string To,
     bool Markdown,
     string? OutputPath,
-    string? InputPath);
+    string? InputPath,
+    string? CheckpointDirectory = null);
 
 /// <summary>
 /// The one command here whose answer is the artifact rather than a statement about one.
@@ -53,6 +54,7 @@ public static class TranslateCommand
         var markdown = false;
         string? output = null;
         string? input = null;
+        string? checkpoint = null;
         var inGiven = 0;
 
         for (var index = 0; index < arguments.Count; index++)
@@ -75,6 +77,7 @@ public static class TranslateCommand
                 case "--to":
                 case "--out":
                 case "--in":
+                case "--checkpoint":
                     if (index + 1 >= arguments.Count)
                     {
                         refusal = new CommandRefusal(
@@ -89,6 +92,14 @@ public static class TranslateCommand
                     var value = arguments[++index];
                     switch (argument)
                     {
+                        case "--checkpoint":
+                            if (string.IsNullOrWhiteSpace(value) || value.StartsWith("--", StringComparison.Ordinal))
+                            {
+                                refusal = new CommandRefusal("checkpoint_value_missing", CliText.OptionValueMissing("translate", argument, CliUsage.Translate));
+                                return false;
+                            }
+                            checkpoint = value;
+                            break;
                         case "--from":
                             from = value;
                             break;
@@ -184,13 +195,13 @@ public static class TranslateCommand
 
         if (text is not null)
         {
-            request = new TranslateRequest(text, false, from, to, markdown, output, null);
+            request = new TranslateRequest(text, false, from, to, markdown, output, null, checkpoint);
             return true;
         }
 
         if (input is not null)
         {
-            request = new TranslateRequest(null, false, from, to, markdown, output, input);
+            request = new TranslateRequest(null, false, from, to, markdown, output, input, checkpoint);
             return true;
         }
 
@@ -202,7 +213,7 @@ public static class TranslateCommand
             return false;
         }
 
-        request = new TranslateRequest(null, true, from, to, markdown, output, null);
+        request = new TranslateRequest(null, true, from, to, markdown, output, null, checkpoint);
         return true;
     }
 
