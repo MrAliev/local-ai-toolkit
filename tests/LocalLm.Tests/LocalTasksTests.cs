@@ -12,6 +12,222 @@ namespace LocalLm.Tests;
 
 public sealed class LocalTasksTests
 {
+    [Fact]
+    public async Task Interrupted_translation_reuses_the_validated_segment_and_preserves_protected_bytes()
+    {
+        var checkpoint = Path.Combine(Path.GetTempPath(), "localai-translation-" + Guid.NewGuid().ToString("N"));
+        const string source = "# Before\r\n\r\n```cs\r\nvar x = 1;\r\n```\r\n\r\nAfter";
+        using var cancellation = new CancellationTokenSource();
+        try
+        {
+            var first = new FakeLocalModelClient
+            {
+                RoutedAnswerFactory = (_, _) => { cancellation.Cancel(); return "# До"; },
+            };
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => new LocalTasks(first).TranslateAsync(
+                source, "English", "Russian", true, TranslationDelivery.ToCaller, cancellation.Token, checkpoint));
+            var next = new FakeLocalModelClient
+            {
+                RoutedAnswerFactory = (call, _) => call.Prompt.EndsWith("After", StringComparison.Ordinal) ? "После" : "# Повтор",
+            };
+            var result = await new LocalTasks(next).TranslateAsync(source, "English", "Russian", true,
+                TranslationDelivery.ToCaller, TestContext.Current.CancellationToken, checkpoint);
+            Assert.Single(next.Calls);
+            Assert.StartsWith("# До\r\n\r\n```cs\r\nvar x = 1;\r\n```\r\n\r\nПосле", result.Answer, StringComparison.Ordinal);
+            Assert.DoesNotContain("var x", next.Calls[0].Prompt, StringComparison.Ordinal);
+        }
+        finally { if (Directory.Exists(checkpoint)) Directory.Delete(checkpoint, recursive: true); }
+    }
+
+    [Fact]
+    public async Task Complete_translation_checkpoint_returns_unicode_without_replaying_usage()
+    {
+        var checkpoint = Path.Combine(Path.GetTempPath(), "localai-translation-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var first = await new LocalTasks(new FakeLocalModelClient
+            {
+                Answer = "Привет 😀", QueueDuration = TimeSpan.FromSeconds(7), ExecutionDuration = TimeSpan.FromSeconds(11),
+            }).TranslateAsync("Hello there", "English", "Russian", false, TranslationDelivery.ToCaller,
+                TestContext.Current.CancellationToken, checkpoint);
+            using var usage = new UsageCall(UsageSurface.Mcp, "locallm", "translate_local");
+            var next = new FakeLocalModelClient();
+            var result = await new LocalTasks(next).TranslateAsync("Hello there", "English", "Russian", false,
+                TranslationDelivery.ToFile, TestContext.Current.CancellationToken, checkpoint);
+            Assert.Equal(first.Answer, result.Answer);
+            Assert.Empty(next.Calls);
+            Assert.Empty(next.ExperimentCompletions);
+            Assert.Equal(0, result.LocalTokensProcessed);
+            Assert.Null(result.Model);
+            Assert.Null(result.Receipt);
+            Assert.False(result.NoTranslatableText);
+            Assert.Contains("checkpoint", result.Notice, StringComparison.OrdinalIgnoreCase);
+            var report = usage.Complete();
+            Assert.Equal(UsageCache.Hit, report.Models.Cache);
+            Assert.Equal(UsageModelState.NotCalled, report.Models.State);
+            Assert.Empty(report.Models.Actual);
+        }
+        finally { Directory.Delete(checkpoint, recursive: true); }
+    }
+
+    [Fact]
+    public async Task Long_plain_translation_resumes_chunk_order_after_a_late_cancellation()
+    {
+        var checkpoint = Path.Combine(Path.GetTempPath(), "localai-translation-" + Guid.NewGuid().ToString("N"));
+        var source = string.Concat(Enumerable.Repeat("First paragraph. ", 3000)) + "Final paragraph.";
+        using var cancellation = new CancellationTokenSource();
+        try
+        {
+            var first = new FakeLocalModelClient
+            {
+                RoutedAnswerFactory = (_, _) => { cancellation.Cancel(); return "Первый фрагмент. "; },
+            };
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => new LocalTasks(first).TranslateAsync(source,
+                "English", "Russian", false, TranslationDelivery.ToCaller, cancellation.Token, checkpoint));
+            var next = new FakeLocalModelClient { Answer = "Последний фрагмент." };
+            var result = await new LocalTasks(next).TranslateAsync(source, "English", "Russian", false,
+                TranslationDelivery.ToCaller, TestContext.Current.CancellationToken, checkpoint);
+            Assert.EndsWith("Final paragraph.", Assert.Single(next.Calls).Prompt, StringComparison.Ordinal);
+            Assert.StartsWith("Первый фрагмент. Последний фрагмент.", result.Answer, StringComparison.Ordinal);
+        }
+        finally { Directory.Delete(checkpoint, recursive: true); }
+    }
+
+    [Theory]
+    [InlineData("source")]
+    [InlineData("sourceLanguage")]
+    [InlineData("targetLanguage")]
+    [InlineData("markdown")]
+    [InlineData("route")]
+    [InlineData("processor")]
+    [InlineData("language")]
+    public async Task Translation_checkpoint_rejects_changed_identity_before_inference(string changed)
+    {
+        var checkpoint = Path.Combine(Path.GetTempPath(), "localai-translation-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            await new LocalTasks(new FakeLocalModelClient { Answer = "Привет" }).TranslateAsync("Hello", "English", "Russian", false,
+                TranslationDelivery.ToCaller, TestContext.Current.CancellationToken, checkpoint);
+            if (changed is "route" or "processor" or "language")
+            {
+                var path = Path.Combine(checkpoint, "session.json");
+                var manifest = JsonSerializer.Deserialize<TranslationCheckpoint.Manifest>(await File.ReadAllTextAsync(path,
+                    TestContext.Current.CancellationToken), LocalAiJson.Strict)!;
+                manifest = changed switch
+                {
+                    "route" => manifest with { RouteVersion = "changed-route" },
+                    "processor" => manifest with { ProcessorVersion = "changed-processor" },
+                    _ => manifest with { Language = "changed-language" },
+                };
+                await File.WriteAllTextAsync(path, JsonSerializer.Serialize(manifest, LocalAiJson.Strict), TestContext.Current.CancellationToken);
+            }
+            var next = new FakeLocalModelClient();
+            await Assert.ThrowsAsync<ArgumentException>(() => new LocalTasks(next).TranslateAsync(
+                changed == "source" ? "Different" : "Hello", changed == "sourceLanguage" ? "French" : "English",
+                changed == "targetLanguage" ? "German" : "Russian", changed == "markdown", TranslationDelivery.ToCaller,
+                TestContext.Current.CancellationToken, checkpoint));
+            Assert.Empty(next.Calls);
+        }
+        finally { Directory.Delete(checkpoint, recursive: true); }
+    }
+
+    [Fact]
+    public async Task Translation_fallback_reuses_validated_segments_and_counts_only_new_calls()
+    {
+        var checkpoint = Path.Combine(Path.GetTempPath(), "localai-translation-" + Guid.NewGuid().ToString("N"));
+        const string source = "# Before\n\n```cs\nvar x = 1;\n```\n\nAfter {name}";
+        using var catalog = new TranslationCatalog(true, ["qwen3.5:9b"]);
+        try
+        {
+            var client = new FakeLocalModelClient { QueueDuration = TimeSpan.FromSeconds(2), ExecutionDuration = TimeSpan.FromSeconds(3) };
+            client.Answers.Enqueue("# До");
+            client.Answers.Enqueue("После"); // Invalid: missing protected placeholder.
+            client.Answers.Enqueue("После {name}");
+            var result = await catalog.Tasks(client).TranslateAsync(source, "English", "Russian", true,
+                TranslationDelivery.ToCaller, TestContext.Current.CancellationToken, checkpoint);
+            Assert.Equal(3, client.Calls.Count);
+            Assert.EndsWith("After {name}", client.Calls[2].Prompt, StringComparison.Ordinal);
+            Assert.Equal("qwen3.5:9b", client.Calls[2].ModelOverride);
+            Assert.StartsWith("# До\n\n```cs\nvar x = 1;\n```\n\nПосле {name}", result.Answer, StringComparison.Ordinal);
+            Assert.Equal(TimeSpan.FromSeconds(6), result.Receipt!.QueueDuration);
+            Assert.Equal(TimeSpan.FromSeconds(9), result.Receipt.ExecutionDuration);
+            Assert.Equal(client.Calls.Sum(call => TokenEstimator.ForText(call.Prompt)) +
+                new[] { "# До", "После", "После {name}" }.Sum(TokenEstimator.ForText), result.LocalTokensProcessed);
+            Assert.Equal(ModelExecutionOutcome.StructuralFailure, Assert.Single(client.ExperimentCompletions).Outcome);
+            var next = new FakeLocalModelClient();
+            var cached = await catalog.Tasks(next).TranslateAsync(source, "English", "Russian", true,
+                TranslationDelivery.ToCaller, TestContext.Current.CancellationToken, checkpoint);
+            Assert.Equal(result.Answer, cached.Answer);
+            Assert.Empty(next.Calls);
+            Assert.Empty(next.ExperimentCompletions);
+        }
+        finally { Directory.Delete(checkpoint, recursive: true); }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Damaged_translation_checkpoint_is_refused_even_with_a_recomputed_text_hash(bool rehash)
+    {
+        var checkpoint = Path.Combine(Path.GetTempPath(), "localai-translation-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            await new LocalTasks(new FakeLocalModelClient { Answer = "Привет {name}" }).TranslateAsync("Hello {name}", "English", "Russian", true,
+                TranslationDelivery.ToCaller, TestContext.Current.CancellationToken, checkpoint);
+            var path = Path.Combine(checkpoint, "segment-0.json");
+            var segment = JsonSerializer.Deserialize<TranslationCheckpoint.Segment>(await File.ReadAllTextAsync(path,
+                TestContext.Current.CancellationToken), LocalAiJson.Strict)!;
+            segment = segment with { Text = "Изменено", TextHash = rehash ? TranslationCheckpoint.Hash("Изменено") : segment.TextHash };
+            await File.WriteAllTextAsync(path, JsonSerializer.Serialize(segment, LocalAiJson.Strict), TestContext.Current.CancellationToken);
+            var next = new FakeLocalModelClient();
+            await Assert.ThrowsAsync<ArgumentException>(() => new LocalTasks(next).TranslateAsync("Hello {name}", "English", "Russian", true,
+                TranslationDelivery.ToCaller, TestContext.Current.CancellationToken, checkpoint));
+            Assert.Empty(next.Calls);
+        }
+        finally { Directory.Delete(checkpoint, recursive: true); }
+    }
+
+    [Fact]
+    public async Task Missing_translation_segment_is_recomputed_without_replaying_other_segments()
+    {
+        var checkpoint = Path.Combine(Path.GetTempPath(), "localai-translation-" + Guid.NewGuid().ToString("N"));
+        const string source = "Before\n\n```cs\ncode\n```\n\nAfter";
+        try
+        {
+            var first = new FakeLocalModelClient();
+            first.Answers.Enqueue("До"); first.Answers.Enqueue("После");
+            await new LocalTasks(first).TranslateAsync(source, "English", "Russian", true,
+                TranslationDelivery.ToCaller, TestContext.Current.CancellationToken, checkpoint);
+            File.Delete(Path.Combine(checkpoint, "segment-1.json"));
+            var next = new FakeLocalModelClient { Answer = "После", QueueDuration = TimeSpan.FromSeconds(2) };
+            var result = await new LocalTasks(next).TranslateAsync(source, "English", "Russian", true,
+                TranslationDelivery.ToCaller, TestContext.Current.CancellationToken, checkpoint);
+            Assert.EndsWith("After", Assert.Single(next.Calls).Prompt, StringComparison.Ordinal);
+            Assert.Equal(TimeSpan.FromSeconds(2), result.Receipt!.QueueDuration);
+            Assert.Equal(TokenEstimator.ForText(next.Calls[0].Prompt) + TokenEstimator.ForText("После"), result.LocalTokensProcessed);
+        }
+        finally { Directory.Delete(checkpoint, recursive: true); }
+    }
+
+    [Fact]
+    public async Task Translation_checkpoint_has_one_writer_and_releases_its_lease()
+    {
+        var checkpoint = Path.Combine(Path.GetTempPath(), "localai-translation-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            await new LocalTasks(new FakeLocalModelClient { Answer = "Привет" }).TranslateAsync("Hello", "English", "Russian", false,
+                TranslationDelivery.ToCaller, TestContext.Current.CancellationToken, checkpoint);
+            using (var lease = new FileStream(Path.Combine(checkpoint, "session.lock"), FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+            {
+                var next = new FakeLocalModelClient();
+                await Assert.ThrowsAsync<ArgumentException>(() => new LocalTasks(next).TranslateAsync("Hello", "English", "Russian", false,
+                    TranslationDelivery.ToCaller, TestContext.Current.CancellationToken, checkpoint));
+                Assert.Empty(next.Calls);
+            }
+        }
+        finally { Directory.Delete(checkpoint, recursive: true); }
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

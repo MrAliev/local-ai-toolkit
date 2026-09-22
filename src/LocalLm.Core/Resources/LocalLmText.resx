@@ -363,4 +363,13 @@
   <data name="TranslationNotRequired" xml:space="preserve">
     <value>No translation required; protected code and whitespace preserved exactly.</value>
   </data>
+  <data name="TranslationCheckpointMismatch" xml:space="preserve">
+    <value>Translation checkpoint '{0}' is incompatible or damaged. Use a new checkpoint directory for changed input, languages, routing or processor versions.</value>
+  </data>
+  <data name="TranslationCheckpointUnavailable" xml:space="preserve">
+    <value>Translation checkpoint '{0}' is in use or unavailable. Wait for its current writer to finish.</value>
+  </data>
+  <data name="TranslationCheckpointReturned" xml:space="preserve">
+    <value>Translation restored from the checkpoint. No model was called; new local tokens: 0. Cloud-token comparisons describe this delivery, not the original translation run.</value>
+  </data>
 </root>
