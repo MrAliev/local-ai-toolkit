@@ -47,6 +47,14 @@ public static partial class OutputValidation
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(selection);
         ArgumentNullException.ThrowIfNull(result);
+        if (request.Payload is ChatJobPayload { OutputSchema: { } schema })
+        {
+            var validation = StructuredOutputValidator.Validate(Answer(result), schema);
+            return new ModelValidationResult(validation.IsValid,
+                validation.IsValid ? ModelExecutionOutcome.Success : ModelExecutionOutcome.StructuralFailure,
+                "structured_output_" + validation.Status.ToString().ToLowerInvariant())
+            { StructuredValidation = validation };
+        }
         var validator = catalog.Route(selection.Profile).Validator;
         return validator switch
         {
@@ -57,9 +65,11 @@ public static partial class OutputValidation
             // check here is a compile-time hole rather than a silent pass. The code carries the
             // name, so a receipt says which check was asked for even when none was performed.
             LocalOutputValidator.None or
-            LocalOutputValidator.TranslationStructure or
-            LocalOutputValidator.StructuredOutput =>
+            LocalOutputValidator.TranslationStructure =>
                 ModelValidationResult.Pass(validator.ToString()),
+            LocalOutputValidator.StructuredOutput =>
+                ModelValidationResult.Pass("structured_output_not_requested") with
+                { StructuredValidation = new(StructuredValidationStatus.NotRequested, []) },
             _ => throw new ArgumentOutOfRangeException(
                 nameof(selection),
                 validator,
@@ -217,7 +227,7 @@ public static partial class OutputValidation
         {
             return result.Body.Deserialize<ChatJobOutput>(LocalAiJson.Strict)?.Content;
         }
-        catch (JsonException)
+        catch (Exception exception) when (exception is JsonException or ArgumentException)
         {
             // Not a chat answer. A body this cannot read is not an answer this can judge, and a
             // check that fails on a shape it does not understand would blame the model for the

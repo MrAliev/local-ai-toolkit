@@ -10,7 +10,8 @@ public sealed record AskRequest(
     IReadOnlyList<string> Files,
     LocalTaskProfile Profile,
     string? Model,
-    string? Language = null);
+    string? Language = null,
+    string? SchemaPath = null);
 
 /// <summary>
 /// A mechanical task over known files, run on a local model: summarise this, list every method
@@ -41,6 +42,7 @@ public static class AskCommand
         var profile = LocalTaskProfile.ShortSummary;
         string? model = null;
         string? language = null;
+        string? schemaPath = null;
 
         for (var index = 0; index < arguments.Count; index++)
         {
@@ -50,6 +52,7 @@ public static class AskCommand
                 case "--profile":
                 case "--model":
                 case "--language":
+                case "--schema":
                     if (index + 1 >= arguments.Count)
                     {
                         refusal = new CommandRefusal(
@@ -59,6 +62,16 @@ public static class AskCommand
                     }
 
                     var value = arguments[++index];
+                    if (argument == "--schema")
+                    {
+                        if (schemaPath is not null || string.IsNullOrWhiteSpace(value) || value.StartsWith("--", StringComparison.Ordinal))
+                        {
+                            refusal = new CommandRefusal("schema_invalid_argument", "Provide --schema once with a schema file path.");
+                            return false;
+                        }
+                        schemaPath = value;
+                        break;
+                    }
                     if (argument == "--model")
                     {
                         model = value;
@@ -148,8 +161,24 @@ public static class AskCommand
             return false;
         }
 
-        request = new AskRequest(prompt, files, profile, model, language);
+        if (schemaPath is not null && profile is not (LocalTaskProfile.Extraction or LocalTaskProfile.Classification))
+        {
+            refusal = new CommandRefusal("schema_profile_not_supported", "--schema requires --profile Extraction or Classification.");
+            return false;
+        }
+        request = new AskRequest(prompt, files, profile, model, language, schemaPath);
         return true;
+    }
+
+    public static async Task<StructuredOutputSchema?> ReadSchemaAsync(string? path, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (path is null) return null;
+        using var reader = new StreamReader(Path.GetFullPath(path));
+        var buffer = new char[StructuredOutputSchema.MaximumSchemaCharacters + 1];
+        var length = await reader.ReadBlockAsync(buffer.AsMemory(), cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        return StructuredOutputSchema.Parse(new string(buffer, 0, length));
     }
 
     /// <summary>

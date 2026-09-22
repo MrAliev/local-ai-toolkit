@@ -25,7 +25,7 @@ public static class LocalAiCommandSyntax
     public const string Doctor = "localai doctor [--root dir] [--json]";
     public const string Telemetry = "localai telemetry [--call-id <guid>]";
     public const string Ask =
-        "localai ask <prompt> [file ...] [--profile name] [--model model] " +
+        "localai ask <prompt> [file ...] [--profile name] [--model model] [--schema file] " +
         "[--language en|ru] [--json]";
     public const string Triage =
         "localai triage [log-file|-] [--question text] [--model model] " +

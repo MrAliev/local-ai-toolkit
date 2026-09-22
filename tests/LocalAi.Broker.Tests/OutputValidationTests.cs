@@ -17,6 +17,43 @@ public sealed class OutputValidationTests
 {
     private static readonly ModelRoutingCatalog Catalog = ModelRoutingCatalog.LoadEmbedded();
 
+    [Theory]
+    [InlineData(false, StructuredValidationStatus.NotRequested)]
+    [InlineData(true, StructuredValidationStatus.Valid)]
+    public void Only_an_explicit_contract_can_report_structured_validation_success(bool withSchema, StructuredValidationStatus status)
+    {
+        var request = LocalJobRequestFactory.CreateRoutedChat("structured", LocalJobPriority.Foreground,
+            LocalTaskProfile.Classification, "Classify", null, null,
+            new LocalWorkloadMetadata(10, 10, 0, 0, 0, LocalDurationClass.Short),
+            outputSchema: withSchema ? new StructuredOutputSchema(1, [new("label", StructuredFieldType.String)]) : null);
+        var selection = new ModelSelection(LocalTaskProfile.Classification, "qwen3.5:9b", 2048, false, false, Catalog.CatalogVersion, "test");
+        var result = OutputValidation.For(Catalog, request, selection,
+            new BrokerExecutionResult(JsonSerializer.SerializeToElement(new ChatJobOutput("{\"label\":\"bug\"}"))));
+        Assert.True(result.Passed);
+        Assert.Equal(status, result.StructuredValidation!.Status);
+        Assert.Equal(withSchema, result.StructuredValidation.IsValid);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("{\"label\":17}")]
+    [InlineData("{}")]
+    [InlineData("Answer: {\"label\":\"bug\"}")]
+    public void Explicit_structured_contract_rejects_invalid_model_content(string answer)
+    {
+        var schema = new StructuredOutputSchema(1, [new("label", StructuredFieldType.String, AllowedValues: ["bug", "question"])]);
+        var request = LocalJobRequestFactory.CreateRoutedChat("structured", LocalJobPriority.Foreground,
+            LocalTaskProfile.Classification, "Classify this message.", null, null,
+            new LocalWorkloadMetadata(22, 100, 0, 0, 0, LocalDurationClass.Short), outputSchema: schema);
+        var selection = new ModelSelection(LocalTaskProfile.Classification, "qwen3.5:9b", 2048, false, false, Catalog.CatalogVersion, "test");
+        var result = OutputValidation.For(Catalog, request, selection,
+            new BrokerExecutionResult(JsonSerializer.SerializeToElement(new { content = answer })));
+        Assert.False(result.Passed);
+        Assert.Equal(ModelExecutionOutcome.StructuralFailure, result.Outcome);
+        Assert.NotNull(result.StructuredValidation);
+        Assert.False(result.StructuredValidation.IsValid);
+    }
+
     /// <summary>
     /// The measured shape: a file of fifty-eight lines, and an answer confidently citing line 91.
     /// </summary>

@@ -121,7 +121,9 @@ public static class LocalLmTools
         string? model = null,
         CancellationToken cancellationToken = default,
         [Description("Context comparison: NotPresent assumes first reading (default); AlreadyPresent excludes source content already in the cloud context; Unknown reports that uncertainty.")]
-        CloudContextPresence? sourceContext = null)
+        CloudContextPresence? sourceContext = null,
+        [Description("Optional version-one flat-object contract JSON (schemaVersion:1, fields:[{name,type,required,allowedValues}]); only Extraction/Classification. Types: String, Integer (Int64), Number, Boolean. Returns answer plus typed validation; Valid checks structure, not factual correctness.")]
+        string? outputSchema = null)
     {
         if (sourceContext is { } context) UsageCall.Current?.Comparison.SourceContext(context);
         return await Run(
@@ -130,7 +132,8 @@ public static class LocalLmTools
                 prompt,
                 files ?? [],
                 model,
-                cancellationToken),
+                cancellationToken,
+                outputSchema is null ? null : StructuredOutputSchema.Parse(outputSchema)),
             "ask_local:" + PrimarySource(files ?? []),
             cancellationToken);
     }
@@ -508,7 +511,7 @@ public static class LocalLmTools
             return Report(
                 result.Notice,
                 result.Receipt.Routing?.ResidencyShortfall ?? ResidencyShortfall.None,
-                result.Answer,
+                result.Validation is null ? result.Answer : Serialize(new { answer = result.Answer, validation = result.Validation }),
                 origin);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -553,6 +556,11 @@ public static class LocalLmTools
         catch (ArgumentException ex)
         {
             ObserveFailure(ex);
+            return LocalLmText.InvalidRequest(ex.Message);
+        }
+        catch (JsonException ex)
+        {
+            UsageCall.Current?.Refused("invalid_input");
             return LocalLmText.InvalidRequest(ex.Message);
         }
         catch (Exception ex)

@@ -27,6 +27,12 @@ public interface ILocalModelClient
     Task<LocalJobResult<IReadOnlyList<string>>> ListModelsAsync(
         CancellationToken cancellationToken = default);
 
+    Task<LocalJobResult<string>> RoutedStructuredChatAsync(
+        LocalTaskProfile profile, string prompt, string system,
+        LocalWorkloadMetadata workload, string? modelOverride, int? requestedContextTokens,
+        StructuredOutputSchema outputSchema, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("Structured output is not supported by this client.");
+
     Task<LocalJobResult<LocalModelsStatusOutput>> GetModelsStatusAsync(
         CancellationToken cancellationToken = default);
 

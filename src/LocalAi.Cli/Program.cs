@@ -312,12 +312,13 @@ static async Task<int> RunAsync(string[] args, bool machineReadable, CommandStre
             "ask",
             "ask:" + PrimarySource(ask!.Files, "prompt"),
             ask.Profile,
-            (tasks, inner) => tasks.AskAsync(
+            async (tasks, inner) => await tasks.AskAsync(
                 ask.Profile,
                 ask.Prompt,
                 ask.Files,
                 ask.Model,
-                inner),
+                inner,
+                await AskCommand.ReadSchemaAsync(ask.SchemaPath, inner)),
             machineReadable,
             token, streams));
     }

@@ -28,7 +28,7 @@ public sealed class BrokerLocalModelClient(IBrokerClient broker) : ILocalModelCl
         return new LocalJobResult<string>(result.Value.Content, result.Receipt);
     }
 
-    public async Task<LocalJobResult<string>> RoutedChatAsync(
+    public Task<LocalJobResult<string>> RoutedChatAsync(
         LocalTaskProfile profile,
         string prompt,
         string? system,
@@ -38,7 +38,22 @@ public sealed class BrokerLocalModelClient(IBrokerClient broker) : ILocalModelCl
         string? modelOverride,
         int? requestedContextTokens,
         LocalJobPriority priority,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        RoutedChatCoreAsync(profile, prompt, system, imagesBase64, workload, workflow,
+            modelOverride, requestedContextTokens, priority, null, cancellationToken);
+
+    public Task<LocalJobResult<string>> RoutedStructuredChatAsync(
+        LocalTaskProfile profile, string prompt, string system,
+        LocalWorkloadMetadata workload, string? modelOverride, int? requestedContextTokens,
+        StructuredOutputSchema outputSchema, CancellationToken cancellationToken = default) =>
+        RoutedChatCoreAsync(profile, prompt, system, null, workload, null,
+            modelOverride, requestedContextTokens, LocalJobPriority.Foreground, outputSchema, cancellationToken);
+
+    private async Task<LocalJobResult<string>> RoutedChatCoreAsync(
+        LocalTaskProfile profile, string prompt, string? system, IReadOnlyList<string>? imagesBase64,
+        LocalWorkloadMetadata workload, LocalWorkflowHint? workflow, string? modelOverride,
+        int? requestedContextTokens, LocalJobPriority priority, StructuredOutputSchema? outputSchema,
+        CancellationToken cancellationToken)
     {
         var request = LocalJobRequestFactory.CreateRoutedChat(
             DeduplicationKey(
@@ -46,7 +61,8 @@ public sealed class BrokerLocalModelClient(IBrokerClient broker) : ILocalModelCl
                 prompt,
                 system,
                 imagesBase64,
-                workflow?.CatalogVersion),
+                outputSchema is null ? workflow?.CatalogVersion :
+                    workflow?.CatalogVersion + "|schema:" + System.Text.Json.JsonSerializer.Serialize(outputSchema)),
             priority,
             profile,
             prompt,
@@ -54,7 +70,8 @@ public sealed class BrokerLocalModelClient(IBrokerClient broker) : ILocalModelCl
             imagesBase64,
             workload,
             workflow,
-            requestedContextTokens);
+            requestedContextTokens,
+            outputSchema: outputSchema);
         if (modelOverride is not null)
         {
             request = LocalJobRequestFactory.ResolveRoutedChat(request, modelOverride);
