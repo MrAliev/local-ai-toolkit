@@ -3,6 +3,17 @@ using LocalLm.Core;
 using LocalLm.Core.Resources;
 using LocalLm.Mcp;
 using System.Runtime.InteropServices;
+using System.Text.Json;
+using System.IO.Pipelines;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using ModelContextProtocol.Client;
+using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
+using System.Diagnostics;
+using System.Text.RegularExpressions;
+using LocalAi.Cli;
+using LocalAi.Broker;
 
 namespace LocalLm.Tests;
 
@@ -29,6 +40,202 @@ public sealed class TranslateLocalReadsAFileTests : IDisposable
         "localai-translate-tool-" + Guid.NewGuid().ToString("N")));
 
     public TranslateLocalReadsAFileTests() => Directory.CreateDirectory(_root);
+
+    [Fact]
+    public async Task The_real_cli_delivers_a_completed_checkpoint_with_zero_model_calls()
+    {
+        var document = Write("cli-input.txt", English);
+        var target = Path.Combine(_root, "cli-output.txt");
+        var checkpoint = Path.Combine(_root, "cli-checkpoint");
+        var expected = await new LocalTasks(new RecordingClient(Russian)).TranslateAsync(English, "English", "Russian", false,
+            TranslationDelivery.ToFile, TestContext.Current.CancellationToken, checkpoint);
+        var start = new ProcessStartInfo("dotnet")
+        {
+            UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true,
+        };
+        start.Environment["LOCALAI_LANGUAGE"] = "en";
+        foreach (var argument in new[] { typeof(HookInstaller).Assembly.Location, "translate", "--in", document,
+            "--from", "English", "--to", "Russian", "--checkpoint", checkpoint, "--out", target, "--json" })
+            start.ArgumentList.Add(argument);
+        using var process = Process.Start(start) ?? throw new InvalidOperationException("Cannot start CLI.");
+        var outputTask = process.StandardOutput.ReadToEndAsync(TestContext.Current.CancellationToken);
+        var errorTask = process.StandardError.ReadToEndAsync(TestContext.Current.CancellationToken);
+        try { await process.WaitForExitAsync(TestContext.Current.CancellationToken); }
+        finally { if (!process.HasExited) process.Kill(entireProcessTree: true); }
+        var output = await outputTask;
+        var error = await errorTask;
+        var id = Regex.Match(error, @"Call ([0-9a-f-]{36})");
+        Assert.True(id.Success, error);
+        var callId = Guid.Parse(id.Groups[1].Value);
+        var store = new UsageReportStore(ModelResidencyPolicyStore.DefaultRuntimeRoot);
+        try
+        {
+            Assert.True(process.ExitCode == 0, output + error);
+            Assert.Equal(expected.Answer, File.ReadAllText(target));
+            using var json = JsonDocument.Parse(output);
+            var data = json.RootElement.GetProperty("data");
+            Assert.Equal(0, data.GetProperty("modelCalls").GetInt32());
+            Assert.Equal("translation_checkpoint", data.GetProperty("reason").GetString());
+            Assert.Equal(0, data.GetProperty("localTokensProcessedEstimate").GetInt32());
+            var usage = await store.ReadAsync(callId, TestContext.Current.CancellationToken);
+            Assert.NotNull(usage);
+            Assert.Equal(UsageModelState.NotCalled, usage.Models.State);
+            Assert.Equal(UsageCache.Hit, usage.Models.Cache);
+            Assert.Empty(usage.Models.Actual);
+            Assert.Equal(UsageDelivery.Delivered, usage.Outcome.Delivery);
+        }
+        finally { File.Delete(Path.Combine(store.ReportsDirectory, $"{callId:N}.json")); }
+    }
+
+    [Fact]
+    public async Task Mcp_binds_translation_checkpoints_and_preserves_the_output_boundary()
+    {
+        var model = new RecordingClient(Russian);
+        var incoming = new Pipe();
+        var outgoing = new Pipe();
+        var target = Path.Combine(_root, "mcp-output.txt");
+        var builder = Host.CreateApplicationBuilder();
+        builder.Services.AddSingleton(new LocalTasks(model));
+        builder.Services.AddMcpServer().WithStreamServerTransport(incoming.Reader.AsStream(), outgoing.Writer.AsStream())
+            .WithToolsFromAssembly(typeof(LocalLmTools).Assembly);
+        using var host = builder.Build();
+        await host.StartAsync(TestContext.Current.CancellationToken);
+        try
+        {
+            await using var client = await McpClient.CreateAsync(new StreamClientTransport(incoming.Writer.AsStream(), outgoing.Reader.AsStream()),
+                cancellationToken: TestContext.Current.CancellationToken);
+            var request = new CallToolRequestParams
+            {
+                Name = "translate_local",
+                Arguments = new Dictionary<string, JsonElement>
+                {
+                    ["sourceLanguage"] = JsonSerializer.SerializeToElement("English"),
+                    ["targetLanguage"] = JsonSerializer.SerializeToElement("Russian"),
+                    ["path"] = JsonSerializer.SerializeToElement(Write("mcp-input.txt", English)),
+                    ["outPath"] = JsonSerializer.SerializeToElement(target),
+                    ["checkpointDirectory"] = JsonSerializer.SerializeToElement(Path.Combine(_root, "mcp-checkpoint")),
+                },
+            };
+            var first = await client.CallToolAsync(request, TestContext.Current.CancellationToken);
+            Assert.NotEqual(true, first.IsError);
+            var expected = File.ReadAllText(target);
+            File.Delete(target);
+            var next = await client.CallToolAsync(request, TestContext.Current.CancellationToken);
+            Assert.NotEqual(true, next.IsError);
+            Assert.Single(model.Profiles);
+            Assert.Equal(expected, File.ReadAllText(target));
+            var answer = string.Join("\n", next.Content.OfType<TextContentBlock>().Select(block => block.Text));
+            Assert.Contains(target, answer, StringComparison.Ordinal);
+            Assert.Contains(LocalLmText.TranslationCheckpointReturned, answer, StringComparison.Ordinal);
+            Assert.DoesNotContain(Russian, answer, StringComparison.Ordinal);
+            request.Arguments.Remove("outPath");
+            var inline = await client.CallToolAsync(request, TestContext.Current.CancellationToken);
+            var wrapped = string.Join("\n", inline.Content.OfType<TextContentBlock>().Select(block => block.Text));
+            Assert.Contains("<untrusted-content", wrapped, StringComparison.Ordinal);
+            Assert.Contains(Russian, wrapped, StringComparison.Ordinal);
+            Assert.Single(model.Profiles);
+        }
+        finally { await host.StopAsync(TestContext.Current.CancellationToken); }
+    }
+
+    [Fact]
+    public async Task Output_inside_a_checkpoint_is_refused_before_translation()
+    {
+        var checkpoint = Path.Combine(_root, "checkpoint");
+        Directory.CreateDirectory(checkpoint);
+        var model = new RecordingClient(Russian);
+        var answer = await LocalLmTools.TranslateLocal(new LocalTasks(model), "English", "Russian", source: English,
+            outPath: Path.Combine(checkpoint, "output.txt"), checkpointDirectory: checkpoint,
+            cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Contains(LocalLmText.TranslationCheckpointOutputConflict(checkpoint), answer, StringComparison.Ordinal);
+        Assert.Empty(model.Profiles);
+        Assert.Empty(Directory.EnumerateFileSystemEntries(checkpoint));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task An_output_alias_cannot_replace_a_checkpoint_manifest(bool duringTranslation)
+    {
+        if (!OperatingSystem.IsWindows()) Assert.Skip("Windows hard-link regression.");
+        var checkpoint = Path.Combine(_root, "checkpoint");
+        var manifest = Path.Combine(checkpoint, "session.json");
+        var target = Path.Combine(_root, "target.txt");
+        if (!duringTranslation)
+            await new LocalTasks(new RecordingClient(Russian)).TranslateAsync(English, "English", "Russian", false,
+                TranslationDelivery.ToCaller, TestContext.Current.CancellationToken, checkpoint);
+        byte[]? expectedManifest = null;
+        void Link()
+        {
+            expectedManifest = File.ReadAllBytes(manifest);
+            Assert.True(CreateHardLink(target, manifest, IntPtr.Zero));
+        }
+        if (!duringTranslation) Link();
+        var model = new RecordingClient(Russian, duringTranslation ? Link : null);
+        var answer = await LocalLmTools.TranslateLocal(new LocalTasks(model), "English", "Russian", source: English,
+            outPath: target, checkpointDirectory: checkpoint, cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Contains(LocalLmText.TranslationCheckpointOutputConflict(checkpoint), answer, StringComparison.Ordinal);
+        Assert.Equal(expectedManifest, File.ReadAllBytes(manifest));
+        Assert.Equal(duringTranslation ? 1 : 0, model.Profiles.Count);
+        File.Delete(target);
+        var retry = new RecordingClient("must not run");
+        await LocalLmTools.TranslateLocal(new LocalTasks(retry), "English", "Russian", source: English, outPath: target,
+            checkpointDirectory: checkpoint, cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Empty(retry.Profiles);
+        Assert.StartsWith(Russian, File.ReadAllText(target), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Cancelled_translation_publication_preserves_the_previous_complete_file()
+    {
+        var target = Write("target.txt", "previous complete text");
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => TranslationFileOutput.WriteAsync(target,
+            new string('x', 100_000), null, null, cancellation.Token));
+        Assert.Equal("previous complete text", File.ReadAllText(target));
+        Assert.Empty(Directory.EnumerateFiles(_root, "*.tmp"));
+    }
+
+    [Fact]
+    public async Task A_checkpoint_retries_failed_output_without_repeating_translation()
+    {
+        var source = Write("input.txt", English);
+        var target = Path.Combine(_root, "output.txt");
+        var checkpoint = Path.Combine(_root, "checkpoint");
+        var first = new RecordingClient(Russian, () => Directory.CreateDirectory(target));
+        await LocalLmTools.TranslateLocal(new LocalTasks(first), "English", "Russian", path: source,
+            outPath: target, checkpointDirectory: checkpoint, cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Single(first.Profiles);
+        Directory.Delete(target);
+        var next = new RecordingClient("unexpected repeated inference");
+        var answer = await LocalLmTools.TranslateLocal(new LocalTasks(next), "English", "Russian", path: source,
+            outPath: target, checkpointDirectory: checkpoint, cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Empty(next.Profiles);
+        Assert.StartsWith(Russian, File.ReadAllText(target), StringComparison.Ordinal);
+        Assert.DoesNotContain(Russian, answer, StringComparison.Ordinal);
+        Assert.Contains(LocalLmText.TranslationCheckpointReturned, answer, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Checkpoint_file_delivery_preserves_more_than_the_inline_character_limit()
+    {
+        var document = Write("long-input.txt", new string('x', 40_000));
+        var translated = new string('Ж', 60_000);
+        var target = Path.Combine(_root, "long-output.txt");
+        var checkpoint = Path.Combine(_root, "long-checkpoint");
+        var model = new RecordingClient(translated);
+        var first = await LocalLmTools.TranslateLocal(new LocalTasks(model), "English", "Russian", path: document,
+            outPath: target, checkpointDirectory: checkpoint, cancellationToken: TestContext.Current.CancellationToken);
+        var expected = File.ReadAllText(target);
+        Assert.StartsWith(translated, expected, StringComparison.Ordinal);
+        Assert.DoesNotContain(translated, first, StringComparison.Ordinal);
+        File.Delete(target);
+        await LocalLmTools.TranslateLocal(new LocalTasks(model), "English", "Russian", path: document,
+            outPath: target, checkpointDirectory: checkpoint, cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Single(model.Profiles);
+        Assert.Equal(expected, File.ReadAllText(target));
+    }
 
     [Fact]
     public async Task Code_only_file_is_written_unchanged_without_a_model_or_attribution()

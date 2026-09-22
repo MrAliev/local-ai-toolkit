@@ -372,4 +372,7 @@
   <data name="TranslationCheckpointReturned" xml:space="preserve">
     <value>Translation restored from the checkpoint. No model was called; new local tokens: 0. Cloud-token comparisons describe this delivery, not the original translation run.</value>
   </data>
+  <data name="TranslationCheckpointOutputConflict" xml:space="preserve">
+    <value>The output must be outside translation checkpoint '{0}' and must not alias its files.</value>
+  </data>
 </root>

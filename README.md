@@ -710,6 +710,24 @@ text-layer, damaged-document and raster-limit checks, plus the limits of that ev
 
 Languages are given as **names**, not codes: `--to Russian`, not `--to ru`.
 
+For resumable translation, add `--checkpoint translation-progress` (MCP
+`translate_local`: `checkpointDirectory`). Repeat the same request after cancellation
+or a failed output write. Structurally validated fragments are saved atomically and
+reused; protected fenced code is copied unchanged. A fully cached result makes no model
+call and does not replay old token counts or timings. Structural validation does not
+certify the translation's meaning or language.
+
+Use an empty directory for a new session. Changes to input text, source/target languages,
+Markdown mode, routing catalog, processor build or UI language require a new directory.
+Checkpoint records contain translated text and receipts, are limited to 4 MiB each,
+and allow one writer at a time. Keep the output outside the checkpoint directory;
+aliases of the source or checkpoint files are refused. File output is published by
+atomic replacement, preserving the old file on cancellation or failure.
+
+```powershell
+lai localai translate --in manual.md --from English --to Russian --markdown --checkpoint translation-progress --out manual.ru.md
+```
+
 With `--markdown`, a document containing only fenced code blocks and whitespace is
 returned unchanged without calling a model or adding a translation note. Local token
 usage is zero; cloud token savings are not applicable. In `--json`, this successful

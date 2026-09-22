@@ -13,6 +13,25 @@ namespace LocalAi.IntegrationTests;
 /// </summary>
 public sealed class TranslateCommandTests
 {
+    [Fact]
+    public void A_translation_can_request_an_explicit_checkpoint_directory()
+    {
+        Assert.True(TranslateCommand.TryParse(["hello", "--from", "English", "--to", "Russian", "--checkpoint", "progress"],
+            false, out var request, out _));
+        Assert.Equal("progress", request!.CheckpointDirectory);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("--out")]
+    public void A_checkpoint_directory_must_have_a_value(string value)
+    {
+        Assert.False(TranslateCommand.TryParse(["hello", "--from", "English", "--to", "Russian", "--checkpoint", value],
+            false, out _, out var refusal));
+        Assert.Equal("checkpoint_value_missing", refusal!.Code);
+    }
+
     [Theory]
     [InlineData(false, false)]
     [InlineData(false, true)]
@@ -40,6 +59,7 @@ public sealed class TranslateCommandTests
             {
                 typeof(HookInstaller).Assembly.Location, "translate", "--in", input,
                 "--from", "English", "--to", "Russian", "--markdown",
+                "--checkpoint", Path.Combine(root, "checkpoint"),
             }) start.ArgumentList.Add(argument);
             if (json) start.ArgumentList.Add("--json");
             if (writeFile)
