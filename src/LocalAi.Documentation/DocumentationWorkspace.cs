@@ -11,7 +11,8 @@ public static class DocumentationWorkspace
     public static string Snapshot(WorkingIndexIdentity identity) => identity.HeadCommit + ":" + identity.HeadTree +
         (identity.SemanticDirtyHash is null ? "" : ":" + identity.SemanticDirtyHash);
 
-    public static DocumentationBuildInput Capture(string workingRoot, string runtimeRoot, int limit = 5, CancellationToken cancellationToken = default)
+    public static DocumentationBuildInput Capture(string workingRoot, string runtimeRoot, int limit = 5, CancellationToken cancellationToken = default,
+        string? path = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var identity = RuntimeIndexLayout.Inspect(workingRoot, runtimeRoot);
@@ -48,7 +49,7 @@ public static class DocumentationWorkspace
             catch (IOException) { throw new DocumentationValidationException(["index_outdated"]); }
         }
         var input = new DocumentationBuildInput(identity.WorkingRoot.Value, Snapshot(identity), DocumentationInputs.CreateScoped(index, ReadSource,
-            paths => History(identity.WorkingRoot.Value, identity.HeadCommit, paths, cancellationToken), limit));
+            paths => History(identity.WorkingRoot.Value, identity.HeadCommit, paths, cancellationToken), limit, path, cancellationToken));
         if (Snapshot(RuntimeIndexLayout.Inspect(workingRoot, runtimeRoot)) != input.Snapshot) throw new DocumentationValidationException(["index_outdated"]);
         return input;
     }

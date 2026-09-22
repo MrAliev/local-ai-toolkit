@@ -1078,7 +1078,7 @@
   <data name="DocsSelectionConflict" xml:space="preserve"><value>Укажите либо --limit, либо --all.</value></data>
   <data name="DocsSourcesChanged" xml:space="preserve"><value>Исходники изменились после сборки пакета. Перед применением снова выполните localai docs build --root {0}.</value></data>
   <data name="DocsSubset" xml:space="preserve"><value>Выбран поднабор: до {0} публичных типов.</value></data>
-  <data name="DocsUsage" xml:space="preserve"><value>Использование: localai docs build --root &lt;repo&gt; [--limit N | --all] [--standalone-html] [--json]; localai docs apply --root &lt;repo&gt; [--json]; localai docs prune --root &lt;repo&gt; [--keep N] [--dry-run | --apply] [--json]; localai docs pin|unpin --root &lt;repo&gt; --package &lt;package-id&gt; [--json]</value></data>
+  <data name="DocsUsage" xml:space="preserve"><value>Использование: localai docs build --root &lt;repo&gt; [--path &lt;relative-path&gt;] [--plan] [--limit N | --all] [--standalone-html] [--json]; localai docs apply --root &lt;repo&gt; [--json]; localai docs prune --root &lt;repo&gt; [--keep N] [--dry-run | --apply] [--json]; localai docs pin|unpin --root &lt;repo&gt; --package &lt;package-id&gt; [--json]</value></data>
   <data name="DocsValidatingType" xml:space="preserve"><value>Проверяется документация для {0}.</value></data>
   <data name="DocsRenderingType" xml:space="preserve"><value>Формируется документ для {0}.</value></data>
   <data name="DocsValidationFailed" xml:space="preserve"><value>Не удалось подготовить документацию для {0}: {1}</value></data>
@@ -1109,4 +1109,10 @@
   <data name="DocsRetention_unknown_entry" xml:space="preserve"><value>нераспознанный файл сохраняется</value></data>
   <data name="DocsRetention_outside_retention" xml:space="preserve"><value>сверх лимита хранения и без защиты</value></data>
   <data name="DocsRetention_unreferenced" xml:space="preserve"><value>не используется сохраняемыми версиями</value></data>
+  <data name="DocsScopeInvalid" xml:space="preserve"><value>Недопустимый путь документации «{0}». Укажите точный путь файла или папки относительно репозитория, без переходов к родительским папкам.</value></data>
+  <data name="DocsScopeEmpty" xml:space="preserve"><value>По пути документации «{0}» нет публичных типов C# с точной индексацией.</value></data>
+  <data name="DocsPlanHeader" xml:space="preserve"><value>Область документации: {0}; снимок {1}; типов {2}.</value></data>
+  <data name="DocsPlanType" xml:space="preserve"><value>Тип: {0} ({1})</value></data>
+  <data name="DocsPlanSources" xml:space="preserve"><value>  Объявления в исходниках: {0}</value></data>
+  <data name="DocsPlanDependencies" xml:space="preserve"><value>  Исходники зависимостей: {0}</value></data>
 </root>

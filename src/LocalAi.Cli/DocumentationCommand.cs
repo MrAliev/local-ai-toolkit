@@ -15,6 +15,7 @@ internal static class DocumentationCommand
         var operation = args.FirstOrDefault() ?? "";
         var command = "docs " + operation;
         var root = ""; var limit = 5; var all = false; var namedLimit = false; var standaloneHtml = false;
+        string? selectedPath = null; var planOnly = false;
         var keep = 5; var namedKeep = false; var dryRun = true; var namedAction = false; var package = "";
         string T(string key, params object?[] values) => CliText.Catalogue.Format(key, values);
         int Refuse(string code, string message, int exit)
@@ -34,6 +35,8 @@ internal static class DocumentationCommand
                     return Refuse("invalid_arguments", T("DocsLimitInvalid"), 2);
             }
             else if (operation == "build" && args[i] == "--all" && !all) all = true;
+            else if (operation == "build" && args[i] == "--path" && selectedPath is null && i + 1 < args.Length && !args[i + 1].StartsWith("--", StringComparison.Ordinal)) selectedPath = args[++i];
+            else if (operation == "build" && args[i] == "--plan" && !planOnly) planOnly = true;
             else if (operation == "build" && args[i] == "--standalone-html" && !standaloneHtml) standaloneHtml = true;
             else if (operation == "prune" && args[i] == "--keep" && !namedKeep)
             {
@@ -49,6 +52,8 @@ internal static class DocumentationCommand
         }
         if (root.Length == 0) return Refuse("invalid_arguments", T("DocsRootRequired"), 2);
         if (all && namedLimit) return Refuse("invalid_arguments", T("DocsSelectionConflict"), 2);
+        try { selectedPath = DocumentationPathScope.Normalize(selectedPath); }
+        catch (DocumentationValidationException) { return Refuse("scope_invalid", T("DocsScopeInvalid", selectedPath), 2); }
         if (operation is "pin" or "unpin" && (package.Length != 32 || package.Any(c => !Uri.IsHexDigit(c))))
             return Refuse("invalid_arguments", T("DocsPackageIdRequired"), 2);
         runtimeRoot ??= RuntimeIndexLayout.DefaultRuntimeRoot;
@@ -91,8 +96,28 @@ internal static class DocumentationCommand
                 return 0;
             }
             streams.Error.WriteLine(all ? T("DocsAll") : T("DocsSubset", limit));
-            var input = DocumentationWorkspace.Capture(root, runtimeRoot, all ? int.MaxValue : limit, cancellationToken);
+            var input = DocumentationWorkspace.Capture(root, runtimeRoot, all ? int.MaxValue : limit, cancellationToken, selectedPath);
             streams.Error.WriteLine(T("DocsSelectedCount", input.Units.Count));
+            var plan = DocumentationSelectionPlan.Create(input, selectedPath, all ? int.MaxValue : limit);
+            void ShowPlan(TextWriter writer)
+            {
+                writer.WriteLine(T("DocsPlanHeader", plan.Path ?? ".", plan.Snapshot, plan.Units.Count));
+                foreach (var unit in plan.Units)
+                {
+                    writer.WriteLine(T("DocsPlanType", unit.Name, unit.SymbolId));
+                    writer.WriteLine(T("DocsPlanSources", string.Join(", ", unit.SourcePaths)));
+                    writer.WriteLine(T("DocsPlanDependencies", string.Join(", ", unit.DependencyPaths)));
+                }
+            }
+            if (planOnly)
+            {
+                LocalAi.Contracts.UsageCall.Current?.NoInference();
+                LocalAi.Contracts.UsageCall.Current?.Comparison.NotApplicable("documentation_plan");
+                if (machineReadable) streams.Out.WriteLine(MachineOutput.Answer(command, plan));
+                else ShowPlan(streams.Out);
+                return 0;
+            }
+            if (selectedPath is not null) ShowPlan(streams.Error);
             DocumentationGenerator? generator = null;
             generate ??= (content, token) =>
             {
@@ -134,8 +159,9 @@ internal static class DocumentationCommand
         {
             var code = error.Errors.FirstOrDefault() ?? "documentation_failed";
             var key = code switch { "index_outdated" => "DocsIndexOutdated", "sources_changed" => "DocsSourcesChanged", "package_missing" => "DocsPackageMissing",
-                "build_already_running" => "DocsBuildAlreadyRunning", "runtime_inside_repository" => "DocsRuntimeInsideRepository", "destination_link" => "DocsDestinationLink", _ => "DocsOperationFailed" };
-            return Refuse(code, T(key, key == "DocsOperationFailed" ? error.Message : '"' + (error.Data["path"] as string ?? root) + '"'), 65);
+                "build_already_running" => "DocsBuildAlreadyRunning", "runtime_inside_repository" => "DocsRuntimeInsideRepository", "destination_link" => "DocsDestinationLink",
+                "scope_empty" => "DocsScopeEmpty", _ => "DocsOperationFailed" };
+            return Refuse(code, T(key, key == "DocsScopeEmpty" ? selectedPath : key == "DocsOperationFailed" ? error.Message : '"' + (error.Data["path"] as string ?? root) + '"'), 65);
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
         {
