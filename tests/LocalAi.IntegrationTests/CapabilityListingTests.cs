@@ -58,12 +58,12 @@ public sealed class CapabilityListingTests
     /// <summary>
     /// The mapping to MCP is the one field here that exists nowhere else in the code, so it is a
     /// first copy rather than a second — and a first copy still has to be true. The names are held
-    /// against <see cref="McpToolNames"/>, which <c>LocalLm.Tests</c> in turn holds against the
-    /// attributes the server actually exposes: a renamed tool breaks the build rather than the
+    /// against <see cref="McpToolNames"/>, which the two MCP test projects hold against the
+    /// attributes their servers actually expose: a renamed tool breaks the build rather than the
     /// listing.
     /// </summary>
     [Fact]
-    public void Every_tool_named_is_one_the_local_model_server_exposes()
+    public void Every_tool_named_is_one_a_managed_mcp_server_exposes()
     {
         var named = MachineOutput.Capabilities().Commands
             .Select(command => command.Tool)
@@ -71,7 +71,7 @@ public sealed class CapabilityListingTests
             .ToArray();
 
         Assert.NotEmpty(named);
-        Assert.All(named, tool => Assert.Contains(tool, McpToolNames.LocalLm, StringComparer.Ordinal));
+        Assert.All(named, tool => Assert.Contains(tool, McpToolNames.LocalLm.Concat(McpToolNames.CodeSearch), StringComparer.Ordinal));
     }
 
     /// <summary>

@@ -246,6 +246,49 @@ public static class CodeSearchTools
         }
     }
 
+    [McpServerTool(Name = "analyze_impact")]
+    [Description("""
+        First C# impact pilot: returns direct precise indexed references and incoming implementation,
+        override and base-type relationships for a symbol. Coordinates are one-based UTF-16,
+        end-exclusive. Every fact has source coordinates, a document SHA-256 and a stable evidence ID;
+        the report identifies the exact index snapshot and whether the evidence limit truncated it.
+        Explain only the supplied facts, cite their evidence IDs, and label hypotheses separately.
+        This is not transitive reachability or proof of runtime breakage. Missing edges do not prove
+        no impact. Unsaved buffers, other languages and heuristic results are excluded. No model runs.
+        Source-derived data is wrapped in nonce-bound untrusted-content markers.
+        """)]
+    public static string AnalyzeImpact(SemanticNavigationGateway gateway, SyncNotice notice,
+        [Description("Repository-relative C# source path.")] string path,
+        [Description("Line counted from 1, as search_code prints it.")] int line,
+        [Description("UTF-16 column counted from 1.")] int column = 1,
+        [Description("Maximum returned evidence items, 1..10000. Default 200; truncation is explicit.")] int limit = 200,
+        [Description("Repository root. Defaults to the repository containing the working directory.")] string? root = null,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!SemanticDocumentPath.IsRepositoryRelative(path))
+        { UsageCall.Current?.Refused("invalid_path"); return CodeSearchText.PathNotRelative(path); }
+        if (!SourcePosition.TryFromOneBased(line, column, out var position))
+        { UsageCall.Current?.Refused("invalid_position"); return CodeSearchText.PositionNotFromOne(line, column); }
+        if (limit is < 1 or > 10_000)
+        { UsageCall.Current?.Refused("invalid_limit"); return "invalid_limit: 1..10000"; }
+        try
+        {
+            var report = gateway.AnalyzeImpact(path, position.Line, position.Utf16Column, limit, root, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            UsageCall.Current?.NoInference();
+            return notice.Above(root, SyncNoticeAudience.Answer) + UntrustedContent.Wrap(
+                System.Text.Json.JsonSerializer.Serialize(SemanticImpactOutput.Create(report)), "analyze_impact");
+        }
+        catch (SemanticNavigationNotReadyException error) { return NotReady(error, notice, root); }
+        catch (SemanticSnapshotMismatchException error)
+        { UsageCall.Current?.Refused("semantic_snapshot_mismatch"); return "semantic_snapshot_mismatch: " + error.Message; }
+        catch (InvalidOperationException error) when (error.Message.StartsWith("impact_", StringComparison.Ordinal))
+        { UsageCall.Current?.Refused(error.Message); return error.Message; }
+        catch (Exception error) when (error is not OperationCanceledException)
+        { ObserveFailure(error); return CodeSearchText.ToolFailed("analyze_impact", Describe(error)); }
+    }
+
     [McpServerTool(Name = "find_relationships")]
     [Description("""
         Queries the exact snapshot-bound SIDX relationship graph for the symbol at a line and

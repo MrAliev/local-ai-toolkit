@@ -74,6 +74,7 @@ public static class UsageReportingRegistry
             ("docs apply", UsageComparisonKind.NotApplicable, null),
             ("docs prune", UsageComparisonKind.NotApplicable, null), ("docs pin", UsageComparisonKind.NotApplicable, null),
             ("docs unpin", UsageComparisonKind.NotApplicable, null),
+            ("semantic impact", UsageComparisonKind.ContextReduction, "analyze_impact"),
         }) yield return new(UsageSurface.Cli, "localai", command, new(comparison, UsageResponseShape.Envelope), tool);
 
         foreach (var (command, tool) in new (string, string?)[]
