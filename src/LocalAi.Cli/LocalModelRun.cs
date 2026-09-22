@@ -36,7 +36,9 @@ public sealed record LocalModelData(
     /// empty on almost every call teaches a reader to skip it.
     [property: JsonPropertyName("vramResidentPercent"), JsonPropertyOrder(8),
                JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    int? VramResidentPercent = null);
+    int? VramResidentPercent = null,
+    [property: JsonPropertyName("validation"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    StructuredValidationResult? Validation = null);
 
 /// <summary>
 /// What <c>translate</c> tells a program: the shared block, plus the two figures only this command
@@ -106,6 +108,17 @@ internal static class LocalModelRun
         try
         {
             var result = await job(Tasks(Watching(streams.Error)), cancellationToken);
+            if (result.Validation is { IsValid: false } rejected)
+            {
+                if (machineReadable) streams.Out.WriteLine(MachineEnvelope.StructuredRefusal(command, rejected));
+                else
+                {
+                    streams.Error.WriteLine(result.Notice);
+                    streams.Error.WriteLine("result_rejected: " + LocalModelOutput.Answer(
+                        origin + ":validation", System.Text.Json.JsonSerializer.Serialize(rejected), Console.IsErrorRedirected));
+                }
+                return 65;
+            }
             if (machineReadable)
             {
                 streams.Out.WriteLine(MachineOutput.Answer(command, Describe(origin, result)));
@@ -116,6 +129,8 @@ internal static class LocalModelRun
             // `localai ask "…" x.cs > out.md` leaves a file with the answer and nothing else.
             // `hook` already puts its own synchronization line on stderr for this reason.
             streams.Error.WriteLine(result.Notice);
+            if (result.Validation is { } validation)
+                streams.Error.WriteLine("validation: " + validation.Status);
             streams.Out.WriteLine(LocalModelOutput.Answer(
                 origin,
                 result.Answer,
@@ -283,6 +298,7 @@ internal static class LocalModelRun
             BrokerBootstrapException bootstrap => (bootstrap.Code, bootstrap.Message, 75),
             PdfOutputWriteException output => ("output_not_written", output.Message, 73),
             FileNotFoundException missing => ("file_missing", missing.Message, 2),
+            System.Text.Json.JsonException schema => ("input_rejected", schema.Message, 2),
             // Before ArgumentException, which it derives from: a profile the task will not run is
             // not the same failure as a bound that was exceeded.
             ArgumentOutOfRangeException rejectedProfile =>
@@ -304,7 +320,8 @@ internal static class LocalModelRun
             (long)result.Receipt.ExecutionDuration.TotalMilliseconds,
             result.SavedTokens,
             result.Truncated,
-            Vram(result.Receipt));
+            Vram(result.Receipt),
+            result.Validation);
 
     private static TranslationData Describe(string origin, LocalTranslationResult result) =>
         new(

@@ -256,7 +256,8 @@ public sealed record ChatJobPayload : LocalJobPayload
         LocalTaskProfile? taskProfile = null,
         LocalWorkloadMetadata? workload = null,
         LocalWorkflowHint? workflow = null,
-        int? requestedContextTokens = null)
+        int? requestedContextTokens = null,
+        StructuredOutputSchema? outputSchema = null)
     {
         if (string.IsNullOrWhiteSpace(model) && taskProfile is null)
         {
@@ -298,6 +299,13 @@ public sealed record ChatJobPayload : LocalJobPayload
         Workload = workload;
         Workflow = workflow;
         RequestedContextTokens = requestedContextTokens;
+        if (outputSchema is not null)
+        {
+            if (taskProfile is not (LocalTaskProfile.Extraction or LocalTaskProfile.Classification))
+                throw new ArgumentException("Structured output requires Extraction or Classification.", nameof(outputSchema));
+            outputSchema.EnsureValid();
+            OutputSchema = StructuredOutputSchema.Parse(JsonSerializer.Serialize(outputSchema));
+        }
     }
 
     [JsonInclude]
@@ -329,6 +337,9 @@ public sealed record ChatJobPayload : LocalJobPayload
 
     [JsonInclude]
     public int? RequestedContextTokens { get; private init; }
+
+    [JsonInclude, JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public StructuredOutputSchema? OutputSchema { get; private init; }
 }
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
@@ -839,7 +850,8 @@ public static class LocalJobRequestFactory
         LocalWorkflowHint? workflow = null,
         int? requestedContextTokens = null,
         Guid? jobId = null,
-        DateTimeOffset? createdAtUtc = null) =>
+        DateTimeOffset? createdAtUtc = null,
+        StructuredOutputSchema? outputSchema = null) =>
         Create(
             deduplicationKey,
             priority,
@@ -851,7 +863,8 @@ public static class LocalJobRequestFactory
                 taskProfile,
                 workload,
                 workflow,
-                requestedContextTokens),
+                requestedContextTokens,
+                outputSchema),
             jobId,
             createdAtUtc);
 
@@ -972,7 +985,8 @@ public static class LocalJobRequestFactory
                 chat.TaskProfile,
                 chat.Workload,
                 chat.Workflow,
-                chat.RequestedContextTokens),
+                chat.RequestedContextTokens,
+                chat.OutputSchema),
             request.CreatedAtUtc);
     }
 
