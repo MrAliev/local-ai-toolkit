@@ -150,6 +150,8 @@ internal static class LocalModelRun
         }
         try
         {
+            if (request.OutputPath is { } destination)
+                TranslationFileOutput.Validate(request.InputPath, destination, request.CheckpointDirectory);
             var result = await Tasks(Watching(streams.Error)).TranslateAsync(
                 text,
                 request.From,
@@ -161,7 +163,7 @@ internal static class LocalModelRun
                 request.OutputPath is null
                     ? TranslationDelivery.ToCaller
                     : TranslationDelivery.ToFile,
-                cancellationToken);
+                cancellationToken, request.CheckpointDirectory);
 
             UsageCall.Current?.Validated(result.Validation.Passed);
             if (request.OutputPath is { } path)
@@ -170,10 +172,10 @@ internal static class LocalModelRun
                 {
                     // The document itself, with no provenance markers around it. That is what
                     // `--out` is for: a file wrapped in them would not be a document.
-                    await File.WriteAllTextAsync(path, result.Answer, cancellationToken);
+                    await TranslationFileOutput.WriteAsync(path, result.Answer, request.InputPath, request.CheckpointDirectory, cancellationToken);
                 }
                 catch (Exception failure) when (
-                    failure is IOException or UnauthorizedAccessException or NotSupportedException)
+                    failure is IOException or UnauthorizedAccessException or NotSupportedException or System.ComponentModel.Win32Exception)
                 {
                     UsageCall.Current?.DeliveryFailed("output_not_written");
                     // 73 is EX_CANTCREAT. Not 2 — the command line was right, and the cause is a
@@ -318,8 +320,8 @@ internal static class LocalModelRun
             result.LocalTokensProcessed,
             result.NetCloudContextTokensSaved,
             Vram(result.Receipt),
-            result.NoTranslatableText ? 0 : null,
-            result.NoTranslatableText ? "no_translatable_text" : null);
+            result.NoTranslatableText || result.FromCheckpoint ? 0 : null,
+            result.NoTranslatableText ? "no_translatable_text" : result.FromCheckpoint ? "translation_checkpoint" : null);
 
     private static int? Vram(LocalUsageReceipt? receipt) =>
         receipt?.Routing?.ResidencyShortfall is ResidencyShortfall.None or null
