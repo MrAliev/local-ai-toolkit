@@ -328,6 +328,9 @@
   <data name="PdfOnlyInput" xml:space="preserve">
     <value>Передайте путь к одному PDF за вызов, без других файлов.</value>
   </data>
+  <data name="PdfPagesOnly" xml:space="preserve"><value>Выбор страниц доступен только для одного PDF.</value></data>
+  <data name="PdfPagesInvalid" xml:space="preserve"><value>Укажите положительные номера страниц или включительные диапазоны, например 1,3-5 (не более 4096 символов).</value></data>
+  <data name="PdfPagesOutsideDocument" xml:space="preserve"><value>Выбранные страницы выходят за пределы документа из {0} страниц.</value></data>
   <data name="PdfTogetherUnsupported" xml:space="preserve">
     <value>Для PDF режим together недоступен: страницы читаются по одной.</value>
   </data>

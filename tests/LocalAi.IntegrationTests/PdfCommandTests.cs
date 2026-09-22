@@ -7,6 +7,44 @@ namespace LocalAi.IntegrationTests;
 public sealed class PdfCommandTests
 {
     [Fact]
+    public void Pdf_page_selection_is_accepted_without_renumbering_the_request()
+    {
+        Assert.True(ReadImageCommand.TryParse(["Read", "manual.pdf", "--pages", "4,2-3"], out var request, out _));
+        Assert.Equal("4,2-3", request!.PdfPages);
+    }
+
+    [Theory]
+    [InlineData("image.png", "1", "pdf_pages_requires_pdf")]
+    [InlineData("manual.pdf", "0", "pdf_pages_invalid")]
+    [InlineData("manual.pdf", "3-1", "pdf_pages_invalid")]
+    public void Invalid_page_options_are_refused(string path, string pages, string code)
+    {
+        Assert.False(ReadImageCommand.TryParse(["Read", path, "--pages", pages], out _, out var refusal));
+        Assert.Equal(code, refusal!.Code);
+    }
+
+    [Fact]
+    public void Pdf_page_option_requires_a_value()
+    {
+        Assert.False(ReadImageCommand.TryParse(["Read", "manual.pdf", "--pages"], out _, out var refusal));
+        Assert.Equal("pages_value_missing", refusal!.Code);
+    }
+
+    [Fact]
+    public void Sparse_page_progress_estimates_remaining_selected_pages()
+    {
+        using var culture = TestCulture.Reading("en");
+        using var output = new StringWriter();
+        var now = DateTimeOffset.UnixEpoch;
+        var progress = new LocalRunProgress(output, () => now);
+        progress.Report(new ReadingPdfPage(2, 100) { SelectedIndex = 1, SelectedTotal = 2 });
+        now = now.AddMinutes(1);
+        progress.Report(new ReadingPdfPage(90, 100) { SelectedIndex = 2, SelectedTotal = 2 });
+        Assert.Equal("Reading PDF page 2 of 100." + Environment.NewLine +
+            "Reading PDF page 90 of 100. About 1.0 min left." + Environment.NewLine, output.ToString());
+    }
+
+    [Fact]
     public void Read_image_accepts_a_pdf_with_an_image_task_profile()
     {
         var accepted = ReadImageCommand.TryParse(["Read the tables", "manual.PDF", "--profile", "Ocr"], out var request, out var refusal);

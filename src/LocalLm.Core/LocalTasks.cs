@@ -172,7 +172,8 @@ public sealed class LocalTasks
         LocalTaskProfile profile,
         string? model,
         bool together,
-        CancellationToken ct)
+        CancellationToken ct,
+        string? pdfPages = null)
     {
         ct.ThrowIfCancellationRequested();
         if (!IsImageProfile(profile))
@@ -192,7 +193,9 @@ public sealed class LocalTasks
             throw new ArgumentException(LocalLmText.PdfOnlyInput, nameof(paths));
         if (isPdf && together)
             throw new ArgumentException(LocalLmText.PdfTogetherUnsupported, nameof(together));
-        await using var pdf = isPdf ? await PdfPageReader.OpenAsync(Resolve(paths[0]), ct) : null;
+        if (!isPdf && pdfPages is not null)
+            throw new ArgumentException(LocalLmText.PdfPagesOnly, nameof(pdfPages));
+        await using var pdf = isPdf ? await PdfPageReader.OpenAsync(Resolve(paths[0]), ct, pdfPages) : null;
 
         if (paths.Count > MaxImageCount)
         {
@@ -264,6 +267,11 @@ public sealed class LocalTasks
             }
         }
         var frameCount = pdf?.Pages.Count ?? fullPaths.Count;
+        int PageNumber(int index) => pdf?.PageNumbers[index] ?? index + 1;
+        var totalPdfPages = pdf?.TotalPageCount ?? frameCount;
+        ReadingPdfPage PageStep(int index) => pdfPages is null
+            ? new ReadingPdfPage(PageNumber(index), totalPdfPages)
+            : new ReadingPdfPage(PageNumber(index), totalPdfPages) { SelectedIndex = index + 1, SelectedTotal = frameCount };
 
         const string imageReadingSystem =
             "You are reading images on behalf of another engineer who will never see them. " +
@@ -331,7 +339,7 @@ public sealed class LocalTasks
             var encoded = pdf is not null ? await pdf.ReadNextAsync(token)
                 : Convert.ToBase64String(await File.ReadAllBytesAsync(fullPaths[index], token));
             var size = pdf is not null ? (pdf.Pages[index].Width, pdf.Pages[index].Height) : dimensions[index];
-            var identity = (pdf is not null ? paths[0] + ":page:" + index : fullPaths[index]) + ":" +
+            var identity = (pdf is not null ? paths[0] + ":page:" + (PageNumber(index) - 1) : fullPaths[index]) + ":" +
                 Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(encoded)));
             UsageCall.Current?.Comparison.SourceImage(identity, size.Item1, size.Item2);
             return encoded;
@@ -354,12 +362,12 @@ public sealed class LocalTasks
             for (var index = 0; index < frameCount; index++)
             {
                 ct.ThrowIfCancellationRequested();
-                observer?.Report(new ReadingPdfPage(index + 1, frameCount));
+                observer?.Report(PageStep(index));
                 var one = await AskAsync(question, [await EncodeAsync(index, ct)],
                     pixels[index], index, frameCount);
                 ct.ThrowIfCancellationRequested();
                 if (index != 0) transcript.Append("\n\n");
-                transcript.Append(LocalLmText.PdfPageHeading(index + 1, frameCount))
+                transcript.Append(LocalLmText.PdfPageHeading(PageNumber(index), totalPdfPages))
                     .Append("\n\n").Append(one.Value);
                 receipt = one.Receipt;
             }
@@ -368,7 +376,7 @@ public sealed class LocalTasks
         }
         else if (inOneCall)
         {
-            if (isPdf) observer?.Report(new ReadingPdfPage(1, 1));
+            if (isPdf) observer?.Report(PageStep(0));
             var batch = new List<string>(frameCount);
             for (var index = 0; index < frameCount; index++)
             {
@@ -378,7 +386,7 @@ public sealed class LocalTasks
             // One call, so there is nothing to count inside it. The console keeps the number and
             // spends it on the heartbeat it was going to print anyway.
             if (!isPdf) observer?.Report(new ReadingImages(batch.Count));
-            result = await AskAsync(isPdf ? $"PDF page 1 of 1.\n{question}" : question,
+            result = await AskAsync(isPdf ? $"PDF page {PageNumber(0)} of {totalPdfPages}.\n{question}" : question,
                 batch, isPdf ? pixels[0] : totalImagePixels, 0, 1);
         }
         else
@@ -409,16 +417,16 @@ public sealed class LocalTasks
             for (var index = 0; index < frameCount; index++)
             {
                 ct.ThrowIfCancellationRequested();
-                observer?.Report(isPdf ? new ReadingPdfPage(index + 1, frameCount)
+                observer?.Report(isPdf ? PageStep(index)
                     : new ReadingImage(index + 1, frameCount));
                 var one = await AskAsync(
-                    isPdf ? $"PDF page {index + 1} of {frameCount}. Keep this page number with your findings.\n{question}" : question,
+                    isPdf ? $"PDF page {PageNumber(index)} of {totalPdfPages}. Keep this page number with your findings.\n{question}" : question,
                     [await EncodeAsync(index, ct)],
                     pixels[index],
                     index,
                     frameCount + 1);
                 ct.ThrowIfCancellationRequested();
-                await reducer.AddAsync(isPdf ? $"PDF page {index + 1}:\n{one.Value}" : one.Value, ct);
+                await reducer.AddAsync(isPdf ? $"PDF page {PageNumber(index)}:\n{one.Value}" : one.Value, ct);
             }
 
             var reduced = await reducer.CompleteAsync(ct);

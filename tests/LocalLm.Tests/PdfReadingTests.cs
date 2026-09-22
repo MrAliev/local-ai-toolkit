@@ -2,6 +2,14 @@ using LocalAi.Contracts;
 using System.Globalization;
 using LocalLm.Core;
 using SkiaSharp;
+using LocalLm.Mcp;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using ModelContextProtocol.Client;
+using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
+using System.IO.Pipelines;
+using System.Text.Json;
 
 namespace LocalLm.Tests;
 
@@ -10,6 +18,115 @@ public sealed class PdfReadingTests : IDisposable
     private readonly string root = Path.Combine(Path.GetTempPath(), "localai-pdf-tests-" + Guid.NewGuid().ToString("N"));
 
     public PdfReadingTests() => Directory.CreateDirectory(root);
+
+    [Fact]
+    public async Task Mcp_binds_page_selection_and_returns_original_page_headings()
+    {
+        var model = new RecordingClient();
+        var incoming = new Pipe();
+        var outgoing = new Pipe();
+        var builder = Host.CreateApplicationBuilder();
+        builder.Services.AddSingleton(new LocalTasks(model));
+        builder.Services.AddMcpServer()
+            .WithStreamServerTransport(incoming.Reader.AsStream(), outgoing.Writer.AsStream())
+            .WithToolsFromAssembly(typeof(LocalLmTools).Assembly);
+        using var host = builder.Build();
+        await host.StartAsync(TestContext.Current.CancellationToken);
+        try
+        {
+            await using var client = await McpClient.CreateAsync(
+                new StreamClientTransport(incoming.Writer.AsStream(), outgoing.Reader.AsStream()),
+                cancellationToken: TestContext.Current.CancellationToken);
+            var result = await client.CallToolAsync(new CallToolRequestParams
+            {
+                Name = "read_image",
+                Arguments = new Dictionary<string, JsonElement>
+                {
+                    ["paths"] = JsonSerializer.SerializeToElement(new[] { Pdf(4) }),
+                    ["question"] = JsonSerializer.SerializeToElement("Transcribe"),
+                    ["mode"] = JsonSerializer.SerializeToElement("Ocr"),
+                    ["pages"] = JsonSerializer.SerializeToElement("4,2,2"),
+                },
+            }, TestContext.Current.CancellationToken);
+            Assert.NotEqual(true, result.IsError);
+            Assert.Equal(2, model.Calls.Count);
+            var answer = string.Join("\n", result.Content.OfType<TextContentBlock>().Select(block => block.Text));
+            Assert.Contains("PDF page 2 of 4\n\nreply 1\n\nPDF page 4 of 4\n\nreply 2", answer, StringComparison.Ordinal);
+            Assert.Contains("<untrusted-content", answer, StringComparison.Ordinal);
+        }
+        finally { await host.StopAsync(TestContext.Current.CancellationToken); }
+    }
+
+    [Fact]
+    public async Task Selected_pages_render_only_the_requested_rasters_and_keep_original_numbers()
+    {
+        var client = new RecordingClient();
+        var result = await new LocalTasks(client).ReadImageAsync([Pdf(4)], "Transcribe",
+            LocalTaskProfile.Ocr, null, false, TestContext.Current.CancellationToken, pdfPages: "4,2,2");
+
+        Assert.Equal(2, client.Calls.Count);
+        Assert.Equal("PDF page 2 of 4\n\nreply 1\n\nPDF page 4 of 4\n\nreply 2", result.Answer);
+        foreach (var call in client.Calls)
+        {
+            using var bitmap = SKBitmap.Decode(Convert.FromBase64String(Assert.Single(call.Images)));
+            Assert.Equal(SKColors.Blue, bitmap.GetPixel(bitmap.Width / 2, bitmap.Height / 2));
+        }
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("0")]
+    [InlineData("4-2")]
+    [InlineData("2-99")]
+    [InlineData("3,,4")]
+    [InlineData("2147483648")]
+    public async Task Invalid_page_selection_calls_no_model_and_releases_the_pdf(string selection)
+    {
+        var path = Pdf(4);
+        var client = new RecordingClient();
+        await Assert.ThrowsAsync<ArgumentException>(() => new LocalTasks(client).ReadImageAsync([path], "Read",
+            LocalTaskProfile.Ocr, null, false, TestContext.Current.CancellationToken, selection));
+        Assert.Empty(client.Calls);
+        using var released = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+    }
+
+    [Theory]
+    [InlineData(LocalTaskProfile.VisualAnalysis)]
+    [InlineData(LocalTaskProfile.ImageTranslation)]
+    public async Task A_single_selected_page_keeps_its_original_number_in_the_prompt(LocalTaskProfile profile)
+    {
+        var client = new RecordingClient();
+        await new LocalTasks(client).ReadImageAsync([Pdf(4)], "Read", profile, null, false,
+            TestContext.Current.CancellationToken, "2");
+        var call = Assert.Single(client.Calls);
+        Assert.Contains("PDF page 2 of 4.", call.Prompt, StringComparison.Ordinal);
+        using var bitmap = SKBitmap.Decode(Convert.FromBase64String(Assert.Single(call.Images)));
+        Assert.Equal(SKColors.Blue, bitmap.GetPixel(bitmap.Width / 2, bitmap.Height / 2));
+    }
+
+    [Fact]
+    public async Task Selected_ranges_use_original_numbers_and_selected_counts_in_progress()
+    {
+        var observer = new Observer();
+        var client = new RecordingClient();
+        await new LocalTasks(client, observer).ReadImageAsync([Pdf(5)], "Read", LocalTaskProfile.Ocr,
+            null, false, TestContext.Current.CancellationToken, "5,2-3");
+        Assert.Equal(new[]
+        {
+            new ReadingPdfPage(2, 5) { SelectedIndex = 1, SelectedTotal = 3 },
+            new ReadingPdfPage(3, 5) { SelectedIndex = 2, SelectedTotal = 3 },
+            new ReadingPdfPage(5, 5) { SelectedIndex = 3, SelectedTotal = 3 },
+        }, observer.Steps.OfType<ReadingPdfPage>());
+    }
+
+    [Fact]
+    public async Task Page_selection_for_an_image_is_refused_before_loading_it()
+    {
+        var client = new RecordingClient();
+        await Assert.ThrowsAsync<ArgumentException>(() => new LocalTasks(client).ReadImageAsync(["missing.png"], "Read",
+            LocalTaskProfile.Ocr, null, false, TestContext.Current.CancellationToken, "1"));
+        Assert.Empty(client.Calls);
+    }
 
     [Fact]
     public async Task Ocr_preserves_both_pages_when_a_text_only_merge_would_invent_a_third()
