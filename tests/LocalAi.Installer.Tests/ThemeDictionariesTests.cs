@@ -97,6 +97,8 @@ public sealed class ThemeDictionariesTests
             ("AccentFill", "ControlFill", 3),
             ("AccentForeground", "AccentFill", 4.5),
             ("WindowFill", "AccentFill", 3),
+            ("ScrollThumb", "ScrollTrack", 3),
+            ("ScrollThumbHover", "ScrollTrack", 3),
         ];
         foreach (var (foreground, background, minimum) in pairs)
         {

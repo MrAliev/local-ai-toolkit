@@ -47,8 +47,8 @@
     <SolidColorBrush x:Key="FocusRing" Color="#0067C0" />
     <SolidColorBrush x:Key="SelectionFill" Color="#CCE4F7" />
     <SolidColorBrush x:Key="ScrollTrack" Color="#F5F5F5" />
-    <SolidColorBrush x:Key="ScrollThumb" Color="#C4C4C4" />
-    <SolidColorBrush x:Key="ScrollThumbHover" Color="#A0A0A0" />
+    <SolidColorBrush x:Key="ScrollThumb" Color="#8A8A8A" />
+    <SolidColorBrush x:Key="ScrollThumbHover" Color="#6B6B6B" />
 
     <!-- The raised edge a card gets in dark. Light has none: on white there is nothing to
          lighten, and the card states itself with its border. Present so the key sets match. -->
