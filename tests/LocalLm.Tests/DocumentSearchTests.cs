@@ -14,10 +14,12 @@ namespace LocalLm.Tests;
 
 public sealed partial class PdfReadingTests
 {
-    [Fact]
-    public async Task Document_tools_bind_through_the_real_mcp_sdk_and_wrap_source_text()
+    [Theory]
+    [InlineData("Ocr", "reply", "unverified", 1)]
+    [InlineData("TextLayer", "ALPHA-7319", "layout-unverified", 0)]
+    public async Task Document_tools_bind_through_the_real_mcp_sdk_and_wrap_source_text(string mode, string query, string verification, int calls)
     {
-        _ = Pdf(1);
+        _ = mode == "Ocr" ? Pdf(1) : TextPdf();
         var incoming = new Pipe();
         var outgoing = new Pipe();
         var builder = Host.CreateApplicationBuilder();
@@ -32,16 +34,16 @@ public sealed partial class PdfReadingTests
             await using var client = await McpClient.CreateAsync(new StreamClientTransport(incoming.Writer.AsStream(), outgoing.Reader.AsStream()),
                 cancellationToken: TestContext.Current.CancellationToken);
             var indexed = await client.CallToolAsync("index_documents", new Dictionary<string, object?>
-            { ["sourceDirectory"] = root, ["indexDirectory"] = DocumentIndexPath }, cancellationToken: TestContext.Current.CancellationToken);
+            { ["sourceDirectory"] = root, ["indexDirectory"] = DocumentIndexPath, ["pdfMode"] = mode }, cancellationToken: TestContext.Current.CancellationToken);
             Assert.NotEqual(true, indexed.IsError);
             var result = await client.CallToolAsync("search_documents", new Dictionary<string, object?>
-            { ["indexDirectory"] = DocumentIndexPath, ["query"] = "reply", ["limit"] = 1 }, cancellationToken: TestContext.Current.CancellationToken);
+            { ["indexDirectory"] = DocumentIndexPath, ["query"] = query, ["limit"] = 1 }, cancellationToken: TestContext.Current.CancellationToken);
             var text = string.Join("\n", result.Content.OfType<TextContentBlock>().Select(content => content.Text));
             Assert.NotEqual(true, result.IsError);
             Assert.Contains("<untrusted-content", text);
-            Assert.Contains("reply 1", text);
-            Assert.Contains("\"textVerification\":\"unverified\"", text);
-            Assert.Single(model.Calls);
+            Assert.Contains(query, text);
+            Assert.Contains("\"textVerification\":\"" + verification + "\"", text);
+            Assert.Equal(calls, model.Calls.Count);
         }
         finally
         {
@@ -106,7 +108,7 @@ public sealed partial class PdfReadingTests
             Assert.True(result.Truncated);
             var hit = Assert.Single(result.Hits);
             Assert.Equal(text.Substring(hit.TextOffset, hit.Text.Length), hit.Text);
-            Assert.Equal("needle", text.Substring(hit.OcrOffset, hit.MatchLength));
+            Assert.Equal("needle", text.Substring(hit.OcrOffset!.Value, hit.MatchLength));
             Assert.Equal(UsageModelState.NotCalled, usage.Complete().Models.State);
             Assert.NotNull(usage.Comparison.Scenario("search"));
         }
