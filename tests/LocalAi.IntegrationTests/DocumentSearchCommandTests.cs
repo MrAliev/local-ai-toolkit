@@ -33,6 +33,30 @@ public sealed class DocumentSearchCommandTests
     }
 
     [Fact]
+    public async Task Real_cli_reads_plain_text_with_pdf_text_layer_option_without_a_model()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "localai-native-cli-" + Guid.NewGuid().ToString("N"));
+        var source = Path.Combine(root, "source");
+        var index = Path.Combine(root, "index");
+        Directory.CreateDirectory(source);
+        File.WriteAllText(Path.Combine(source, "notes.md"), "# Heading\nInvoice ALPHA-7319\n");
+        try
+        {
+            var created = await Run(["documents", "index", "--source", source, "--index", index, "--pdf-mode", "TextLayer", "--json"]);
+            Assert.Equal(0, created.Exit);
+            Assert.Contains("No model call", created.Error);
+            var searched = await Run(["documents", "search", "--index", index, "--query", "ALPHA-7319", "--json"]);
+            Assert.Equal(0, searched.Exit);
+            using var found = JsonDocument.Parse(searched.Output);
+            var hit = Assert.Single(found.RootElement.GetProperty("data").GetProperty("hits").EnumerateArray());
+            Assert.Equal("plain-text", hit.GetProperty("textKind").GetString());
+            Assert.Equal(2, hit.GetProperty("matchStartLine").GetInt32());
+            Assert.Equal(JsonValueKind.Null, hit.GetProperty("page").ValueKind);
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
     public async Task Already_cancelled_command_performs_no_work()
     {
         using var cancellation = new CancellationTokenSource();

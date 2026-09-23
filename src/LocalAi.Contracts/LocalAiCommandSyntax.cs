@@ -43,7 +43,7 @@ public static class LocalAiCommandSyntax
     // for a program, and the block this line sits in is the list for a person.
     public const string Capabilities = "localai capabilities --json";
     public const string SemanticImpact = "localai semantic impact --path <relative.cs> --line <1-based> [--column <1-based utf16>] [--limit 1..10000] [--root dir] [--explain [--model name]] [--json]";
-    public const string DocumentsIndex = "localai documents index --source <folder> --index <folder> [--model name] [--json]";
+    public const string DocumentsIndex = "localai documents index --source <folder> --index <folder> [--pdf-mode Ocr|TextLayer] [--model name] [--json]";
     public const string DocumentsSearch = "localai documents search --index <folder> --query <literal phrase> [--limit 1..100] [--json]";
     public const string DocsBuild = "localai docs build --root <repo> [--path <relative-path>] [--plan] [--limit N | --all] [--standalone-html] [--json]";
     public const string DocsApply = "localai docs apply --root <repo> [--json]";
