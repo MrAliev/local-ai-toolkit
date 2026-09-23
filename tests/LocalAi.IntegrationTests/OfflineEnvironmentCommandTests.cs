@@ -12,6 +12,7 @@ public sealed class OfflineEnvironmentCommandTests
     [InlineData("install-dependency", "offline_action_refused")]
     [InlineData("import-models", "offline_models_refused")]
     [InlineData("plan", "offline_plan_refused")]
+    [InlineData("execute", "offline_execution_refused")]
     public async Task Real_cli_reports_missing_materials_without_running_a_model(string operation, string refusal)
     {
         var missing = Path.Combine(Path.GetTempPath(), "missing-offline-" + Guid.NewGuid().ToString("N"));
@@ -20,6 +21,7 @@ public sealed class OfflineEnvironmentCommandTests
         start.ArgumentList.Add(Assembly.Load("localai").Location);
         string[] arguments = operation switch
         {
+            "execute" => ["offline", operation, "--bundle", missing, "--manifest-sha256", new string('0', 64), "--request", missing + ".json", "--out", missing + "-run", "--json"],
             "plan" => ["offline", operation, "--bundle", missing, "--manifest-sha256", new string('0', 64), "--disk", Path.GetTempPath(), "--json"],
             "bundle" => ["offline", operation, "--source", missing, "--out", missing + "-output", "--json"],
             "install-dependency" => ["offline", operation, "--bundle", missing, "--manifest-sha256", new string('0', 64), "--component", "dependency.ollama", "--json"],
