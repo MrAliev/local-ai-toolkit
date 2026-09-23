@@ -20,11 +20,12 @@ namespace LocalAi.Contracts;
 public sealed record OllamaLaunchRecord(
     [property: JsonRequired] int SchemaVersion,
     [property: JsonRequired] string ExecutablePath,
-    string? Version = null)
+    string? Version = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? ModelsDirectory = null)
 {
     public const string FileName = "ollama-launch.json";
 
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
 }
 
 /// <summary>
@@ -54,12 +55,15 @@ public sealed class OllamaLaunchRecordStore
     {
         try
         {
-            var text = File.ReadAllText(_path);
-            var record = JsonSerializer.Deserialize<OllamaLaunchRecord>(text, SerializerOptions);
+            EnsureNoLinks(_path);
+            using var input = new FileStream(_path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete);
+            if (input.Length is <= 0 or > 65536) return null;
+            var record = JsonSerializer.Deserialize<OllamaLaunchRecord>(input, SerializerOptions);
             return record is null ||
-                record.SchemaVersion != OllamaLaunchRecord.CurrentSchemaVersion ||
+                record.SchemaVersion is not (1 or 2) ||
                 string.IsNullOrWhiteSpace(record.ExecutablePath) ||
-                !Path.IsPathFullyQualified(record.ExecutablePath)
+                !Path.IsPathFullyQualified(record.ExecutablePath) ||
+                (record.SchemaVersion == 1 ? record.ModelsDirectory is not null : !IsLocalModelsPath(record.ModelsDirectory))
                 ? null
                 : record;
         }
@@ -76,6 +80,15 @@ public sealed class OllamaLaunchRecordStore
     /// against whatever directory the broker happened to be started in.
     /// </summary>
     public void Save(string executablePath, string? version)
+        => Write(executablePath, version, Read()?.ModelsDirectory);
+
+    public void Save(string executablePath, string? version, string modelsDirectory)
+    {
+        ValidateModelsDirectory(modelsDirectory);
+        Write(executablePath, version, Path.GetFullPath(modelsDirectory));
+    }
+
+    private void Write(string executablePath, string? version, string? modelsDirectory)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(executablePath);
         if (!Path.IsPathFullyQualified(executablePath))
@@ -85,13 +98,43 @@ public sealed class OllamaLaunchRecordStore
                 nameof(executablePath));
         }
 
-        File.WriteAllText(
-            _path,
-            JsonSerializer.Serialize(
-                new OllamaLaunchRecord(
-                    OllamaLaunchRecord.CurrentSchemaVersion,
-                    Path.GetFullPath(executablePath),
-                    version),
-                SerializerOptions));
+        EnsureNoLinks(_path);
+        var temporary = _path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough))
+            {
+                JsonSerializer.Serialize(stream, new OllamaLaunchRecord(modelsDirectory is null ? 1 : OllamaLaunchRecord.CurrentSchemaVersion,
+                    Path.GetFullPath(executablePath), version, modelsDirectory), SerializerOptions);
+                stream.Flush(true);
+            }
+            File.Move(temporary, _path, overwrite: true);
+        }
+        finally { if (File.Exists(temporary)) File.Delete(temporary); }
+    }
+
+    /// <summary>Never substitute the default store when an explicitly selected local store is unavailable.</summary>
+    public static void ValidateModelsDirectory(string directory)
+    {
+        if (!IsLocalModelsPath(directory)) throw new ArgumentException("The model directory must be an absolute local path.", nameof(directory));
+        EnsureNoLinks(directory);
+        if (!Directory.Exists(directory)) throw new DirectoryNotFoundException("The configured model directory is unavailable.");
+    }
+
+    private static bool IsLocalModelsPath(string? path) => !string.IsNullOrWhiteSpace(path) &&
+        Path.IsPathFullyQualified(path) && !path.StartsWith(@"\\", StringComparison.Ordinal) && !path.StartsWith("//", StringComparison.Ordinal);
+
+    private static void EnsureNoLinks(string path)
+    {
+        for (var current = Path.GetFullPath(path); current is not null; current = Path.GetDirectoryName(current))
+        {
+            try
+            {
+                if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
+                    throw new IOException("The configured path contains a link.");
+            }
+            catch (FileNotFoundException) { }
+            catch (DirectoryNotFoundException) { }
+        }
     }
 }

@@ -1186,6 +1186,27 @@ existing process environments are unchanged. Start a new session before using th
 earlier PATH entries can still resolve a different Node/SCIP version. Compatibility and broker
 preflight remain required, and `readyForUse=false` remains explicit.
 
+To bind imported models to broker-managed Ollama launches, use `"schemaVersion": 4` and
+`"configureModels": true`, with a non-null `modelsOutput`. Runtime installation must be selected
+or its destination root must already exist. The default is false; schemas 1–3 refuse this option.
+The plan's `modelSetup` names the imported directory, `ollama-launch.json` and the prior file hash.
+After import, `configuration:ollama-model-root` discovers Ollama through the installer's verified
+installed-application probe (registry entry, approved directory and executable identity), never
+through PATH. Its journal intent precedes the probe and the write. Missing/unverified Ollama,
+a detected concurrent record change, a write error or a failed readback stops later steps with
+the configuration still pending. Imported files remain. The record is published by a flushed
+temporary-file rename; the before/after checks are not an atomic compare-and-set with other writers.
+
+Schema 2 of `ollama-launch.json` stores the explicit model directory. On a future broker-managed
+launch, the broker validates that this local directory exists without links and sets `OLLAMA_MODELS`
+only in its child process. An unavailable directory prevents launch instead of falling back to the
+default store. A later installer update preserves the configured directory. User/system
+`OLLAMA_MODELS` and an already listening backend are unchanged. Use a runtime that supports this
+record schema; older runtimes refuse it. Stop an existing Ollama backend deliberately before using
+the configured launch, then run the existing model preflight through the target broker. This option
+does not stop/start a backend, run inference or transfer residency proofs. A configured directory
+does not establish model compatibility or readiness.
+
 The command does not add optional components. An empty
 dependency array, `installRuntime=false` or `modelsOutput=null` omits the corresponding steps, but
 at least one step (including an npm selection) must remain. Dependencies run in catalog order, followed by runtime activation
@@ -1197,8 +1218,8 @@ Before any dependency executes, a selected runtime passes the normal full signed
 and applicable Authenticode verification in protected staging. Its verified files remain retained
 through execution. Runtime activation uses the current user's default LocalAi installation and may
 stop running tools and change the active version. PATH is changed only by the explicit schema-3
-option above. Windows uninstall registration, wizard configuration and `OLLAMA_MODELS` remain
-separate setup steps.
+option above. Windows uninstall registration and other wizard configuration remain separate.
+Model-root setup is optional as described above; it does not change user/system `OLLAMA_MODELS`.
 
 The run folder contains `plan.json`, `journal-*.json` and, when recording succeeds, `result.json`.
 Each step's intent is flushed before its effect. Failure, cancellation, timeout, reboot request,
@@ -1213,8 +1234,8 @@ CLI exits are 0 for a plan or completed selected steps, 130 for cancellation, 75
 74 for recording failure and 70 for failed/uncertain execution. Such nonzero results use `ok=false`
 and retain the result details. Invalid requests use 2 or 65; an existing output uses 73.
 Even `state=applied` reports `readyForUse=false`: dependency versions/prerequisites, complete disk
-requirements and offline usability remain unverified. Configure the imported model root and run
-broker preflight on the target machine separately. This command invokes no models, transfers no
+requirements and offline usability remain unverified. Configure the imported model root explicitly
+and run broker preflight on the target machine separately. This command invokes no models, transfers no
 residency proof and adds no network fallback or privilege elevation. External vendor installers can
 still use the network. Cloud INPUT/OUTPUT accounting is administrative (not applicable).
 

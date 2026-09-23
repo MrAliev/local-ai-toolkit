@@ -65,7 +65,8 @@ internal static class OfflineExecuteCommand
         if (exit == 130) UsageCall.Current?.Cancelled();
         else if (exit != 0) UsageCall.Current?.Failed("offline_execution_failed");
         var data = JsonSerializer.SerializeToElement(new { mode, result, notice = CliText.Catalogue.Get("OfflineExecuteNotice"),
-            dependencyNotice = CliText.Catalogue.Get("OfflineApplyNotice"), modelNotice = CliText.Catalogue.Get("OfflineModelsNotice"),
+            dependencyNotice = CliText.Catalogue.Get("OfflineApplyNotice"), modelNotice = CliText.Catalogue.Get(
+                (applied?.Plan ?? result as OfflineExecutionPlan)?.ModelSetup is null ? "OfflineModelsNotice" : "OfflineExecuteModelsNotice"),
             npmNotice = CliText.Catalogue.Get("OfflineNpmNotice"), pathNotice = CliText.Catalogue.Get("OfflineExecutePathNotice"),
             diskNotice = CliText.Catalogue.Get("OfflinePlanDiskCaveat") }, OfflineEnvironmentBundle.Json);
         if (machineReadable)
