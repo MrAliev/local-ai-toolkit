@@ -23,6 +23,7 @@ public static class LocalAiCommandSyntax
     // branch is not.
     public const string RepoPrune = "localai repo prune [--root dir] [--dry-run]";
     public const string Doctor = "localai doctor [--root dir] [--json]";
+    public const string Diagnostics = "localai diagnostics [--out file.zip] [--json]";
     public const string Telemetry = "localai telemetry [--call-id <guid>]";
     public const string Ask =
         "localai ask <prompt> [file ...] [--profile name] [--model model] [--schema file] " +
