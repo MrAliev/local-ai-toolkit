@@ -27,6 +27,7 @@ public static class LocalAiCommandSyntax
     public const string HardwarePlan = "localai hardware plan --release <folder> [--disk <existing-path>] [--json]";
     public const string OfflineBundle = "localai offline bundle --source <folder> --out <new-folder> [--json]";
     public const string OfflineVerify = "localai offline verify --bundle <folder> --manifest-sha256 <trusted-hash> [--json]";
+    public const string OfflinePlan = "localai offline plan --bundle <folder> --manifest-sha256 <trusted-hash> --disk <existing-local-folder> [--json]";
     public const string OfflineInstallDependency = "localai offline install-dependency --bundle <folder> --manifest-sha256 <trusted-hash> --component <catalog-id> [--mode plan|apply] [--json]";
     public const string OfflineImportModels = "localai offline import-models --bundle <folder> --manifest-sha256 <trusted-hash> --out <new-model-root> [--mode plan|apply] [--json]";
     public const string Telemetry = "localai telemetry [--call-id <guid>]";
