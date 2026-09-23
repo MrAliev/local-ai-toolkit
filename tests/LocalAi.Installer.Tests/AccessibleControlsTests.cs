@@ -27,10 +27,48 @@ public sealed class AccessibleControlsTests
                 app.Resources.MergedDictionaries.Add(new ResourceDictionary
                 {
                     Source = new Uri($"/LocalAi.Installer;component/Themes/{resource}.xaml", UriKind.Relative),
-            });
-        try { CheckWindows(); }
-        finally { app.Shutdown(); }
+                });
+            try { CheckButtonTextFollowsItsState(app); CheckWindows(); }
+            finally { app.Shutdown(); }
         });
+    }
+
+    private static void CheckButtonTextFollowsItsState(Application app)
+    {
+        using var machine = new RemovalFixture();
+        var presentation = new InstallerPresentation(new InstallerPreferencesStore(Path.Combine(machine.Root, "preferences")));
+        foreach (var window in new Window[] { new StartWindow(presentation), new MainWindow(presentation) })
+        {
+            try
+            {
+                Layout(window);
+                var button = Descendants(window.Content).OfType<Button>().First(control => control.IsDefault);
+                // Exercise the actual compiled template, including WPF's generated plain-text
+                // and access-key labels. The palette alone cannot prove the rendered colour.
+                button.ClearValue(Button.CommandProperty);
+                foreach (var palette in new[] { "Light", "Dark", "HighContrast", "Light" })
+                {
+                    app.Resources.MergedDictionaries[0] = palette == "HighContrast"
+                        ? HighContrastPalette.Create()
+                        : new ResourceDictionary { Source = new Uri($"/LocalAi.Installer;component/Themes/{palette}.xaml", UriKind.Relative) };
+                    foreach (var content in new[] { "Next", "_Next", "Далее" })
+                    foreach (var enabled in new[] { true, false })
+                    foreach (var primary in new[] { true, false })
+                    {
+                        button.Content = content;
+                        button.IsEnabled = enabled;
+                        button.IsDefault = primary;
+                        Layout(window);
+                        var expected = (SolidColorBrush)app.Resources[!enabled ? "TextDisabled" : primary ? "AccentForeground" : "TextPrimary"];
+                        var labels = Descendants(button).OfType<TextBlock>().ToArray();
+                        Assert.NotEmpty(labels);
+                        foreach (var label in labels)
+                            Assert.Equal(expected.Color, Assert.IsType<SolidColorBrush>(label.Foreground).Color);
+                    }
+                }
+            }
+            finally { window.Close(); }
+        }
     }
 
     private static void CheckWindows()
