@@ -1153,4 +1153,12 @@ To keep a worktree whatever its branch: git worktree lock &lt;path&gt;</value>
   <data name="OfflinePlanDiskCaveat" xml:space="preserve"><value>The known disk budget applies to one volume. Space for dependency installation and temporary files, backups, indexes and filesystem overhead is not fully known. Meeting the known budget still leaves the result incomplete.</value></data>
   <data name="OfflinePlanRefused" xml:space="preserve"><value>Cannot create the offline plan. Check the trusted manifest hash, bundle contents and component metadata.</value></data>
   <data name="OfflinePlanDiskPathInvalid" xml:space="preserve"><value>--disk must point to an existing local directory for the disk-space estimate.</value></data>
+  <data name="OfflineExecuteHelp" xml:space="preserve"><value>Plan the dependency, runtime and model-import steps selected in --request. --mode plan is the default; --mode apply executes them and records the run in a new --out folder.</value></data>
+  <data name="OfflineExecutePlan" xml:space="preserve"><value>Plan only: no dependency installation, runtime activation or model import was performed.</value></data>
+  <data name="OfflineExecuteNotice" xml:space="preserve"><value>Selected runtime activation applies to the current user and can stop running LocalAi tools and change the active version. Partial changes may remain. There is no automatic replay, resume or rollback of the whole run.</value></data>
+  <data name="OfflineExecuteApplied" xml:space="preserve"><value>Selected installation and file steps completed; readyForUse=false. Model-root configuration and broker preflight on the target machine remain separate. Offline usability is unverified.</value></data>
+  <data name="OfflineExecuteStopped" xml:space="preserve"><value>Further steps were not started. State: {0}. Partial changes may remain. Check the journal and installer state before a new run.</value></data>
+  <data name="OfflineExecuteRefused" xml:space="preserve"><value>Execution request refused. Check the trusted manifest hash, request JSON and bundle contents.</value></data>
+  <data name="OfflineExecuteFailed" xml:space="preserve"><value>The run could not be completed or fully recorded. Changes may remain. Check the available run records and installer state before another run.</value></data>
+  <data name="OfflineExecuteOutputExists" xml:space="preserve"><value>The --out path already exists. Choose a new run folder; this command does not resume existing runs.</value></data>
 </root>

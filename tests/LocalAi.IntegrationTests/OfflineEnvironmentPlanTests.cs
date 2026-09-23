@@ -35,12 +35,25 @@ public sealed class OfflineEnvironmentPlanTests
         Assert.Equal(6, plan.Disk.RuntimeArtifactBytes);
         Assert.Equal(2 * package.Length + 7, plan.Disk.RuntimePreparationBytes);
         Assert.Equal(new FileInfo(Path.Combine(fixture.Output, "ollama.exe")).Length, plan.Disk.DependencyStagingBytes);
-        Assert.Equal(6 + Math.Max(plan.Disk.RuntimePreparationBytes, plan.Disk.DependencyStagingBytes), plan.Disk.KnownConservativeAdditionalBytes);
+        Assert.Equal(6 + Math.Max(plan.Disk.RuntimePreparationBytes, 7 + plan.Disk.DependencyStagingBytes), plan.Disk.KnownConservativeAdditionalBytes);
         Assert.Equal("incomplete", plan.Disk.Assessment); Assert.False(plan.Disk.Complete);
         Assert.Contains("dependency-installed-and-temporary-bytes", plan.Disk.Unknowns);
         Assert.False(plan.ReadyForInstallation); Assert.NotEmpty(plan.Unresolved);
+        Assert.Contains("environment.explicit-selection-required", plan.Unresolved);
+        Assert.DoesNotContain("environment.execution-not-supported", plan.Unresolved);
         Assert.Equal(before, Directory.GetFiles(fixture.Output, "*", SearchOption.AllDirectories).Order().ToArray());
         Assert.Equal(built.ManifestSha256, (await fixture.Bundle.VerifyAsync(fixture.Output, built.ManifestSha256, Token)).ManifestSha256);
+    }
+
+    [Fact]
+    public async Task Disk_budget_includes_the_runtime_stage_retained_while_a_larger_dependency_runs()
+    {
+        using var fixture = new OfflineEnvironmentTests.Fixture(Package());
+        File.WriteAllBytes(Path.Combine(fixture.Source, "ollama.exe"), new byte[10000]);
+        var built = await Prepare(fixture);
+        var plan = await Application(fixture).PlanEnvironmentAsync(fixture.Output, built.ManifestSha256, fixture.Catalog,
+            new(ObservationState.Available, long.MaxValue, null), Token);
+        Assert.Equal(10013, plan.Disk.KnownConservativeAdditionalBytes);
     }
 
     [Theory]

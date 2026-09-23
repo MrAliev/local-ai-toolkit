@@ -23,6 +23,7 @@ internal static class CliCommandSyntax
         ["offline bundle"] = LocalAiCommandSyntax.OfflineBundle,
         ["offline verify"] = LocalAiCommandSyntax.OfflineVerify,
         ["offline plan"] = LocalAiCommandSyntax.OfflinePlan,
+        ["offline execute"] = LocalAiCommandSyntax.OfflineExecute,
         ["offline install-dependency"] = LocalAiCommandSyntax.OfflineInstallDependency,
         ["offline import-models"] = LocalAiCommandSyntax.OfflineImportModels,
         ["ask"] = LocalAiCommandSyntax.Ask,

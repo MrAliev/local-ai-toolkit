@@ -1045,18 +1045,19 @@ The conservative known additional-space budget is:
 ```text
 runtime artifacts + unique model files
   + max(2 * compressed runtime package + runtime ZIP expansion,
-        largest validated dependency staging payload)
+        runtime ZIP expansion + largest validated dependency staging payload)
 ```
 
 The two compressed copies reserve the normal directory-feed/verifier preparation flow; the runtime
-stage is additional to installed artifacts. Model import publishes its copied stage by renaming it,
+stage is additional to installed artifacts and stays retained while selected dependencies execute.
+Model import publishes its copied stage by renaming it,
 so shared blobs and the model stage are not counted twice. Existing bundle storage is reported by
 `offline bundle` separately. Missing/invalid material sizes, dependency installed/temporary sizes,
 old-version/launcher backups, indexes, caches and filesystem overhead remain explicit unknowns.
 Below-budget free space yields `below-known-budget`; unavailable space yields `unknown`; enough
 space still yields `incomplete`. `readyForInstallation` and disk `complete` remain false. A successful
-JSON envelope means the plan was generated, not that the environment is ready. Whole-environment
-application and clean-machine/no-network acceptance remain outstanding in #634. Cloud INPUT/OUTPUT
+JSON envelope means the plan was generated, not that the environment is ready. Selected execution
+is available through `offline execute` below; clean-machine/no-network acceptance remains outstanding in #634. Cloud INPUT/OUTPUT
 accounting is administrative (not applicable).
 
 #### Apply a bundled dependency or import model artifacts
@@ -1118,6 +1119,55 @@ or replaced. `OLLAMA_MODELS`, the active runtime and policy are unchanged. Confi
 model root separately, then run the existing broker preflight on the target machine; backend/model
 startup and residency proof are separate steps. The Windows wizard's dependency flow is unchanged.
 Clean-machine installation without network access or a preinstalled SDK remains an acceptance task.
+
+#### Execute selected offline steps with a durable journal
+
+```powershell
+lai localai offline execute --bundle E:\localai-offline --manifest-sha256 <trusted-hash> --request C:\prepared\request.json --out C:\prepared\run-01 --json
+```
+
+The default `--mode plan` validates the selection without creating the run folder or applying
+changes. Add `--mode apply` to execute it on Windows. Example `request.json` (at most 1 MiB):
+
+```json
+{
+  "schemaVersion": 1,
+  "dependencies": ["dependency.ollama"],
+  "installRuntime": true,
+  "modelsOutput": "C:\\localai-models"
+}
+```
+
+Choose only required catalog dependencies; the command does not add optional components. An empty
+dependency array, `installRuntime=false` or `modelsOutput=null` omits the corresponding steps, but
+at least one step must remain. Dependencies run in catalog order, followed by runtime activation
+and import of all included, enabled models. The dependency recipe and model rules above still apply.
+Every supplied path must be local. Model and run outputs require new, separate folders with existing
+parents, outside the bundle and runtime installation. Existing run folders are never resumed.
+
+Before any dependency executes, a selected runtime passes the normal full signed-package, metadata
+and applicable Authenticode verification in protected staging. Its verified files remain retained
+through execution. Runtime activation uses the current user's default LocalAi installation and may
+stop running tools and change the active version. It does not configure PATH, register Windows
+uninstall, apply wizard configuration or set `OLLAMA_MODELS`; those setup steps remain separate.
+
+The run folder contains `plan.json`, `journal-*.json` and, when recording succeeds, `result.json`.
+Each step's intent is flushed before its effect. Failure, cancellation, timeout, reboot request,
+unconfirmed process termination or a journal write failure prevents subsequent steps. Reboot and
+uncertain outcomes leave an incomplete journal; uncertain effects remain Running. The result
+preserves completed steps, pending identifiers, runtime outcome and retained dependency files in
+`steps[].retainedDirectory`. Confirm process/installer state before retrying or deleting retained
+files. There is no automatic replay, resume or rollback of the whole run; partial changes can remain.
+`recordingComplete=false` means available records may be incomplete.
+
+CLI exits are 0 for a plan or completed selected steps, 130 for cancellation, 75 for timeout or reboot,
+74 for recording failure and 70 for failed/uncertain execution. Such nonzero results use `ok=false`
+and retain the result details. Invalid requests use 2 or 65; an existing output uses 73.
+Even `state=applied` reports `readyForUse=false`: dependency versions/prerequisites, complete disk
+requirements and offline usability remain unverified. Configure the imported model root and run
+broker preflight on the target machine separately. This command invokes no models, transfers no
+residency proof and adds no network fallback or privilege elevation. External vendor installers can
+still use the network. Cloud INPUT/OUTPUT accounting is administrative (not applicable).
 
 #### When something refuses
 
