@@ -105,6 +105,7 @@ The set is **not the same**: some tools exist only here, some only over MCP.
 | `localai hooks install` | install the hooks that keep the index current |
 | `localai repo status` | whether a repository is connected |
 | `localai doctor` | what is wrong with the installation, read-only |
+| `localai diagnostics` | preview recorded diagnostics or save them as a ZIP |
 | `localai model status` / `pull` / `preflight` | models: installed, fetch, prove the fit |
 | `localai policy show` / `set` | the model residency policy |
 | `localai prune` | clear out stale generations and overlays |
@@ -880,6 +881,35 @@ lai localai policy show                        # residency and update policy
 lai localai telemetry                          # a summary of local jobs
 lai localai doctor                             # what is wrong with the installation
 ```
+
+`lai localai diagnostics` displays the complete diagnostic manifest and projected data without
+saving a bundle. `lai localai diagnostics --out C:\support\localai.zip` saves those same contents
+as a ZIP in an existing folder; it refuses to replace an existing destination. Add `--json` for
+the existing machine envelope with `saved`, `manifest` and `contents` fields. Help, cancellation
+and the administrative cloud-token report apply; collecting a bundle calls no model or network
+service. Collection does not modify its sources; the usual CLI usage report is still recorded.
+No new MCP tool or changes to existing MCP responses are introduced by this pilot.
+
+The ZIP contains `manifest.json` and five JSON projections: collector/.NET/OS versions and the
+recorded installed release, active queue state counts, recorded repository/index build states,
+recognized broker error categories, and aggregate metric status counts. Cloud INPUT and OUTPUT
+remain separate; measured and estimated samples have separate minimum/maximum values, including
+negative savings. Unknown and inapplicable values retain their own counts. There is no summed
+savings claim across calls or workflows. The current diagnostics call finishes after collection
+and therefore is not included in its own snapshot.
+
+Prompts, documents, answers, raw logs, exception messages, paths, repository/model names,
+job/call IDs, settings and environment variables are excluded. There is no include-content
+option. Repository ordinals identify entries only within this snapshot. The collector commit
+and active version directory are installation version identifiers, not job/call IDs. These
+records **do not prove current service health or index freshness**: files are read independently,
+with capture timestamps and explicit missing/unreadable/invalid/linked/limited source counts.
+Links are not followed. The first pilot samples at most 1,024 active jobs, 256 repositories,
+2,048 retained usage reports, 1 MiB per source file (smaller bounds for states/reports), and
+32 MiB of source bytes overall. Truncated samples are not necessarily the newest records.
+The two broker log rotations contribute recognized categories only; unknown categories become
+`Other`. Manifest file sizes and SHA-256 hashes describe the exact projected ZIP entries, not
+the private source files. A cancelled or failed export does not publish a partial ZIP.
 
 #### When something refuses
 
