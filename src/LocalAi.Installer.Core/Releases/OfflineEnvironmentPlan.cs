@@ -108,12 +108,13 @@ public sealed partial class OfflineBundleApplication
         steps.Add(new("configuration", "ollama-model-root", "not-assessed", "configure-model-root", "manual-step-required"));
         steps.Add(new("validation", "broker-preflight", "not-assessed", "broker-preflight", "target-machine-check-required"));
         unresolved.AddRange(["dependencies.installed-versions-unverified", "models.root-configuration-and-preflight-required",
-            "environment.execution-not-supported", "environment.offline-acceptance-required"]);
+            "environment.explicit-selection-required", "environment.offline-acceptance-required"]);
         // This is an explicit single-volume, sequential-operation planning reserve, not an
         // installed-size claim. Runtime preparation budgets two compressed copies (directory
-        // release feed + verifier) and its unpacked stage; model import renames its stage.
+        // release feed + verifier) and its unpacked stage. The executor retains the verified
+        // runtime stage during dependency execution; model import renames its stage.
         var runtimePreparation = checked(2 * archive.Bytes + runtime.ExpandedBytes);
-        var knownBudget = checked(runtime.ArtifactBytes + modelBytes + Math.Max(runtimePreparation, dependencyStaging));
+        var knownBudget = checked(runtime.ArtifactBytes + modelBytes + Math.Max(runtimePreparation, checked(runtime.ExpandedBytes + dependencyStaging)));
         var available = disk.State == ObservationState.Available && disk.AvailableBytes is >= 0 ? disk.AvailableBytes : null;
         var assessment = available is null ? "unknown" : available < knownBudget ? "below-known-budget" : "incomplete";
         return new(1, snapshot.ManifestSha256, snapshot.Manifest.ReleaseVersion, catalog.CatalogVersion, steps.ToArray(),

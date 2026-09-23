@@ -73,6 +73,7 @@ public static class UsageReportingRegistry
             ("offline bundle", UsageComparisonKind.NotApplicable, null),
             ("offline verify", UsageComparisonKind.NotApplicable, null),
             ("offline plan", UsageComparisonKind.NotApplicable, null),
+            ("offline execute", UsageComparisonKind.NotApplicable, null),
             ("offline install-dependency", UsageComparisonKind.NotApplicable, null),
             ("offline import-models", UsageComparisonKind.NotApplicable, null),
             ("ask", UsageComparisonKind.ReplacedGeneration, "ask_local"), ("triage", UsageComparisonKind.ReplacedGeneration, "triage_log"),
