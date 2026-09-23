@@ -304,4 +304,21 @@
   <data name="EvaluationSnapshotChanged" xml:space="preserve">
     <value>Во время оценки изменились исходный код, индекс или файл --cases. Повторите оценку, не изменяя их.</value>
   </data>
+  <data name="ImpactExplanationTitle" xml:space="preserve"><value>Вопросы для проверки (эвристика)</value></data>
+  <data name="ImpactExplanationNotice" xml:space="preserve"><value>Связи взяты из проверенного индекса. Модель выбирает вопросы для проверки; это не подтверждённые замечания.</value></data>
+  <data name="ImpactExplanationEmpty" xml:space="preserve"><value>Прямые связи из индекса не найдены. Это не исключает влияния. Модель не вызывалась.</value></data>
+  <data name="ImpactExplanationRejected" xml:space="preserve"><value>Вопросы не добавлены: ответ модели не прошёл проверку соответствия переданным связям.</value></data>
+  <data name="ImpactExplanationLimit" xml:space="preserve"><value>Вопросы не сформированы: пилот поддерживает не более 16 связей. Укажите --limit 16 для явно частичного графа или уберите --explain.</value></data>
+  <data name="ImpactExplanationBudget" xml:space="preserve"><value>Вопросы не сформированы: переданный контекст превышает лимит объяснения.</value></data>
+  <data name="ImpactExplanationChanged" xml:space="preserve"><value>Состояние исходников изменилось во время работы модели. Обновите индекс и повторите анализ.</value></data>
+  <data name="ImpactFact_reference" xml:space="preserve"><value>Индекс содержит ссылку на выбранный символ в этой позиции.</value></data>
+  <data name="ImpactFact_implementation" xml:space="preserve"><value>Индекс содержит связь реализации от этого объявления к выбранному символу.</value></data>
+  <data name="ImpactFact_override" xml:space="preserve"><value>Индекс содержит связь переопределения от этого объявления к выбранному символу.</value></data>
+  <data name="ImpactFact_type-definition" xml:space="preserve"><value>Индекс содержит связь type-definition от этого объявления к выбранному символу.</value></data>
+  <data name="ImpactQuestion_usage-contract" xml:space="preserve"><value>Потребуется ли изменить это использование при изменении контракта выбранного символа?</value></data>
+  <data name="ImpactQuestion_implementation-contract" xml:space="preserve"><value>Потребуется ли изменить эту реализацию при изменении выбранного контракта?</value></data>
+  <data name="ImpactQuestion_override-contract" xml:space="preserve"><value>Потребуется ли изменить это переопределение при изменении переопределяемого члена?</value></data>
+  <data name="ImpactQuestion_type-contract" xml:space="preserve"><value>Потребуется ли изменить это объявление при изменении выбранного типа?</value></data>
+  <data name="ImpactQuestion_test-coverage" xml:space="preserve"><value>Какие тесты проверят изменение, затрагивающее эту связь?</value></data>
+  <data name="ImpactQuestion_insufficient-context" xml:space="preserve"><value>Вопрос не выбран: модель отметила переданный контекст как недостаточный.</value></data>
 </root>

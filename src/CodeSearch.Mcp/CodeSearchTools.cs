@@ -254,15 +254,21 @@ public static class CodeSearchTools
         the report identifies the exact index snapshot and whether the evidence limit truncated it.
         Explain only the supplied facts, cite their evidence IDs, and label hypotheses separately.
         This is not transitive reachability or proof of runtime breakage. Missing edges do not prove
-        no impact. Unsaved buffers, other languages and heuristic results are excluded. No model runs.
+        no impact. Unsaved buffers, other languages and heuristic graph results are excluded.
+        By default no model runs. Optionally add heuristic review questions selected by a local model
+        from a fixed set for up to 16 supplied evidence items. The verified graph is unchanged.
+        Questions are not confirmed issues; invalid or incomplete selections are rejected.
         Source-derived data is wrapped in nonce-bound untrusted-content markers.
         """)]
-    public static string AnalyzeImpact(SemanticNavigationGateway gateway, SyncNotice notice,
+    public static async Task<string> AnalyzeImpact(SemanticNavigationGateway gateway, SyncNotice notice,
+        SemanticImpactExplanation explanations,
         [Description("Repository-relative C# source path.")] string path,
         [Description("Line counted from 1, as search_code prints it.")] int line,
         [Description("UTF-16 column counted from 1.")] int column = 1,
         [Description("Maximum returned evidence items, 1..10000. Default 200; truncation is explicit.")] int limit = 200,
         [Description("Repository root. Defaults to the repository containing the working directory.")] string? root = null,
+        [Description("Add model-selected heuristic review questions for up to 16 returned evidence items. Default false.")] bool explain = false,
+        [Description("Optional local model override. Requires explain=true; residency policy is unchanged.")] string? model = null,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -272,19 +278,28 @@ public static class CodeSearchTools
         { UsageCall.Current?.Refused("invalid_position"); return CodeSearchText.PositionNotFromOne(line, column); }
         if (limit is < 1 or > 10_000)
         { UsageCall.Current?.Refused("invalid_limit"); return "invalid_limit: 1..10000"; }
+        if (model is not null && (!explain || string.IsNullOrWhiteSpace(model)))
+        { UsageCall.Current?.Refused("invalid_arguments"); return "invalid_arguments: model requires explain=true"; }
         try
         {
-            var report = gateway.AnalyzeImpact(path, position.Line, position.Utf16Column, limit, root, cancellationToken);
+            SemanticImpactReport Read() => gateway.AnalyzeImpact(path, position.Line, position.Utf16Column, limit, root, cancellationToken);
+            var explained = explain ? await explanations.ExplainAsync(Read, model, cancellationToken) : null;
+            var report = explained?.Report ?? Read();
             cancellationToken.ThrowIfCancellationRequested();
-            UsageCall.Current?.NoInference();
+            if (!explain) UsageCall.Current?.NoInference();
             return notice.Above(root, SyncNoticeAudience.Answer) + UntrustedContent.Wrap(
-                System.Text.Json.JsonSerializer.Serialize(SemanticImpactOutput.Create(report)), "analyze_impact");
+                System.Text.Json.JsonSerializer.Serialize(SemanticImpactOutput.Create(report, explained?.Explanation)), "analyze_impact");
+        }
+        catch (ImpactExplanationRejectedException error)
+        {
+            return "result_rejected: " + SemanticImpactExplanation.DescribeFailure(error.Message) + "\n" +
+                UntrustedContent.Wrap(System.Text.Json.JsonSerializer.Serialize(error.Validation), "analyze_impact:validation");
         }
         catch (SemanticNavigationNotReadyException error) { return NotReady(error, notice, root); }
         catch (SemanticSnapshotMismatchException error)
         { UsageCall.Current?.Refused("semantic_snapshot_mismatch"); return "semantic_snapshot_mismatch: " + error.Message; }
         catch (InvalidOperationException error) when (error.Message.StartsWith("impact_", StringComparison.Ordinal))
-        { UsageCall.Current?.Refused(error.Message); return error.Message; }
+        { UsageCall.Current?.Refused(error.Message); return error.Message + ": " + SemanticImpactExplanation.DescribeFailure(error.Message); }
         catch (Exception error) when (error is not OperationCanceledException)
         { ObserveFailure(error); return CodeSearchText.ToolFailed("analyze_impact", Describe(error)); }
     }
