@@ -59,19 +59,28 @@ public sealed class RuntimeAcl
         // file) between the two walks is picked up by the validate pass but was never touched by
         // the apply pass — it still carries a merely-inherited ACL (protected=false) and fails
         // validation even though nothing is actually wrong.
+        var hostStatePath = Path.Combine(fullPath, "host.json");
         foreach (var path in EnumerateRuntimeTree(fullPath))
         {
-            ApplyAndValidate(path, currentUserSid, expected);
+            ApplyAndValidate(path, currentUserSid, expected,
+                string.Equals(path, hostStatePath, StringComparison.OrdinalIgnoreCase));
         }
     }
 
     private void ApplyAndValidate(
         string path,
         string currentUserSid,
-        IReadOnlySet<string> expected)
+        IReadOnlySet<string> expected,
+        bool isHostState)
     {
         try
         {
+            // A heartbeat replaces host.json atomically. Hold the file through both reads
+            // and any repair so they cannot inspect different objects at the same path.
+            // The host publisher already retries transient rename conflicts. Do not pin
+            // queue files: their containing directories move during publication/archival.
+            // Metadata-only access needs no permission to read the file's contents.
+            using var fileLease = isHostState && !Directory.Exists(path) ? RuntimeFileLease.Open(path) : null;
             // Recheck every real ACL, even on repeated client creation. Rewriting an already
             // exact directory ACL can propagate through its descendants and turn this walk
             // into repeated filesystem work. Only repair a mismatch; never cache the verdict.
@@ -270,7 +279,7 @@ public sealed class RuntimeAcl
         }
     }
 
-    private static InvalidOperationException ReparseRefusal(string path) =>
+    internal static InvalidOperationException ReparseRefusal(string path) =>
         new(
             $"Runtime ACL refused a reparse point at '{path}': the runtime tree must not " +
             "contain junctions or symlinks, because repairing ACLs through one would " +
