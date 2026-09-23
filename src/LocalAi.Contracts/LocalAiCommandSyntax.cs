@@ -25,6 +25,8 @@ public static class LocalAiCommandSyntax
     public const string Doctor = "localai doctor [--root dir] [--json]";
     public const string Diagnostics = "localai diagnostics [--out file.zip] [--json]";
     public const string HardwarePlan = "localai hardware plan --release <folder> [--disk <existing-path>] [--json]";
+    public const string OfflineBundle = "localai offline bundle --source <folder> --out <new-folder> [--json]";
+    public const string OfflineVerify = "localai offline verify --bundle <folder> --manifest-sha256 <trusted-hash> [--json]";
     public const string Telemetry = "localai telemetry [--call-id <guid>]";
     public const string Ask =
         "localai ask <prompt> [file ...] [--profile name] [--model model] [--schema file] " +
