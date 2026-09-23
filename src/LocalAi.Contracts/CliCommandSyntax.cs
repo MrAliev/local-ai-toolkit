@@ -19,6 +19,7 @@ internal static class CliCommandSyntax
         ["repo prune"] = LocalAiCommandSyntax.RepoPrune,
         ["doctor"] = LocalAiCommandSyntax.Doctor,
         ["diagnostics"] = LocalAiCommandSyntax.Diagnostics,
+        ["hardware plan"] = LocalAiCommandSyntax.HardwarePlan,
         ["ask"] = LocalAiCommandSyntax.Ask,
         ["triage"] = LocalAiCommandSyntax.Triage,
         ["read-image"] = LocalAiCommandSyntax.ReadImage,
