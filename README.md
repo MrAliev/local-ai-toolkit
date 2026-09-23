@@ -1018,6 +1018,47 @@ acceptance is still pending in #634.
 These commands establish a reproducible transfer inventory and byte integrity, not a fully installable
 or usable offline environment.
 
+#### Plan the offline environment and its known disk budget
+
+```powershell
+lai localai offline plan --bundle E:\localai-offline --manifest-sha256 <trusted-hash> --disk C:\prepared --json
+```
+
+This read-only command re-verifies the bundle and lists the sequence: catalog dependencies, the
+normal runtime installer, model import, separate Ollama root configuration and broker preflight.
+All dependencies and enabled models in the current catalog are accounted for, including missing
+inventory rows; this is catalog coverage, not a recommendation to install every optional component.
+Installed dependency versions are not detected. Included dependency recipes and the model graph
+use the same validators as the individual application commands. Unsupported recipes and invalid
+model graphs remain explicit; planning never launches an installer or model, copies model files,
+changes configuration, or applies the sequence. `--mode apply` is not supported here.
+
+`--disk` must name an existing local directory without links, junctions or mounted-directory
+aliases. The disk report is a single-volume planning scenario, not a reservation or a cross-volume
+installation check. The known budget separates runtime artifact bytes, ZIP expansion, unique model
+files and the largest sequential dependency staging payload. Archive expansion comes from the
+trusted ZIP's bounded central/local-header and layout checks shared with the normal installer;
+it does not replace decompression, package-metadata verification or Authenticode validation.
+
+The conservative known additional-space budget is:
+
+```text
+runtime artifacts + unique model files
+  + max(2 * compressed runtime package + runtime ZIP expansion,
+        largest validated dependency staging payload)
+```
+
+The two compressed copies reserve the normal directory-feed/verifier preparation flow; the runtime
+stage is additional to installed artifacts. Model import publishes its copied stage by renaming it,
+so shared blobs and the model stage are not counted twice. Existing bundle storage is reported by
+`offline bundle` separately. Missing/invalid material sizes, dependency installed/temporary sizes,
+old-version/launcher backups, indexes, caches and filesystem overhead remain explicit unknowns.
+Below-budget free space yields `below-known-budget`; unavailable space yields `unknown`; enough
+space still yields `incomplete`. `readyForInstallation` and disk `complete` remain false. A successful
+JSON envelope means the plan was generated, not that the environment is ready. Whole-environment
+application and clean-machine/no-network acceptance remain outstanding in #634. Cloud INPUT/OUTPUT
+accounting is administrative (not applicable).
+
 #### Apply a bundled dependency or import model artifacts
 
 ```powershell

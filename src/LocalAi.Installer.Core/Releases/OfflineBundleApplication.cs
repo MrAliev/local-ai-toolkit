@@ -82,6 +82,32 @@ public sealed partial class OfflineBundleApplication(ReleaseManifestVerifier ver
         var sourcePrefix = Path.TrimEndingDirectorySeparator(Path.GetFullPath(bundle)) + Path.DirectorySeparatorChar;
         if (destination.StartsWith(sourcePrefix, StringComparison.OrdinalIgnoreCase)) throw Invalid();
         var snapshot = await new OfflineEnvironmentBundle(verifier).VerifyAsync(bundle, pin, token);
+        var materials = await ReadModelArtifactsAsync(bundle, snapshot, catalog, token);
+        var plan = new OfflineModelsPlan(materials.Models, materials.Files.Select(path => path[7..]).ToArray(), materials.Bytes,
+            destination, "preflight-required");
+        if (!apply) return plan;
+        var files = snapshot.Manifest.Files.ToDictionary(file => file.Path, StringComparer.Ordinal);
+        var staging = Path.Combine(parent, ".localai-models-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(staging);
+        try
+        {
+            foreach (var path in materials.Files)
+            {
+                token.ThrowIfCancellationRequested();
+                var target = OfflineEnvironmentBundle.Resolve(staging, path[7..]);
+                Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+                await CopyVerifiedAsync(bundle, path, target, files[path], token);
+            }
+            token.ThrowIfCancellationRequested();
+            Directory.Move(staging, destination);
+            return plan;
+        }
+        finally { if (Directory.Exists(staging)) Directory.Delete(staging, recursive: true); }
+    }
+
+    private static async Task<(string[] Models, string[] Files, long Bytes)> ReadModelArtifactsAsync(string bundle,
+        OfflineBundleResult snapshot, ModelRoutingCatalogDocument catalog, CancellationToken token)
+    {
         ValidateComponents(snapshot.Manifest);
         var files = snapshot.Manifest.Files.ToDictionary(file => file.Path, StringComparer.Ordinal);
         var selected = snapshot.Manifest.Components.Where(component => component.Kind == "model" && component.Availability == "included").ToArray();
@@ -119,25 +145,7 @@ public sealed partial class OfflineBundleApplication(ReleaseManifestVerifier ver
             imported.UnionWith(graph);
         }
         var paths = imported.Order(StringComparer.Ordinal).ToArray();
-        var plan = new OfflineModelsPlan(selected.Select(component => component.Id).ToArray(), paths.Select(path => path[7..]).ToArray(),
-            paths.Sum(path => files[path].Bytes), destination, "preflight-required");
-        if (!apply) return plan;
-        var staging = Path.Combine(parent, ".localai-models-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(staging);
-        try
-        {
-            foreach (var path in paths)
-            {
-                token.ThrowIfCancellationRequested();
-                var target = OfflineEnvironmentBundle.Resolve(staging, path[7..]);
-                Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-                await CopyVerifiedAsync(bundle, path, target, files[path], token);
-            }
-            token.ThrowIfCancellationRequested();
-            Directory.Move(staging, destination);
-            return plan;
-        }
-        finally { if (Directory.Exists(staging)) Directory.Delete(staging, recursive: true); }
+        return (selected.Select(component => component.Id).ToArray(), paths, paths.Sum(path => files[path].Bytes));
     }
 
     private static async Task<OfflineDependencyPlan> DependencyPlanAsync(string bundle, OfflineBundleResult snapshot, string id, CancellationToken token)
