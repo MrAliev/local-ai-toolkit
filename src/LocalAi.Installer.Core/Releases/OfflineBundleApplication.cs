@@ -14,9 +14,11 @@ public sealed record OfflineDependencyPlan(string Component, string? DeclaredVer
 public sealed record OfflineDependencyResult(OfflineDependencyPlan Plan, string State, int? ExitCode, bool RebootRequired, string? RetainedDirectory);
 public sealed record OfflineModelsPlan(string[] Models, string[] Files, long Bytes, string Destination, string ResidencyProof);
 
-public sealed partial class OfflineBundleApplication(ReleaseManifestVerifier verifier, IProcessRunner runner, IUserPathStore? userPath = null)
+public sealed partial class OfflineBundleApplication(ReleaseManifestVerifier verifier, IProcessRunner runner, IUserPathStore? userPath = null,
+    IInstalledApplicationProbe? installedApplications = null)
 {
     private readonly IUserPathStore pathStore = userPath ?? new WindowsUserPathStore();
+    private readonly IInstalledApplicationProbe applications = installedApplications ?? new Diagnosis.WindowsInstalledApplicationProbe();
     private const string ActionsFile = "offline-actions.json";
 
     public async Task<OfflineDependencyPlan> PlanDependencyAsync(string bundle, string pin, string component, CancellationToken token)
