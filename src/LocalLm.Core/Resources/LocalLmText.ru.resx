@@ -265,10 +265,10 @@
     <value>При переводе не получено ни одного ответа модели.</value>
   </data>
   <data name="TranslationNotice" xml:space="preserve">
-    <value>🔧 Локально: {0}{1}. Перевод проверен: {2}. {3}. Оценка числа токенов: локально обработано {4}; экономия на облачной генерации — {5}; чистая экономия облачного контекста — {6}.</value>
+    <value>🔧 Локально: {0}{1}. Проверки перевода: {2}. {3}. Оценка числа токенов: локально обработано {4}; экономия на облачной генерации — {5}; чистая экономия облачного контекста — {6}.</value>
   </data>
   <data name="TranslationValidationFailed" xml:space="preserve">
-    <value>Проверка структуры не пройдена даже после перехода на запасную модель: {0}.</value>
+    <value>Локальный перевод не прошёл проверки после перехода на запасную модель: {0}.</value>
   </data>
   <data name="UnknownValue" xml:space="preserve">
     <value>Неизвестное значение {0}: '{1}'.</value>
@@ -303,7 +303,7 @@
     <value>подстановки</value>
   </data>
   <data name="ValidatorPlausible" xml:space="preserve">
-    <value>отклонений не найдено</value>
+    <value>базовые проверки текста пройдены; смысл и соответствие заданному языку не проверены</value>
   </data>
   <data name="ValidatorPromptLeak" xml:space="preserve">
     <value>в ответ попал текст запроса</value>
@@ -312,7 +312,7 @@
     <value>{0}: изменилось число защищённых фрагментов</value>
   </data>
   <data name="ValidatorStructurePreserved" xml:space="preserve">
-    <value>структура сохранена</value>
+    <value>проверки структуры Markdown пройдены; смысл и соответствие заданному языку не проверены</value>
   </data>
   <data name="ValidatorUnexpectedFence" xml:space="preserve">
     <value>неожиданный блок кода</value>
@@ -406,4 +406,6 @@
   <data name="DocumentsDocxXmlTooComplex" xml:space="preserve"><value>Структура XML в DOCX «{0}» слишком сложна для индексации.</value></data>
   <data name="DocumentsDocxOmissions" xml:space="preserve"><value>Часть содержимого DOCX не проиндексирована. Подробности — в extractionNotices; additionalNotices показывает число уведомлений сверх первых 64 для каждого файла.</value></data>
   <data name="DocumentsDocxLocationNotice" xml:space="preserve"><value>Ссылки DOCX указывают на абзацы в структуре документа. Положение на странице и визуальный порядок чтения не проверены.</value></data>
+  <data name="ValidatorUnchangedProse" xml:space="preserve"><value>текст для перевода остался без изменений, хотя запрошен другой язык</value></data>
+  <data name="ValidatorNumbersChanged" xml:space="preserve"><value>числовые записи отличаются от исходных (изменены, удалены, добавлены или переставлены)</value></data>
 </root>

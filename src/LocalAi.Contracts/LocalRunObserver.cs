@@ -49,7 +49,7 @@ public sealed record ModelDownloadProgress(
 public sealed record TranslatingFragment(int Index, int Total) : LocalRunStep;
 
 /// <summary>
-/// The structure check failed, so the whole document is translated again from fragment 1 with
+/// Translation checks failed, so the document is retried with validated checkpoint reuse and
 /// another model. Without this the counter restarting at 1 reads as a defect.
 /// </summary>
 public sealed record TranslationRetrying(string Detail, string Model) : LocalRunStep;

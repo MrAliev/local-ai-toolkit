@@ -5,6 +5,43 @@ namespace LocalLm.Tests;
 public sealed class TranslationValidatorTests
 {
     [Theory]
+    [InlineData("42 / 53")]
+    [InlineData("`Model12.Do()` {name} https://example.test/v2")]
+    [InlineData("```cs\nvar answer = 42;\n```\n")]
+    public void Non_prose_markdown_does_not_trigger_the_copied_prose_guard(string source)
+    {
+        Assert.True(TranslationValidator.ValidateMarkdown(source, source, "English", "Russian").Passed);
+    }
+
+    [Fact]
+    public void Copying_prose_with_only_punctuation_and_whitespace_changes_is_rejected()
+    {
+        Assert.False(TranslationValidator.ValidateMarkdown("Measured output stays unchanged.",
+            "MEASURED  output\nstays unchanged!", "English", "Russian").Passed);
+    }
+
+    [Theory]
+    [InlineData("Value: 5199.121", "Значение: 342.123")]
+    [InlineData("Value: 42", "Значение:")]
+    [InlineData("Value:", "Значение: 42")]
+    [InlineData("Values: 42 / 53", "Значения: 53 / 42")]
+    [InlineData("| First | 5199.121 |\n| Second | 5552.463 |", "| Первый | 342.123 |\n| Второй | 567.890 |")]
+    public void Translation_refuses_changed_missing_added_or_reordered_numeric_literals(string source, string answer)
+    {
+        Assert.False(TranslationValidator.ValidatePlain(source, answer).Passed);
+        Assert.False(TranslationValidator.ValidateMarkdown(source, answer).Passed);
+    }
+
+    [Theory]
+    [InlineData("Result: -42, +12.50, 1.2e-3, 12%, 1,234.56", "Результат: -42, +12.50, 1.2e-3, 12%, 1,234.56")]
+    [InlineData("Version: RC22, 0.2.1, port 11434", "Версия: RC22, 0.2.1, порт 11434")]
+    public void Preserved_numeric_literals_remain_valid(string source, string answer)
+    {
+        Assert.True(TranslationValidator.ValidatePlain(source, answer).Passed);
+        Assert.True(TranslationValidator.ValidateMarkdown(source, answer).Passed);
+    }
+
+    [Theory]
     [MemberData(nameof(FencedTranslationCases.Blocks), MemberType = typeof(FencedTranslationCases))]
     public void Markdown_validator_preserves_every_supported_fenced_source_range(
         string block, string after)

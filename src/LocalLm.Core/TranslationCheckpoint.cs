@@ -45,7 +45,7 @@ internal sealed class TranslationCheckpoint(string directory, FileStream lease) 
                 var segment = await ReadAsync<Segment>(path, cancellationToken);
                 if (segment.Index != index || segment.Text is null || segment.Receipt is null ||
                     segment.SourceHash != Hash(sources[index]) || segment.TextHash != Hash(segment.Text) ||
-                    !Validate(sources[index], segment.Text, markdown).Passed)
+                    !Validate(sources[index], segment.Text, markdown, expected.SourceLanguage, expected.TargetLanguage).Passed)
                     throw Mismatch(directory);
                 checkpoint.completed.Add(index, segment);
             }
@@ -58,8 +58,10 @@ internal sealed class TranslationCheckpoint(string directory, FileStream lease) 
         }
     }
 
-    public static TranslationValidationResult Validate(string source, string text, bool markdown) => markdown
-        ? TranslationValidator.ValidateMarkdown(source, text) : TranslationValidator.ValidatePlain(source, text);
+    public static TranslationValidationResult Validate(string source, string text, bool markdown,
+        string? sourceLanguage = null, string? targetLanguage = null) => markdown
+        ? TranslationValidator.ValidateMarkdown(source, text, sourceLanguage, targetLanguage)
+        : TranslationValidator.ValidatePlain(source, text, sourceLanguage, targetLanguage);
 
     public async Task SaveAsync(int index, string source, string text, LocalUsageReceipt receipt)
     {
