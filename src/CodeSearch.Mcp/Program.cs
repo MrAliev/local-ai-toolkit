@@ -46,6 +46,8 @@ builder.Services.AddSingleton(serviceProvider => new SyncNotice(
 builder.Services.AddSingleton<ILiveSemanticNavigation, LiveSemanticNavigationOverlay>();
 builder.Services.AddSingleton<IHeuristicSemanticNavigation, HeuristicSemanticNavigation>();
 builder.Services.AddSingleton<SemanticNavigationGateway>();
+builder.Services.AddSingleton(new SemanticImpactExplanation(
+    () => LocalAi.Broker.Client.BrokerClientFactory.CreateDefault()));
 
 builder.Services
     .AddMcpServer()

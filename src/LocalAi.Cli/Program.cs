@@ -568,7 +568,7 @@ static async Task<int> RunAsync(string[] args, bool machineReadable, CommandStre
 
     if (args is ["semantic", "impact", .. var impactArguments])
     {
-        return await Interruptible(token => Task.FromResult(SemanticImpactCommand.Execute(impactArguments, streams, machineReadable, token)));
+        return await Interruptible(token => SemanticImpactCommand.ExecuteAsync(impactArguments, streams, machineReadable, token));
     }
 
     if (args is ["semantic", .. var semanticArguments])

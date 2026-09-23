@@ -5,6 +5,7 @@ using LocalAi.Cli.Resources;
 using LocalAi.Contracts;
 using LocalAi.Contracts.Localization;
 using LocalAi.Contracts.Security;
+using LocalAi.Broker.Client;
 
 namespace LocalAi.Cli;
 
@@ -12,24 +13,33 @@ internal static class SemanticImpactCommand
 {
     internal static int Execute(string[] args, CommandStreams streams, bool machineReadable,
         CancellationToken cancellationToken, string? runtimeRoot = null)
+        => ExecuteAsync(args, streams, machineReadable, cancellationToken, runtimeRoot).GetAwaiter().GetResult();
+
+    internal static async Task<int> ExecuteAsync(string[] args, CommandStreams streams, bool machineReadable,
+        CancellationToken cancellationToken, string? runtimeRoot = null, SemanticImpactExplanation? explanationService = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         int Refuse(string code, string message, int exit = 2)
         {
-            UsageCall.Current?.Refused(code);
+            if (exit is 70 or 75) UsageCall.Current?.Failed(code);
+            else UsageCall.Current?.Refused(code);
             if (machineReadable) streams.Out.WriteLine(MachineOutput.Refusal("semantic impact", code, message));
             else streams.Error.WriteLine(message);
             return exit;
         }
         var options = new Dictionary<string, string>(StringComparer.Ordinal);
+        var explain = false;
         for (var i = 0; i < args.Length; i++)
         {
-            if (args[i] is not ("--root" or "--path" or "--line" or "--column" or "--limit") ||
+            if (args[i] == "--explain" && !explain) { explain = true; continue; }
+            if (args[i] is not ("--root" or "--path" or "--line" or "--column" or "--limit" or "--model") ||
                 i + 1 >= args.Length || args[i + 1].StartsWith("--", StringComparison.Ordinal) ||
                 !options.TryAdd(args[i], args[i + 1]))
                 return Refuse("invalid_arguments", LocalAiCommandSyntax.SemanticImpact);
             i++;
         }
+        if (options.ContainsKey("--model") && (!explain || string.IsNullOrWhiteSpace(options["--model"])))
+            return Refuse("invalid_arguments", LocalAiCommandSyntax.SemanticImpact);
         var path = options.GetValueOrDefault("--path");
         if (path is null || !int.TryParse(options.GetValueOrDefault("--line"), NumberStyles.None, CultureInfo.InvariantCulture, out var line) ||
             !int.TryParse(options.GetValueOrDefault("--column", "1"), NumberStyles.None, CultureInfo.InvariantCulture, out var column) ||
@@ -40,11 +50,16 @@ internal static class SemanticImpactCommand
             return Refuse("invalid_position", CliText.PositionNotFromOne(line, column));
         try
         {
-            var report = new SemanticNavigationGateway(runtimeRoot: runtimeRoot).AnalyzeImpact(path, position.Line,
+            var gateway = new SemanticNavigationGateway(runtimeRoot: runtimeRoot);
+            SemanticImpactReport Read() => gateway.AnalyzeImpact(path, position.Line,
                 position.Utf16Column, limit, options.GetValueOrDefault("--root"), cancellationToken);
+            var explained = explain ? await (explanationService ?? new SemanticImpactExplanation(
+                    () => BrokerClientFactory.CreateDefault(runtimeRoot))).ExplainAsync(Read, options.GetValueOrDefault("--model"), cancellationToken)
+                : null;
+            var report = explained?.Report ?? Read();
             cancellationToken.ThrowIfCancellationRequested();
-            UsageCall.Current?.NoInference();
-            var data = SemanticImpactOutput.Create(report);
+            if (!explain) UsageCall.Current?.NoInference();
+            var data = SemanticImpactOutput.Create(report, explained?.Explanation);
             if (machineReadable) streams.Out.WriteLine(MachineOutput.Answer("semantic impact", data));
             else
             {
@@ -55,10 +70,22 @@ internal static class SemanticImpactCommand
             }
             return 0;
         }
+        catch (ImpactExplanationRejectedException error)
+        {
+            if (machineReadable) streams.Out.WriteLine(MachineEnvelope.StructuredRefusal("semantic impact", error.Validation));
+            else streams.Error.WriteLine("result_rejected: " + SemanticImpactExplanation.DescribeFailure(error.Message));
+            return 65;
+        }
+        catch (BrokerJobFailedException error)
+        { return Refuse("local_model_failed", error.Message, 70); }
+        catch (BrokerBootstrapException error)
+        { return Refuse(error.Code, error.Message, 75); }
         catch (SemanticNavigationNotReadyException error) { return Refuse("semantic_navigation_not_ready", error.Message, 65); }
         catch (SemanticSnapshotMismatchException error) { return Refuse("semantic_snapshot_mismatch", error.Message, 65); }
         catch (InvalidOperationException error) when (error.Message.StartsWith("impact_", StringComparison.Ordinal))
         {
+            if (error.Message is "impact_explanation_limit" or "impact_explanation_budget" or "impact_snapshot_changed")
+                return Refuse(error.Message, SemanticImpactExplanation.DescribeFailure(error.Message), 65);
             return Refuse(error.Message, OutputCulture.Pick(
                 "Impact analysis requires an indexed, precise C# symbol and source hashes. " + error.Message,
                 "Для анализа нужен точный C#-символ в индексе и хеши исходников. " + error.Message), 65);
