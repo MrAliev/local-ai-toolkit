@@ -743,9 +743,9 @@ is not supported.
 See the [PDF parser and OCR measurements](scripts/quality/pdf/README.md) for separate
 text-layer, damaged-document and raster-limit checks, plus the limits of that evidence.
 
-Document search indexes **PDF, TXT and Markdown** (`.md`, `.markdown`). Keep the index
+Document search indexes **PDF, TXT, Markdown** (`.md`, `.markdown`) **and DOCX**. Keep the index
 outside the source folder; only supported files directly in that folder are included.
-PDFs still use OCR by default. TXT and Markdown are read directly without a model.
+PDFs still use OCR by default. Other supported formats are read directly without a model.
 
 ```powershell
 lai localai documents index --source C:\Documents\Scans --index C:\Documents\SearchIndex
@@ -755,7 +755,7 @@ lai localai documents search --index C:\Documents\SearchIndex --query "invoice n
 
 MCP equivalents are `index_documents(sourceDirectory, indexDirectory, model?, pdfMode?)` and
 `search_documents(indexDirectory, query, limit?, sourceContext?)`. Search finds a
-case-insensitive literal phrase, returns at most one excerpt per page, and makes no
+case-insensitive literal phrase, returns at most one excerpt per source unit, and makes no
 model call. Every PDF hit identifies the file, its SHA-256 version, one-based page,
 normalized whole-page region `(0,0,1,1)`, extraction kind and source excerpt.
 OCR hits also name the extraction model and mark transcription accuracy unverified.
@@ -768,7 +768,7 @@ Explicit `--pdf-mode TextLayer` (MCP `pdfMode: "TextLayer"`) reads embedded PDF 
 with PdfPig 0.1.16. It **never falls back to OCR**: pages with no extracted text are
 listed in the index result's `emptyPages`; reindex with `--pdf-mode Ocr` to recognize
 page images. Embedded text can contain hidden characters or a different reading order.
-`textKind` distinguishes `ocr`, `pdf-text` and `plain-text`; `textVerification` is
+For these formats, `textKind` distinguishes `ocr`, `pdf-text` and `plain-text`; `textVerification` is
 `unverified`, `layout-unverified` or `source-text` respectively. Text-layer extraction
 does not claim a match to the visible page.
 
@@ -779,10 +779,34 @@ decoded text file or extracted PDF page. Text is preserved, including line endin
 UTF-8 and BOM-marked UTF-16/UTF-32 are supported. Invalid encodings and NUL-containing
 input are refused. Plain-text search returns at most one excerpt per file.
 
+DOCX search reads main-body paragraphs and paragraphs in top-level table cells.
+It joins adjacent text runs, preserves tabs and explicit breaks, and returns at most
+one excerpt per paragraph. `textKind: "docx-text"` and `textVerification: "layout-unverified"`
+identify this extraction. Each hit's `docxSource` contains the declared main `part`,
+`namespaceUri` for the `w` XPath prefix, and an exact `xpath`. One-based `paragraph`
+counts direct paragraphs in the body or cell; `table`, `row` and `cell` count direct
+XML siblings and are null for body paragraphs. Merged-cell positions describe XML,
+not visual grid columns. File SHA-256 pins these references to that version.
+`page`, `region`, `model`, `ocrOffset` and line fields are null. UTF-16 offsets refer
+to the extracted paragraph. Pages, numbering, styles, hidden text and reading order
+are not rendered or verified; text from hidden runs can be present.
+
+DOCX extraction is deliberately partial. A paragraph containing unsupported inline
+content (such as fields, drawings, notes or tracked revisions) is omitted in full
+to prevent false phrase matches across a skipped fragment. Unsupported blocks,
+content controls and nested tables are omitted. Header/footer, note, comment, style,
+media and other unindexed package parts are listed in `extractionNotices`, with exact
+part names and structural locations where available. External relationships are
+reported and never fetched; hyperlink display text can still be read. Notices are
+limited to 64 per file; `additionalNotices` counts the remainder across files.
+Both index and search return notices, including searches with no hits. Search includes
+notices only for sources that still pass its freshness checks. No match does not prove
+the phrase is absent from the complete Word document.
+
 Repeat `documents index` to refresh. Unchanged documents are reused; changed documents
 are re-read and deleted entries disappear. Changing PDF mode invalidates extraction
-reuse. Version-one OCR indexes remain searchable; refresh atomically upgrades storage
-to version two. The CLI/MCP response schema remains version one with additive fields;
+reuse. Version-one and version-two indexes remain searchable; refresh atomically upgrades storage
+to version three. The CLI/MCP response schema remains version one with additive fields;
 `indexSchemaVersion` names the stored format. Search checks file hashes before returning
 hits and reports changed, deleted or unreadable sources in `excludedSources`. Refresh
 after changes; newly added files become searchable after that refresh. Publication is
@@ -790,14 +814,20 @@ atomic and cancellation keeps the previous snapshot; interrupted new OCR work is
 repeated on the next run. Stored text remains local in `snapshot.json`. Its page hashes
 detect accidental corruption, not deliberate tampering by someone able to rewrite it.
 
-Pilot limits: 32 files, 128 pages per PDF, 256 MiB per PDF, 8 MiB per text file, 1 GiB
+Pilot limits: 32 files, 128 pages per PDF, 256 MiB per PDF, 8 MiB per other file, 1 GiB
 in total, 64,000 extracted characters per PDF page and 8 million in the index.
 Results contain at most 2,000 characters
 per excerpt and accept a 1–256-character phrase. Indexing reports token savings as not
 applicable. Search compares only the source units represented in returned hits with the
 complete tool request/response; this conditional estimate can be negative and is not
 account usage. It does not count the entire corpus or replay earlier OCR usage.
-DOCX is the next format priority. PDF parsing has cooperative cancellation between
+DOCX additionally allows up to 256 archive entries, 8 MiB per expanded part,
+32 MiB total declared expansion, 4096 direct body/cell paragraphs and 64,000 characters
+per extracted paragraph. Consumed XML is also bounded by actual bytes, 100,000 reader
+nodes and depth 64 per part. DTDs, ambiguous/unsafe package paths and duplicate entries
+are refused. No archive content is written to source paths. Index summary `pages` counts
+PDF pages; `paragraphs` counts extracted DOCX paragraphs, and `docxDocuments` counts DOCX files.
+PDF parsing has cooperative cancellation between
 pages, not a hard process deadline or memory sandbox.
 
 Languages are given as **names**, not codes: `--to Russian`, not `--to ru`.
