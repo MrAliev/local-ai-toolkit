@@ -177,7 +177,7 @@ public sealed class ReleaseInstallService(
     /// the ability to name the installed release until the next install writes it again, and
     /// the surfaces that read it say "unknown" rather than guessing.
     /// </summary>
-    private static void RecordInstalledRelease(
+    internal static void RecordInstalledRelease(
         string versionPath,
         string versionDirectory,
         string releaseVersion)
