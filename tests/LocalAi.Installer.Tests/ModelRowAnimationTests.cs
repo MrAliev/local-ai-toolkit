@@ -23,26 +23,10 @@ public sealed class ModelRowAnimationTests
         RunMark expectedMark,
         bool residencyDegraded)
     {
-        var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var thread = new Thread(() =>
+        await WpfTestThread.Run(() =>
         {
-            try
-            {
-                AssertAnimation(verdict, expectedMark, residencyDegraded);
-                completed.SetResult();
-            }
-            catch (Exception exception)
-            {
-                completed.SetException(exception);
-            }
-            finally
-            {
-                Dispatcher.CurrentDispatcher.InvokeShutdown();
-            }
-        }) { IsBackground = true };
-        thread.SetApartmentState(ApartmentState.STA);
-        thread.Start();
-        await completed.Task.WaitAsync(TestContext.Current.CancellationToken);
+            AssertAnimation(verdict, expectedMark, residencyDegraded);
+        });
     }
 
     private static void AssertAnimation(

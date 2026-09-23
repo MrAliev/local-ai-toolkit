@@ -20,26 +20,17 @@ public sealed class AccessibleControlsTests
     [Fact]
     public async Task Real_peers_name_fields_and_choices_in_both_languages_without_changing_consent()
     {
-        var finished = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var thread = new Thread(() =>
+        await WpfTestThread.Run(() =>
         {
-            try
-            {
-                var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
-                foreach (var resource in new[] { "Light", "Controls", "Brand" })
-                    app.Resources.MergedDictionaries.Add(new ResourceDictionary
-                    {
-                        Source = new Uri($"/LocalAi.Installer;component/Themes/{resource}.xaml", UriKind.Relative),
-                    });
-                try { CheckWindows(); }
-                finally { app.Shutdown(); }
-                finished.SetResult();
-            }
-            catch (Exception exception) { finished.SetException(exception); }
-        }) { IsBackground = true };
-        thread.SetApartmentState(ApartmentState.STA);
-        thread.Start();
-        await finished.Task.WaitAsync(TimeSpan.FromSeconds(60), TestContext.Current.CancellationToken);
+            var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+            foreach (var resource in new[] { "Light", "Controls", "Brand" })
+                app.Resources.MergedDictionaries.Add(new ResourceDictionary
+                {
+                    Source = new Uri($"/LocalAi.Installer;component/Themes/{resource}.xaml", UriKind.Relative),
+            });
+        try { CheckWindows(); }
+        finally { app.Shutdown(); }
+        });
     }
 
     private static void CheckWindows()
