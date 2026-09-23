@@ -53,8 +53,10 @@ public sealed partial class PdfReadingTests
         finally { if (Directory.Exists(DocumentIndexPath)) Directory.Delete(DocumentIndexPath, true); }
     }
 
-    [Fact]
-    public async Task Old_ocr_snapshot_is_searchable_and_refresh_migrates_it_atomically()
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    public async Task Old_ocr_snapshot_is_searchable_and_refresh_migrates_it_atomically(int version)
     {
         _ = Pdf(1);
         try
@@ -62,14 +64,14 @@ public sealed partial class PdfReadingTests
             await DocumentSearchIndex.RefreshAsync(new LocalTasks(new RecordingClient()), root, DocumentIndexPath, null, TestContext.Current.CancellationToken);
             var path = Path.Combine(DocumentIndexPath, "snapshot.json");
             var old = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(path))!;
-            old["schemaVersion"] = 1;
+            old["schemaVersion"] = version;
             old.AsObject().Remove("pdfMode");
             old["documents"]![0]!["pages"]![0]!.AsObject().Remove("textKind");
             File.WriteAllText(path, old.ToJsonString());
             Assert.Single((await DocumentSearchIndex.SearchAsync(DocumentIndexPath, "reply", 10, TestContext.Current.CancellationToken)).Hits);
             var summary = await DocumentSearchIndex.RefreshAsync(new LocalTasks(new RecordingClient()), root, DocumentIndexPath, null, TestContext.Current.CancellationToken);
-            Assert.Equal(2, summary.IndexSchemaVersion);
-            Assert.Equal(2, System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(path))!["schemaVersion"]!.GetValue<int>());
+            Assert.Equal(3, summary.IndexSchemaVersion);
+            Assert.Equal(3, System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(path))!["schemaVersion"]!.GetValue<int>());
         }
         finally { if (Directory.Exists(DocumentIndexPath)) Directory.Delete(DocumentIndexPath, true); }
     }

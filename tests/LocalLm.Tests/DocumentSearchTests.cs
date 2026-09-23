@@ -17,9 +17,10 @@ public sealed partial class PdfReadingTests
     [Theory]
     [InlineData("Ocr", "reply", "unverified", 1)]
     [InlineData("TextLayer", "ALPHA-7319", "layout-unverified", 0)]
+    [InlineData("Docx", "ALPHA-7319", "layout-unverified", 0)]
     public async Task Document_tools_bind_through_the_real_mcp_sdk_and_wrap_source_text(string mode, string query, string verification, int calls)
     {
-        _ = mode == "Ocr" ? Pdf(1) : TextPdf();
+        _ = mode == "Docx" ? WriteDocx("<w:p><w:r><w:t>ALPHA-7319</w:t></w:r></w:p>") : mode == "Ocr" ? Pdf(1) : TextPdf();
         var incoming = new Pipe();
         var outgoing = new Pipe();
         var builder = Host.CreateApplicationBuilder();
@@ -34,7 +35,7 @@ public sealed partial class PdfReadingTests
             await using var client = await McpClient.CreateAsync(new StreamClientTransport(incoming.Writer.AsStream(), outgoing.Reader.AsStream()),
                 cancellationToken: TestContext.Current.CancellationToken);
             var indexed = await client.CallToolAsync("index_documents", new Dictionary<string, object?>
-            { ["sourceDirectory"] = root, ["indexDirectory"] = DocumentIndexPath, ["pdfMode"] = mode }, cancellationToken: TestContext.Current.CancellationToken);
+            { ["sourceDirectory"] = root, ["indexDirectory"] = DocumentIndexPath, ["pdfMode"] = mode == "Docx" ? "Ocr" : mode }, cancellationToken: TestContext.Current.CancellationToken);
             Assert.NotEqual(true, indexed.IsError);
             var result = await client.CallToolAsync("search_documents", new Dictionary<string, object?>
             { ["indexDirectory"] = DocumentIndexPath, ["query"] = query, ["limit"] = 1 }, cancellationToken: TestContext.Current.CancellationToken);

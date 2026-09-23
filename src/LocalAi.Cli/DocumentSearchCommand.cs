@@ -51,6 +51,8 @@ internal static class DocumentSearchCommand
                 result = summary;
                 if (!machineReadable) streams.Out.WriteLine(LocalLmText.Catalogue.Format("DocumentsIndexReady", summary.Documents, summary.Pages));
                 if (!machineReadable && mode == "TextLayer") streams.Out.WriteLine(LocalLmText.Get("DocumentsTextLayerNotice"));
+                if (!machineReadable && summary.DocxDocuments > 0) streams.Out.WriteLine(LocalLmText.Get("DocumentsDocxLocationNotice"));
+                if (!machineReadable && summary.ExtractionNotices.Length > 0) streams.Out.WriteLine(LocalLmText.Get("DocumentsDocxOmissions"));
             }
             else
             {
@@ -62,6 +64,8 @@ internal static class DocumentSearchCommand
                     streams.Out.WriteLine(LocalLmText.Catalogue.Format("DocumentsSearchSummary", found.Hits.Length, found.ExcludedSources.Length));
                     streams.Out.WriteLine(LocalLmText.Get("DocumentsHitExcerpt"));
                     if (found.Hits.Any(hit => hit.TextKind == "pdf-text")) streams.Out.WriteLine(LocalLmText.Get("DocumentsTextLayerNotice"));
+                    if (found.Hits.Any(hit => hit.TextKind == "docx-text")) streams.Out.WriteLine(LocalLmText.Get("DocumentsDocxLocationNotice"));
+                    if (found.ExtractionNotices.Length > 0) streams.Out.WriteLine(LocalLmText.Get("DocumentsDocxOmissions"));
                     if (found.ExcludedSources.Length > 0) streams.Out.WriteLine(LocalLmText.Get("DocumentsRefreshHint"));
                 }
             }
