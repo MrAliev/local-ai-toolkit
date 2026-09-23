@@ -45,8 +45,8 @@
     <SolidColorBrush x:Key="FocusRing" Color="#7FC0F0" />
     <SolidColorBrush x:Key="SelectionFill" Color="#264F78" />
     <SolidColorBrush x:Key="ScrollTrack" Color="#1F1F1F" />
-    <SolidColorBrush x:Key="ScrollThumb" Color="#4A4A4A" />
-    <SolidColorBrush x:Key="ScrollThumbHover" Color="#5E5E5E" />
+    <SolidColorBrush x:Key="ScrollThumb" Color="#858585" />
+    <SolidColorBrush x:Key="ScrollThumbHover" Color="#A0A0A0" />
 
     <!-- WPF has no elevation, and a lighter top edge is the only way a card can say "raised".
          Light needs none: on white there is nothing to lighten. -->
