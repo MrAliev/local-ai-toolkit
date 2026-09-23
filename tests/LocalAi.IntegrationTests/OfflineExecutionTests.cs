@@ -32,6 +32,7 @@ public sealed class OfflineExecutionTests
             fixture.Materials.Verifier, runner, fixture.Materials.Catalog, fixture.Layout);
         Assert.Equal(expected, exit);
         using var json = JsonDocument.Parse(output.ToString());
+        Assert.Contains("registerUninstall=true", json.RootElement.GetProperty("data").GetProperty("uninstallNotice").GetString());
         Assert.Equal(mode == "plan", json.RootElement.GetProperty("ok").GetBoolean());
         var data = json.RootElement.GetProperty("data");
         Assert.Equal(mode, data.GetProperty("mode").GetString());
@@ -276,7 +277,7 @@ public sealed class OfflineExecutionTests
             Layout = InstallationLayout.FromLocalAppData(appData);
         }
 
-        public async Task<OfflineBundleResult> Build()
+        public async Task<OfflineBundleResult> Build(bool includeUninstaller = false)
         {
             File.WriteAllText(Path.Combine(Materials.Source, "offline-actions.json"), JsonSerializer.Serialize(new OfflineActionDocument(1,
                 [new("dependency.ollama", "exe", "ollama.exe", [])]), OfflineEnvironmentBundle.Json));
@@ -287,8 +288,9 @@ public sealed class OfflineExecutionTests
             File.WriteAllBytes(Path.Combine(Materials.Source, blob), [42]);
             File.WriteAllText(Path.Combine(Materials.Source, manifest), JsonSerializer.Serialize(new { schemaVersion = 2,
                 config = new { digest = "sha256:" + hash, size = 1 }, layers = new[] { new { digest = "sha256:" + hash, size = 1 } } }));
+            if (includeUninstaller) File.WriteAllText(Path.Combine(Materials.Source, "LocalAi.Installer.exe"), "pinned installer fixture");
             File.WriteAllText(Path.Combine(Materials.Source, OfflineEnvironmentBundle.SourceName), JsonSerializer.Serialize(new OfflineSourceDocument(1,
-                [new("runtime", "localai", "0.0.0-test", ["offline-actions.json"]), new("dependency", "dependency.ollama", "fixture", ["ollama.exe"]),
+                [new("runtime", "localai", "0.0.0-test", includeUninstaller ? ["offline-actions.json", "LocalAi.Installer.exe"] : ["offline-actions.json"]), new("dependency", "dependency.ollama", "fixture", ["ollama.exe"]),
                  new("model", model, "fixture", [manifest, blob])]), OfflineEnvironmentBundle.Json));
             return await Materials.Bundle.BuildAsync(Materials.Source, Materials.Output, Materials.Catalog, Token);
         }
