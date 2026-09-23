@@ -30,6 +30,9 @@ public enum InstallerRunEffectKind
 
     /// <summary>Appending explicitly selected offline tool directories to this account's PATH.</summary>
     UserPath,
+
+    /// <summary>Loading an explicitly selected local model through the target broker without downloading.</summary>
+    ModelPreflight,
 }
 
 public enum InstallerRunStepStatus
