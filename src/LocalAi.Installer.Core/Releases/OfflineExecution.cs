@@ -8,9 +8,14 @@ using LocalAi.Installer.Core.Transactions;
 
 namespace LocalAi.Installer.Core.Releases;
 
-public sealed record OfflineExecutionRequest(int SchemaVersion, string[] Dependencies, bool InstallRuntime, string? ModelsOutput);
+public sealed record OfflineNpmSelection(string Component, string Node, string NpmCli, string Output);
+public sealed record OfflineExecutionRequest(int SchemaVersion, string[] Dependencies, bool InstallRuntime, string? ModelsOutput, OfflineNpmSelection[]? Npm = null);
 public sealed record OfflineExecutionPlan(string ManifestSha256, string ReleaseVersion, OfflineDependencyPlan[] Dependencies,
-    string? RuntimeRoot, OfflineModelsPlan? Models, string OutputDirectory, string[] RemainingRequirements);
+    string? RuntimeRoot, OfflineModelsPlan? Models, string OutputDirectory, string[] RemainingRequirements, OfflineNpmPlan[]? Npm = null)
+{
+    public string[] DependencyOrder => DependencyCatalog.Supported.Where(item => Dependencies.Any(plan => plan.Component == item.ActionId) ||
+        Npm?.Any(plan => plan.Component == item.ActionId) == true).Select(item => item.ActionId).ToArray();
+}
 public sealed record OfflineExecutedStep(string Kind, string Id, string State, int? ExitCode, bool RebootRequired,
     string? RetainedDirectory, LocalAiPackageInstallResult? Runtime = null);
 public sealed record OfflineExecutionResult(OfflineExecutionPlan Plan, string State, string JournalPath,
@@ -26,28 +31,47 @@ public sealed partial class OfflineBundleApplication
         OfflineExecutionRequest request, string output, ModelRoutingCatalogDocument catalog, InstallationLayout layout, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
-        if (request.SchemaVersion != 1 || request.Dependencies is null || request.Dependencies.Length > DependencyCatalog.Supported.Count ||
+        var npmSelections = request.Npm ?? [];
+        if (request.SchemaVersion is not (1 or 2) || request.SchemaVersion == 1 && npmSelections.Length != 0 ||
+            request.Dependencies is null || request.Dependencies.Length > DependencyCatalog.Supported.Count ||
             request.Dependencies.Any(id => id is null || !DependencyCatalog.Supported.Any(item => item.ActionId == id)) ||
             request.Dependencies.Distinct(StringComparer.Ordinal).Count() != request.Dependencies.Length ||
-            request.Dependencies.Length == 0 && !request.InstallRuntime && request.ModelsOutput is null) throw Invalid();
+            npmSelections.Length > DependencyCatalog.Supported.Count || npmSelections.Any(selection => selection is null ||
+                !DependencyCatalog.Supported.Any(item => item.ActionId == selection.Component && item.InstallerKind == DependencyInstallerKind.Npm) ||
+                string.IsNullOrWhiteSpace(selection.Node) || string.IsNullOrWhiteSpace(selection.NpmCli) || string.IsNullOrWhiteSpace(selection.Output)) ||
+            npmSelections.Select(selection => selection.Component).Distinct(StringComparer.Ordinal).Count() != npmSelections.Length ||
+            npmSelections.Any(selection => request.Dependencies.Contains(selection.Component, StringComparer.Ordinal)) ||
+            request.Dependencies.Length == 0 && npmSelections.Length == 0 && !request.InstallRuntime && request.ModelsOutput is null) throw Invalid();
         output = NewExecutionDirectory(output, bundle, layout.Root);
         var snapshot = await new OfflineEnvironmentBundle(verifier).VerifyAsync(bundle, pin, token);
         ValidateComponents(snapshot.Manifest);
         var dependencies = new List<OfflineDependencyPlan>();
         foreach (var item in DependencyCatalog.Supported.Where(item => request.Dependencies.Contains(item.ActionId, StringComparer.Ordinal)))
             dependencies.Add(await DependencyPlanAsync(bundle, snapshot, item.ActionId, token));
+        var npm = new List<OfflineNpmPlan>();
+        var outputs = new List<string> { output };
+        foreach (var item in DependencyCatalog.Supported)
+        {
+            var selection = npmSelections.SingleOrDefault(selection => selection.Component == item.ActionId);
+            if (selection is null) continue;
+            var destination = NewExecutionDirectory(selection.Output, bundle, layout.Root);
+            if (outputs.Any(existing => PathsOverlap(existing, destination))) throw Invalid();
+            npm.Add(await NpmPlanAsync(bundle, snapshot, selection.Component, selection.Node, selection.NpmCli, destination, token));
+            outputs.Add(destination);
+        }
         OfflineModelsPlan? models = null;
         if (request.ModelsOutput is not null)
         {
             var destination = NewExecutionDirectory(request.ModelsOutput, bundle, layout.Root);
-            if (PathsOverlap(output, destination)) throw Invalid();
+            if (outputs.Any(existing => PathsOverlap(existing, destination))) throw Invalid();
             var artifacts = await ReadModelArtifactsAsync(bundle, snapshot, catalog, token);
             models = new(artifacts.Models, artifacts.Files.Select(path => path[7..]).ToArray(), artifacts.Bytes, destination, "preflight-required");
         }
         return (snapshot, new(snapshot.ManifestSha256, snapshot.Manifest.ReleaseVersion, dependencies.ToArray(),
             request.InstallRuntime ? layout.Root : null, models, output,
             ["dependency-prerequisites-and-installed-versions-unverified", "disk-requirements-incomplete",
-             "offline-usability-unverified", .. models is null ? Array.Empty<string>() : ["ollama-model-root-configuration", "target-broker-preflight"]]));
+             "offline-usability-unverified", .. models is null ? Array.Empty<string>() : ["ollama-model-root-configuration", "target-broker-preflight"],
+             .. npm.Count == 0 ? Array.Empty<string>() : ["npm-path-configuration", "npm-toolchain-compatibility-unverified"]], npm.ToArray()));
     }
 
     public async Task<OfflineExecutionResult> ExecuteAsync(string bundle, string pin, OfflineExecutionRequest request, string output,
@@ -65,7 +89,7 @@ public sealed partial class OfflineBundleApplication
             WriteExecutionRecord(Path.Combine(directory.CanonicalPath, "plan.json"), plan);
             using var journal = InstallerRunJournal.Start(directory.CanonicalPath);
             var steps = new List<OfflineExecutedStep>();
-            var pending = plan.Dependencies.Select(item => "dependency:" + item.Component)
+            var pending = plan.DependencyOrder.Select(component => "dependency:" + component)
                 .Concat(plan.RuntimeRoot is null ? [] : new[] { "runtime:localai" })
                 .Concat(plan.Models is null ? [] : new[] { "models:bundled" }).ToList();
             var state = "applied";
@@ -74,15 +98,25 @@ public sealed partial class OfflineBundleApplication
             string? activeStep = null;
             try
             {
-                foreach (var dependency in plan.Dependencies)
+                foreach (var component in plan.DependencyOrder)
                 {
                     token.ThrowIfCancellationRequested();
-                    recording = true; activeStep = journal.BeginStep(InstallerRunEffectKind.DependencyInstall, dependency.Component); recording = false;
-                    var result = await ApplyDependencyAsync(bundle, pin, dependency.Component, token);
-                    var step = new OfflineExecutedStep("dependency", dependency.Component, result.State, result.ExitCode, result.RebootRequired, result.RetainedDirectory);
+                    recording = true; activeStep = journal.BeginStep(InstallerRunEffectKind.DependencyInstall, component); recording = false;
+                    OfflineExecutedStep step;
+                    var npm = plan.Npm?.SingleOrDefault(item => item.Component == component);
+                    if (npm is not null)
+                    {
+                        var result = await ApplyNpmAsync(bundle, pin, component, npm.NodeExecutable, npm.NpmCli, npm.Destination, token);
+                        step = new("dependency", component, result.State == "applied" ? "completed" : result.State, result.ExitCode, false, result.RetainedDirectory);
+                    }
+                    else
+                    {
+                        var result = await ApplyDependencyAsync(bundle, pin, component, token);
+                        step = new("dependency", component, result.State, result.ExitCode, result.RebootRequired, result.RetainedDirectory);
+                    }
                     Record(step);
-                    if (result.State != "completed") { state = result.State; break; }
-                    if (result.RebootRequired) { state = "reboot-required"; break; }
+                    if (step.State != "completed") { state = step.State; break; }
+                    if (step.RebootRequired) { state = "reboot-required"; break; }
                 }
                 if (state == "applied" && package is not null)
                 {
@@ -201,5 +235,5 @@ public sealed partial class OfflineBundleApplication
 
     private static bool IsExecutionFailure(Exception error) => error is IOException or InvalidDataException or UnauthorizedAccessException or
         ArgumentException or NotSupportedException or OverflowException or ReleaseVerificationException or LocalAiPackageInstallationException or
-        System.ComponentModel.Win32Exception or System.Security.SecurityException;
+        JsonException or InvalidOperationException or System.ComponentModel.Win32Exception or System.Security.SecurityException;
 }
