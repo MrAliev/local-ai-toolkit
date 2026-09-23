@@ -352,7 +352,7 @@
     <comment>Printed before the call, not after: the total is known before the first one, and it is the fact that decides whether the reader waits. {2} is ProgressMinutesLeft or empty.</comment>
   </data>
   <data name="ProgressTranslationRetry" xml:space="preserve">
-    <value>Проверка структуры не пройдена ({0}), поэтому весь документ переводится заново с фрагмента 1, моделью {1}.</value>
+    <value>Проверки перевода не пройдены ({0}). Повторная попытка с моделью {1}; доступные фрагменты из контрольных точек будут использованы повторно, если пройдут проверки.</value>
     <comment>The fallback pass re-translates the whole document, so the counter restarts at 1; without this line that reads as a defect. {0} is the validator's own detail, {1} the model tag, which is never translated.</comment>
   </data>
   <data name="ProgressTriageChoosingModel" xml:space="preserve">

@@ -22,7 +22,7 @@ public sealed class BrokerDocumentationModel(ILocalModelClient client, Action<Lo
             new LocalWorkloadMetadata(english.Length, english.Length, 0, 0, 0, LocalDurationClass.Short),
             null, null, 8192, LocalJobPriority.Background, cancellationToken);
         report?.Invoke(result.Receipt);
-        if (!TranslationValidator.ValidatePlain(english, result.Value).Passed)
+        if (!TranslationValidator.ValidatePlain(english, result.Value, "English", "Russian").Passed)
             throw new DocumentationValidationException(["invalid_translation"]);
         return result.Value.Trim();
     }

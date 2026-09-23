@@ -352,8 +352,8 @@
     <comment>Printed before the call, not after: the total is known before the first one, and it is the fact that decides whether the reader waits. {2} is ProgressMinutesLeft or empty.</comment>
   </data>
   <data name="ProgressTranslationRetry" xml:space="preserve">
-    <value>The structure check failed ({0}), so the whole document is translated again from fragment 1, with {1}.</value>
-    <comment>The fallback pass re-translates the whole document, so the counter restarts at 1; without this line that reads as a defect. {0} is the validator's own detail, {1} the model tag, which is never translated.</comment>
+    <value>Translation checks failed ({0}). Retrying with {1}; checkpoint fragments will be reused where available and passing validation.</value>
+    <comment>{0} is the validator's detail; {1} is the model tag, which is never translated. Valid checkpoint fragments can be reused during the retry.</comment>
   </data>
   <data name="ProgressTriageChoosingModel" xml:space="preserve">
     <value>Choosing a model for this log and loading it.</value>
