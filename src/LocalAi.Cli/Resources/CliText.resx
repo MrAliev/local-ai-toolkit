@@ -1161,4 +1161,12 @@ To keep a worktree whatever its branch: git worktree lock &lt;path&gt;</value>
   <data name="OfflineExecuteRefused" xml:space="preserve"><value>Execution request refused. Check the trusted manifest hash, request JSON and bundle contents.</value></data>
   <data name="OfflineExecuteFailed" xml:space="preserve"><value>The run could not be completed or fully recorded. Changes may remain. Check the available run records and installer state before another run.</value></data>
   <data name="OfflineExecuteOutputExists" xml:space="preserve"><value>The --out path already exists. Choose a new run folder; this command does not resume existing runs.</value></data>
+  <data name="OfflineNpmHelp" xml:space="preserve"><value>Plan installation of a pinned SCIP npm component from the bundle into a new prefix. --mode plan is the default; --mode apply is supported on Windows only.</value></data>
+  <data name="OfflineNpmPlan" xml:space="preserve"><value>Plan only: npm installation was not run and no packages were installed into --out.</value></data>
+  <data name="OfflineNpmNotice" xml:space="preserve"><value>Uses npm ci --offline --ignore-scripts --no-audit --no-fund. SCIP Python receives the Windows compatibility patch when selected. Node and npm must already exist at the supplied local paths; this command does not verify their provenance. Offline flags do not establish firewall isolation or environment readiness. No models are run and no residency proof is created.</value></data>
+  <data name="OfflineNpmApplied" xml:space="preserve"><value>Package files for '{0}' saved to new prefix '{1}'. Existing prefixes, global packages and PATH were unchanged. Functionality and target prerequisites remain unverified.</value></data>
+  <data name="OfflineNpmRefused" xml:space="preserve"><value>npm installation refused. Check the trusted manifest hash, selected component, local Node/npm paths and --out. Apply requires Windows.</value></data>
+  <data name="OfflineNpmFailed" xml:space="preserve"><value>npm installation or prefix publication failed. Check the available result details before retrying.</value></data>
+  <data name="OfflineNpmUnconfirmed" xml:space="preserve"><value>npm process termination could not be confirmed. It may still be running. The staging directory was retained; its path is in result.retainedDirectory. Check the process state before retrying.</value></data>
+  <data name="OfflineNpmOutputExists" xml:space="preserve"><value>The --out path already exists. Choose a new installation prefix.</value></data>
 </root>

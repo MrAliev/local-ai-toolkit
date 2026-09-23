@@ -6,7 +6,7 @@ using LocalAi.Installer.Core.Diagnosis;
 namespace LocalAi.Installer.Core.Releases;
 
 public sealed record OfflineEnvironmentStep(string Kind, string Id, string Availability, string Action, string State,
-    OfflineDependencyPlan? Dependency = null);
+    OfflineDependencyPlan? Dependency = null, OfflineNpmMaterials? Npm = null);
 public sealed record OfflineEnvironmentDisk(long RuntimeArchiveExpandedBytes, long RuntimeArtifactBytes, long ModelArtifactBytes,
     long DependencyStagingBytes, long RuntimePreparationBytes, long KnownConservativeAdditionalBytes,
     long? AvailableBytes, string Assessment, bool Complete, string[] Unknowns);
@@ -64,6 +64,14 @@ public sealed partial class OfflineBundleApplication
             }
             try
             {
+                if (dependency.InstallerKind == DependencyInstallerKind.Npm)
+                {
+                    var npm = await NpmMaterialsAsync(bundle, snapshot, component.Id, token);
+                    dependencyStaging = Math.Max(dependencyStaging, npm.Bytes);
+                    steps.Add(new("dependency", component.Id, "included", "install-npm", "lockfile-validated", Npm: npm));
+                    unresolved.Add("dependency.npm-toolchain-and-prefix-required:" + component.Id);
+                    continue;
+                }
                 var action = await DependencyPlanAsync(bundle, snapshot, component.Id, token);
                 dependencyStaging = Math.Max(dependencyStaging, action.Files.Sum(path => files[path].Bytes));
                 steps.Add(new("dependency", component.Id, "included", "install-dependency", "recipe-validated", action));

@@ -7,6 +7,23 @@ namespace LocalAi.Installer.Core.Tests;
 
 public sealed class SystemProcessRunnerTests
 {
+    [Fact]
+    public async Task Explicit_working_directory_is_observed_by_the_child_without_changing_the_parent()
+    {
+        var parent = Environment.CurrentDirectory;
+        var directory = Path.Combine(Path.GetTempPath(), "localai-child-cwd-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var result = await new SystemProcessRunner().RunInDirectoryAsync(Fixture, ["current-directory"], directory,
+                Completion, TestContext.Current.CancellationToken);
+            AssertCompleted(result);
+            Assert.Equal(Path.GetFullPath(directory), result.StandardOutput.Trim());
+            Assert.Equal(parent, Environment.CurrentDirectory);
+        }
+        finally { Directory.Delete(directory); }
+    }
+
     /// <summary>
     /// The budget a test passes when it expects the child to finish.
     /// </summary>

@@ -11,6 +11,8 @@ internal static class OfflineEnvironmentCommand
     internal static async Task<int> ExecuteAsync(string[] args, CommandStreams streams, bool machineReadable, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
+        if (args.FirstOrDefault() == "install-npm")
+            return await OfflineNpmCommand.ExecuteAsync(args[1..], streams, machineReadable, token);
         if (args.FirstOrDefault() == "execute")
             return await OfflineExecuteCommand.ExecuteAsync(args[1..], streams, machineReadable, token);
         if (args.FirstOrDefault() == "plan")
