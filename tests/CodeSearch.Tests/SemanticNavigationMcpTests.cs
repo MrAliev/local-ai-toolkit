@@ -1,14 +1,70 @@
 using CodeSearch.Core.Semantics;
 using CodeSearch.Mcp;
+using System.IO.Pipelines;
+using System.Text.Json;
+using LocalAi.Contracts;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using ModelContextProtocol.Client;
+using ModelContextProtocol.Protocol;
 
 namespace CodeSearch.Tests;
 
 public class SemanticNavigationMcpTests
 {
-    [Fact]
-    public void Impact_wraps_one_based_evidence_with_snapshot_and_hashes()
+    private static SemanticImpactExplanation NoExplanation() => new(() => throw new InvalidOperationException("must not start broker"));
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Mcp_sdk_binds_opt_in_explanations_and_rejects_unbound_model_claims(bool reject)
     {
-        var response = CodeSearchTools.AnalyzeImpact(Gateway(), NoBuildRunning.Notice, "Src/A.cs", 3,
+        var broker = new SemanticImpactExplanationTests.ReplyBroker(payload => reject ? "{\"invented\":\"a confirmed bug\"}" :
+            JsonSerializer.Serialize(payload.OutputSchema!.Fields.ToDictionary(field => field.Name, _ => "test-coverage")));
+        var incoming = new Pipe(); var outgoing = new Pipe();
+        var builder = Host.CreateApplicationBuilder();
+        builder.Services.AddSingleton(Gateway());
+        builder.Services.AddSingleton(NoBuildRunning.Notice);
+        builder.Services.AddSingleton(new SemanticImpactExplanation(() => broker));
+        builder.Services.AddMcpServer().WithStreamServerTransport(incoming.Reader.AsStream(), outgoing.Writer.AsStream())
+            .WithToolsFromAssembly(typeof(CodeSearchTools).Assembly);
+        using var host = builder.Build();
+        await host.StartAsync(TestContext.Current.CancellationToken);
+        try
+        {
+            await using var client = await McpClient.CreateAsync(new StreamClientTransport(incoming.Writer.AsStream(), outgoing.Reader.AsStream()),
+                cancellationToken: TestContext.Current.CancellationToken);
+            var request = new CallToolRequestParams
+            {
+                Name = "analyze_impact", Arguments = new Dictionary<string, JsonElement>
+                { ["path"] = JsonSerializer.SerializeToElement("Src/A.cs"), ["line"] = JsonSerializer.SerializeToElement(3) },
+            };
+            var plain = await client.CallToolAsync(request, TestContext.Current.CancellationToken);
+            Assert.DoesNotContain("explanation", string.Join("\n", plain.Content.OfType<TextContentBlock>().Select(block => block.Text)), StringComparison.Ordinal);
+            Assert.Empty(broker.Requests);
+            request.Arguments["explain"] = JsonSerializer.SerializeToElement(true);
+            var result = await client.CallToolAsync(request, TestContext.Current.CancellationToken);
+            var text = string.Join("\n", result.Content.OfType<TextContentBlock>().Select(block => block.Text));
+            Assert.Contains("<untrusted-content", text, StringComparison.Ordinal);
+            Assert.Single(broker.Requests);
+            if (reject)
+            {
+                Assert.StartsWith("result_rejected:", text, StringComparison.Ordinal);
+                Assert.Contains("unexpected_field", text, StringComparison.Ordinal);
+                Assert.DoesNotContain("a confirmed bug", text, StringComparison.Ordinal);
+            }
+            else
+            {
+                Assert.Contains("\"questionVerification\":\"heuristic\"", text, StringComparison.Ordinal);
+                Assert.Contains("\"evidenceCount\":2", text, StringComparison.Ordinal);
+            }
+        }
+        finally { await host.StopAsync(TestContext.Current.CancellationToken); }
+    }
+    [Fact]
+    public async Task Impact_wraps_one_based_evidence_with_snapshot_and_hashes()
+    {
+        var response = await CodeSearchTools.AnalyzeImpact(Gateway(), NoBuildRunning.Notice, NoExplanation(), "Src/A.cs", 3,
             limit: 1, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Contains("<untrusted-content", response, StringComparison.Ordinal);
         Assert.Contains("origin=\"analyze_impact\"", response, StringComparison.Ordinal);
@@ -31,22 +87,22 @@ public class SemanticNavigationMcpTests
     [InlineData("Src/A.cs", 1, 0, 10, "invalid_position:")]
     [InlineData("Src/A.cs", 1, 1, 0, "invalid_limit:")]
     [InlineData("Src/A.cs", 1, 1, 10001, "invalid_limit:")]
-    public void Impact_rejects_invalid_inputs_before_loading(string path, int line, int column, int limit, string code)
+    public async Task Impact_rejects_invalid_inputs_before_loading(string path, int line, int column, int limit, string code)
     {
         var gateway = new SemanticNavigationGateway(_ => throw new InvalidOperationException("must not load"));
-        Assert.StartsWith(code, CodeSearchTools.AnalyzeImpact(gateway, NoBuildRunning.Notice, path, line, column, limit,
+        Assert.StartsWith(code, await CodeSearchTools.AnalyzeImpact(gateway, NoBuildRunning.Notice, NoExplanation(), path, line, column, limit,
             cancellationToken: TestContext.Current.CancellationToken), StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Impact_cancellation_propagates_and_readiness_is_not_a_graph()
+    public async Task Impact_cancellation_propagates_and_readiness_is_not_a_graph()
     {
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
         var gateway = new SemanticNavigationGateway(_ => throw new SemanticNavigationNotReadyException("stale snapshot"));
-        Assert.ThrowsAny<OperationCanceledException>(() => CodeSearchTools.AnalyzeImpact(gateway, NoBuildRunning.Notice,
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => CodeSearchTools.AnalyzeImpact(gateway, NoBuildRunning.Notice, NoExplanation(),
             "Src/A.cs", 3, cancellationToken: cancellation.Token));
-        var refused = CodeSearchTools.AnalyzeImpact(gateway, NoBuildRunning.Notice, "Src/A.cs", 3,
+        var refused = await CodeSearchTools.AnalyzeImpact(gateway, NoBuildRunning.Notice, NoExplanation(), "Src/A.cs", 3,
             cancellationToken: TestContext.Current.CancellationToken);
         Assert.StartsWith("semantic_navigation_not_ready:", refused, StringComparison.Ordinal);
         Assert.DoesNotContain("<untrusted-content", refused, StringComparison.Ordinal);

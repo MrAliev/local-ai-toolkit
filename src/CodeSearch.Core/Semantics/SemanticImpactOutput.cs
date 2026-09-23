@@ -3,8 +3,10 @@ namespace CodeSearch.Core.Semantics;
 /// <summary>The CLI/MCP wire view uses one-based, end-exclusive UTF-16 coordinates.</summary>
 public static class SemanticImpactOutput
 {
-    public static object Create(SemanticImpactReport report) => new
+    public static object Create(SemanticImpactReport report, object? explanation = null)
     {
+        var data = new
+        {
         schemaVersion = 1,
         scope = report.Scope,
         coordinateBase = 1,
@@ -20,7 +22,12 @@ public static class SemanticImpactOutput
         truncated = report.Truncated,
         limitations = new[] { "indexed-csharp-only", "no-transitive-closure", "no-runtime-breakage-prediction",
             "unsaved-buffers-excluded", "unverified-locations-excluded" },
-    };
+        };
+        if (explanation is null) return data;
+        var output = System.Text.Json.JsonSerializer.SerializeToNode(data)!.AsObject();
+        output["explanation"] = System.Text.Json.JsonSerializer.SerializeToNode(explanation);
+        return output;
+    }
 
     private static object Source(SemanticImpactSource source) => new
     {
