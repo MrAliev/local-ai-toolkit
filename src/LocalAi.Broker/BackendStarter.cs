@@ -33,7 +33,7 @@ public sealed class BackendStarter
     private readonly Uri _endpoint;
     private readonly OllamaLaunchRecordStore _records;
     private readonly Action<string> _report;
-    private readonly Action<string> _start;
+    private readonly Action<ProcessStartInfo> _start;
 
     /// <summary>
     /// Whether anything answers at the endpoint. A socket rather than a request on purpose: the
@@ -55,12 +55,13 @@ public sealed class BackendStarter
         OllamaLaunchRecordStore records,
         Action<string> report,
         Action<string>? start = null,
-        Func<Uri, bool>? isListening = null)
+        Func<Uri, bool>? isListening = null,
+        Action<ProcessStartInfo>? startProcess = null)
     {
         _endpoint = endpoint ?? throw new ArgumentNullException(nameof(endpoint));
         _records = records ?? throw new ArgumentNullException(nameof(records));
         _report = report ?? throw new ArgumentNullException(nameof(report));
-        _start = start ?? StartDetached;
+        _start = startProcess ?? (start is null ? StartDetached : info => start(info.FileName));
         _isListening = isListening ?? BackendEndpoint.AnythingListening;
     }
 
@@ -135,14 +136,23 @@ public sealed class BackendStarter
         Volatile.Write(ref _attempted, 1);
         try
         {
-            _start(record.ExecutablePath);
+            var startInfo = new ProcessStartInfo(record.ExecutablePath)
+            {
+                ArgumentList = { "serve" }, UseShellExecute = false, CreateNoWindow = true,
+            };
+            if (record.ModelsDirectory is not null)
+            {
+                OllamaLaunchRecordStore.ValidateModelsDirectory(record.ModelsDirectory);
+                startInfo.Environment["OLLAMA_MODELS"] = record.ModelsDirectory;
+            }
+            _start(startInfo);
             _report(
                 $"Ollama was not answering; started {record.ExecutablePath}. Queued work runs " +
                 "as soon as it answers.");
         }
         catch (Exception exception) when (
             exception is Win32Exception or InvalidOperationException or IOException or
-                ObjectDisposedException)
+                ObjectDisposedException or UnauthorizedAccessException or ArgumentException)
         {
             _report(
                 $"Ollama could not be started from {record.ExecutablePath}: " +
@@ -150,14 +160,9 @@ public sealed class BackendStarter
         }
     }
 
-    private static void StartDetached(string executablePath)
+    private static void StartDetached(ProcessStartInfo startInfo)
     {
-        using var started = Process.Start(new ProcessStartInfo(executablePath)
-        {
-            ArgumentList = { "serve" },
-            UseShellExecute = false,
-            CreateNoWindow = true,
-        });
+        using var started = Process.Start(startInfo);
         if (started is null)
         {
             throw new InvalidOperationException("The process did not start.");
