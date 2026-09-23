@@ -1130,4 +1130,11 @@
   <data name="HardwarePlanReleaseRejected" xml:space="preserve"><value>Не удалось прочитать или проверить данные релиза. Укажите папку совместимого релиза с файлами release-manifest.json и release-manifest.sig.</value></data>
   <data name="HardwarePlanCatalogRejected" xml:space="preserve"><value>Текущий model-routing.json недоступен для чтения или некорректен. Исправьте каталог моделей и повторите команду.</value></data>
   <data name="HardwarePlanDiskPathInvalid" xml:space="preserve"><value>--disk должен указывать существующий локальный каталог для оценки места на диске.</value></data>
+  <data name="OfflineHelpBundle" xml:space="preserve"><value>Создать комплект для переноса из локальных файлов и offline-components.json со списком включённых и отсутствующих компонентов.</value></data>
+  <data name="OfflineHelpVerify" xml:space="preserve"><value>Сверить манифест с доверенным хешем SHA-256, сохранённым отдельно от комплекта, затем проверить каждый перечисленный файл.</value></data>
+  <data name="OfflineNotice" xml:space="preserve"><value>Status: installation-unverified. Целостность файлов не подтверждает работоспособность компонентов или готовность к работе без сети. Проверка на чистом компьютере ещё не выполнена. Исполняемые файлы и модели из комплекта не запускаются.</value></data>
+  <data name="OfflineSaved" xml:space="preserve"><value>Комплект сохранён в «{0}». SHA-256 манифеста: {1}. Сохраните этот хеш отдельно в доверенном месте.</value></data>
+  <data name="OfflineInvalidSource" xml:space="preserve"><value>Не удалось собрать комплект из этого источника. Проверьте offline-components.json и перечисленные в нём локальные файлы.</value></data>
+  <data name="OfflineOutputExists" xml:space="preserve"><value>Путь --out уже существует. Укажите новую выходную папку.</value></data>
+  <data name="OfflineVerificationFailed" xml:space="preserve"><value>Проверка комплекта не пройдена. Используйте отдельно сохранённый доверенный хеш манифеста и неизменённую копию комплекта.</value></data>
 </root>
