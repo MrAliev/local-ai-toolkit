@@ -1,0 +1,518 @@
+{
+  "schemaVersion": 1,
+  "baseline": {
+    "artifacts": {
+      "codesearch-mcp.exe": {
+        "bytes": 110360216,
+        "sha256": "53386A87BD1506ECB4E111929E5BE64EEBEED65A0C9744A95545DA2D8F09130D"
+      },
+      "codesearch.exe": {
+        "bytes": 106404903,
+        "sha256": "A8C14FC66FAE134B4977E2225D5913F26522359F0CF84D4207BB105440690BE2"
+      },
+      "libHarfBuzzSharp.dll": {
+        "bytes": 2065248,
+        "sha256": "3E47DCF6E42ADA1ADA2202BFBAB1A804C0C98EDDD6989145E27AF6588FED90AF"
+      },
+      "libSkiaSharp.dll": {
+        "bytes": 12254048,
+        "sha256": "C8770C219E0D3CD9BB119FAD46F2D00AE1855B11315816E86E909E3332826212"
+      },
+      "localai-launcher.exe": {
+        "bytes": 76154644,
+        "sha256": "5CAC1B6BC14C496F9C416BE6589A6FF7E004970D2C5D76DCF7F03778AF93A8A2"
+      },
+      "LocalAi.Broker.exe": {
+        "bytes": 76507409,
+        "sha256": "C38419738E7472A75836C40E54DFE9E87BEFD7CB9C941AA2D81550BBBC6ED7CC"
+      },
+      "localai.exe": {
+        "bytes": 122137169,
+        "sha256": "8C100614BE213F6E1A5AF67D964A7C44AD9460A47D568C1210BFC2E2C49E6C89"
+      },
+      "locallm-mcp.exe": {
+        "bytes": 87903952,
+        "sha256": "7261F95932FF406BB1F164E6CFE2B45D3951C76520BDBA38C9AD4681E9D36C08"
+      },
+      "pdfium.dll": {
+        "bytes": 7220736,
+        "sha256": "D3D9F4B7C9DABE3363F30779C5C3C715C47332749FA590E4B4A2B8B6780CB1C4"
+      },
+      "THIRD-PARTY-NOTICES-DOCUMENTATION.txt": {
+        "bytes": 154318,
+        "sha256": "E7071F8C8CC62241DDD6E67CEC517BC09A55D3B07741B17081A96D4D79F8A5CD"
+      },
+      "THIRD-PARTY-NOTICES-PDF.txt": {
+        "bytes": 267720,
+        "sha256": "C809F4B30F53A9E48741BF4156DB8E893148725477B18CEE0BD455247F22D29E"
+      }
+    },
+    "artifactBytes": 601430363,
+    "installer": {
+      "bytes": 143371332,
+      "sha256": "C93E989532F910354ECD8F26914F0414613B5BF7C708161B6E0EC18508B59406"
+    },
+    "package": {
+      "bytes": 261660703,
+      "sha256": "A03F98D91697927FFE98CFC01870EF86F9AE11AC65D1375E494AAE0542093FAB"
+    },
+    "folderInstallBytes": 405032035,
+    "packageMetadata": {
+      "SchemaVersion": 1,
+      "ReleaseVersion": "0.0.0-size",
+      "VersionDirectory": "ac6b47f",
+      "ModelCatalogVersion": "1",
+      "ProtocolVersion": 1,
+      "BuildCompatibilityId": "localai-broker-v1"
+    }
+  },
+  "candidate": {
+    "artifacts": {
+      "codesearch-mcp.exe": {
+        "bytes": 51152186,
+        "sha256": "162BC7D6E6D19CD3442FFD60CE713AE68B64DD8231B64564D61BAF9BDAFED528"
+      },
+      "codesearch.exe": {
+        "bytes": 49966296,
+        "sha256": "CF1746213B6C32C78AD535BE179826B0511712C87F094F64164C19D15A817280"
+      },
+      "libHarfBuzzSharp.dll": {
+        "bytes": 2065248,
+        "sha256": "3E47DCF6E42ADA1ADA2202BFBAB1A804C0C98EDDD6989145E27AF6588FED90AF"
+      },
+      "libSkiaSharp.dll": {
+        "bytes": 12254048,
+        "sha256": "C8770C219E0D3CD9BB119FAD46F2D00AE1855B11315816E86E909E3332826212"
+      },
+      "localai-launcher.exe": {
+        "bytes": 39377392,
+        "sha256": "74FC10773EF76443DD3C67DCFB7A291AD9F623C8FA804F2A7428BFB59DF40155"
+      },
+      "LocalAi.Broker.exe": {
+        "bytes": 39520845,
+        "sha256": "71059983390E270568EAC3BC40EC5F424287D80CCF6E14FF3F1DDD850272AFD9"
+      },
+      "localai.exe": {
+        "bytes": 56065998,
+        "sha256": "34B80371DB4864D0FED8CBD133ADF0F7A8EAF890AEE5781E123DA3DC7825C4CD"
+      },
+      "locallm-mcp.exe": {
+        "bytes": 43226436,
+        "sha256": "90425D92A1C8BE088655A94FEC6A0F5EFE6FB0372F1D49124920A304115266CD"
+      },
+      "pdfium.dll": {
+        "bytes": 7220736,
+        "sha256": "D3D9F4B7C9DABE3363F30779C5C3C715C47332749FA590E4B4A2B8B6780CB1C4"
+      },
+      "THIRD-PARTY-NOTICES-DOCUMENTATION.txt": {
+        "bytes": 154318,
+        "sha256": "E7071F8C8CC62241DDD6E67CEC517BC09A55D3B07741B17081A96D4D79F8A5CD"
+      },
+      "THIRD-PARTY-NOTICES-PDF.txt": {
+        "bytes": 267720,
+        "sha256": "C809F4B30F53A9E48741BF4156DB8E893148725477B18CEE0BD455247F22D29E"
+      }
+    },
+    "artifactBytes": 301271223,
+    "installer": {
+      "bytes": 66985781,
+      "sha256": "F969F4C6FF62C73A1A01E48F25B040D428EF3CFEB9E83E1000F126DE461186C4"
+    },
+    "package": {
+      "bytes": 256765951,
+      "sha256": "C0F878DBD4A71A965BADAFFA2BE1FCFEAB87D2A05E97ED52432097330F356FDB"
+    },
+    "folderInstallBytes": 323751732,
+    "packageMetadata": {
+      "SchemaVersion": 1,
+      "ReleaseVersion": "0.0.0-size",
+      "VersionDirectory": "ac6b47f",
+      "ModelCatalogVersion": "1",
+      "ProtocolVersion": 1,
+      "BuildCompatibilityId": "localai-broker-v1"
+    }
+  },
+  "artifactReductionBytes": 300159140,
+  "folderInstallReductionBytes": 81280303,
+  "startupScope": "new_process_and_empty_bundle_cache; OS_page_cache_not_cleared",
+  "sdkExposure": "PATH_system32_only; DOTNET_ROOT_points_to_missing_directory",
+  "deferred": [
+    "installer_UI_startup",
+    "locallm_MCP_background_model_sync",
+    "clean_machine_offline_install"
+  ],
+  "cloudTokenSavings": "not_applicable_administrative_measurement",
+  "startups": {
+    "localai.exe": {
+      "baseline": {
+        "samples": [
+          {
+            "elapsedMs": 175.782,
+            "exit": 0,
+            "usageSha256": "f00c10c20fa449d3c826df0b82cac4ff7d8a22309c50280c1ecb633f07241159",
+            "extractedBytes": 0
+          },
+          {
+            "elapsedMs": 168.606,
+            "exit": 0,
+            "usageSha256": "f00c10c20fa449d3c826df0b82cac4ff7d8a22309c50280c1ecb633f07241159",
+            "extractedBytes": 0
+          },
+          {
+            "elapsedMs": 169.127,
+            "exit": 0,
+            "usageSha256": "f00c10c20fa449d3c826df0b82cac4ff7d8a22309c50280c1ecb633f07241159",
+            "extractedBytes": 0
+          },
+          {
+            "elapsedMs": 161.472,
+            "exit": 0,
+            "usageSha256": "f00c10c20fa449d3c826df0b82cac4ff7d8a22309c50280c1ecb633f07241159",
+            "extractedBytes": 0
+          },
+          {
+            "elapsedMs": 162.124,
+            "exit": 0,
+            "usageSha256": "f00c10c20fa449d3c826df0b82cac4ff7d8a22309c50280c1ecb633f07241159",
+            "extractedBytes": 0
+          }
+        ],
+        "medianMs": 168.606
+      },
+      "candidate": {
+        "samples": [
+          {
+            "elapsedMs": 228.417,
+            "exit": 0,
+            "usageSha256": "f00c10c20fa449d3c826df0b82cac4ff7d8a22309c50280c1ecb633f07241159",
+            "extractedBytes": 0
+          },
+          {
+            "elapsedMs": 223.725,
+            "exit": 0,
+            "usageSha256": "f00c10c20fa449d3c826df0b82cac4ff7d8a22309c50280c1ecb633f07241159",
+            "extractedBytes": 0
+          },
+          {
+            "elapsedMs": 229.943,
+            "exit": 0,
+            "usageSha256": "f00c10c20fa449d3c826df0b82cac4ff7d8a22309c50280c1ecb633f07241159",
+            "extractedBytes": 0
+          },
+          {
+            "elapsedMs": 233.465,
+            "exit": 0,
+            "usageSha256": "f00c10c20fa449d3c826df0b82cac4ff7d8a22309c50280c1ecb633f07241159",
+            "extractedBytes": 0
+          },
+          {
+            "elapsedMs": 225.441,
+            "exit": 0,
+            "usageSha256": "f00c10c20fa449d3c826df0b82cac4ff7d8a22309c50280c1ecb633f07241159",
+            "extractedBytes": 0
+          }
+        ],
+        "medianMs": 228.417
+      }
+    },
+    "codesearch.exe": {
+      "baseline": {
+        "samples": [
+          {
+            "elapsedMs": 161.615,
+            "exit": 0,
+            "usageSha256": "cf9ab65af025cc7b894cf58bc578bdbde3b024921872087df81059581361f99c",
+            "extractedBytes": 0
+          },
+          {
+            "elapsedMs": 168.789,
+            "exit": 0,
+            "usageSha256": "cf9ab65af025cc7b894cf58bc578bdbde3b024921872087df81059581361f99c",
+            "extractedBytes": 0
+          },
+          {
+            "elapsedMs": 155.084,
+            "exit": 0,
+            "usageSha256": "cf9ab65af025cc7b894cf58bc578bdbde3b024921872087df81059581361f99c",
+            "extractedBytes": 0
+          },
+          {
+            "elapsedMs": 167.044,
+            "exit": 0,
+            "usageSha256": "cf9ab65af025cc7b894cf58bc578bdbde3b024921872087df81059581361f99c",
+            "extractedBytes": 0
+          },
+          {
+            "elapsedMs": 152.486,
+            "exit": 0,
+            "usageSha256": "cf9ab65af025cc7b894cf58bc578bdbde3b024921872087df81059581361f99c",
+            "extractedBytes": 0
+          }
+        ],
+        "medianMs": 161.615
+      },
+      "candidate": {
+        "samples": [
+          {
+            "elapsedMs": 208.985,
+            "exit": 0,
+            "usageSha256": "cf9ab65af025cc7b894cf58bc578bdbde3b024921872087df81059581361f99c",
+            "extractedBytes": 0
+          },
+          {
+            "elapsedMs": 221.783,
+            "exit": 0,
+            "usageSha256": "cf9ab65af025cc7b894cf58bc578bdbde3b024921872087df81059581361f99c",
+            "extractedBytes": 0
+          },
+          {
+            "elapsedMs": 200.795,
+            "exit": 0,
+            "usageSha256": "cf9ab65af025cc7b894cf58bc578bdbde3b024921872087df81059581361f99c",
+            "extractedBytes": 0
+          },
+          {
+            "elapsedMs": 223.52,
+            "exit": 0,
+            "usageSha256": "cf9ab65af025cc7b894cf58bc578bdbde3b024921872087df81059581361f99c",
+            "extractedBytes": 0
+          },
+          {
+            "elapsedMs": 205.431,
+            "exit": 0,
+            "usageSha256": "cf9ab65af025cc7b894cf58bc578bdbde3b024921872087df81059581361f99c",
+            "extractedBytes": 0
+          }
+        ],
+        "medianMs": 208.985
+      }
+    },
+    "localai-launcher.exe": {
+      "baseline": {
+        "samples": [
+          {
+            "elapsedMs": 34.323,
+            "exit": 2,
+            "usageSha256": "68d955167b995c58dabdd9aa88f67ef346c77910fefe7aff1e3e17935c14ab9d",
+            "extractedBytes": 0
+          },
+          {
+            "elapsedMs": 31.951,
+            "exit": 2,
+            "usageSha256": "68d955167b995c58dabdd9aa88f67ef346c77910fefe7aff1e3e17935c14ab9d",
+            "extractedBytes": 0
+          },
+          {
+            "elapsedMs": 31.38,
+            "exit": 2,
+            "usageSha256": "68d955167b995c58dabdd9aa88f67ef346c77910fefe7aff1e3e17935c14ab9d",
+            "extractedBytes": 0
+          },
+          {
+            "elapsedMs": 32.906,
+            "exit": 2,
+            "usageSha256": "68d955167b995c58dabdd9aa88f67ef346c77910fefe7aff1e3e17935c14ab9d",
+            "extractedBytes": 0
+          },
+          {
+            "elapsedMs": 30.732,
+            "exit": 2,
+            "usageSha256": "68d955167b995c58dabdd9aa88f67ef346c77910fefe7aff1e3e17935c14ab9d",
+            "extractedBytes": 0
+          }
+        ],
+        "medianMs": 31.951
+      },
+      "candidate": {
+        "samples": [
+          {
+            "elapsedMs": 67.75,
+            "exit": 2,
+            "usageSha256": "68d955167b995c58dabdd9aa88f67ef346c77910fefe7aff1e3e17935c14ab9d",
+            "extractedBytes": 0
+          },
+          {
+            "elapsedMs": 65.563,
+            "exit": 2,
+            "usageSha256": "68d955167b995c58dabdd9aa88f67ef346c77910fefe7aff1e3e17935c14ab9d",
+            "extractedBytes": 0
+          },
+          {
+            "elapsedMs": 65.653,
+            "exit": 2,
+            "usageSha256": "68d955167b995c58dabdd9aa88f67ef346c77910fefe7aff1e3e17935c14ab9d",
+            "extractedBytes": 0
+          },
+          {
+            "elapsedMs": 68.552,
+            "exit": 2,
+            "usageSha256": "68d955167b995c58dabdd9aa88f67ef346c77910fefe7aff1e3e17935c14ab9d",
+            "extractedBytes": 0
+          },
+          {
+            "elapsedMs": 66.372,
+            "exit": 2,
+            "usageSha256": "68d955167b995c58dabdd9aa88f67ef346c77910fefe7aff1e3e17935c14ab9d",
+            "extractedBytes": 0
+          }
+        ],
+        "medianMs": 66.372
+      }
+    },
+    "LocalAi.Broker.exe": {
+      "baseline": {
+        "samples": [
+          {
+            "elapsedMs": 41.146,
+            "exit": 2,
+            "usageSha256": "1295603a22239d7121dc30ccb173bf027027d3bfa2ad67794ae84a73acad43df",
+            "extractedBytes": 0
+          },
+          {
+            "elapsedMs": 38.803,
+            "exit": 2,
+            "usageSha256": "1295603a22239d7121dc30ccb173bf027027d3bfa2ad67794ae84a73acad43df",
+            "extractedBytes": 0
+          },
+          {
+            "elapsedMs": 38.576,
+            "exit": 2,
+            "usageSha256": "1295603a22239d7121dc30ccb173bf027027d3bfa2ad67794ae84a73acad43df",
+            "extractedBytes": 0
+          },
+          {
+            "elapsedMs": 40.723,
+            "exit": 2,
+            "usageSha256": "1295603a22239d7121dc30ccb173bf027027d3bfa2ad67794ae84a73acad43df",
+            "extractedBytes": 0
+          },
+          {
+            "elapsedMs": 37.102,
+            "exit": 2,
+            "usageSha256": "1295603a22239d7121dc30ccb173bf027027d3bfa2ad67794ae84a73acad43df",
+            "extractedBytes": 0
+          }
+        ],
+        "medianMs": 38.803
+      },
+      "candidate": {
+        "samples": [
+          {
+            "elapsedMs": 78.899,
+            "exit": 2,
+            "usageSha256": "1295603a22239d7121dc30ccb173bf027027d3bfa2ad67794ae84a73acad43df",
+            "extractedBytes": 0
+          },
+          {
+            "elapsedMs": 78.175,
+            "exit": 2,
+            "usageSha256": "1295603a22239d7121dc30ccb173bf027027d3bfa2ad67794ae84a73acad43df",
+            "extractedBytes": 0
+          },
+          {
+            "elapsedMs": 79.601,
+            "exit": 2,
+            "usageSha256": "1295603a22239d7121dc30ccb173bf027027d3bfa2ad67794ae84a73acad43df",
+            "extractedBytes": 0
+          },
+          {
+            "elapsedMs": 79.905,
+            "exit": 2,
+            "usageSha256": "1295603a22239d7121dc30ccb173bf027027d3bfa2ad67794ae84a73acad43df",
+            "extractedBytes": 0
+          },
+          {
+            "elapsedMs": 77.142,
+            "exit": 2,
+            "usageSha256": "1295603a22239d7121dc30ccb173bf027027d3bfa2ad67794ae84a73acad43df",
+            "extractedBytes": 0
+          }
+        ],
+        "medianMs": 78.899
+      }
+    },
+    "codesearch-mcp.exe": {
+      "baseline": {
+        "samples": [
+          {
+            "elapsedMs": 226.948,
+            "exit": 0,
+            "tools": 12,
+            "usageSha256": "47ff425331adddcd72acb8e1445c801a3615caa141d81cb94aa6bc9670a9a011"
+          },
+          {
+            "elapsedMs": 227.329,
+            "exit": 0,
+            "tools": 12,
+            "usageSha256": "47ff425331adddcd72acb8e1445c801a3615caa141d81cb94aa6bc9670a9a011"
+          },
+          {
+            "elapsedMs": 221.973,
+            "exit": 0,
+            "tools": 12,
+            "usageSha256": "47ff425331adddcd72acb8e1445c801a3615caa141d81cb94aa6bc9670a9a011"
+          },
+          {
+            "elapsedMs": 226.603,
+            "exit": 0,
+            "tools": 12,
+            "usageSha256": "47ff425331adddcd72acb8e1445c801a3615caa141d81cb94aa6bc9670a9a011"
+          },
+          {
+            "elapsedMs": 228.3,
+            "exit": 0,
+            "tools": 12,
+            "usageSha256": "47ff425331adddcd72acb8e1445c801a3615caa141d81cb94aa6bc9670a9a011"
+          }
+        ],
+        "medianMs": 226.948
+      },
+      "candidate": {
+        "samples": [
+          {
+            "elapsedMs": 300.563,
+            "exit": 0,
+            "tools": 12,
+            "usageSha256": "47ff425331adddcd72acb8e1445c801a3615caa141d81cb94aa6bc9670a9a011"
+          },
+          {
+            "elapsedMs": 275.535,
+            "exit": 0,
+            "tools": 12,
+            "usageSha256": "47ff425331adddcd72acb8e1445c801a3615caa141d81cb94aa6bc9670a9a011"
+          },
+          {
+            "elapsedMs": 282.936,
+            "exit": 0,
+            "tools": 12,
+            "usageSha256": "47ff425331adddcd72acb8e1445c801a3615caa141d81cb94aa6bc9670a9a011"
+          },
+          {
+            "elapsedMs": 293.618,
+            "exit": 0,
+            "tools": 12,
+            "usageSha256": "47ff425331adddcd72acb8e1445c801a3615caa141d81cb94aa6bc9670a9a011"
+          },
+          {
+            "elapsedMs": 290.966,
+            "exit": 0,
+            "tools": 12,
+            "usageSha256": "47ff425331adddcd72acb8e1445c801a3615caa141d81cb94aa6bc9670a9a011"
+          }
+        ],
+        "medianMs": 290.966
+      }
+    }
+  },
+  "provenance": {
+    "date": "2026-09-23",
+    "releaseVersion": "0.0.0-size",
+    "packageVerification": "Production ReleasePackageVerifier accepted both exact packages with an ephemeral test key; no installation performed",
+    "runtime": "win-x64",
+    "sdk": "10.0.401",
+    "modelCalls": 0,
+    "candidateCompression": true,
+    "sourceCommit": "ac6b47fc3dd04acb10a4287fa583212fc3c49be7",
+    "baselineCompression": false
+  }
+}

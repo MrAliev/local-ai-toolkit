@@ -416,6 +416,38 @@ pwsh scripts/publish-localai-release-win-x64-self-contained.ps1 -ReleaseVersion 
 
 You get a `publish/` folder holding `LocalAi.Installer.exe` and the package itself.
 
+Add `-CompressBinaries` to reduce executable size on disk, with a possible startup penalty;
+compression is off by default. Both modes remain self-contained: the bundled .NET runtime,
+package layout, native libraries and validation rules are preserved. Existing language-tooling
+requirements remain unchanged.
+
+The first Windows x64 pilot (2026-09-23, SDK 10.0.401, source `ac6b47fc3dd0`) compared otherwise
+identical `0.0.0-size` builds. Runtime artifacts, including the launcher and native libraries,
+decreased **573.57 → 287.31 MiB (49.9%)**. The folder-install payload (installer + ZIP, excluding
+small manifest/signature files) decreased **386.27 → 308.75 MiB (20.1%)**; the ZIP alone decreased
+249.54 → 244.87 MiB. Five alternating launches per variant used a new process, an empty bundle
+extraction directory, a PATH containing only System32, and an unavailable global .NET root:
+
+| Startup path | Uncompressed median | Compressed median |
+| --- | ---: | ---: |
+| `localai --help` | 168.606 ms | 228.417 ms |
+| `codesearch --help` | 161.615 ms | 208.985 ms |
+| launcher usage refusal | 31.951 ms | 66.372 ms |
+| broker usage refusal | 38.803 ms | 78.899 ms |
+| CodeSearch MCP initialization | 226.948 ms | 290.966 ms |
+
+Usage output and MCP initialization/tool descriptions matched across variants; these entry
+points started without a global SDK/runtime. The OS file cache was **not** cleared, so these
+are process/extraction-cache cold starts, not a clean-boot measurement. Installer UI startup,
+LocalLm MCP background model synchronization and a clean-machine offline installation remain
+part of final acceptance (#618); the opt-in pilot does not replace it. Both ZIPs passed the
+production package verifier with an ephemeral test trust key, without modifying the installed
+runtime or using the release signing key. Measurements and artifact hashes are retained in
+[results.json](scripts/quality/standalone-size/results.json); reproduce the comparison with
+[compare.py](scripts/quality/standalone-size/compare.py) after publishing two distinct output
+folders with identical release/version arguments, adding `-CompressBinaries` only to the second.
+This is a storage/startup tradeoff, not a cloud-token savings measurement.
+
 ### What it will compute on
 
 The product is built for a graphics card but does not demand one. What you get is your
