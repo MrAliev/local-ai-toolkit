@@ -25,6 +25,9 @@ param(
     [string] $PackageUri = "",
 
     [Parameter(Mandatory = $false)]
+    [switch] $CompressBinaries,
+
+    [Parameter(Mandatory = $false)]
     [switch] $SignManifest
 )
 
@@ -75,9 +78,11 @@ if ([string]::IsNullOrWhiteSpace($PackageUri)) {
 # "the version without the suffix" - while Version, InformationalVersion, the package URI and
 # the signer keep the full string, so a test build stays labelled as the prerelease it is.
 $NumericVersion = ($ReleaseVersion -split '-', 2)[0]
+$CompressionEnabled = $CompressBinaries.IsPresent.ToString().ToLowerInvariant()
 
 Write-Host "Release version: $ReleaseVersion"
 Write-Host "Package URI:     $PackageUri"
+Write-Host "Binary compression: $CompressionEnabled"
 
 if ([string]::IsNullOrWhiteSpace($VersionDirectory)) {
     $VersionDirectory = (git rev-parse --short=12 HEAD).Trim()
@@ -174,6 +179,7 @@ function Invoke-SafePublish {
         # successes and then failed on the missing artifacts with nothing to explain either.
         $output = dotnet publish $ProjectPath -c $Configuration -r $Runtime `
             -p:SelfContained=true -p:PublishSingleFile=true -p:BuildInParallel=false -p:UseSharedCompilation=false `
+            -p:EnableCompressionInSingleFile=$CompressionEnabled `
             -p:Version=$ReleaseVersion -p:VersionPrefix=$NumericVersion `
             -p:AssemblyVersion="$NumericVersion.0" -p:FileVersion="$NumericVersion.0" `
             -p:InformationalVersion=$ReleaseVersion `
