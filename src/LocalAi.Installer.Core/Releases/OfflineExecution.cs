@@ -9,12 +9,12 @@ using LocalAi.Installer.Core.Transactions;
 namespace LocalAi.Installer.Core.Releases;
 
 public sealed record OfflineNpmSelection(string Component, string Node, string NpmCli, string Output);
-public sealed record OfflineExecutionRequest(int SchemaVersion, string[] Dependencies, bool InstallRuntime, string? ModelsOutput, OfflineNpmSelection[]? Npm = null, bool RegisterPaths = false, bool ConfigureModels = false);
+public sealed record OfflineExecutionRequest(int SchemaVersion, string[] Dependencies, bool InstallRuntime, string? ModelsOutput, OfflineNpmSelection[]? Npm = null, bool RegisterPaths = false, bool ConfigureModels = false, bool RegisterUninstall = false);
 public sealed record OfflineUserPathPlan(string? Before, string After, string[] Directories);
 public sealed record OfflineModelSetupPlan(string Directory, string RecordPath, string? BeforeSha256);
 public sealed record OfflineExecutionPlan(string ManifestSha256, string ReleaseVersion, OfflineDependencyPlan[] Dependencies,
     string? RuntimeRoot, OfflineModelsPlan? Models, string OutputDirectory, string[] RemainingRequirements, OfflineNpmPlan[]? Npm = null, OfflineUserPathPlan? UserPath = null,
-    OfflineModelSetupPlan? ModelSetup = null)
+    OfflineModelSetupPlan? ModelSetup = null, OfflineUninstallPlan? Uninstall = null)
 {
     public string[] DependencyOrder => DependencyCatalog.Supported.Where(item => Dependencies.Any(plan => plan.Component == item.ActionId) ||
         Npm?.Any(plan => plan.Component == item.ActionId) == true).Select(item => item.ActionId).ToArray();
@@ -38,6 +38,7 @@ public sealed partial class OfflineBundleApplication
         if (request.SchemaVersion is not (1 or 2 or 3 or 4) || request.SchemaVersion == 1 && npmSelections.Length != 0 ||
             request.RegisterPaths && (request.SchemaVersion < 3 || !request.InstallRuntime && npmSelections.Length == 0) ||
             request.ConfigureModels && (request.SchemaVersion < 4 || request.ModelsOutput is null || !request.InstallRuntime && !Directory.Exists(layout.Root)) ||
+            request.RegisterUninstall && (request.SchemaVersion < 4 || !request.InstallRuntime) ||
             request.Dependencies is null || request.Dependencies.Length > DependencyCatalog.Supported.Count ||
             request.Dependencies.Any(id => id is null || !DependencyCatalog.Supported.Any(item => item.ActionId == id)) ||
             request.Dependencies.Distinct(StringComparer.Ordinal).Count() != request.Dependencies.Length ||
@@ -74,6 +75,7 @@ public sealed partial class OfflineBundleApplication
         }
         var path = request.RegisterPaths ? PlanUserPath(request.InstallRuntime ? layout : null, npm) : null;
         var modelSetup = request.ConfigureModels ? PlanModelSetup(models!, layout) : null;
+        var uninstall = request.RegisterUninstall ? PlanUninstall(snapshot, layout) : null;
         return (snapshot, new(snapshot.ManifestSha256, snapshot.Manifest.ReleaseVersion, dependencies.ToArray(),
             request.InstallRuntime ? layout.Root : null, models, output,
             ["dependency-prerequisites-and-installed-versions-unverified", "disk-requirements-incomplete",
@@ -82,7 +84,8 @@ public sealed partial class OfflineBundleApplication
                 ["configured-ollama-start-required", "ollama-launch-schema-2-required", "target-broker-preflight"],
              .. request.InstallRuntime && path is null ? new[] { "launcher-path-configuration" } : Array.Empty<string>(),
              .. npm.Count == 0 ? Array.Empty<string>() : path is null ? ["npm-path-configuration", "npm-toolchain-compatibility-unverified"] : ["npm-toolchain-compatibility-unverified"],
-             .. path is null ? Array.Empty<string>() : ["new-process-environment-required"]], npm.ToArray(), path, modelSetup));
+             .. path is null ? Array.Empty<string>() : ["new-process-environment-required"],
+             .. uninstall is null ? Array.Empty<string>() : ["uninstall-functional-acceptance-required"]], npm.ToArray(), path, modelSetup, uninstall));
     }
 
     public async Task<OfflineExecutionResult> ExecuteAsync(string bundle, string pin, OfflineExecutionRequest request, string output,
@@ -91,10 +94,12 @@ public sealed partial class OfflineBundleApplication
         var (snapshot, plan) = await ExecutionMaterialAsync(bundle, pin, request, output, catalog, layout, token);
         if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException();
         VerifiedPackage? package = null;
+        PreparedUninstaller? preparedUninstaller = null;
         try
         {
             // Full runtime trust is established before any dependency can change the machine.
             if (plan.RuntimeRoot is not null) package = await PrepareOfflineRuntimeAsync(bundle, snapshot, token);
+            if (plan.Uninstall is not null) preparedUninstaller = await PrepareUninstallerAsync(bundle, snapshot, plan.Uninstall, token);
             token.ThrowIfCancellationRequested();
             using var directory = new WindowsStagingRootFactory().CreateExclusive(plan.OutputDirectory);
             WriteExecutionRecord(Path.Combine(directory.CanonicalPath, "plan.json"), plan);
@@ -102,6 +107,7 @@ public sealed partial class OfflineBundleApplication
             var steps = new List<OfflineExecutedStep>();
             var pending = plan.DependencyOrder.Select(component => "dependency:" + component)
                 .Concat(plan.RuntimeRoot is null ? [] : new[] { "runtime:localai" })
+                .Concat(plan.Uninstall is null ? [] : new[] { "configuration:uninstall" })
                 .Concat(plan.Models is null ? [] : new[] { "models:bundled" })
                 .Concat(plan.ModelSetup is null ? [] : new[] { "configuration:ollama-model-root" })
                 .Concat(plan.UserPath is null ? [] : new[] { "configuration:user-path" }).ToList();
@@ -142,6 +148,14 @@ public sealed partial class OfflineBundleApplication
                     Record(new("runtime", "localai", succeeded ? "completed" : uncertain ? "recovery-required" : "failed", null, false, null, result));
                     if (succeeded) ReleaseInstallService.RecordInstalledRelease(result.VersionPath, result.Version, plan.ReleaseVersion);
                     else state = uncertain ? "recovery-required" : "failed";
+                }
+                if (state == "applied" && preparedUninstaller is not null)
+                {
+                    token.ThrowIfCancellationRequested();
+                    recording = true; activeStep = journal.BeginStep(InstallerRunEffectKind.UninstallRegistration, "configuration:uninstall"); recording = false;
+                    var step = ApplyUninstall(plan.Uninstall!, layout, plan.ReleaseVersion, preparedUninstaller, token);
+                    Record(step);
+                    if (step.State != "completed") state = step.State;
                 }
                 if (state == "applied" && plan.Models is not null)
                 {
@@ -213,7 +227,7 @@ public sealed partial class OfflineBundleApplication
                 recording = false;
             }
         }
-        finally { package?.TryCleanupAndDispose(); }
+        finally { preparedUninstaller?.Dispose(); package?.TryCleanupAndDispose(); }
     }
 
     private async Task<VerifiedPackage> PrepareOfflineRuntimeAsync(string bundle, OfflineBundleResult snapshot, CancellationToken token)

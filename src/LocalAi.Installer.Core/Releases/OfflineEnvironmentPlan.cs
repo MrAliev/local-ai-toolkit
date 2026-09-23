@@ -9,7 +9,8 @@ public sealed record OfflineEnvironmentStep(string Kind, string Id, string Avail
     OfflineDependencyPlan? Dependency = null, OfflineNpmMaterials? Npm = null);
 public sealed record OfflineEnvironmentDisk(long RuntimeArchiveExpandedBytes, long RuntimeArtifactBytes, long ModelArtifactBytes,
     long DependencyStagingBytes, long RuntimePreparationBytes, long KnownConservativeAdditionalBytes,
-    long? AvailableBytes, string Assessment, bool Complete, string[] Unknowns);
+    long? AvailableBytes, string Assessment, bool Complete, string[] Unknowns,
+    long NpmRetainedMaterialBytes = 0, long UninstallerAdditionalBytes = 0);
 public sealed record OfflineEnvironmentPlan(int SchemaVersion, string ManifestSha256, string ReleaseVersion, string CatalogVersion,
     OfflineEnvironmentStep[] Steps, OfflineEnvironmentDisk Disk, string[] Unresolved, bool ReadyForInstallation);
 
@@ -53,6 +54,7 @@ public sealed partial class OfflineBundleApplication
         };
         var expected = new HashSet<(string, string)> { ("runtime", "localai") };
         long dependencyStaging = 0;
+        long npmRetainedMaterials = 0;
         foreach (var dependency in DependencyCatalog.Supported)
         {
             token.ThrowIfCancellationRequested();
@@ -68,6 +70,7 @@ public sealed partial class OfflineBundleApplication
                 {
                     var npm = await NpmMaterialsAsync(bundle, snapshot, component.Id, token);
                     dependencyStaging = Math.Max(dependencyStaging, npm.Bytes);
+                    npmRetainedMaterials = checked(npmRetainedMaterials + npm.Bytes);
                     steps.Add(new("dependency", component.Id, "included", "install-npm", "lockfile-validated", Npm: npm));
                     unresolved.Add("dependency.npm-toolchain-and-prefix-required:" + component.Id);
                     continue;
@@ -113,6 +116,7 @@ public sealed partial class OfflineBundleApplication
         if (snapshot.Manifest.CatalogVersion != catalog.CatalogVersion) unresolved.Add("catalog.version-changed");
         if (steps.Any(step => step.Kind == "model" && step.Availability == "missing")) unknowns.Add("missing-model-artifact-bytes");
         if (steps.Any(step => step.Kind == "dependency" && step.Availability == "missing")) unknowns.Add("missing-dependency-material-bytes");
+        if (npmRetainedMaterials > 0) unknowns.Add("npm-installed-and-generated-bytes");
         steps.Add(new("configuration", "ollama-model-root", "not-assessed", "configure-model-root", "manual-step-required"));
         steps.Add(new("validation", "broker-preflight", "not-assessed", "broker-preflight", "target-machine-check-required"));
         unresolved.AddRange(["dependencies.installed-versions-unverified", "models.root-configuration-and-preflight-required",
@@ -120,13 +124,18 @@ public sealed partial class OfflineBundleApplication
         // This is an explicit single-volume, sequential-operation planning reserve, not an
         // installed-size claim. Runtime preparation budgets two compressed copies (directory
         // release feed + verifier) and its unpacked stage. The executor retains the verified
-        // runtime stage during dependency execution; model import renames its stage.
+        // runtime stage during dependency execution; model import renames its stage. Published
+        // npm prefixes retain their project, lock and cache. The optional uninstaller retains
+        // its protected source until completion alongside the installed copy.
         var runtimePreparation = checked(2 * archive.Bytes + runtime.ExpandedBytes);
-        var knownBudget = checked(runtime.ArtifactBytes + modelBytes + Math.Max(runtimePreparation, checked(runtime.ExpandedBytes + dependencyStaging)));
+        var uninstallerCopies = components[("runtime", "localai")].Files.Contains(BundledInstaller, StringComparer.Ordinal) &&
+            files.TryGetValue(BundledInstaller, out var installer) ? checked(2 * installer.Bytes) : 0;
+        var knownBudget = checked(runtime.ArtifactBytes + modelBytes + npmRetainedMaterials + uninstallerCopies +
+            Math.Max(runtimePreparation, checked(runtime.ExpandedBytes + dependencyStaging)));
         var available = disk.State == ObservationState.Available && disk.AvailableBytes is >= 0 ? disk.AvailableBytes : null;
         var assessment = available is null ? "unknown" : available < knownBudget ? "below-known-budget" : "incomplete";
         return new(1, snapshot.ManifestSha256, snapshot.Manifest.ReleaseVersion, catalog.CatalogVersion, steps.ToArray(),
             new(runtime.ExpandedBytes, runtime.ArtifactBytes, modelBytes, dependencyStaging, runtimePreparation, knownBudget,
-                available, assessment, false, unknowns.ToArray()), unresolved.ToArray(), false);
+                available, assessment, false, unknowns.ToArray(), npmRetainedMaterials, uninstallerCopies), unresolved.ToArray(), false);
     }
 }
