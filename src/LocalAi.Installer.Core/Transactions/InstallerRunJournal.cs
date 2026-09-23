@@ -27,6 +27,9 @@ public enum InstallerRunEffectKind
 
     /// <summary>Taking the managed dispatchers out of one repository.</summary>
     GitHookRemoval,
+
+    /// <summary>Appending explicitly selected offline tool directories to this account's PATH.</summary>
+    UserPath,
 }
 
 public enum InstallerRunStepStatus

@@ -1165,7 +1165,26 @@ selections and overlapping run/model/npm destinations are refused before effects
 `dependencyOrder`: selected EXE/MSI and npm components use catalog order regardless of array order,
 then runtime and model steps follow. npm intent and outcomes use the same durable journal; failure
 or uncertain termination prevents later steps, and retained files appear in `steps[].retainedDirectory`.
-PATH setup and toolchain/functional compatibility remain separate requirements.
+PATH setup is optional below; toolchain/functional compatibility remains a separate requirement.
+
+To register the selected tools, use `"schemaVersion": 3` and add `"registerPaths": true` to the
+same request. At least one runtime or npm selection is required; older schemas reject this option.
+The default is false, preserving existing requests. `userPath` in the plan shows the original
+and proposed user PATH and the selected directories: the runtime launcher directory, each npm
+selection's Node directory and its `node_modules/.bin`. The Node executable must be named
+`node.exe`. Literal directory names containing PATH delimiters, quotes, percent signs or line
+breaks are refused. Existing entries keep their order; duplicate directories are not added.
+
+The `configuration:user-path` step runs after all selected installations/imports succeed, with
+durable intent before its effect. It checks that the directories and launcher/npm command shims
+exist without links, checks that user PATH still equals the execution plan's snapshot, appends
+the missing entries and reads the stored value back. A detected concurrent change stops the step;
+Windows registry updates are not an atomic compare-and-set. Failed writes/readback are reported
+in `steps[].detail`, leave the step pending and never trigger a retry or rollback. PATH may already
+have changed after a failed write/readback. Earlier installed files remain. Machine PATH and
+existing process environments are unchanged. Start a new session before using the commands;
+earlier PATH entries can still resolve a different Node/SCIP version. Compatibility and broker
+preflight remain required, and `readyForUse=false` remains explicit.
 
 The command does not add optional components. An empty
 dependency array, `installRuntime=false` or `modelsOutput=null` omits the corresponding steps, but
@@ -1177,8 +1196,9 @@ parents, outside the bundle and runtime installation. Existing run folders are n
 Before any dependency executes, a selected runtime passes the normal full signed-package, metadata
 and applicable Authenticode verification in protected staging. Its verified files remain retained
 through execution. Runtime activation uses the current user's default LocalAi installation and may
-stop running tools and change the active version. It does not configure PATH, register Windows
-uninstall, apply wizard configuration or set `OLLAMA_MODELS`; those setup steps remain separate.
+stop running tools and change the active version. PATH is changed only by the explicit schema-3
+option above. Windows uninstall registration, wizard configuration and `OLLAMA_MODELS` remain
+separate setup steps.
 
 The run folder contains `plan.json`, `journal-*.json` and, when recording succeeds, `result.json`.
 Each step's intent is flushed before its effect. Failure, cancellation, timeout, reboot request,

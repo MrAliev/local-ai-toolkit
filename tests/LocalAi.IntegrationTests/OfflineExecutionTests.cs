@@ -250,7 +250,7 @@ public sealed class OfflineExecutionTests
         { Calls++; return Task.FromResult(callback(executable, arguments)); }
     }
 
-    private sealed class Fixture : IDisposable
+    internal sealed class Fixture : IDisposable
     {
         public OfflineEnvironmentTests.Fixture Materials { get; }
         public string Run => Path.Combine(Path.GetDirectoryName(Materials.Source)!, "run");
