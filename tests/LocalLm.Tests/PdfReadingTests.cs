@@ -15,7 +15,7 @@ using LocalAi.Mcp;
 
 namespace LocalLm.Tests;
 
-public sealed class PdfReadingTests : IDisposable
+public sealed partial class PdfReadingTests : IDisposable
 {
     private readonly string root = Path.Combine(Path.GetTempPath(), "localai-pdf-tests-" + Guid.NewGuid().ToString("N"));
 

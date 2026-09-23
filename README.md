@@ -65,6 +65,7 @@ locally.
 | `ask_local` | mechanical work over files you name |
 | `triage_log` | make sense of machine output of any length |
 | `read_image` | read images from disk or one PDF page by page |
+| `index_documents` / `search_documents` | index scanned PDFs and find OCR phrases with file versions and page references |
 | `translate_local` | translate, structure intact |
 | `index_status` | whether an index exists, what built it, how far behind HEAD |
 | `index_refresh` | refresh the index after a commit |
@@ -98,6 +99,7 @@ The set is **not the same**: some tools exist only here, some only over MCP.
 | `localai ask "…" <file> …` | mechanical work over files |
 | `localai triage <log>` | make sense of a log |
 | `localai read-image "…" <file>` | read images or one PDF |
+| `localai documents index` / `search` | build a PDF OCR index or find a literal phrase with source references |
 | `localai translate --in <file> --from … --to …` | translate |
 | `localai sync` | build or refresh the index |
 | `localai hooks install` | install the hooks that keep the index current |
@@ -740,6 +742,41 @@ is not supported.
 
 See the [PDF parser and OCR measurements](scripts/quality/pdf/README.md) for separate
 text-layer, damaged-document and raster-limit checks, plus the limits of that evidence.
+
+The document-search pilot indexes **scanned PDFs through OCR**. Keep the index outside
+the source folder; only PDFs directly in that folder are included, without recursion.
+
+```powershell
+lai localai documents index --source C:\Documents\Scans --index C:\Documents\SearchIndex
+lai localai documents search --index C:\Documents\SearchIndex --query "invoice number" --limit 10 --json
+```
+
+MCP equivalents are `index_documents(sourceDirectory, indexDirectory, model?)` and
+`search_documents(indexDirectory, query, limit?, sourceContext?)`. Search finds a
+case-insensitive literal phrase, returns at most one excerpt per page, and makes no
+model call. Every hit identifies the file, its SHA-256 version, one-based page,
+normalized whole-page region `(0,0,1,1)`, OCR model and unverified OCR excerpt.
+`ocrOffset`, `matchLength` and `textOffset` count UTF-16 code units in the page's OCR
+text; they are not coordinates of words in the PDF. No paraphrases or generated answers
+are mixed with that text. OCR can misread or omit text; a missing match proves only
+that the phrase was absent from the indexed OCR.
+
+Repeat `documents index` to refresh. Unchanged documents are reused; changed documents
+are re-read and deleted entries disappear. Search checks file hashes before returning
+hits and reports changed, deleted or unreadable sources in `excludedSources`. Refresh
+after changes; newly added files become searchable after that refresh. Publication is
+atomic and cancellation keeps the previous snapshot; interrupted new OCR work is
+repeated on the next run. Stored text remains local in `snapshot.json`. Its page hashes
+detect accidental corruption, not deliberate tampering by someone able to rewrite it.
+
+Pilot limits: 32 PDFs, 128 pages per PDF, 256 MiB per PDF, 1 GiB of PDFs, 64,000 OCR
+characters per page and 8 million in the index. Results contain at most 2,000 characters
+per excerpt and accept a 1–256-character phrase. Indexing reports token savings as not
+applicable. Search compares only the OCR pages represented in returned hits with the
+complete tool request/response; this conditional estimate can be negative and is not
+account usage. It does not count the entire corpus or replay earlier OCR usage.
+Text-layer extraction and TXT/Markdown are the next priority, followed by DOCX;
+this pilot reads all accepted PDFs through OCR and does not implement those readers.
 
 Languages are given as **names**, not codes: `--to Russian`, not `--to ru`.
 

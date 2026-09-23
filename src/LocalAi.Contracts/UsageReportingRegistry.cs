@@ -75,6 +75,8 @@ public static class UsageReportingRegistry
             ("docs prune", UsageComparisonKind.NotApplicable, null), ("docs pin", UsageComparisonKind.NotApplicable, null),
             ("docs unpin", UsageComparisonKind.NotApplicable, null),
             ("semantic impact", UsageComparisonKind.ContextReduction, "analyze_impact"),
+            ("documents index", UsageComparisonKind.NotApplicable, "index_documents"),
+            ("documents search", UsageComparisonKind.ContextReduction, "search_documents"),
         }) yield return new(UsageSurface.Cli, "localai", command, new(comparison, UsageResponseShape.Envelope), tool);
 
         foreach (var (command, tool) in new (string, string?)[]
@@ -84,7 +86,7 @@ public static class UsageReportingRegistry
 
         foreach (var command in new[]
         {
-            "help", "--help", "-h", "model", "native", "docs", "policy", "policy show", "policy set", "update", "semantic", "semantic status",
+            "help", "--help", "-h", "model", "native", "docs", "documents", "policy", "policy show", "policy set", "update", "semantic", "semantic status",
             "semantic config", "semantic config show", "semantic config path", "semantic config init",
             "semantic lsp-config", "semantic lsp-config show", "semantic lsp-config path", "semantic lsp-config init",
             "semantic fallback-config", "semantic fallback-config show", "semantic fallback-config path", "semantic fallback-config init",
