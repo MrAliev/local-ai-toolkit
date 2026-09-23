@@ -4,8 +4,12 @@ using LocalAi.Contracts;
 
 namespace LocalAi.Installer.Core.Abstractions;
 
-public sealed class SystemProcessRunner : IProcessRunner, IProcessFileRunner
+public sealed class SystemProcessRunner : IProcessRunner, IProcessFileRunner, IProcessWorkingDirectoryRunner
 {
+    public Task<ProcessResult> RunInDirectoryAsync(string executable, IReadOnlyList<string> arguments, string workingDirectory,
+        TimeSpan timeout, CancellationToken cancellationToken) => RunCoreAsync(executable, arguments, timeout, null, cancellationToken,
+            Path.GetFullPath(workingDirectory));
+
     private const int DefaultMaximumCapturedCharacters = 65_536;
     private static readonly TimeSpan DefaultTerminationGrace = TimeSpan.FromSeconds(5);
     private readonly IProcessFactory _processFactory;
@@ -69,7 +73,8 @@ public sealed class SystemProcessRunner : IProcessRunner, IProcessFileRunner
         IReadOnlyList<string> arguments,
         TimeSpan timeout,
         Action<string>? onStandardErrorLine,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? workingDirectory = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(executable);
         ArgumentNullException.ThrowIfNull(arguments);
@@ -84,6 +89,7 @@ public sealed class SystemProcessRunner : IProcessRunner, IProcessFileRunner
         }
 
         var startInfo = CreateStartInfo(executable, arguments);
+        if (workingDirectory is not null) startInfo.WorkingDirectory = workingDirectory;
         using var process = _processFactory.Start(startInfo);
         using var drainCancellation = new CancellationTokenSource();
         var standardOutput = DrainBoundedAsync(
