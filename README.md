@@ -1139,10 +1139,37 @@ changes. Add `--mode apply` to execute it on Windows. Example `request.json` (at
 }
 ```
 
-Choose only required EXE/MSI catalog dependencies; npm components use `offline install-npm`
-separately. The command does not add optional components. An empty
+Choose only required EXE/MSI catalog dependencies. Schema 1 requests keep the original behavior;
+use schema 2 and an explicit `npm` array to include npm components in the same journaled run.
+For example, a request selecting only SCIP TypeScript is:
+
+```json
+{
+  "schemaVersion": 2,
+  "dependencies": [],
+  "installRuntime": false,
+  "modelsOutput": null,
+  "npm": [{
+    "component": "dependency.scip-typescript",
+    "node": "C:\\Program Files\\nodejs\\node.exe",
+    "npmCli": "C:\\Program Files\\nodejs\\node_modules\\npm\\bin\\npm-cli.js",
+    "output": "C:\\localai-scip-typescript"
+  }]
+}
+```
+
+Schema 2 makes older executors refuse the request instead of silently ignoring npm selections.
+Node/npm must already exist when planning; this does not bootstrap a missing toolchain. Each npm
+selection follows the pinned cache rules below and requires its own new prefix. Duplicate component
+selections and overlapping run/model/npm destinations are refused before effects. The plan reports
+`dependencyOrder`: selected EXE/MSI and npm components use catalog order regardless of array order,
+then runtime and model steps follow. npm intent and outcomes use the same durable journal; failure
+or uncertain termination prevents later steps, and retained files appear in `steps[].retainedDirectory`.
+PATH setup and toolchain/functional compatibility remain separate requirements.
+
+The command does not add optional components. An empty
 dependency array, `installRuntime=false` or `modelsOutput=null` omits the corresponding steps, but
-at least one step must remain. Dependencies run in catalog order, followed by runtime activation
+at least one step (including an npm selection) must remain. Dependencies run in catalog order, followed by runtime activation
 and import of all included, enabled models. The dependency recipe and model rules above still apply.
 Every supplied path must be local. Model and run outputs require new, separate folders with existing
 parents, outside the bundle and runtime installation. Existing run folders are never resumed.
@@ -1221,7 +1248,7 @@ or deleting files. No failure publishes the destination. `readyForUse=false` rem
 after success. Offline flags are not a firewall test, cache availability is not functional acceptance,
 and installed/temporary disk requirements remain incomplete. `offline plan` now recognizes these
 materials and their staging bytes, while reporting the separate toolchain/prefix requirement.
-The journaled `offline execute` sequence does not yet include this npm operation.
+The same operation can be selected in a schema-2 `offline execute` request and recorded in its journal.
 
 #### When something refuses
 
