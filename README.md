@@ -1094,7 +1094,8 @@ directory with unique filenames. Nested payload directories are unsupported. App
 EXE or MSI on Windows, after copying and hashing the selected files in a protected temporary folder
 and retaining file handles against replacement throughout execution. MSI uses the system `msiexec`
 with `/i`, `/qn`, `/norestart`; recipe arguments may only be uppercase `PROPERTY=value` entries.
-There is no shell-script, package-manager or network fallback; npm cache installation is unsupported.
+There is no shell-script, package-manager or network fallback in the EXE/MSI command. Pinned SCIP
+npm caches use the separate `offline install-npm` command below.
 The inventory hash trusts the supplied recipe and bytes, not their publisher or declared version.
 The external installer may access the network or make partial changes; network isolation, installed
 version and usability are not established here, and LocalAi cannot automatically roll changes back.
@@ -1138,7 +1139,8 @@ changes. Add `--mode apply` to execute it on Windows. Example `request.json` (at
 }
 ```
 
-Choose only required catalog dependencies; the command does not add optional components. An empty
+Choose only required EXE/MSI catalog dependencies; npm components use `offline install-npm`
+separately. The command does not add optional components. An empty
 dependency array, `installRuntime=false` or `modelsOutput=null` omits the corresponding steps, but
 at least one step must remain. Dependencies run in catalog order, followed by runtime activation
 and import of all included, enabled models. The dependency recipe and model rules above still apply.
@@ -1168,6 +1170,58 @@ requirements and offline usability remain unverified. Configure the imported mod
 broker preflight on the target machine separately. This command invokes no models, transfers no
 residency proof and adds no network fallback or privilege elevation. External vendor installers can
 still use the network. Cloud INPUT/OUTPUT accounting is administrative (not applicable).
+
+#### Install pinned SCIP packages from an offline npm cache
+
+```powershell
+lai localai offline install-npm --bundle E:\localai-offline --manifest-sha256 <trusted-hash> --component dependency.scip-typescript --node "C:\Program Files\nodejs\node.exe" --npm-cli "C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js" --out C:\localai-scip-typescript --json
+```
+
+The default is `--mode plan`; `--mode apply` installs on Windows into a new local prefix with an
+existing parent, outside the bundle. Existing prefixes, global packages and PATH are preserved.
+Supply existing local Node/npm paths explicitly; their provenance and versions are not verified
+by this command. Node must be compatible with the selected package. This command invokes no models
+and reports administrative cloud INPUT/OUTPUT as not applicable.
+
+Only the current catalog's pinned `dependency.scip-typescript` and `dependency.scip-python` packages
+are supported. For each component, declare these files under its dependency inventory entry:
+
+```text
+npm/<component-id>/package.json
+npm/<component-id>/package-lock.json
+npm/<component-id>/cache/_cacache/<every prepared cache file>
+```
+
+List each cache file explicitly; the inventory does not expand globs. Do not include `node_modules`,
+logs or `.npmrc`. The component version must equal the catalog version. `package.json` allows only
+name, version, private and dependencies; dependencies must contain exactly the selected package
+at that exact version, without a range. For TypeScript the dependencies object is
+`{"@sourcegraph/scip-typescript":"0.4.0"}`; for Python it is
+`{"@sourcegraph/scip-python":"0.6.6"}`. Use a version-3 lockfile with matching root dependencies
+and package version. Registry package entries require HTTPS `registry.npmjs.org` URLs and SHA-512
+integrity values. Git/file links, workspaces and arbitrary package sets are unsupported.
+
+Prepare the project and cache on a connected machine in a new folder, running Node's `npm-cli.js`
+with `install --ignore-scripts --global=false --no-audit --no-fund --logs-max=0 --cache ./cache
+--registry=https://registry.npmjs.org` from that folder. Use the working directory, not `--prefix`,
+for this preparation command: the tested npm 10.8.2 can otherwise add a self-referencing file
+dependency. Include only the declared project, lock and cache files in the transferred bundle.
+
+Application re-verifies the complete pinned bundle, copies selected materials into protected
+staging, and runs `npm ci --offline --ignore-scripts --global=false --no-audit --no-fund` through
+Node with a private cache, separate empty user/global configs and an explicit working directory.
+Missing cache entries fail without an online fallback. On success, installed package name/version
+are checked; Python receives the existing hash-pinned Windows compatibility patch. The completed
+stage is published by moving it to the new prefix. Package commands are under `node_modules/.bin`;
+PATH configuration and functional checks remain separate. The prefix also retains its private cache.
+
+Failed/cancelled/timed-out npm runs retain staging for diagnosis. `result.retainedDirectory` names
+it. `termination-unconfirmed` means npm may still be running; establish its state before retrying
+or deleting files. No failure publishes the destination. `readyForUse=false` remains explicit even
+after success. Offline flags are not a firewall test, cache availability is not functional acceptance,
+and installed/temporary disk requirements remain incomplete. `offline plan` now recognizes these
+materials and their staging bytes, while reporting the separate toolchain/prefix requirement.
+The journaled `offline execute` sequence does not yet include this npm operation.
 
 #### When something refuses
 

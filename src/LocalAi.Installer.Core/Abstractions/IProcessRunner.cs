@@ -30,6 +30,15 @@ public interface IProcessRunner
 }
 
 /// <summary>
+/// Runs a child in an explicit working directory without changing the parent process.
+/// </summary>
+public interface IProcessWorkingDirectoryRunner
+{
+    Task<ProcessResult> RunInDirectoryAsync(string executable, IReadOnlyList<string> arguments, string workingDirectory,
+        TimeSpan timeout, CancellationToken cancellationToken);
+}
+
+/// <summary>
 /// Runs a process while preserving its standard output as raw bytes in a file.
 /// Use this for authenticated CLI downloads: routing an archive through a text reader
 /// corrupts arbitrary byte sequences.
