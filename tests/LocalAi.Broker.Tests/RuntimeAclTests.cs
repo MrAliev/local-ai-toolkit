@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using LocalAi.Broker;
+using LocalAi.Contracts;
 
 #pragma warning disable CA1416
 
@@ -9,6 +10,108 @@ namespace LocalAi.Broker.Tests;
 
 public sealed class RuntimeAclTests
 {
+    [Theory]
+    [InlineData("after-repair")]
+    [InlineData("after-initial-read")]
+    public void Ensure_holds_the_same_file_until_acl_validation_finishes(string boundary)
+    {
+        using var root = new TemporaryRuntimeRoot();
+        new RuntimeAcl().Ensure(root.Path);
+        var host = Path.Combine(root.Path, "host.json");
+        File.WriteAllText(host, "original");
+        if (boundary == "after-initial-read") new RuntimeAcl().Ensure(root.Path);
+        var attempted = false;
+        var blocked = false;
+        void TryPublish()
+        {
+            attempted = true;
+            try { PublishReplacement(host); }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException) { blocked = true; }
+        }
+        var acl = new RuntimeAcl(
+            applyExactAcl: (path, directory, create, user, administrators) =>
+            {
+                ApplyRealAcl(path, directory, create, user, administrators);
+                if (path == host && boundary == "after-repair") TryPublish();
+            },
+            readAclSnapshot: path =>
+            {
+                var snapshot = ReadRealAclSnapshot(path);
+                if (path == host && boundary == "after-initial-read" && !attempted) TryPublish();
+                return snapshot;
+            });
+
+        acl.Ensure(root.Path);
+
+        Assert.True(attempted); Assert.True(blocked);
+        Assert.Equal("original", File.ReadAllText(host));
+        Assert.True(ReadRealAclSnapshot(host).AreAccessRulesProtected);
+        PublishReplacement(host);
+        Assert.Equal("replacement", File.ReadAllText(host));
+    }
+
+    [Fact]
+    public void Ensure_does_not_require_sharing_the_contents_of_an_open_file()
+    {
+        using var root = new TemporaryRuntimeRoot();
+        new RuntimeAcl().Ensure(root.Path);
+        var file = Path.Combine(root.Path, "host.json");
+        using var writer = new FileStream(file, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None);
+
+        new RuntimeAcl().Ensure(root.Path);
+
+        Assert.True(ReadRealAclSnapshot(file).AreAccessRulesProtected);
+        writer.WriteByte(42);
+    }
+
+    [Fact]
+    public void Ensure_can_repair_a_file_without_permission_to_read_its_contents()
+    {
+        using var root = new TemporaryRuntimeRoot();
+        new RuntimeAcl().Ensure(root.Path);
+        var file = Path.Combine(root.Path, "host.json");
+        File.WriteAllText(file, "original");
+        var security = new FileInfo(file).GetAccessControl();
+        security.AddAccessRule(new FileSystemAccessRule(WindowsIdentity.GetCurrent().User!,
+            FileSystemRights.ReadData | FileSystemRights.WriteData, AccessControlType.Deny));
+        new FileInfo(file).SetAccessControl(security);
+        Assert.Throws<UnauthorizedAccessException>(() => File.ReadAllText(file));
+
+        new RuntimeAcl().Ensure(root.Path);
+
+        Assert.Equal("original", File.ReadAllText(file));
+        Assert.True(ReadRealAclSnapshot(file).AreAccessRulesProtected);
+    }
+
+    private static void PublishReplacement(string path) => AtomicFile.Write(path, stream =>
+    {
+        using var writer = new StreamWriter(stream, leaveOpen: true);
+        writer.Write("replacement");
+    }, AtomicWrite.Recomputable);
+
+    [Fact]
+    public void Host_protection_does_not_pin_queue_files_during_directory_publication()
+    {
+        using var root = new TemporaryRuntimeRoot();
+        new RuntimeAcl().Ensure(root.Path);
+        var source = Path.Combine(root.Path, "staging", "pending");
+        var destination = Path.Combine(root.Path, "jobs", "published");
+        Directory.CreateDirectory(source);
+        var request = Path.Combine(source, "request.json");
+        File.WriteAllText(request, "request");
+        var moved = false;
+        var acl = new RuntimeAcl(applyExactAcl: (path, directory, create, user, administrators) =>
+        {
+            ApplyRealAcl(path, directory, create, user, administrators);
+            if (path == request) { Directory.Move(source, destination); moved = true; }
+        });
+
+        acl.Ensure(root.Path);
+
+        Assert.True(moved);
+        Assert.Equal("request", File.ReadAllText(Path.Combine(destination, "request.json")));
+    }
+
     [Fact]
     public void Ensure_rechecks_a_secured_tree_without_spending_any_acl_write_operations()
     {
