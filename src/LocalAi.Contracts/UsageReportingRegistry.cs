@@ -68,6 +68,7 @@ public static class UsageReportingRegistry
         foreach (var (command, comparison, tool) in new (string, UsageComparisonKind, string?)[]
         {
             ("repo status", UsageComparisonKind.NotApplicable, null), ("doctor", UsageComparisonKind.NotApplicable, null),
+            ("diagnostics", UsageComparisonKind.NotApplicable, null),
             ("ask", UsageComparisonKind.ReplacedGeneration, "ask_local"), ("triage", UsageComparisonKind.ReplacedGeneration, "triage_log"),
             ("read-image", UsageComparisonKind.ReplacedGeneration, "read_image"), ("translate", UsageComparisonKind.ReplacedGeneration, "translate_local"),
             ("capabilities", UsageComparisonKind.NotApplicable, null), ("docs build", UsageComparisonKind.ReplacedGeneration, null),

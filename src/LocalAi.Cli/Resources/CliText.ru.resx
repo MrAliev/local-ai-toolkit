@@ -1115,4 +1115,11 @@
   <data name="DocsPlanType" xml:space="preserve"><value>Тип: {0} ({1})</value></data>
   <data name="DocsPlanSources" xml:space="preserve"><value>  Объявления в исходниках: {0}</value></data>
   <data name="DocsPlanDependencies" xml:space="preserve"><value>  Исходники зависимостей: {0}</value></data>
+  <data name="DiagnosticsHelp" xml:space="preserve"><value>Показать манифест и диагностические данные. Добавьте --out, чтобы сохранить то же содержимое в ZIP.</value></data>
+  <data name="DiagnosticsNotice" xml:space="preserve"><value>Записанные состояния не подтверждают текущую работоспособность служб или актуальность индексов. В снимке отмечены отсутствующие, нечитаемые и частично собранные источники.</value></data>
+  <data name="DiagnosticsPrivacyNotice" xml:space="preserve"><value>Снимок не содержит запросов к моделям, документов, ответов моделей, необработанных журналов, путей, идентификаторов заданий и вызовов и названий моделей.</value></data>
+  <data name="DiagnosticsSaved" xml:space="preserve"><value>Диагностический ZIP сохранён в «{0}».</value></data>
+  <data name="DiagnosticsOutputExists" xml:space="preserve"><value>Выходной файл уже существует. Укажите другой путь --out.</value></data>
+  <data name="DiagnosticsInputFailed" xml:space="preserve"><value>Не удалось завершить сбор диагностики из-за ошибки чтения. Проверьте доступ к локальным диагностическим данным.</value></data>
+  <data name="DiagnosticsOutputFailed" xml:space="preserve"><value>Не удалось записать диагностический ZIP. Проверьте выходную папку и права на запись.</value></data>
 </root>
