@@ -828,7 +828,7 @@ public sealed class LocalTasks
     /// Translates a document, and is told where it is going: a translation handed back to
     /// the caller lands in a context and one written to a file does not, which is the
     /// whole of the difference between the two figures the notice can print.
-    /// An optional checkpoint reuses structurally validated fragments; it does not
+    /// An optional checkpoint reuses fragments passing structure/content checks; it does not
     /// certify translation accuracy. Protected fenced source ranges are never translated.
     /// </summary>
     public async Task<LocalTranslationResult> TranslateAsync(
@@ -905,6 +905,7 @@ public sealed class LocalTasks
             var outputTokens = 0;
             LocalUsageReceipt? lastReceipt = null;
             var modelStep = 0;
+            TranslationValidationResult? fragmentFailure = null;
             foreach (var item in work)
             {
                 ct.ThrowIfCancellationRequested();
@@ -934,7 +935,7 @@ public sealed class LocalTasks
                 var prompt =
                     $"Translate the following fragment from {sourceLanguage} to {targetLanguage}. " +
                     "Return only the translated fragment. Preserve Markdown structure, code, URLs, " +
-                    "placeholders, and line endings exactly where they are not natural language.\r\n\r\n" +
+                    "placeholders, numeric literals in source order, and line endings exactly where they are not natural language.\r\n\r\n" +
                     text;
                 LocalJobResult<string> result;
                 try
@@ -986,7 +987,9 @@ public sealed class LocalTasks
                 totalOutputTokens = checked(totalOutputTokens + returnedTokens);
                 outputTokens = checked(outputTokens + returnedTokens);
                 var fragment = leadingLineBreaks + result.Value.Trim('\r', '\n') + trailingLineBreaks;
-                if (checkpoint is not null && TranslationCheckpoint.Validate(item.Text, fragment, markdown).Passed)
+                var fragmentValidation = TranslationCheckpoint.Validate(item.Text, fragment, markdown, sourceLanguage, targetLanguage);
+                if (!fragmentValidation.Passed) fragmentFailure ??= fragmentValidation;
+                if (checkpoint is not null && fragmentValidation.Passed)
                     await checkpoint.SaveAsync(modelStep, item.Text, fragment, result.Receipt);
                 translated.Append(fragment);
                 lastReceipt = result.Receipt;
@@ -1000,14 +1003,13 @@ public sealed class LocalTasks
                     ?? throw new InvalidOperationException(
                         LocalLmText.TranslationNoReceipt),
                 Array.AsReadOnly(receipts.ToArray()),
-                outputTokens);
+                outputTokens,
+                fragmentFailure);
         }
 
         var experimentalAttempt = await RunAttemptAsync(modelOverride: null);
         var attempt = experimentalAttempt;
-        var validation = markdown
-            ? TranslationValidator.ValidateMarkdown(source, attempt.Text)
-            : TranslationValidator.ValidatePlain(source, attempt.Text);
+        var validation = attempt.FragmentFailure ?? TranslationCheckpoint.Validate(source, attempt.Text, markdown, sourceLanguage, targetLanguage);
         var brokerFailureOutcome = attempt.Receipts
             .Select(receipt => receipt.Routing?.ExperimentalOutcome)
             .FirstOrDefault(outcome => outcome is not null);
@@ -1036,9 +1038,7 @@ public sealed class LocalTasks
                         new TranslationRetrying(validation.Detail, fallbackModel));
                     attempt = await RunAttemptAsync(fallbackModel);
                     lastFailure = null;
-                    validation = markdown
-                        ? TranslationValidator.ValidateMarkdown(source, attempt.Text)
-                        : TranslationValidator.ValidatePlain(source, attempt.Text);
+                    validation = attempt.FragmentFailure ?? TranslationCheckpoint.Validate(source, attempt.Text, markdown, sourceLanguage, targetLanguage);
                     if (validation.Passed)
                     {
                         break;
@@ -1086,7 +1086,7 @@ public sealed class LocalTasks
                     totalOutputTokens,
                     checked(totalInputTokens + totalOutputTokens),
                     attempt.OutputTokens,
-                    tokenMetrics.EstimatedNetCloudContextTokensSaved,
+                    validation.Passed ? tokenMetrics.EstimatedNetCloudContextTokensSaved : 0,
                     allReceipts.Aggregate(
                         TimeSpan.Zero,
                         (total, receipt) =>
@@ -1141,7 +1141,8 @@ public sealed class LocalTasks
         string Text,
         LocalUsageReceipt Receipt,
         IReadOnlyList<LocalUsageReceipt> Receipts,
-        int OutputTokens);
+        int OutputTokens,
+        TranslationValidationResult? FragmentFailure);
 
     private sealed record TranslationWorkItem(
         string Text,

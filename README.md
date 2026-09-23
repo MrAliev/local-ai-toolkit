@@ -832,9 +832,23 @@ pages, not a hard process deadline or memory sandbox.
 
 Languages are given as **names**, not codes: `--to Russian`, not `--to ru`.
 
+Translation checks reject copied source prose when the requested language names differ,
+including copies disguised by whitespace, punctuation or an appended attribution note.
+Each fragment is checked, so translating one fragment does not excuse copying another.
+Numeric literals must keep their spelling and order, including table cells and repeated
+values; decimal localization or reordering is conservatively refused. Fenced code is
+preserved separately, and model tags in generated attribution do not count as source
+numbers. Invalid output follows only the catalog's fallback order; if no attempt passes,
+the tool returns an explicit failure and does not write the translated file. Rejected
+work retains its inference accounting and earns no successful translation credit.
+These are deterministic checks, **not verification of meaning or target language**.
+Unchanged names or words shared between languages can also be refused; same-language
+requests skip the copied-prose check. Code-only Markdown remains a no-model preservation
+operation. Documentation translations use the same unchanged-text and numeric checks.
+
 For resumable translation, add `--checkpoint translation-progress` (MCP
 `translate_local`: `checkpointDirectory`). Repeat the same request after cancellation
-or a failed output write. Structurally validated fragments are saved atomically and
+or a failed output write. Fragments passing structure and content checks are saved atomically and
 reused; protected fenced code is copied unchanged. A fully cached result makes no model
 call and does not replay old token counts or timings. Structural validation does not
 certify the translation's meaning or language.

@@ -20,10 +20,12 @@ public sealed class BrokerDocumentationModelTests
         Assert.Equal(2, receipts.Count);
     }
 
-    [Fact]
-    public async Task Translation_prompt_leak_is_rejected()
+    [Theory]
+    [InlineData("Translate the following fragment")]
+    [InlineData("Description.")]
+    public async Task Translation_prompt_leak_or_unchanged_prose_is_rejected(string answer)
     {
-        var client = new Client { Translation = "Translate the following fragment" };
+        var client = new Client { Translation = answer };
         await Assert.ThrowsAsync<DocumentationValidationException>(() =>
             new BrokerDocumentationModel(client).TranslateAsync("Description.", TestContext.Current.CancellationToken));
     }
