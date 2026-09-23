@@ -225,6 +225,56 @@ public sealed class AccessibleControlsTests
         finally { removal.Close(); }
         CheckStartKeyboard(presentation);
         CheckRemovalDefault(presentation, machine);
+        CheckReinstallContinuation(presentation, machine);
+    }
+
+    private static void CheckReinstallContinuation(InstallerPresentation presentation, RemovalFixture machine)
+    {
+        foreach (var offersInstall in new[] { false, true })
+        {
+            var wizard = new UninstallWizardViewModel(RemovalPreset.ReinstallFriendly, offersInstall,
+                machine.Layout, machine.Home, readHooksPath: machine.HooksPathReader, presentation: presentation);
+            var window = new UninstallWindow(presentation) { DataContext = wizard };
+            var requests = 0;
+            wizard.InstallRequested += (_, _) => requests++;
+            try
+            {
+                Layout(window);
+                var continuation = Descendants(window.Content).OfType<Button>()
+                    .Single(button => ReferenceEquals(button.Command, wizard.ContinueToInstallCommand));
+                Assert.Equal(Visibility.Collapsed, continuation.Visibility);
+                Assert.False(continuation.IsDefault);
+                // Select the completed presentation fixture without running removal or opening
+                // the installation window. View-model outcome gates have their own coverage.
+                typeof(UninstallWizardViewModel).GetProperty(nameof(wizard.CurrentPage))!
+                    .SetValue(wizard, UninstallPage.Finish);
+                foreach (var language in new[] { InstallerLanguage.English, InstallerLanguage.Russian })
+                {
+                    presentation.ChooseLanguage(language);
+                    Layout(window);
+                    Assert.Equal(offersInstall ? Visibility.Visible : Visibility.Collapsed, continuation.Visibility);
+                    Assert.Equal(offersInstall, continuation.IsDefault);
+                    Assert.Equal(0, requests);
+                    if (offersInstall)
+                    {
+                        Assert.Same(continuation, CheckDefaultAction(window, wizard.ContinueToInstallCommand));
+                        Assert.Equal(PageLabels.ContinueToInstall, Peer(continuation).GetName());
+                    }
+                }
+                if (offersInstall)
+                {
+                    ((IInvokeProvider)Peer(continuation).GetPattern(PatternInterface.Invoke)!).Invoke();
+                    Dispatcher.CurrentDispatcher.Invoke(() => { }, DispatcherPriority.ApplicationIdle);
+                    Assert.Equal(1, requests);
+                }
+                typeof(UninstallWizardViewModel).GetProperty(nameof(wizard.CurrentPage))!
+                    .SetValue(wizard, UninstallPage.Choose);
+                Layout(window);
+                Assert.Equal(Visibility.Collapsed, continuation.Visibility);
+                Assert.False(continuation.IsDefault);
+            }
+            finally { window.Close(); wizard.DetachPresentation(); }
+        }
     }
 
     private static Button CheckDefaultAction(Window window, ICommand command)
