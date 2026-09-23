@@ -24,6 +24,7 @@ public sealed record LocalResult(
     bool Truncated = false)
 {
     public StructuredValidationResult? Validation { get; init; }
+    public PdfOcrEvidence? PdfEvidence { get; init; }
 
     /// <summary>
     /// The line the caller is expected to surface, so what a local call cost and saved is
@@ -300,7 +301,7 @@ public sealed class LocalTasks
             ? imageTranslationSystem
             : imageReadingSystem;
         var checkpointCatalog = pdfCheckpointDirectory is null ? null : modelCatalog.Read();
-        var pdfHash = checkpointCatalog is null ? null : await pdf!.HashAsync(ct);
+        var pdfHash = pdf is not null && profile == LocalTaskProfile.Ocr ? await pdf.HashAsync(ct) : null;
         await using var checkpoint = checkpointCatalog is null ? null : await PdfOcrCheckpoint.OpenAsync(
             pdfCheckpointDirectory!,
             new PdfOcrCheckpoint.Manifest(1, pdfHash!, checkpointCatalog.CatalogVersion,
@@ -373,6 +374,7 @@ public sealed class LocalTasks
         }
 
         LocalJobResult<string> result;
+        var pageEvidence = new List<PdfOcrPage>();
         // Accumulated over every call, the way triage does it: reporting the last one as the whole
         // run understates a job of several calls in the line whose purpose is to show its cost.
         // A single image takes the together path because there is nothing to merge it with, and
@@ -409,6 +411,7 @@ public sealed class LocalTasks
                     if (checkpoint is not null) await checkpoint.SaveAsync(PageNumber(index), one);
                 }
                 ct.ThrowIfCancellationRequested();
+                pageEvidence.Add(new PdfOcrPage(PageNumber(index), one.Value, one.Receipt.Model));
                 if (index != 0) transcript.Append("\n\n");
                 transcript.Append(LocalLmText.PdfPageHeading(PageNumber(index), totalPdfPages))
                     .Append("\n\n").Append(one.Value);
@@ -545,7 +548,10 @@ public sealed class LocalTasks
                 : LocalLmText.ImagesReadOneAtATime(
                     fullPaths.Count,
                     string.Join(", ", described)),
-            result.Receipt);
+            result.Receipt)
+        {
+            PdfEvidence = pdfHash is null ? null : new PdfOcrEvidence(Resolve(paths[0]), pdfHash, totalPdfPages, pageEvidence.ToArray()),
+        };
     }
 
     public Task<LocalResult> TriageLogAsync(

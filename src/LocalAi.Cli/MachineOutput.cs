@@ -32,16 +32,27 @@ internal static class MachineOutput
         MachineEnvelope.Language(Requested(arguments));
 
     /// <summary>
-    /// A scan of the whole argument list is safe in this binary because no option's value could
-    /// plausibly be the literal <c>--json</c>. That is not true of <c>codesearch search --query</c>,
-    /// which uses <see cref="MachineEnvelope.RequestedAsOption"/> instead.
+    /// Document queries may contain a literal --json. Their value options are scanned in pairs;
+    /// existing commands retain their established flag handling.
     /// </summary>
     public static bool Requested(IReadOnlyList<string> arguments) =>
-        MachineEnvelope.RequestedAnywhere(arguments);
+        arguments.FirstOrDefault() == "documents" ? MachineEnvelope.RequestedAsOption(arguments)
+            : MachineEnvelope.RequestedAnywhere(arguments);
 
     /// <summary>The arguments a command sees, with the flag this class owns taken out.</summary>
-    public static string[] Without(IReadOnlyList<string> arguments) =>
-        MachineEnvelope.WithoutFlag(arguments);
+    public static string[] Without(IReadOnlyList<string> arguments)
+    {
+        if (arguments.FirstOrDefault() != "documents") return MachineEnvelope.WithoutFlag(arguments);
+        var result = new List<string>();
+        for (var i = 0; i < arguments.Count; i++)
+        {
+            if (arguments[i] == Flag) continue;
+            result.Add(arguments[i]);
+            if (arguments[i].StartsWith("--", StringComparison.Ordinal) && i + 1 < arguments.Count)
+                result.Add(arguments[++i]);
+        }
+        return result.ToArray();
+    }
 
     /// <summary>
     /// The commands that fill an envelope today. A flag whose promise held for some commands and

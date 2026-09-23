@@ -299,6 +299,9 @@ static async Task<int> RunAsync(string[] args, bool machineReadable, CommandStre
     if (args is ["docs", .. var docsArguments])
         return await Interruptible(token => DocumentationCommand.ExecuteAsync(docsArguments, streams, machineReadable, token));
 
+    if (args is ["documents", .. var documentArguments])
+        return await Interruptible(token => DocumentSearchCommand.ExecuteAsync(documentArguments, streams, machineReadable, token));
+
     if (args is ["ask", .. var askArguments])
     {
         if (!AskCommand.TryParse(askArguments, out var ask, out var askRefusal))

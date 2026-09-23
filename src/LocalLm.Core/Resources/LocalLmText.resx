@@ -375,4 +375,25 @@
   <data name="TranslationCheckpointOutputConflict" xml:space="preserve">
     <value>The output must be outside translation checkpoint '{0}' and must not alias its files.</value>
   </data>
+  <data name="DocumentsIndexMissing" xml:space="preserve"><value>No document index at '{0}'. Create it with localai documents index.</value></data>
+  <data name="DocumentsIndexCorrupt" xml:space="preserve"><value>Document index '{0}' is damaged or incomplete. Choose a new --index folder and run localai documents index.</value></data>
+  <data name="DocumentsIndexSchemaUnsupported" xml:space="preserve"><value>Document index '{0}' uses an unsupported format version. Choose a new --index folder and run localai documents index.</value></data>
+  <data name="DocumentsIndexSourceMismatch" xml:space="preserve"><value>This index belongs to source folder '{0}'. Use that folder or choose a new --index folder.</value></data>
+  <data name="DocumentsSourceChanged" xml:space="preserve"><value>Source '{0}' changed during indexing. Run the command again after file changes are complete.</value></data>
+  <data name="DocumentsSourceFolderMissing" xml:space="preserve"><value>Source folder '{0}' does not exist.</value></data>
+  <data name="DocumentsPathInvalid" xml:space="preserve"><value>Cannot use folder path '{0}'. Check the path and access permissions.</value></data>
+  <data name="DocumentsIndexUnavailable" xml:space="preserve"><value>Cannot open document index '{0}' for writing. It may be in use or inaccessible.</value></data>
+  <data name="DocumentsLimitInvalid" xml:space="preserve"><value>--limit must be an integer from 1 to 100.</value></data>
+  <data name="DocumentsFileCountExceeded" xml:space="preserve"><value>Source folder contains at least {0} PDFs; the limit is {1}. Choose a folder containing fewer PDFs.</value></data>
+  <data name="DocumentsPageCountExceeded" xml:space="preserve"><value>PDF '{0}' contains {1} pages; the limit is {2}.</value></data>
+  <data name="DocumentsFileSizeExceeded" xml:space="preserve"><value>PDF '{0}' exceeds the {1} MiB limit.</value></data>
+  <data name="DocumentsTotalSizeExceeded" xml:space="preserve"><value>The PDFs exceed the total size limit of {0} GiB.</value></data>
+  <data name="DocumentsTextLimitExceeded" xml:space="preserve"><value>OCR text exceeds the index limit. Use a smaller set of PDFs.</value></data>
+  <data name="DocumentsSearchMethod" xml:space="preserve"><value>Literal-phrase search in OCR text; no semantic ranking.</value></data>
+  <data name="DocumentsHitExcerpt" xml:space="preserve"><value>OCR excerpt (transcription accuracy not verified):</value></data>
+  <data name="DocumentsRefreshHint" xml:space="preserve"><value>Refresh with localai documents index using the same --source and --index folders. Restore access to unreadable files first.</value></data>
+  <data name="DocumentsIndexReady" xml:space="preserve"><value>Index ready: {0} PDFs, {1} pages.</value></data>
+  <data name="DocumentsSearchSummary" xml:space="preserve"><value>Matches shown: {0}. Sources excluded: {1}.</value></data>
+  <data name="DocumentsIndexOutsideSource" xml:space="preserve"><value>Choose an --index folder outside the --source folder.</value></data>
+  <data name="DocumentsQueryInvalid" xml:space="preserve"><value>--query requires a non-empty phrase of 1–256 characters.</value></data>
 </root>

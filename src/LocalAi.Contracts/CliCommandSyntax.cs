@@ -24,6 +24,8 @@ internal static class CliCommandSyntax
         ["translate"] = LocalAiCommandSyntax.Translate,
         ["capabilities"] = LocalAiCommandSyntax.Capabilities,
         ["docs build"] = LocalAiCommandSyntax.DocsBuild,
+        ["documents index"] = LocalAiCommandSyntax.DocumentsIndex,
+        ["documents search"] = LocalAiCommandSyntax.DocumentsSearch,
         ["docs apply"] = LocalAiCommandSyntax.DocsApply,
         ["docs prune"] = LocalAiCommandSyntax.DocsPrune,
         ["docs pin"] = LocalAiCommandSyntax.DocsPin,
