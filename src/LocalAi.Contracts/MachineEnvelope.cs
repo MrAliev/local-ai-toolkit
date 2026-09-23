@@ -106,8 +106,8 @@ public static class MachineEnvelope
     public static string Answer(string command, object data) =>
         Write(new Envelope(Schema, command, true, data, null));
 
-    public static string Refusal(string command, string code, string message) =>
-        Write(new Envelope(Schema, command, false, null, new Failure(code, message)));
+    public static string Refusal(string command, string code, string message, object? data = null) =>
+        Write(new Envelope(Schema, command, false, data, new Failure(code, message)));
 
     public static string StructuredRefusal(string command, StructuredValidationResult validation) =>
         Write(new Envelope(Schema, command, false, null,
