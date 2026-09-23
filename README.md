@@ -1224,6 +1224,27 @@ uninstall acceptance is still required. The disk plan reserves both installer co
 npm project/lock/cache files; installed npm trees, generated files and vendor temporary space remain
 unknown, so it never claims complete disk readiness.
 
+To check selected imported models on the target installation, use `"schemaVersion": 5` and
+`"preflight": [{ "model": "<bundled-model-tag>", "contextTokens": 8192 }]`, replacing the placeholder
+and context with a pair present in both the current catalog and signed release manifest. This option
+requires `installRuntime=true`, `configureModels=true` and import of every selected model. Older request
+schemas refuse it. Planning lists the selections without starting a process.
+
+After import and model-root setup, each `preflight:<model>:<context>` step records intent, holds the
+verified launcher and active-version lease, checks model status and requests broker preflight. A missing
+model or a pending pull stops the sequence; this path never downloads a model. The target root is passed
+explicitly to the shared broker, and the target residency policy is read without changing it. `model status`
+and `model preflight` accept a final `--runtime-root <dir>` for this purpose; it must be an existing local
+directory without links, given as an absolute path. The option is refused by `model pull`.
+
+Successful steps record `proof` (model, context, catalog, model/VRAM bytes and verification time) and
+`residencyPolicy`; rejected or invalid responses never become accepted proofs. Partial/CPU placement
+is accepted only under the target policy. Failure stops later selections and PATH setup. The original
+plan retains its pre-execution requirements; step proofs report what completed. Other model/context
+pairs remain unchecked. An already running Ollama is not restarted: successful residency checks do not
+prove which model source or directory it used. Source/directory verification, complete dependency/disk
+evidence and clean-machine offline acceptance remain required; `readyForUse=false` is unchanged.
+
 The command does not add optional components. An empty
 dependency array, `installRuntime=false` or `modelsOutput=null` omits the corresponding steps, but
 at least one step (including an npm selection) must remain. Dependencies run in catalog order, followed by runtime activation
@@ -1251,9 +1272,9 @@ CLI exits are 0 for a plan or completed selected steps, 130 for cancellation, 75
 74 for recording failure and 70 for failed/uncertain execution. Such nonzero results use `ok=false`
 and retain the result details. Invalid requests use 2 or 65; an existing output uses 73.
 Even `state=applied` reports `readyForUse=false`: dependency versions/prerequisites, complete disk
-requirements and offline usability remain unverified. Configure the imported model root explicitly
-and run broker preflight on the target machine separately. This command invokes no models, transfers no
-residency proof and adds no network fallback or privilege elevation. External vendor installers can
+requirements and offline usability remain unverified. Select model-root setup and target preflight
+explicitly or complete them separately. Only the selected preflight step invokes models; no residency
+proof is transferred from the preparation machine. The command adds no network fallback or privilege elevation. External vendor installers can
 still use the network. Cloud INPUT/OUTPUT accounting is administrative (not applicable).
 
 #### Install pinned SCIP packages from an offline npm cache

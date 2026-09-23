@@ -101,13 +101,15 @@ public sealed class OfflineEnvironmentTests
         internal OfflineEnvironmentBundle Bundle { get; }
         internal ReleaseManifestVerifier Verifier => verifier;
 
-        internal Fixture(byte[]? packageBytes = null)
+        internal Fixture(byte[]? packageBytes = null, bool signModels = false)
         {
             Directory.CreateDirectory(Source);
             byte[] package = packageBytes ?? [1, 2, 3, 4];
             var release = new ReleaseManifest(1, "0.0.0-test", "abcdef123456", Catalog.CatalogVersion,
                 BrokerCompatibilityContract.ProtocolVersion, BrokerCompatibilityContract.BuildCompatibilityId,
-                new Uri("https://example.invalid/package.zip"), package.Length, Convert.ToHexString(SHA256.HashData(package)), false, []);
+                new Uri("https://example.invalid/package.zip"), package.Length, Convert.ToHexString(SHA256.HashData(package)), false,
+                signModels ? Catalog.Models.Where(model => model.Lifecycle != LocalModelLifecycle.Disabled && model.InstallPolicy != LocalModelInstallPolicy.Never)
+                    .SelectMany(model => model.ContextTokens.Select(context => new ManifestModel(model.Tag, context, 1, 1))).ToArray() : []);
             var payload = ReleaseManifestVerifier.CreateCanonicalUnsignedPayload(release);
             var signature = key.SignData(payload, HashAlgorithmName.SHA256, DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
             var order = BigInteger.Parse("115792089210356248762697446949407573529996955224135760342422259061068512044369");

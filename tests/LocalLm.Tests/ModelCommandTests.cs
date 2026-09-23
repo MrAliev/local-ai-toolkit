@@ -7,6 +7,62 @@ namespace LocalLm.Tests;
 
 public sealed class ModelCommandTests
 {
+    [Fact]
+    public async Task Production_status_passes_the_explicit_root_to_the_broker_factory()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "localai-model-target-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var client = new RecordingClient { StatusResult = Result(new LocalModelsStatusOutput([], [], [], [], "catalog-7")) };
+            using var output = new StringWriter(); string? actualRoot = null;
+            var exit = await ModelCommand.ExecuteProductionAsync(["status", "--runtime-root", root],
+                (_, _, runtimeRoot, _) => { actualRoot = runtimeRoot; return client; }, output, TestContext.Current.CancellationToken);
+            Assert.Equal(0, exit); Assert.Equal(root, actualRoot); Assert.Equal(["status"], client.Calls);
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Theory]
+    [InlineData("relative")]
+    [InlineData("missing")]
+    [InlineData("duplicate")]
+    [InlineData("pull")]
+    public async Task Invalid_target_options_never_construct_a_broker_client(string invalid)
+    {
+        var root = Path.GetTempPath();
+        string[] arguments = invalid == "pull" ? ["pull", "--model", "qwen3.5:9b", "--catalog-version", "signed-7"] : ["status"];
+        arguments = [.. arguments, "--runtime-root", invalid == "relative" ? "." : invalid == "missing"
+            ? Path.Combine(root, Guid.NewGuid().ToString("N")) : root];
+        if (invalid == "duplicate") arguments = [.. arguments, "--runtime-root", root];
+        using var output = new StringWriter();
+        var exit = await ModelCommand.ExecuteProductionAsync(arguments,
+            (_, _, _, _) => throw new InvalidOperationException("Must not construct a broker client."), output, TestContext.Current.CancellationToken);
+        Assert.Equal(2, exit);
+    }
+
+    [Theory]
+    [InlineData(ModelResidencyPolicy.AllowCpu, 0)]
+    [InlineData(ModelResidencyPolicy.RequireFullVram, 1)]
+    public async Task Explicit_runtime_preflight_reads_that_roots_policy(ModelResidencyPolicy policy, int expected)
+    {
+        var root = Path.Combine(Path.GetTempPath(), "localai-model-root-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            new ModelResidencyPolicyStore(root).Write(BrokerPolicy.Default with { ModelResidency = policy });
+            var client = new RecordingClient { PreflightResult = Result(new LocalModelPreflightOutput(
+                "qwen3.5:9b", 8192, "signed-7", 123, 0, false, VerifiedUtc)) };
+            using var output = new StringWriter();
+            var exit = await ModelCommand.ExecuteAsync(["preflight", "--model", "qwen3.5:9b", "--context", "8192",
+                "--catalog-version", "signed-7", "--runtime-root", root], client, output, TestContext.Current.CancellationToken);
+            Assert.Equal(expected, exit);
+            Assert.Equal(["preflight:qwen3.5:9b:8192:signed-7"], client.Calls);
+            Assert.Equal(policy, new ModelResidencyPolicyStore(root).Read().ModelResidency);
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
     private static readonly DateTimeOffset VerifiedUtc =
         new(2026, 7, 31, 8, 9, 10, TimeSpan.Zero);
 
@@ -103,6 +159,7 @@ public sealed class ModelCommandTests
             CliUsage.Text,
             StringComparison.Ordinal);
         var arguments = CliUsage.ModelPreflight
+            .Replace(" [--runtime-root <dir>]", string.Empty, StringComparison.Ordinal)
             .Replace("localai model ", string.Empty, StringComparison.Ordinal)
             .Replace("<model>", "qwen3.5:9b", StringComparison.Ordinal)
             .Replace("<tokens>", "2048", StringComparison.Ordinal)

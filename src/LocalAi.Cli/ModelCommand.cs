@@ -54,21 +54,29 @@ public static class ModelCommand
         CancellationToken cancellationToken, TextWriter? error = null) =>
         ExecuteProductionAsync(
             arguments,
-            static (observer, deadline, token) =>
+            static (observer, deadline, runtimeRoot, token) =>
             {
                 token.ThrowIfCancellationRequested();
                 return new BrokerLocalModelClient(
                     BrokerClientFactory.CreateDefault(
-                        observer: observer,
+                        runtimeRoot: runtimeRoot, observer: observer,
                         deadline: deadline));
             },
             output,
             cancellationToken, error);
 
-    internal static async Task<int> ExecuteProductionAsync(
+    internal static Task<int> ExecuteProductionAsync(
         IReadOnlyList<string> arguments,
         Func<ILocalRunObserver?, TimeSpan?, CancellationToken, ILocalModelClient>
             clientFactory,
+        TextWriter output,
+        CancellationToken cancellationToken, TextWriter? error = null) =>
+        ExecuteProductionAsync(arguments, (observer, deadline, _, token) => clientFactory(observer, deadline, token),
+            output, cancellationToken, error);
+
+    internal static async Task<int> ExecuteProductionAsync(
+        IReadOnlyList<string> arguments,
+        Func<ILocalRunObserver?, TimeSpan?, string?, CancellationToken, ILocalModelClient> clientFactory,
         TextWriter output,
         CancellationToken cancellationToken, TextWriter? error = null)
     {
@@ -94,6 +102,7 @@ public static class ModelCommand
             client = clientFactory(
                     observer,
                     isPull ? PullDeadline : null,
+                    request.RuntimeRoot,
                     cancellationToken) ??
                 throw new InvalidOperationException();
             cancellationToken.ThrowIfCancellationRequested();
@@ -249,7 +258,7 @@ public static class ModelCommand
                 request.CatalogVersion,
                 StringComparison.Ordinal) ||
             proof.SizeBytes <= 0 ||
-            !IsResidencyAcceptable(proof) ||
+            !IsResidencyAcceptable(proof, request.RuntimeRoot) ||
             proof.VerifiedAtUtc == default ||
             proof.VerifiedAtUtc.Offset != TimeSpan.Zero ||
             proof.VerifiedAtUtc > DateTimeOffset.UtcNow.AddMinutes(5))
@@ -279,8 +288,8 @@ public static class ModelCommand
     /// so it has to know which outcomes the installation actually permits — otherwise a
     /// machine deliberately configured for integrated graphics would look like a liar.
     /// </summary>
-    private static bool IsResidencyAcceptable(LocalModelPreflightOutput proof) =>
-        ModelResidencyPolicyStore.ReadDefault().ModelResidency switch
+    private static bool IsResidencyAcceptable(LocalModelPreflightOutput proof, string? runtimeRoot) =>
+        new ModelResidencyPolicyStore(runtimeRoot ?? ModelResidencyPolicyStore.DefaultRuntimeRoot).Read().ModelResidency switch
         {
             ModelResidencyPolicy.RequireFullVram =>
                 proof.FullyResident && proof.SizeVramBytes == proof.SizeBytes,
@@ -306,6 +315,25 @@ public static class ModelCommand
         out Request request)
     {
         request = new Request("invalid", null, null, 0);
+        // Only observation/preflight can select a target installation. This does not
+        // authorize downloads, change process-wide environment or relax its policy.
+        if (arguments.Count >= 3 && arguments[^2] == "--runtime-root")
+        {
+            var root = arguments[^1];
+            if (arguments[0] is not ("status" or "preflight") || !Path.IsPathFullyQualified(root) || !HardwarePlanCommand.IsLocalPath(root)) return false;
+            try
+            {
+                root = Path.GetFullPath(root);
+                for (var directory = new DirectoryInfo(root); directory is not null; directory = directory.Parent)
+                    if (directory.Exists && directory.Attributes.HasFlag(FileAttributes.ReparsePoint)) return false;
+                if (!Directory.Exists(root) || !TryParse(arguments.Take(arguments.Count - 2).ToArray(), out var parsed) ||
+                    parsed.RuntimeRoot is not null) return false;
+                request = parsed with { RuntimeRoot = root };
+                return true;
+            }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+            { return false; }
+        }
         if (arguments.Count == 1 &&
             string.Equals(arguments[0], "status", StringComparison.Ordinal))
         {
@@ -424,5 +452,6 @@ public static class ModelCommand
         string? Model,
         string? CatalogVersion,
         int ContextTokens,
-        bool ProgressJson = false);
+        bool ProgressJson = false,
+        string? RuntimeRoot = null);
 }
