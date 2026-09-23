@@ -1207,6 +1207,23 @@ the configured launch, then run the existing model preflight through the target 
 does not stop/start a backend, run inference or transfer residency proofs. A configured directory
 does not establish model compatibility or readiness.
 
+To add the Windows uninstall entry for the current user, use `"schemaVersion": 4`,
+`"registerUninstall": true` and `"installRuntime": true`. The bundle's runtime component must
+explicitly include the release's self-contained `LocalAi.Installer.exe` at the bundle root.
+Its bytes and SHA-256 are covered by the independently trusted bundle pin. Before any dependency
+runs, the file is copied into protected staging, rehashed and retained; applicable release
+Authenticode requirements still apply. The plan's `uninstall` section shows its hash, destination,
+registry subkey and previous entry. An existing entry for another installation root is refused.
+
+After runtime activation, `configuration:uninstall` records intent, copies the retained installer
+to `bin/uninstall/LocalAi.Installer.exe` and registers Local AI Toolkit in the current user's Windows
+installed-app list. It opens no installer UI. Registry snapshot checks and registry/file readback
+detect changes and failures; they are not an atomic transaction. Failure stops later steps, and
+partial runtime, file or registry changes may remain without automatic rollback. Functional
+uninstall acceptance is still required. The disk plan reserves both installer copies and retained
+npm project/lock/cache files; installed npm trees, generated files and vendor temporary space remain
+unknown, so it never claims complete disk readiness.
+
 The command does not add optional components. An empty
 dependency array, `installRuntime=false` or `modelsOutput=null` omits the corresponding steps, but
 at least one step (including an npm selection) must remain. Dependencies run in catalog order, followed by runtime activation
@@ -1218,7 +1235,7 @@ Before any dependency executes, a selected runtime passes the normal full signed
 and applicable Authenticode verification in protected staging. Its verified files remain retained
 through execution. Runtime activation uses the current user's default LocalAi installation and may
 stop running tools and change the active version. PATH is changed only by the explicit schema-3
-option above. Windows uninstall registration and other wizard configuration remain separate.
+option above. Windows uninstall registration is optional as described above; other wizard settings remain separate.
 Model-root setup is optional as described above; it does not change user/system `OLLAMA_MODELS`.
 
 The run folder contains `plan.json`, `journal-*.json` and, when recording succeeds, `result.json`.

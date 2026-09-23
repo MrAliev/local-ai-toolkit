@@ -15,10 +15,11 @@ public sealed record OfflineDependencyResult(OfflineDependencyPlan Plan, string 
 public sealed record OfflineModelsPlan(string[] Models, string[] Files, long Bytes, string Destination, string ResidencyProof);
 
 public sealed partial class OfflineBundleApplication(ReleaseManifestVerifier verifier, IProcessRunner runner, IUserPathStore? userPath = null,
-    IInstalledApplicationProbe? installedApplications = null)
+    IInstalledApplicationProbe? installedApplications = null, IOfflineUninstallRegistration? uninstallRegistration = null)
 {
     private readonly IUserPathStore pathStore = userPath ?? new WindowsUserPathStore();
     private readonly IInstalledApplicationProbe applications = installedApplications ?? new Diagnosis.WindowsInstalledApplicationProbe();
+    private readonly IOfflineUninstallRegistration uninstaller = uninstallRegistration ?? new OfflineUninstallRegistration();
     private const string ActionsFile = "offline-actions.json";
 
     public async Task<OfflineDependencyPlan> PlanDependencyAsync(string bundle, string pin, string component, CancellationToken token)
