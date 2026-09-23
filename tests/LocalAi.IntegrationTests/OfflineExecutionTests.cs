@@ -259,7 +259,7 @@ public sealed class OfflineExecutionTests
         public InstallationLayout Layout { get; }
         public OfflineExecutionRequest Request => new(1, ["dependency.ollama"], true, Models);
 
-        public Fixture(bool invalidPackageMetadata = false)
+        public Fixture(bool invalidPackageMetadata = false, bool signModels = false)
         {
             using var bytes = new MemoryStream();
             using (var zip = new ZipArchive(bytes, ZipArchiveMode.Create, true))
@@ -272,7 +272,7 @@ public sealed class OfflineExecutionTests
                 using var document = zip.CreateEntry(ReleasePackageVerifier.PackageMetadataFileName, CompressionLevel.NoCompression).Open();
                 document.Write(Encoding.UTF8.GetBytes(metadata));
             }
-            Materials = new(bytes.ToArray());
+            Materials = new(bytes.ToArray(), signModels);
             var appData = Path.Combine(Path.GetDirectoryName(Materials.Source)!, "profile"); Directory.CreateDirectory(appData);
             Layout = InstallationLayout.FromLocalAppData(appData);
         }

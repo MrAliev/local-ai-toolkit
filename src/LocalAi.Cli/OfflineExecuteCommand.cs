@@ -69,6 +69,7 @@ internal static class OfflineExecuteCommand
                 (applied?.Plan ?? result as OfflineExecutionPlan)?.ModelSetup is null ? "OfflineModelsNotice" : "OfflineExecuteModelsNotice"),
             npmNotice = CliText.Catalogue.Get("OfflineNpmNotice"), pathNotice = CliText.Catalogue.Get("OfflineExecutePathNotice"),
             uninstallNotice = CliText.Catalogue.Get("OfflineExecuteUninstallNotice"),
+            preflightNotice = CliText.Catalogue.Get("OfflineExecutePreflightNotice"),
             diskNotice = CliText.Catalogue.Get("OfflinePlanDiskCaveat") }, OfflineEnvironmentBundle.Json);
         if (machineReadable)
             streams.Out.WriteLine(exit == 0 ? MachineOutput.Answer(command, data)

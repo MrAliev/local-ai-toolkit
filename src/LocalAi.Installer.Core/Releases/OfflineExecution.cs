@@ -9,18 +9,19 @@ using LocalAi.Installer.Core.Transactions;
 namespace LocalAi.Installer.Core.Releases;
 
 public sealed record OfflineNpmSelection(string Component, string Node, string NpmCli, string Output);
-public sealed record OfflineExecutionRequest(int SchemaVersion, string[] Dependencies, bool InstallRuntime, string? ModelsOutput, OfflineNpmSelection[]? Npm = null, bool RegisterPaths = false, bool ConfigureModels = false, bool RegisterUninstall = false);
+public sealed record OfflineExecutionRequest(int SchemaVersion, string[] Dependencies, bool InstallRuntime, string? ModelsOutput, OfflineNpmSelection[]? Npm = null, bool RegisterPaths = false, bool ConfigureModels = false, bool RegisterUninstall = false, ModelContextRef[]? Preflight = null);
 public sealed record OfflineUserPathPlan(string? Before, string After, string[] Directories);
 public sealed record OfflineModelSetupPlan(string Directory, string RecordPath, string? BeforeSha256);
 public sealed record OfflineExecutionPlan(string ManifestSha256, string ReleaseVersion, OfflineDependencyPlan[] Dependencies,
     string? RuntimeRoot, OfflineModelsPlan? Models, string OutputDirectory, string[] RemainingRequirements, OfflineNpmPlan[]? Npm = null, OfflineUserPathPlan? UserPath = null,
-    OfflineModelSetupPlan? ModelSetup = null, OfflineUninstallPlan? Uninstall = null)
+    OfflineModelSetupPlan? ModelSetup = null, OfflineUninstallPlan? Uninstall = null, ModelContextRef[]? Preflight = null, string? CatalogVersion = null)
 {
     public string[] DependencyOrder => DependencyCatalog.Supported.Where(item => Dependencies.Any(plan => plan.Component == item.ActionId) ||
         Npm?.Any(plan => plan.Component == item.ActionId) == true).Select(item => item.ActionId).ToArray();
 }
 public sealed record OfflineExecutedStep(string Kind, string Id, string State, int? ExitCode, bool RebootRequired,
-    string? RetainedDirectory, LocalAiPackageInstallResult? Runtime = null, string? Detail = null);
+    string? RetainedDirectory, LocalAiPackageInstallResult? Runtime = null, string? Detail = null,
+    ModelPreflightCommandSuccess? Proof = null, ModelResidencyPolicy? ResidencyPolicy = null);
 public sealed record OfflineExecutionResult(OfflineExecutionPlan Plan, string State, string JournalPath,
     OfflineExecutedStep[] Steps, string[] PendingSteps, bool RecordingComplete, bool ReadyForUse);
 
@@ -35,7 +36,11 @@ public sealed partial class OfflineBundleApplication
     {
         token.ThrowIfCancellationRequested();
         var npmSelections = request.Npm ?? [];
-        if (request.SchemaVersion is not (1 or 2 or 3 or 4) || request.SchemaVersion == 1 && npmSelections.Length != 0 ||
+        var preflight = request.Preflight ?? [];
+        if (request.SchemaVersion is not (1 or 2 or 3 or 4 or 5) || request.SchemaVersion == 1 && npmSelections.Length != 0 ||
+            request.Preflight is not null && (request.SchemaVersion < 5 || preflight.Length is < 1 or > 256 ||
+                !request.InstallRuntime || !request.ConfigureModels || preflight.Any(item => item is null) ||
+                preflight.Distinct().Count() != preflight.Length) ||
             request.RegisterPaths && (request.SchemaVersion < 3 || !request.InstallRuntime && npmSelections.Length == 0) ||
             request.ConfigureModels && (request.SchemaVersion < 4 || request.ModelsOutput is null || !request.InstallRuntime && !Directory.Exists(layout.Root)) ||
             request.RegisterUninstall && (request.SchemaVersion < 4 || !request.InstallRuntime) ||
@@ -76,6 +81,16 @@ public sealed partial class OfflineBundleApplication
         var path = request.RegisterPaths ? PlanUserPath(request.InstallRuntime ? layout : null, npm) : null;
         var modelSetup = request.ConfigureModels ? PlanModelSetup(models!, layout) : null;
         var uninstall = request.RegisterUninstall ? PlanUninstall(snapshot, layout) : null;
+        if (preflight.Length > 0)
+        {
+            var files = snapshot.Manifest.Files.ToDictionary(file => file.Path, StringComparer.Ordinal);
+            var manifestBytes = await ReadVerifiedAsync(bundle, files["release-manifest.json"], token);
+            var signatureBytes = await ReadVerifiedAsync(bundle, files["release-manifest.sig"], token);
+            var manifest = verifier.Verify(manifestBytes, signatureBytes);
+            if (preflight.Any(item => !models!.Models.Contains(item.Model, StringComparer.Ordinal) ||
+                !catalog.Models.Any(model => model.Tag == item.Model && model.ContextTokens.Contains(item.ContextTokens)) ||
+                !manifest.Models.Any(model => model.Name == item.Model && model.ContextTokens == item.ContextTokens))) throw Invalid();
+        }
         return (snapshot, new(snapshot.ManifestSha256, snapshot.Manifest.ReleaseVersion, dependencies.ToArray(),
             request.InstallRuntime ? layout.Root : null, models, output,
             ["dependency-prerequisites-and-installed-versions-unverified", "disk-requirements-incomplete",
@@ -85,7 +100,9 @@ public sealed partial class OfflineBundleApplication
              .. request.InstallRuntime && path is null ? new[] { "launcher-path-configuration" } : Array.Empty<string>(),
              .. npm.Count == 0 ? Array.Empty<string>() : path is null ? ["npm-path-configuration", "npm-toolchain-compatibility-unverified"] : ["npm-toolchain-compatibility-unverified"],
              .. path is null ? Array.Empty<string>() : ["new-process-environment-required"],
-             .. uninstall is null ? Array.Empty<string>() : ["uninstall-functional-acceptance-required"]], npm.ToArray(), path, modelSetup, uninstall));
+             .. uninstall is null ? Array.Empty<string>() : ["uninstall-functional-acceptance-required"],
+             .. preflight.Length == 0 ? Array.Empty<string>() : ["ollama-model-source-and-directory-unverified", "unselected-model-contexts-unverified"]],
+            npm.ToArray(), path, modelSetup, uninstall, preflight, snapshot.Manifest.CatalogVersion));
     }
 
     public async Task<OfflineExecutionResult> ExecuteAsync(string bundle, string pin, OfflineExecutionRequest request, string output,
@@ -110,6 +127,7 @@ public sealed partial class OfflineBundleApplication
                 .Concat(plan.Uninstall is null ? [] : new[] { "configuration:uninstall" })
                 .Concat(plan.Models is null ? [] : new[] { "models:bundled" })
                 .Concat(plan.ModelSetup is null ? [] : new[] { "configuration:ollama-model-root" })
+                .Concat((plan.Preflight ?? []).Select(item => "preflight:" + PreflightId(item)))
                 .Concat(plan.UserPath is null ? [] : new[] { "configuration:user-path" }).ToList();
             var state = "applied";
             var recording = false;
@@ -169,6 +187,15 @@ public sealed partial class OfflineBundleApplication
                     token.ThrowIfCancellationRequested();
                     recording = true; activeStep = journal.BeginStep(InstallerRunEffectKind.OllamaLaunchRecord, "configuration:ollama-model-root"); recording = false;
                     var step = await ApplyModelSetupAsync(plan.ModelSetup, layout, token);
+                    Record(step);
+                    if (step.State != "completed") state = step.State;
+                }
+                foreach (var selection in plan.Preflight ?? [])
+                {
+                    if (state != "applied") break;
+                    token.ThrowIfCancellationRequested();
+                    recording = true; activeStep = journal.BeginStep(InstallerRunEffectKind.ModelPreflight, "preflight:" + PreflightId(selection)); recording = false;
+                    var step = await ApplyModelPreflightAsync(selection, plan, package!, layout, token);
                     Record(step);
                     if (step.State != "completed") state = step.State;
                 }
