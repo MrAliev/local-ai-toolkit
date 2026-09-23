@@ -128,7 +128,7 @@ public sealed class OfflineNpmTests
         { Calls++; return Task.FromResult(callback(executable, arguments, workingDirectory)); }
     }
 
-    private sealed class Fixture : IDisposable
+    internal sealed class Fixture : IDisposable
     {
         public OfflineEnvironmentTests.Fixture Materials { get; } = new(Package());
         public string Component => "dependency.scip-typescript";
@@ -143,7 +143,7 @@ public sealed class OfflineNpmTests
                 { using var entry = archive.CreateEntry(file, CompressionLevel.NoCompression).Open(); entry.WriteByte(1); }
             return bytes.ToArray();
         }
-        public async Task<OfflineBundleResult> Build(string? damage = null)
+        public async Task<OfflineBundleResult> Build(string? damage = null, bool includeExecutables = false)
         {
             File.WriteAllText(Node, "fixture"); File.WriteAllText(NpmCli, "fixture");
             var prefix = "npm/" + Component + "/";
@@ -157,8 +157,18 @@ public sealed class OfflineNpmTests
             File.WriteAllText(Path.Combine(Materials.Source, paths[0]), JsonSerializer.Serialize(project));
             File.WriteAllText(Path.Combine(Materials.Source, paths[1]), JsonSerializer.Serialize(new { lockfileVersion = 3, packages }));
             File.WriteAllText(Path.Combine(Materials.Source, paths[2]), "fixture cache entry");
+            var components = new List<OfflineSourceComponent> { new("dependency", Component, "0.4.0", paths) };
+            if (includeExecutables)
+            {
+                File.WriteAllText(Path.Combine(Materials.Source, "python.exe"), "fixture");
+                File.WriteAllText(Path.Combine(Materials.Source, "offline-actions.json"), JsonSerializer.Serialize(new OfflineActionDocument(1,
+                    [new("dependency.ollama", "exe", "ollama.exe", []), new("dependency.python-3-12", "exe", "python.exe", [])]), OfflineEnvironmentBundle.Json));
+                components.Add(new("runtime", "localai", "0.0.0-test", ["offline-actions.json"]));
+                components.Add(new("dependency", "dependency.ollama", "fixture", ["ollama.exe"]));
+                components.Add(new("dependency", "dependency.python-3-12", "fixture", ["python.exe"]));
+            }
             File.WriteAllText(Path.Combine(Materials.Source, OfflineEnvironmentBundle.SourceName), JsonSerializer.Serialize(new OfflineSourceDocument(1,
-                [new("dependency", Component, "0.4.0", paths)]), OfflineEnvironmentBundle.Json));
+                components.ToArray()), OfflineEnvironmentBundle.Json));
             return await Materials.Bundle.BuildAsync(Materials.Source, Materials.Output, Materials.Catalog, Token);
         }
         public void Dispose() => Materials.Dispose();

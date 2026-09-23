@@ -45,6 +45,9 @@ internal static class OfflineExecuteCommand
             var request = await JsonSerializer.DeserializeAsync<OfflineExecutionRequest>(input, OfflineEnvironmentBundle.Json, token)
                 ?? throw new InvalidDataException();
             if (request.ModelsOutput is not null && !HardwarePlanCommand.IsLocalPath(request.ModelsOutput)) throw new InvalidDataException();
+            if (request.Npm?.Any(selection => selection is null ||
+                new[] { selection.Node, selection.NpmCli, selection.Output }.Any(path => string.IsNullOrWhiteSpace(path) || !HardwarePlanCommand.IsLocalPath(path))) == true)
+                throw new InvalidDataException();
             using var ownedVerifier = verifier is null ? ReleaseTrustAnchor.CreateManifestVerifier() : null;
             var application = new OfflineBundleApplication(verifier ?? ownedVerifier!, runner ?? new SystemProcessRunner());
             catalog ??= new ModelRoutingCatalogStore().Read(); layout ??= InstallationLayout.CreateDefault();
@@ -63,6 +66,7 @@ internal static class OfflineExecuteCommand
         else if (exit != 0) UsageCall.Current?.Failed("offline_execution_failed");
         var data = JsonSerializer.SerializeToElement(new { mode, result, notice = CliText.Catalogue.Get("OfflineExecuteNotice"),
             dependencyNotice = CliText.Catalogue.Get("OfflineApplyNotice"), modelNotice = CliText.Catalogue.Get("OfflineModelsNotice"),
+            npmNotice = CliText.Catalogue.Get("OfflineNpmNotice"),
             diskNotice = CliText.Catalogue.Get("OfflinePlanDiskCaveat") }, OfflineEnvironmentBundle.Json);
         if (machineReadable)
             streams.Out.WriteLine(exit == 0 ? MachineOutput.Answer(command, data)
