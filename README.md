@@ -954,6 +954,70 @@ Capacity uses the largest eligible single GPU, without summing adapters. The sha
 
 Dependency checks establish executable presence on local PATH entries only; versions and usability remain unverified. The disk estimate is a lower bound covering recommended model downloads (once per model) and the package size recorded in the signed manifest. Unpacked runtime files, dependency installers, indexes and temporary-space reserves are not fully included. `complete` remains false even when the known minimum fits. Existing model files are not credited against downloads, and optional/manual models are listed without being included in the default disk total.
 
+#### Prepare and verify transferred offline materials
+
+```powershell
+lai localai offline bundle --source C:\prepared --out E:\localai-offline --json
+lai localai offline verify --bundle E:\localai-offline --manifest-sha256 <trusted-hash> --json
+```
+
+The source must contain `release-manifest.json`, `release-manifest.sig`, `localai-package.zip`,
+and `offline-components.json`. The release signature is checked against the embedded release key;
+the copied package's length and SHA-256 must match that signed manifest. The ZIP is not extracted
+or inspected here; the normal installer remains responsible for package-content verification.
+Source and destination must be local, the output parent must exist, and the output folder must be
+new. No downloads or bundled executables are started. Run these commands with the published
+self-contained CLI; this transfer step does not need a global .NET SDK.
+
+An example source inventory (replace the declared version and supply the actual file):
+
+```json
+{
+  "schemaVersion": 1,
+  "components": [
+    {
+      "kind": "dependency",
+      "id": "dependency.ollama",
+      "version": "user-verified-version",
+      "files": ["dependencies/ollama/OllamaSetup.exe"]
+    }
+  ]
+}
+```
+
+`kind` is `dependency`, `model` or `runtime`. Dependency IDs come from the existing catalog:
+`dependency.git`, `dependency.ollama`, `dependency.github-cli`, `dependency.dotnet-sdk-10`,
+`dependency.nodejs-20`, `dependency.scip-typescript`, `dependency.python-3-12`, and
+`dependency.scip-python`. A model ID is an exact enabled tag from the current `model-routing.json`.
+A runtime component uses ID `localai` and the signed release version; it can list additional
+runtime files, such as `LocalAi.Installer.exe`. The three signed release files are always included.
+Every supplied component needs a version label and an explicit file list: no wildcards or recursive
+folder expansion. Versions and component membership are declarations, not compatibility evidence.
+Model artifacts must already be obtained through the normal authorized model workflow; this command
+does not invoke Ollama, import a model store, or copy broker state/residency proofs automatically.
+
+The bundle preserves relative paths and adds `offline-manifest.json`. Only declared files are copied;
+all catalog dependencies and enabled models are listed as `included` or `missing`. Files shared by
+components are copied/count once. `transferredBytes` counts listed materials; `totalBundleBytes`
+also includes the inventory itself. These are transfer/storage lower bounds, not installed-space
+requirements: expansion, SDK workloads, model import, indexes and temporary space are unaccounted.
+Inventory limits are 8 MiB, 8,192 material files and 1 TiB total material bytes. Preparation publishes
+by moving a completed staging folder; failures/cancellation do not publish a partial output.
+
+Keep the reported `manifestSha256` separately in a trusted location. The inventory is not a new
+publisher signature: copying a hash alongside an altered inventory would not establish trust.
+`offline verify` first requires that independent hash, then checks every file and the signed runtime
+metadata/package hash. Missing, extra, modified or linked files, unsafe paths and case collisions
+are refused. Verification reflects the bytes observed during that invocation; it does not authorize
+later execution of a changed file. Both commands use the standard JSON envelope and administrative
+cloud INPUT/OUTPUT reporting (not applicable).
+
+Missing components stay explicit even when integrity verification succeeds. `completeForInstallation`
+remains false and `installationState` remains `installation-unverified`. Automatic offline dependency
+installation, model-store import and clean-machine/no-network acceptance are still pending in #634.
+These commands establish a reproducible transfer inventory and byte integrity, not a fully installable
+or usable offline environment.
+
 #### When something refuses
 
 
