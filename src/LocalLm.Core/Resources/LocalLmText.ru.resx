@@ -375,4 +375,25 @@
   <data name="TranslationCheckpointOutputConflict" xml:space="preserve">
     <value>Выходной файл должен находиться вне контрольной точки перевода «{0}» и не ссылаться на её файлы.</value>
   </data>
+  <data name="DocumentsIndexMissing" xml:space="preserve"><value>По адресу «{0}» нет индекса документов. Создайте его командой localai documents index.</value></data>
+  <data name="DocumentsIndexCorrupt" xml:space="preserve"><value>Индекс документов «{0}» повреждён или неполон. Укажите новую папку --index и выполните localai documents index.</value></data>
+  <data name="DocumentsIndexSchemaUnsupported" xml:space="preserve"><value>Индекс документов «{0}» использует неподдерживаемую версию формата. Укажите новую папку --index и выполните localai documents index.</value></data>
+  <data name="DocumentsIndexSourceMismatch" xml:space="preserve"><value>Этот индекс относится к папке-источнику «{0}». Укажите её или выберите новую папку --index.</value></data>
+  <data name="DocumentsSourceChanged" xml:space="preserve"><value>Источник «{0}» изменился во время индексации. Повторите команду после завершения изменений файлов.</value></data>
+  <data name="DocumentsSourceFolderMissing" xml:space="preserve"><value>Папка-источник «{0}» не существует.</value></data>
+  <data name="DocumentsPathInvalid" xml:space="preserve"><value>Не удалось использовать путь к папке «{0}». Проверьте путь и права доступа.</value></data>
+  <data name="DocumentsIndexUnavailable" xml:space="preserve"><value>Не удалось открыть индекс документов «{0}» для записи. Возможно, он занят или недоступен.</value></data>
+  <data name="DocumentsLimitInvalid" xml:space="preserve"><value>--limit должен быть целым числом от 1 до 100.</value></data>
+  <data name="DocumentsFileCountExceeded" xml:space="preserve"><value>В папке-источнике не менее {0} PDF; ограничение — {1}. Выберите папку с меньшим количеством PDF.</value></data>
+  <data name="DocumentsPageCountExceeded" xml:space="preserve"><value>В PDF «{0}» {1} страниц; ограничение — {2}.</value></data>
+  <data name="DocumentsFileSizeExceeded" xml:space="preserve"><value>PDF «{0}» превышает ограничение {1} МиБ.</value></data>
+  <data name="DocumentsTotalSizeExceeded" xml:space="preserve"><value>Суммарный размер PDF превышает ограничение {0} ГиБ.</value></data>
+  <data name="DocumentsTextLimitExceeded" xml:space="preserve"><value>Объём распознанного текста превышает ограничение индекса. Используйте меньший набор PDF.</value></data>
+  <data name="DocumentsSearchMethod" xml:space="preserve"><value>Поиск фразы в распознанном тексте; без ранжирования по смыслу.</value></data>
+  <data name="DocumentsHitExcerpt" xml:space="preserve"><value>Фрагмент распознанного текста (точность распознавания не проверена):</value></data>
+  <data name="DocumentsRefreshHint" xml:space="preserve"><value>Обновите индекс командой localai documents index с прежними папками --source и --index. Сначала восстановите доступ к нечитаемым файлам.</value></data>
+  <data name="DocumentsIndexReady" xml:space="preserve"><value>Индекс готов: PDF — {0}, страниц — {1}.</value></data>
+  <data name="DocumentsSearchSummary" xml:space="preserve"><value>Показано совпадений: {0}. Источников исключено: {1}.</value></data>
+  <data name="DocumentsIndexOutsideSource" xml:space="preserve"><value>Для --index выберите папку вне папки --source.</value></data>
+  <data name="DocumentsQueryInvalid" xml:space="preserve"><value>Для --query нужна непустая фраза длиной от 1 до 256 символов.</value></data>
 </root>

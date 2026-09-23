@@ -77,6 +77,8 @@ public static class McpToolNames
         new("translate_local", McpToolApproval.Approve) { Usage = UsagePolicy.Generation },
         new("triage_log", McpToolApproval.Approve) { Usage = UsagePolicy.Generation },
         new("read_image", McpToolApproval.Approve) { Usage = UsagePolicy.Generation },
+        new("index_documents", McpToolApproval.Approve) { Usage = UsagePolicy.Administration },
+        new("search_documents", McpToolApproval.Approve) { Usage = UsagePolicy.Context },
         new("local_models_status", McpToolApproval.Approve) { Usage = UsagePolicy.AdministrationJson },
         // Downloads models by the gigabyte: the one network-and-disk heavyweight here.
         new("local_models_sync", McpToolApproval.Prompt) { Usage = UsagePolicy.AdministrationJson },

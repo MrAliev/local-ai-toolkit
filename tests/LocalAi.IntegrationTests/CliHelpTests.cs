@@ -15,6 +15,8 @@ public sealed class CliHelpTests
     [InlineData("en", "docs prune --help", "--dry-run | --apply")]
     [InlineData("ru", "docs pin --help", "--package")]
     [InlineData("en", "docs unpin --help", "--package")]
+    [InlineData("en", "documents index --help", "--source")]
+    [InlineData("ru", "documents search --help", "--query")]
     public async Task Help_is_successful_stdout_without_executing_the_command(string language, string arguments, string expected)
     {
         var result = await Run(language, arguments);
