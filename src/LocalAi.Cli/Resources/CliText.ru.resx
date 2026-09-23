@@ -1149,4 +1149,10 @@
   <data name="OfflineModelsNotice" xml:space="preserve"><value>Импорт копирует только файлы моделей. OLLAMA_MODELS не изменяется; Ollama и модели не запускаются. Подтверждения размещения не переносятся. Перед использованием отдельно настройте каталог моделей Ollama и выполните preflight через брокер.</value></data>
   <data name="OfflineModelsImported" xml:space="preserve"><value>Файлы моделей импортированы в «{0}». OLLAMA_MODELS не изменён.</value></data>
   <data name="OfflineModelsRefused" xml:space="preserve"><value>Импорт моделей отклонён. Проверьте доверенный хеш манифеста и файлы моделей; --out должен указывать новую папку.</value></data>
+  <data name="OfflinePlanHelp" xml:space="preserve"><value>Повторно проверить комплект и показать состояние компонентов, порядок установки и оценку места на диске. Шаги установки не выполняются.</value></data>
+  <data name="OfflinePlanSummary" xml:space="preserve"><value>План составлен. Пунктов, требующих внимания: {0}.</value></data>
+  <data name="OfflinePlanNotice" xml:space="preserve"><value>План не запускает установщики, не импортирует модели и не меняет настройки. Готовность к работе без сети не подтверждена. Проверка структуры ZIP среды выполнения не заменяет полную проверку пакета или Authenticode.</value></data>
+  <data name="OfflinePlanDiskCaveat" xml:space="preserve"><value>Известная часть оценки места относится к одному тому. Полные потребности в месте для установки зависимостей, временных файлов, резервных копий, индексов и накладных расходов файловой системы неизвестны. Даже если места хватает для известной части, результат остаётся incomplete.</value></data>
+  <data name="OfflinePlanRefused" xml:space="preserve"><value>Не удалось составить план подготовки среды. Проверьте доверенный хеш манифеста, содержимое комплекта и описания компонентов.</value></data>
+  <data name="OfflinePlanDiskPathInvalid" xml:space="preserve"><value>--disk должен указывать существующий локальный каталог для оценки места на диске.</value></data>
 </root>

@@ -226,6 +226,15 @@ public sealed class ReleasePackageVerifier
         }
     }
 
+    // A planning estimate from the same bounded archive structure checks as installation.
+    // It does not decompress, validate package metadata, or establish Authenticode trust.
+    internal static (long ExpandedBytes, long ArtifactBytes) InspectArchiveSpace(FileStream stream)
+    {
+        var entries = InspectArchive(stream);
+        return (entries.Values.Sum(entry => (long)entry.UncompressedSize),
+            entries.Values.Where(entry => entry.Name != PackageMetadataFileName).Sum(entry => (long)entry.UncompressedSize));
+    }
+
     private static IReadOnlyDictionary<string, CentralEntry> InspectArchive(
         FileStream stream)
     {
