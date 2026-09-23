@@ -22,6 +22,8 @@ internal static class CliCommandSyntax
         ["hardware plan"] = LocalAiCommandSyntax.HardwarePlan,
         ["offline bundle"] = LocalAiCommandSyntax.OfflineBundle,
         ["offline verify"] = LocalAiCommandSyntax.OfflineVerify,
+        ["offline install-dependency"] = LocalAiCommandSyntax.OfflineInstallDependency,
+        ["offline import-models"] = LocalAiCommandSyntax.OfflineImportModels,
         ["ask"] = LocalAiCommandSyntax.Ask,
         ["triage"] = LocalAiCommandSyntax.Triage,
         ["read-image"] = LocalAiCommandSyntax.ReadImage,

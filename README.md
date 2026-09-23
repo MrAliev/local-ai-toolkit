@@ -1013,10 +1013,70 @@ later execution of a changed file. Both commands use the standard JSON envelope 
 cloud INPUT/OUTPUT reporting (not applicable).
 
 Missing components stay explicit even when integrity verification succeeds. `completeForInstallation`
-remains false and `installationState` remains `installation-unverified`. Automatic offline dependency
-installation, model-store import and clean-machine/no-network acceptance are still pending in #634.
+remains false and `installationState` remains `installation-unverified`. Clean-machine/no-network
+acceptance is still pending in #634.
 These commands establish a reproducible transfer inventory and byte integrity, not a fully installable
 or usable offline environment.
+
+#### Apply a bundled dependency or import model artifacts
+
+```powershell
+lai localai offline install-dependency --bundle E:\localai-offline --manifest-sha256 <trusted-hash> --component dependency.ollama --json
+lai localai offline import-models --bundle E:\localai-offline --manifest-sha256 <trusted-hash> --out C:\localai-models --json
+```
+
+Both commands default to `--mode plan`; add `--mode apply` to execute the displayed operation.
+Each invocation verifies the complete bundle again against the separately trusted inventory hash.
+Use the published self-contained CLI. Both commands report administrative cloud INPUT/OUTPUT as
+not applicable and do not invoke a model.
+
+Dependency application requires `offline-actions.json` in the source and its explicit inclusion in
+the `runtime` component's `files` before building the bundle. For example:
+
+```json
+{
+  "schemaVersion": 1,
+  "actions": [{
+    "component": "dependency.ollama",
+    "kind": "exe",
+    "installer": "dependencies/ollama/OllamaSetup.exe",
+    "arguments": []
+  }]
+}
+```
+
+The empty argument list above is an interactive-launch example, not a verified unattended recipe.
+Supply the vendor's documented arguments for the exact full offline installer you prepared. The
+installer and every companion file must belong to that dependency's inventory entry and share one
+directory with unique filenames. Nested payload directories are unsupported. Application runs one
+EXE or MSI on Windows, after copying and hashing the selected files in a protected temporary folder
+and retaining file handles against replacement throughout execution. MSI uses the system `msiexec`
+with `/i`, `/qn`, `/norestart`; recipe arguments may only be uppercase `PROPERTY=value` entries.
+There is no shell-script, package-manager or network fallback; npm cache installation is unsupported.
+The inventory hash trusts the supplied recipe and bytes, not their publisher or declared version.
+The external installer may access the network or make partial changes; network isolation, installed
+version and usability are not established here, and LocalAi cannot automatically roll changes back.
+
+Installer exits 0, 3010 and 1641 produce `state=completed`; the latter two set `rebootRequired=true`.
+Other failures return a nonzero CLI exit with `ok=false` while preserving result details. Cancellation
+and timeout produce `cancelled` and `timed-out`. If termination cannot be confirmed, the state is
+`termination-unconfirmed`; `retainedDirectory` identifies preserved installer files. Resolve the
+process state before retrying or removing those files. The command does not elevate privileges.
+
+Model components must list the complete Ollama schema-2 manifest/blob graph, rooted at
+`models/manifests/<host>/<namespace>/<model>/<tag>` and `models/blobs/sha256-<digest>`. Config and layer
+digests, sizes and inventory hashes must agree; extra files such as residency proofs are rejected.
+Only enabled catalog tags are accepted. Short names default to `registry.ollama.ai/library` and
+`latest`. This Windows path subset permits 1–80 ASCII letters, digits, underscores, dots and hyphens
+per segment, starting with a letter, digit or underscore; host ports and digest-qualified tags are
+unsupported. Action documents and individual model manifests are limited to 1 MiB each.
+
+Import requires a new local output folder outside the bundle, with an existing parent. Verified
+files are copied to staging and published by a directory move; existing stores are never merged
+or replaced. `OLLAMA_MODELS`, the active runtime and policy are unchanged. Configure the Ollama
+model root separately, then run the existing broker preflight on the target machine; backend/model
+startup and residency proof are separate steps. The Windows wizard's dependency flow is unchanged.
+Clean-machine installation without network access or a preinstalled SDK remains an acceptance task.
 
 #### When something refuses
 

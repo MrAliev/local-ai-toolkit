@@ -89,7 +89,7 @@ public sealed class OfflineEnvironmentTests
         Assert.False(Directory.Exists(fixture.Output));
     }
 
-    private sealed class Fixture : IDisposable
+    internal sealed class Fixture : IDisposable
     {
         private readonly TemporaryDirectory directory = new("offline-environment");
         private readonly ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
@@ -99,6 +99,7 @@ public sealed class OfflineEnvironmentTests
         internal string Moved => directory.Combine("transferred");
         internal ModelRoutingCatalogDocument Catalog { get; } = ModelRoutingCatalogStore.LoadEmbedded();
         internal OfflineEnvironmentBundle Bundle { get; }
+        internal ReleaseManifestVerifier Verifier => verifier;
 
         internal Fixture()
         {

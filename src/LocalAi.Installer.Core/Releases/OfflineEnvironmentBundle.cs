@@ -181,7 +181,7 @@ public sealed class OfflineEnvironmentBundle(ReleaseManifestVerifier verifier)
         return bytes;
     }
 
-    private static async Task<OfflineBundleFile> CopyAndHashAsync(string source, string? destination, string relative, long maximum, CancellationToken token)
+    internal static async Task<OfflineBundleFile> CopyAndHashAsync(string source, string? destination, string relative, long maximum, CancellationToken token)
     {
         EnsureNoLinks(source);
         await using var input = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read, 65536, FileOptions.Asynchronous | FileOptions.SequentialScan);
@@ -218,7 +218,7 @@ public sealed class OfflineEnvironmentBundle(ReleaseManifestVerifier verifier)
         return result;
     }
 
-    private static string Resolve(string root, string relative)
+    internal static string Resolve(string root, string relative)
     {
         ValidatePath(relative);
         var path = Path.GetFullPath(Path.Combine(root, relative));
@@ -227,7 +227,7 @@ public sealed class OfflineEnvironmentBundle(ReleaseManifestVerifier verifier)
         return path;
     }
 
-    private static void ValidatePath(string path)
+    internal static void ValidatePath(string path)
     {
         if (string.IsNullOrWhiteSpace(path) || path.Length > 1024 || Path.IsPathRooted(path) || path.Any(char.IsControl) ||
             path.IndexOfAny(['\\', ':', '<', '>', '"', '|', '?', '*']) >= 0) throw new InvalidDataException("Invalid relative path.");
@@ -241,7 +241,7 @@ public sealed class OfflineEnvironmentBundle(ReleaseManifestVerifier verifier)
         }
     }
 
-    private static void EnsureNoLinks(string path)
+    internal static void EnsureNoLinks(string path)
     {
         for (var current = Path.GetFullPath(path); current is not null; current = Path.GetDirectoryName(current))
             if (Path.Exists(current) && (File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)

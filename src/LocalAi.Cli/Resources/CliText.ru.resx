@@ -1137,4 +1137,16 @@
   <data name="OfflineInvalidSource" xml:space="preserve"><value>Не удалось собрать комплект из этого источника. Проверьте offline-components.json и перечисленные в нём локальные файлы.</value></data>
   <data name="OfflineOutputExists" xml:space="preserve"><value>Путь --out уже существует. Укажите новую выходную папку.</value></data>
   <data name="OfflineVerificationFailed" xml:space="preserve"><value>Проверка комплекта не пройдена. Используйте отдельно сохранённый доверенный хеш манифеста и неизменённую копию комплекта.</value></data>
+  <data name="OfflineApplyHelp" xml:space="preserve"><value>Подготовить установку одной зависимости из комплекта. По умолчанию используется --mode plan; --mode apply запускает её локальный EXE/MSI согласно offline-actions.json.</value></data>
+  <data name="OfflineApplyPlan" xml:space="preserve"><value>Только план: установщик «{0}» не запущен. Версия компонента указана в описании; фактически установленная версия не проверена.</value></data>
+  <data name="OfflineApplyNotice" xml:space="preserve"><value>Команда использует локальный установщик без перехода к менеджерам пакетов или загрузке из сети. Работа установщика без сети и сетевая изоляция не проверены. Возможны частичные изменения; LocalAi не откатывает их автоматически.</value></data>
+  <data name="OfflineApplyResult" xml:space="preserve"><value>Установщик «{0}» завершился с кодом {1}. Установленная версия и работоспособность без сети не проверены.</value></data>
+  <data name="OfflineApplyRefused" xml:space="preserve"><value>Действие с зависимостью отклонено. Проверьте доверенный хеш манифеста, --component и offline-actions.json.</value></data>
+  <data name="OfflineApplyFailed" xml:space="preserve"><value>Не удалось завершить установку зависимости. Если установщик успел внести изменения, они не откатывались автоматически.</value></data>
+  <data name="OfflineApplyUnconfirmed" xml:space="preserve"><value>Не удалось подтвердить остановку установщика. Он может ещё работать. Защищённая копия файлов сохранена; путь указан в result.retainedDirectory. Перед повторным запуском проверьте состояние установщика.</value></data>
+  <data name="OfflineModelsHelp" xml:space="preserve"><value>Подготовить импорт файлов моделей Ollama в новый каталог моделей. По умолчанию используется --mode plan; --mode apply копирует проверенные файлы.</value></data>
+  <data name="OfflineModelsPlan" xml:space="preserve"><value>Только план: файлы моделей не импортированы. Связи манифестов и файлов данных Ollama, а также хеши SHA-256 прошли проверку.</value></data>
+  <data name="OfflineModelsNotice" xml:space="preserve"><value>Импорт копирует только файлы моделей. OLLAMA_MODELS не изменяется; Ollama и модели не запускаются. Подтверждения размещения не переносятся. Перед использованием отдельно настройте каталог моделей Ollama и выполните preflight через брокер.</value></data>
+  <data name="OfflineModelsImported" xml:space="preserve"><value>Файлы моделей импортированы в «{0}». OLLAMA_MODELS не изменён.</value></data>
+  <data name="OfflineModelsRefused" xml:space="preserve"><value>Импорт моделей отклонён. Проверьте доверенный хеш манифеста и файлы моделей; --out должен указывать новую папку.</value></data>
 </root>
