@@ -10,7 +10,7 @@ using ModelContextProtocol.Protocol;
 
 namespace LocalLm.Tests;
 
-public sealed class LocalTasksTests
+public sealed partial class LocalTasksTests
 {
     [Fact]
     public async Task Interrupted_translation_reuses_the_validated_segment_and_preserves_protected_bytes()

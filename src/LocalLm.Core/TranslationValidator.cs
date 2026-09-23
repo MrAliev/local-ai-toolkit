@@ -16,7 +16,9 @@ public static partial class TranslationValidator
 
     public static TranslationValidationResult ValidatePlain(
         string source,
-        string translated)
+        string translated,
+        string? sourceLanguage = null,
+        string? targetLanguage = null)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(translated);
@@ -51,12 +53,15 @@ public static partial class TranslationValidator
                 LocalLmText.ValidatorExpanded(source.Length, translated.Length));
         }
 
-        return new TranslationValidationResult(true, LocalLmText.ValidatorPlausible);
+        return ValidateContent(source, translated, false, sourceLanguage, targetLanguage)
+            ?? new TranslationValidationResult(true, LocalLmText.ValidatorPlausible);
     }
 
     public static TranslationValidationResult ValidateMarkdown(
         string source,
-        string translated)
+        string translated,
+        string? sourceLanguage = null,
+        string? targetLanguage = null)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(translated);
@@ -70,8 +75,57 @@ public static partial class TranslationValidator
             CompareTokens(LocalLmText.ValidatorPlaceholders, Placeholder().Matches(source), translated)
         };
         var failure = checks.FirstOrDefault(result => !result.Passed);
-        return failure ?? new TranslationValidationResult(true, LocalLmText.ValidatorStructurePreserved);
+        return failure ?? ValidateContent(source, translated, true, sourceLanguage, targetLanguage)
+            ?? new TranslationValidationResult(true, LocalLmText.ValidatorStructurePreserved);
     }
+
+    private static TranslationValidationResult? ValidateContent(string source, string translated, bool markdown,
+        string? sourceLanguage, string? targetLanguage)
+    {
+        if (string.IsNullOrWhiteSpace(translated)) return new(false, LocalLmText.ValidatorEmptyTranslation);
+        // Preserve literal spelling and order, including repeated values and table cells.
+        // A localized decimal separator is a literal change, not silently accepted rounding.
+        if (!Number().Matches(ComparableText(source, markdown)).Select(match => match.Value)
+            .SequenceEqual(Number().Matches(ComparableText(translated, markdown)).Select(match => match.Value), StringComparer.Ordinal))
+            return new(false, LocalLmText.Get("ValidatorNumbersChanged"));
+        if (string.IsNullOrWhiteSpace(sourceLanguage) || string.IsNullOrWhiteSpace(targetLanguage) ||
+            string.Equals(sourceLanguage.Trim(), targetLanguage.Trim(), StringComparison.OrdinalIgnoreCase)) return null;
+        var expected = ProseWords(source, markdown);
+        if (expected.Length == 0) return null;
+        var actual = ProseWords(translated, markdown);
+        // Whitespace, punctuation and a generated footer cannot disguise a copied source.
+        // This compares text; it is not language identification or semantic validation.
+        if ((" " + actual + " ").Contains(" " + expected + " ", StringComparison.Ordinal))
+            return new(false, LocalLmText.Get("ValidatorUnchangedProse"));
+        return null;
+    }
+
+    private static string ProseWords(string text, bool markdown)
+    {
+        text = ComparableText(text, markdown);
+        if (markdown) text = InlineCode().Replace(text, " ");
+        text = Placeholder().Replace(Url().Replace(text, " "), " ");
+        return string.Join(" ", Word().Matches(text).Select(match => match.Value.ToUpperInvariant()));
+    }
+
+    private static string ComparableText(string text, bool markdown)
+    {
+        // Fences are already compared byte-for-byte. Generated attribution identifies
+        // the model, whose tag may contain digits; it is not a source numeric literal.
+        if (markdown && !string.IsNullOrWhiteSpace(text)) text = string.Concat(TranslationProtector.SplitFencedCode(text)
+            .Where(part => part.IsTranslatable).Select(part => part.Text));
+        return AttributionLine().Replace(text, " ");
+    }
+
+    [GeneratedRegex(@"^(?:Translation performed by the local model|Перевод выполнен локальной моделью):[ \t]*[^\r\n]+\.[ \t]*\r?$",
+        RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex AttributionLine();
+
+    [GeneratedRegex(@"[+\-−]?\d+(?:[.,]\d+)*(?:[eE][+\-]?\d+)?%?", RegexOptions.CultureInvariant)]
+    private static partial Regex Number();
+
+    [GeneratedRegex(@"[\p{L}\p{M}]+", RegexOptions.CultureInvariant)]
+    private static partial Regex Word();
 
     private static TranslationValidationResult CompareFencedCode(string source, string translated)
     {

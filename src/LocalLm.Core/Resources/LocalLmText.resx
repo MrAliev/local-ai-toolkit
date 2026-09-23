@@ -265,10 +265,10 @@
     <value>Translation produced no model receipt.</value>
   </data>
   <data name="TranslationNotice" xml:space="preserve">
-    <value>🔧 Local: {0}{1}. Translation checked: {2}. {3}. Estimated tokens processed locally: {4}; cloud generation savings: {5}; net cloud context savings: {6}.</value>
+    <value>🔧 Local: {0}{1}. Translation checks: {2}. {3}. Estimated tokens processed locally: {4}; cloud generation savings: {5}; net cloud context savings: {6}.</value>
   </data>
   <data name="TranslationValidationFailed" xml:space="preserve">
-    <value>Local translation failed structural validation after fallback: {0}.</value>
+    <value>Local translation did not pass the checks after fallback: {0}.</value>
   </data>
   <data name="UnknownValue" xml:space="preserve">
     <value>Unknown {0} '{1}'.</value>
@@ -303,7 +303,7 @@
     <value>placeholders</value>
   </data>
   <data name="ValidatorPlausible" xml:space="preserve">
-    <value>plausible plain translation</value>
+    <value>basic text checks passed; meaning and target language not verified</value>
   </data>
   <data name="ValidatorPromptLeak" xml:space="preserve">
     <value>translation prompt leaked into output</value>
@@ -312,7 +312,7 @@
     <value>{0}: protected token count changed</value>
   </data>
   <data name="ValidatorStructurePreserved" xml:space="preserve">
-    <value>structure preserved</value>
+    <value>Markdown structure checks passed; meaning and target language not verified</value>
   </data>
   <data name="ValidatorUnexpectedFence" xml:space="preserve">
     <value>unexpected fenced content</value>
@@ -406,4 +406,6 @@
   <data name="DocumentsDocxXmlTooComplex" xml:space="preserve"><value>The XML structure in DOCX '{0}' is too complex to index.</value></data>
   <data name="DocumentsDocxOmissions" xml:space="preserve"><value>Some DOCX content was not indexed. See extractionNotices; additionalNotices counts notices beyond the first 64 per file.</value></data>
   <data name="DocumentsDocxLocationNotice" xml:space="preserve"><value>DOCX references identify paragraphs in the document structure. Page positions and visual reading order are not verified.</value></data>
+  <data name="ValidatorUnchangedProse" xml:space="preserve"><value>translatable text is unchanged despite a different requested target language</value></data>
+  <data name="ValidatorNumbersChanged" xml:space="preserve"><value>numeric literals differ from the source (changed, removed, added or reordered)</value></data>
 </root>
