@@ -20,6 +20,8 @@ internal static class CliCommandSyntax
         ["doctor"] = LocalAiCommandSyntax.Doctor,
         ["diagnostics"] = LocalAiCommandSyntax.Diagnostics,
         ["hardware plan"] = LocalAiCommandSyntax.HardwarePlan,
+        ["offline bundle"] = LocalAiCommandSyntax.OfflineBundle,
+        ["offline verify"] = LocalAiCommandSyntax.OfflineVerify,
         ["ask"] = LocalAiCommandSyntax.Ask,
         ["triage"] = LocalAiCommandSyntax.Triage,
         ["read-image"] = LocalAiCommandSyntax.ReadImage,

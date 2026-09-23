@@ -1128,4 +1128,11 @@ To keep a worktree whatever its branch: git worktree lock &lt;path&gt;</value>
   <data name="HardwarePlanReleaseRejected" xml:space="preserve"><value>Cannot read or verify the release metadata. Use a compatible release folder containing release-manifest.json and release-manifest.sig.</value></data>
   <data name="HardwarePlanCatalogRejected" xml:space="preserve"><value>The current model-routing.json is unreadable or invalid. Correct the model catalog and try again.</value></data>
   <data name="HardwarePlanDiskPathInvalid" xml:space="preserve"><value>--disk must point to an existing local directory for the disk-space estimate.</value></data>
+  <data name="OfflineHelpBundle" xml:space="preserve"><value>Create a transfer bundle from local files and offline-components.json, listing included and missing components.</value></data>
+  <data name="OfflineHelpVerify" xml:space="preserve"><value>Verify the manifest against a separately trusted SHA-256, then check every listed file.</value></data>
+  <data name="OfflineNotice" xml:space="preserve"><value>Status: installation-unverified. File integrity does not establish component usability or offline readiness. Clean-machine acceptance is pending. Bundled executables and models are not run.</value></data>
+  <data name="OfflineSaved" xml:space="preserve"><value>Bundle saved to &apos;{0}&apos;. Manifest SHA-256: {1}. Keep this hash separately in a trusted location.</value></data>
+  <data name="OfflineInvalidSource" xml:space="preserve"><value>Cannot build a bundle from this source. Check offline-components.json and the local files it lists.</value></data>
+  <data name="OfflineOutputExists" xml:space="preserve"><value>The --out path already exists. Choose a new output folder.</value></data>
+  <data name="OfflineVerificationFailed" xml:space="preserve"><value>Bundle verification failed. Use the separately trusted manifest hash and an unchanged copy of the bundle.</value></data>
 </root>

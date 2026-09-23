@@ -308,6 +308,9 @@ static async Task<int> RunAsync(string[] args, bool machineReadable, CommandStre
     if (args is ["hardware", "plan", .. var hardwareArguments])
         return await Interruptible(token => HardwarePlanCommand.ExecuteAsync(hardwareArguments, streams, machineReadable, token));
 
+    if (args is ["offline", .. var offlineArguments])
+        return await Interruptible(token => OfflineEnvironmentCommand.ExecuteAsync(offlineArguments, streams, machineReadable, token));
+
     if (args is ["ask", .. var askArguments])
     {
         if (!AskCommand.TryParse(askArguments, out var ask, out var askRefusal))
