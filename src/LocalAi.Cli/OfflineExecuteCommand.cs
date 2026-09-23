@@ -13,7 +13,7 @@ internal static class OfflineExecuteCommand
 {
     internal static async Task<int> ExecuteAsync(string[] args, CommandStreams streams, bool machineReadable, CancellationToken token,
         ReleaseManifestVerifier? verifier = null, IProcessRunner? runner = null, ModelRoutingCatalogDocument? catalog = null,
-        InstallationLayout? layout = null)
+        InstallationLayout? layout = null, IUserPathStore? userPath = null)
     {
         token.ThrowIfCancellationRequested();
         const string command = "offline execute";
@@ -49,7 +49,7 @@ internal static class OfflineExecuteCommand
                 new[] { selection.Node, selection.NpmCli, selection.Output }.Any(path => string.IsNullOrWhiteSpace(path) || !HardwarePlanCommand.IsLocalPath(path))) == true)
                 throw new InvalidDataException();
             using var ownedVerifier = verifier is null ? ReleaseTrustAnchor.CreateManifestVerifier() : null;
-            var application = new OfflineBundleApplication(verifier ?? ownedVerifier!, runner ?? new SystemProcessRunner());
+            var application = new OfflineBundleApplication(verifier ?? ownedVerifier!, runner ?? new SystemProcessRunner(), userPath);
             catalog ??= new ModelRoutingCatalogStore().Read(); layout ??= InstallationLayout.CreateDefault();
             result = mode == "apply"
                 ? await application.ExecuteAsync(options["--bundle"], options["--manifest-sha256"], request, options["--out"], catalog, layout, token)
@@ -66,7 +66,7 @@ internal static class OfflineExecuteCommand
         else if (exit != 0) UsageCall.Current?.Failed("offline_execution_failed");
         var data = JsonSerializer.SerializeToElement(new { mode, result, notice = CliText.Catalogue.Get("OfflineExecuteNotice"),
             dependencyNotice = CliText.Catalogue.Get("OfflineApplyNotice"), modelNotice = CliText.Catalogue.Get("OfflineModelsNotice"),
-            npmNotice = CliText.Catalogue.Get("OfflineNpmNotice"),
+            npmNotice = CliText.Catalogue.Get("OfflineNpmNotice"), pathNotice = CliText.Catalogue.Get("OfflineExecutePathNotice"),
             diskNotice = CliText.Catalogue.Get("OfflinePlanDiskCaveat") }, OfflineEnvironmentBundle.Json);
         if (machineReadable)
             streams.Out.WriteLine(exit == 0 ? MachineOutput.Answer(command, data)
