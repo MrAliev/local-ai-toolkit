@@ -91,60 +91,44 @@ public sealed class LabelsFollowTheLanguageTests
     public async Task A_bound_label_changes_with_the_language()
     {
         using var root = new TemporaryDirectory("LocalAi-label-binding");
-        var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var thread = new Thread(() =>
+        await WpfTestThread.Run(() =>
         {
-            try
-            {
-                var presentation = new InstallerPresentation(
-                    new InstallerPreferencesStore(root.Combine("preferences")));
-                var label = (TextBlock)XamlReader.Parse(
-                    """
-                    <TextBlock xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                               xmlns:vm="clr-namespace:LocalAi.Installer.ViewModels;assembly=LocalAi.Installer"
-                               Text="{vm:Label Back}" />
-                    """);
-                label.DataContext = new object();
-                // A template defers the extension to each instance it builds; the prerequisite and
-                // client rows use labels that way.
-                var templated = (ContentControl)XamlReader.Parse(
-                    """
-                    <ContentControl xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                                    xmlns:vm="clr-namespace:LocalAi.Installer.ViewModels;assembly=LocalAi.Installer">
-                        <ContentControl.ContentTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{vm:Label Next}" />
-                            </DataTemplate>
-                        </ContentControl.ContentTemplate>
-                    </ContentControl>
-                    """);
-                templated.Content = new object();
-                templated.Measure(new System.Windows.Size(200, 50));
-                DrainDispatcher();
-                var row = FindText(templated);
-                Assert.NotNull(row);
-                Assert.Equal("Back", label.Text);
-                Assert.Equal("Next", row.Text);
+            var presentation = new InstallerPresentation(
+                new InstallerPreferencesStore(root.Combine("preferences")));
+            var label = (TextBlock)XamlReader.Parse(
+                """
+                <TextBlock xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                           xmlns:vm="clr-namespace:LocalAi.Installer.ViewModels;assembly=LocalAi.Installer"
+                           Text="{vm:Label Back}" />
+                """);
+            label.DataContext = new object();
+            // A template defers the extension to each instance it builds; the prerequisite and
+            // client rows use labels that way.
+            var templated = (ContentControl)XamlReader.Parse(
+                """
+                <ContentControl xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                                xmlns:vm="clr-namespace:LocalAi.Installer.ViewModels;assembly=LocalAi.Installer">
+                    <ContentControl.ContentTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{vm:Label Next}" />
+                        </DataTemplate>
+                    </ContentControl.ContentTemplate>
+                </ContentControl>
+                """);
+            templated.Content = new object();
+            templated.Measure(new System.Windows.Size(200, 50));
+            DrainDispatcher();
+            var row = FindText(templated);
+            Assert.NotNull(row);
+            Assert.Equal("Back", label.Text);
+            Assert.Equal("Next", row.Text);
 
-                presentation.ChooseLanguage(InstallerLanguage.Russian);
-                DrainDispatcher();
+            presentation.ChooseLanguage(InstallerLanguage.Russian);
+            DrainDispatcher();
 
-                Assert.Equal("Назад", label.Text);
-                Assert.Equal("Далее", row.Text);
-                completed.SetResult();
-            }
-            catch (Exception exception)
-            {
-                completed.SetException(exception);
-            }
-            finally
-            {
-                Dispatcher.CurrentDispatcher.InvokeShutdown();
-            }
-        }) { IsBackground = true };
-        thread.SetApartmentState(ApartmentState.STA);
-        thread.Start();
-        await completed.Task.WaitAsync(TestContext.Current.CancellationToken);
+            Assert.Equal("Назад", label.Text);
+            Assert.Equal("Далее", row.Text);
+        });
     }
 
     private static TextBlock? FindText(System.Windows.DependencyObject parent)
