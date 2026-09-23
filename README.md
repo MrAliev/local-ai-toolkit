@@ -903,10 +903,20 @@ source-derived data with nonce-bound untrusted-content markers.
 
 This first pilot excludes transitive reachability, unsaved buffers, other languages
 and unverified locations. It does not predict runtime breakage, and an absent edge
-does not prove that code is unaffected. The tool invokes no model: an agent explaining
-the graph must cite the supplied evidence IDs and label any additional hypotheses
-separately. No automatic local-model explanation or measured token saving is claimed.
-Existing navigation commands and their JSON contracts remain unchanged.
+does not prove that code is unaffected. By default, the tool invokes no model.
+Add `--explain`, or set MCP `explain=true`, to request heuristic review questions for
+up to 16 returned evidence items. Use `--limit 16` to request an explicitly partial graph
+when there are more; `totalEvidence` and `truncated` remain visible. An optional `--model`
+(MCP `model`) selects a local model without relaxing the residency policy.
+
+The model selects from fixed review topics; the program renders relationship descriptions,
+questions and evidence citations. Model-written claims and source locations are not accepted.
+Review questions are not confirmed issues. Missing/unknown/duplicate selections, wrong
+relationship topics, extra prose and incomplete JSON reject the explanation (CLI exit 65)
+without delivering model text. The source snapshot is rechecked after inference. Empty
+graphs make no model call; the explanation prompt is capped at 16000 characters. Model
+attempts remain in usage reporting; no measured cloud-token saving is claimed for this pilot.
+Without `--explain`, existing graph output and navigation interfaces remain unchanged.
 
 ## Documentation packages
 

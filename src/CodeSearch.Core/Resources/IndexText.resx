@@ -304,4 +304,21 @@
   <data name="EvaluationSnapshotChanged" xml:space="preserve">
     <value>Source, index, or --cases file changed during evaluation. Rerun without changing them.</value>
   </data>
+  <data name="ImpactExplanationTitle" xml:space="preserve"><value>Review questions (heuristic)</value></data>
+  <data name="ImpactExplanationNotice" xml:space="preserve"><value>Relationships come from the verified index. The model selects review questions; these are not confirmed issues.</value></data>
+  <data name="ImpactExplanationEmpty" xml:space="preserve"><value>No direct indexed evidence was returned. This does not rule out impact. No model was called.</value></data>
+  <data name="ImpactExplanationRejected" xml:space="preserve"><value>Review questions were not added because the model response could not be verified against the supplied evidence.</value></data>
+  <data name="ImpactExplanationLimit" xml:space="preserve"><value>Review questions were not generated: the pilot accepts at most 16 evidence items. Set --limit 16 for an explicitly partial graph, or omit --explain.</value></data>
+  <data name="ImpactExplanationBudget" xml:space="preserve"><value>Review questions were not generated: the supplied context exceeds the explanation budget.</value></data>
+  <data name="ImpactExplanationChanged" xml:space="preserve"><value>The source snapshot changed while the model was running. Refresh the index and run the analysis again.</value></data>
+  <data name="ImpactFact_reference" xml:space="preserve"><value>The index records a reference to the selected symbol at this location.</value></data>
+  <data name="ImpactFact_implementation" xml:space="preserve"><value>The index records an implementation relationship from this declaration to the selected symbol.</value></data>
+  <data name="ImpactFact_override" xml:space="preserve"><value>The index records an override relationship from this declaration to the selected symbol.</value></data>
+  <data name="ImpactFact_type-definition" xml:space="preserve"><value>The index records a type-definition relationship from this declaration to the selected symbol.</value></data>
+  <data name="ImpactQuestion_usage-contract" xml:space="preserve"><value>Would a change to the selected symbol’s contract require this use to change?</value></data>
+  <data name="ImpactQuestion_implementation-contract" xml:space="preserve"><value>Would a change to the selected contract require this implementation to change?</value></data>
+  <data name="ImpactQuestion_override-contract" xml:space="preserve"><value>Would a change to the overridden member require this override to change?</value></data>
+  <data name="ImpactQuestion_type-contract" xml:space="preserve"><value>Would a change to the selected type require this declaration to change?</value></data>
+  <data name="ImpactQuestion_test-coverage" xml:space="preserve"><value>Which tests would cover a change involving this relationship?</value></data>
+  <data name="ImpactQuestion_insufficient-context" xml:space="preserve"><value>No review question selected: the model marked the supplied context as insufficient.</value></data>
 </root>
