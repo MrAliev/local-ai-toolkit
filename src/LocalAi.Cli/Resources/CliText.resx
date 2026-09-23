@@ -1135,4 +1135,16 @@ To keep a worktree whatever its branch: git worktree lock &lt;path&gt;</value>
   <data name="OfflineInvalidSource" xml:space="preserve"><value>Cannot build a bundle from this source. Check offline-components.json and the local files it lists.</value></data>
   <data name="OfflineOutputExists" xml:space="preserve"><value>The --out path already exists. Choose a new output folder.</value></data>
   <data name="OfflineVerificationFailed" xml:space="preserve"><value>Bundle verification failed. Use the separately trusted manifest hash and an unchanged copy of the bundle.</value></data>
+  <data name="OfflineApplyHelp" xml:space="preserve"><value>Plan installation of one bundled dependency. The default is --mode plan; --mode apply runs its local EXE/MSI as specified in offline-actions.json.</value></data>
+  <data name="OfflineApplyPlan" xml:space="preserve"><value>Plan only: installer for '{0}' was not launched. The component version is declared metadata; the installed version has not been checked.</value></data>
+  <data name="OfflineApplyNotice" xml:space="preserve"><value>The command uses the local installer without package-manager or network fallback. The installer's offline behavior and network isolation are unverified. Partial changes are possible; LocalAi does not roll them back automatically.</value></data>
+  <data name="OfflineApplyResult" xml:space="preserve"><value>Installer for '{0}' exited with code {1}. The installed version and offline usability remain unverified.</value></data>
+  <data name="OfflineApplyRefused" xml:space="preserve"><value>Dependency action refused. Check the trusted manifest hash, --component and offline-actions.json.</value></data>
+  <data name="OfflineApplyFailed" xml:space="preserve"><value>Dependency installation could not be completed. If the installer made changes, they were not rolled back automatically.</value></data>
+  <data name="OfflineApplyUnconfirmed" xml:space="preserve"><value>Installer termination could not be confirmed. It may still be running. The protected file copy was retained; its path is in result.retainedDirectory. Check the installer's state before retrying.</value></data>
+  <data name="OfflineModelsHelp" xml:space="preserve"><value>Plan importing Ollama model artifacts into a new model root. The default is --mode plan; --mode apply copies the verified files.</value></data>
+  <data name="OfflineModelsPlan" xml:space="preserve"><value>Plan only: model files were not imported. The Ollama manifest/blob graph and SHA-256 hashes passed validation.</value></data>
+  <data name="OfflineModelsNotice" xml:space="preserve"><value>Import copies model artifacts only. OLLAMA_MODELS is unchanged; Ollama and models are not started. Residency proofs are not transferred. Before use, configure the Ollama model root and run broker preflight separately.</value></data>
+  <data name="OfflineModelsImported" xml:space="preserve"><value>Model artifacts imported to '{0}'. OLLAMA_MODELS was not changed.</value></data>
+  <data name="OfflineModelsRefused" xml:space="preserve"><value>Model import refused. Check the trusted manifest hash and model artifacts; --out must name a new folder.</value></data>
 </root>

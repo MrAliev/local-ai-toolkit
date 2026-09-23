@@ -71,7 +71,7 @@ public sealed class UsageRegistryTests
     }
 
     [Theory]
-    [InlineData("localai", "repo status:schema,doctor:schema,diagnostics:schema,hardware plan:schema,offline bundle:schema,offline verify:schema,ask:schema:ask_local,triage:schema:triage_log,read-image:schema:read_image,translate:schema:translate_local,capabilities:schema,docs build:schema,docs apply:schema,docs prune:schema,docs pin:schema,docs unpin:schema,semantic impact:schema:analyze_impact,documents index:schema:index_documents,documents search:schema:search_documents,model status:schemaVersion:local_models_status,model pull:schemaVersion,model preflight:schemaVersion:local_model_preflight")]
+    [InlineData("localai", "repo status:schema,doctor:schema,diagnostics:schema,hardware plan:schema,offline bundle:schema,offline verify:schema,offline install-dependency:schema,offline import-models:schema,ask:schema:ask_local,triage:schema:triage_log,read-image:schema:read_image,translate:schema:translate_local,capabilities:schema,docs build:schema,docs apply:schema,docs prune:schema,docs pin:schema,docs unpin:schema,semantic impact:schema:analyze_impact,documents index:schema:index_documents,documents search:schema:search_documents,model status:schemaVersion:local_models_status,model pull:schemaVersion,model preflight:schemaVersion:local_model_preflight")]
     [InlineData("codesearch", "search:schema:search_code,get-chunk:schema:get_code_chunk,status:schema:index_status,capabilities:schema,evaluate:schemaVersion")]
     public void Existing_capability_names_order_shapes_and_correspondence_are_preserved(string binary, string expected)
     {
