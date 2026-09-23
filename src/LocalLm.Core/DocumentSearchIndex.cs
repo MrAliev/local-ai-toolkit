@@ -62,9 +62,16 @@ public static class DocumentSearchIndex
             Entry entry;
             if (old?.Sha256 == hash && previous!.Processor == processor && previous.Model == model && previous.PdfMode == pdfMode)
             {
-                entry = old;
+                entry = old with { Notices = old.Notices ?? [] };
                 reused++;
                 UsageCall.Current?.CacheHit("document_ocr_index");
+            }
+            else if (IsDocx(path))
+            {
+                var text = await DocumentDocxReader.ReadAsync(path, cancellationToken);
+                if (text.Sha256 != hash) throw Error("source_changed", "DocumentsSourceChanged", path);
+                entry = new Entry(name, hash, text.Paragraphs.Select((paragraph, i) => new Page(i + 1, paragraph.Text,
+                    PageHash(paragraph.Text, paragraph.Source), null, "docx-text", paragraph.Source)).ToArray(), text.Notices, text.AdditionalNotices);
             }
             else if (!IsPdf(path) || pdfMode == "TextLayer")
             {
@@ -91,7 +98,7 @@ public static class DocumentSearchIndex
         foreach (var entry in entries)
             if (await HashAsync(Path.Combine(source, entry.Name), cancellationToken) != entry.Sha256)
                 throw Error("source_changed", "DocumentsSourceChanged", Path.Combine(source, entry.Name));
-        var snapshot = new Snapshot(2, source, processor, model, entries.ToArray(), pdfMode);
+        var snapshot = new Snapshot(3, source, processor, model, entries.ToArray(), pdfMode);
         await AtomicFile.WriteAsync(Path.Combine(index, "snapshot.json"), async (stream, token) =>
         {
             await JsonSerializer.SerializeAsync(stream, snapshot, JsonOptions, token);
@@ -101,7 +108,11 @@ public static class DocumentSearchIndex
         return new(1, source, entries.Count, entries.Where(entry => IsPdf(entry.Name)).Sum(entry => entry.Pages.Length), reused,
             previous?.Documents.Count(entry => !entries.Any(current => Paths.Equals(current.Name, entry.Name))) ?? 0)
         {
-            IndexSchemaVersion = 2,
+            IndexSchemaVersion = 3,
+            DocxDocuments = entries.Count(entry => IsDocx(entry.Name)),
+            Paragraphs = entries.Where(entry => IsDocx(entry.Name)).Sum(entry => entry.Pages.Length),
+            ExtractionNotices = entries.SelectMany(entry => Notices(source, entry)).ToArray(),
+            AdditionalNotices = entries.Sum(entry => entry.AdditionalNotices),
             EmptyPages = entries.SelectMany(entry => entry.Pages.Where(page => page.TextKind == "pdf-text" && string.IsNullOrWhiteSpace(page.Text))
                 .Select(page => new DocumentEmptyPage(Path.Combine(source, entry.Name), page.Number, "no_text_extracted"))).ToArray(),
         };
@@ -116,6 +127,8 @@ public static class DocumentSearchIndex
         var snapshot = (await ReadAsync(FullDirectory(indexDirectory), required: true, cancellationToken))!;
         var hits = new List<DocumentSearchHit>();
         var excluded = new List<DocumentExcludedSource>();
+        var notices = new List<DocumentExtractionNotice>();
+        var additionalNotices = 0;
         var truncated = false;
         foreach (var entry in snapshot.Documents)
         {
@@ -133,6 +146,8 @@ public static class DocumentSearchIndex
             catch (Exception error) when (error is IOException or UnauthorizedAccessException or DocumentIndexException)
             { reason = "unreadable"; }
             if (reason is not null) { excluded.Add(new(path, reason)); continue; }
+            notices.AddRange(Notices(snapshot.SourceDirectory, entry));
+            additionalNotices += entry.AdditionalNotices;
             foreach (var page in entry.Pages)
             {
                 var offset = page.Text.IndexOf(query, StringComparison.OrdinalIgnoreCase);
@@ -144,10 +159,12 @@ public static class DocumentSearchIndex
                 if (start + length < page.Text.Length && char.IsHighSurrogate(page.Text[start + length - 1])) length--;
                 var id = PdfOcrCheckpoint.Hash(path + "\0" + entry.Sha256 + "\0" + page.Number.ToString(System.Globalization.CultureInfo.InvariantCulture) + "\0" + page.TextHash);
                 var plain = page.TextKind == "plain-text";
-                hits.Add(new(id, path, entry.Sha256, plain ? null : page.Number, plain ? null : new("page", "normalized", 0, 0, 1, 1),
+                var pdf = IsPdf(entry.Name);
+                hits.Add(new(id, path, entry.Sha256, pdf ? page.Number : null, pdf ? new("page", "normalized", 0, 0, 1, 1) : null,
                     page.TextKind, page.Text.Substring(start, length), page.Model, page.TextKind == "ocr" ? offset : null, query.Length, start)
                 {
                     MatchOffset = offset,
+                    DocxSource = page.DocxSource,
                     StartLine = plain ? LineAt(page.Text, start) : null,
                     EndLine = plain ? LineAt(page.Text, start + length - 1) : null,
                     MatchStartLine = plain ? LineAt(page.Text, offset) : null,
@@ -158,8 +175,9 @@ public static class DocumentSearchIndex
             }
         }
         UsageCall.Current?.NoInference();
-        return new(1, snapshot.Documents.All(entry => entry.Pages.All(page => page.TextKind == "ocr"))
-            ? "literal-ocr-phrase" : "literal-phrase", hits.ToArray(), excluded.ToArray(), truncated) { IndexSchemaVersion = snapshot.SchemaVersion };
+        return new(1, snapshot.Documents.All(entry => IsPdf(entry.Name) && entry.Pages.All(page => page.TextKind == "ocr"))
+            ? "literal-ocr-phrase" : "literal-phrase", hits.ToArray(), excluded.ToArray(), truncated)
+        { IndexSchemaVersion = snapshot.SchemaVersion, ExtractionNotices = notices.ToArray(), AdditionalNotices = additionalNotices };
     }
 
     private static int LineAt(string text, int offset)
@@ -170,7 +188,12 @@ public static class DocumentSearchIndex
         return line;
     }
     private static bool IsPdf(string path) => Path.GetExtension(path).Equals(".pdf", StringComparison.OrdinalIgnoreCase);
-    private static bool Supported(string path) => new[] { ".pdf", ".txt", ".md", ".markdown" }.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase);
+    private static bool IsDocx(string path) => Path.GetExtension(path).Equals(".docx", StringComparison.OrdinalIgnoreCase);
+    private static bool Supported(string path) => new[] { ".pdf", ".txt", ".md", ".markdown", ".docx" }.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase);
+    private static string PageHash(string text, DocumentDocxSource? source) => PdfOcrCheckpoint.Hash(source is null
+        ? text : JsonSerializer.Serialize(new { source, text }, JsonOptions));
+    private static IEnumerable<DocumentExtractionNotice> Notices(string source, Entry entry) => (entry.Notices ?? [])
+        .Select(notice => new DocumentExtractionNotice(Path.Combine(source, entry.Name), notice.Part, notice.Location, notice.Reason, notice.Element));
 
     private static string FullDirectory(string path)
     {
@@ -214,7 +237,7 @@ public static class DocumentSearchIndex
             await using var input = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete);
             if (input.Length > MaximumIndexBytes) throw new JsonException();
             var value = await JsonSerializer.DeserializeAsync<Snapshot>(input, JsonOptions, cancellationToken) ?? throw new JsonException();
-            if (value.SchemaVersion is not (1 or 2)) throw Error("index_schema", "DocumentsIndexSchemaUnsupported", index);
+            if (value.SchemaVersion is not (1 or 2 or 3)) throw Error("index_schema", "DocumentsIndexSchemaUnsupported", index);
             if (value.SourceDirectory is null || !Path.IsPathFullyQualified(value.SourceDirectory) || value.Processor is null ||
                 value.Documents is null || value.Documents.Length > MaximumDocuments || value.PdfMode is not ("Ocr" or "TextLayer")) throw new JsonException();
             long size = 0;
@@ -222,17 +245,26 @@ public static class DocumentSearchIndex
             foreach (var entry in value.Documents)
             {
                 if (entry is null || string.IsNullOrWhiteSpace(entry.Name) || entry.Name != Path.GetFileName(entry.Name) ||
-                    !Supported(entry.Name) || value.SchemaVersion == 1 && !IsPdf(entry.Name) || !names.Add(entry.Name) || !IsHash(entry.Sha256) ||
-                    entry.Pages is null || entry.Pages.Length is < 1 or > MaximumPages) throw new JsonException();
+                    !Supported(entry.Name) || value.SchemaVersion == 1 && !IsPdf(entry.Name) || value.SchemaVersion < 3 && IsDocx(entry.Name) ||
+                    !names.Add(entry.Name) || !IsHash(entry.Sha256) || entry.Pages is null ||
+                    entry.Pages.Length > (IsDocx(entry.Name) ? DocumentDocxReader.MaximumParagraphs : MaximumPages) ||
+                    entry.Pages.Length == 0 && !IsDocx(entry.Name) || entry.AdditionalNotices is < 0 or > 100_000 ||
+                    entry.Notices is { Length: > DocumentDocxReader.MaximumNotices } ||
+                    (entry.Notices ?? []).Any(notice => notice is null || !DocumentDocxReader.ValidPart(notice.Part) ||
+                        notice.Location is { Length: > 512 } || notice.Element is { Length: > 514 } ||
+                        notice.Reason is not ("unindexed_part" or "external_relationship_not_loaded" or "unsupported_paragraph" or "unsupported_block"))) throw new JsonException();
+                var locations = new HashSet<string>(StringComparer.Ordinal);
                 for (var i = 0; i < entry.Pages.Length; i++)
                 {
                     var page = entry.Pages[i];
-                    if (page is null || page.Number != i + 1 || page.Text is null || page.Text.Length > (IsPdf(entry.Name) ? 64_000 : MaximumText) ||
-                        page.TextKind is not ("ocr" or "pdf-text" or "plain-text") ||
-                        (IsPdf(entry.Name) ? page.TextKind == "plain-text" : page.TextKind != "plain-text" || entry.Pages.Length != 1) ||
+                    if (page is null || page.Number != i + 1 || page.Text is null || page.Text.Length > (IsPdf(entry.Name) || IsDocx(entry.Name) ? 64_000 : MaximumText) ||
+                        page.TextKind is not ("ocr" or "pdf-text" or "plain-text" or "docx-text") ||
+                        (IsPdf(entry.Name) ? page.TextKind is not ("ocr" or "pdf-text") :
+                            IsDocx(entry.Name) ? page.TextKind != "docx-text" : page.TextKind != "plain-text" || entry.Pages.Length != 1) ||
                         value.SchemaVersion == 1 && page.TextKind != "ocr" ||
                         (page.TextKind == "ocr" ? string.IsNullOrWhiteSpace(page.Model) : page.Model is not null) ||
-                        page.TextHash != PdfOcrCheckpoint.Hash(page.Text)) throw new JsonException();
+                        (IsDocx(entry.Name) ? page.DocxSource is not { IsValid: true } || !locations.Add(page.DocxSource.Part + ":" + page.DocxSource.XPath) : page.DocxSource is not null) ||
+                        page.TextHash != PageHash(page.Text, page.DocxSource)) throw new JsonException();
                     size += page.Text.Length;
                 }
             }
@@ -245,26 +277,33 @@ public static class DocumentSearchIndex
     private static DocumentIndexException Error(string code, string key, params object[] values) =>
         new(code, LocalLmText.Catalogue.Format(key, values));
     private sealed record Snapshot(int SchemaVersion, string SourceDirectory, string Processor, string? Model, Entry[] Documents, string PdfMode = "Ocr");
-    private sealed record Entry(string Name, string Sha256, Page[] Pages);
-    private sealed record Page(int Number, string Text, string TextHash, string? Model, string TextKind = "ocr");
+    private sealed record Entry(string Name, string Sha256, Page[] Pages, DocumentContentNotice[]? Notices = null, int AdditionalNotices = 0);
+    private sealed record Page(int Number, string Text, string TextHash, string? Model, string TextKind = "ocr", DocumentDocxSource? DocxSource = null);
 }
 
 public sealed record DocumentIndexSummary(int SchemaVersion, string SourceDirectory, int Documents, int Pages, int ReusedDocuments, int RemovedDocuments)
 {
     public int IndexSchemaVersion { get; init; } = 1;
     public DocumentEmptyPage[] EmptyPages { get; init; } = [];
+    public int DocxDocuments { get; init; }
+    public int Paragraphs { get; init; }
+    public DocumentExtractionNotice[] ExtractionNotices { get; init; } = [];
+    public int AdditionalNotices { get; init; }
 }
 public sealed record DocumentEmptyPage(string Path, int Page, string Reason);
 public sealed record DocumentSearchResult(int SchemaVersion, string SearchKind, DocumentSearchHit[] Hits, DocumentExcludedSource[] ExcludedSources, bool Truncated)
 {
     public string TokenComparisonSource => Hits.All(hit => hit.TextKind == "ocr") ? "returned-ocr-pages" : "returned-source-units";
     public int IndexSchemaVersion { get; init; } = 1;
+    public DocumentExtractionNotice[] ExtractionNotices { get; init; } = [];
+    public int AdditionalNotices { get; init; }
 }
 public sealed record DocumentExcludedSource(string Path, string Reason);
 public sealed record DocumentSearchHit(string Id, string Path, string Sha256, int? Page, DocumentRegion? Region,
     string TextKind, string Text, string? Model, int? OcrOffset, int MatchLength, int TextOffset)
 {
-    public string TextVerification => TextKind == "plain-text" ? "source-text" : TextKind == "pdf-text" ? "layout-unverified" : "unverified";
+    public string TextVerification => TextKind == "plain-text" ? "source-text" : TextKind is "pdf-text" or "docx-text" ? "layout-unverified" : "unverified";
+    public DocumentDocxSource? DocxSource { get; init; }
     public int? StartLine { get; init; }
     public int? EndLine { get; init; }
     public int? MatchStartLine { get; init; }
