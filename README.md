@@ -106,6 +106,7 @@ The set is **not the same**: some tools exist only here, some only over MCP.
 | `localai repo status` | whether a repository is connected |
 | `localai doctor` | what is wrong with the installation, read-only |
 | `localai diagnostics` | preview recorded diagnostics or save them as a ZIP |
+| `localai hardware plan` | estimate model/context capacity from signed release metadata and this computer |
 | `localai model status` / `pull` / `preflight` | models: installed, fetch, prove the fit |
 | `localai policy show` / `set` | the model residency policy |
 | `localai prune` | clear out stale generations and overlays |
@@ -943,7 +944,18 @@ The two broker log rotations contribute recognized categories only; unknown cate
 `Other`. Manifest file sizes and SHA-256 hashes describe the exact projected ZIP entries, not
 the private source files. A cancelled or failed export does not publish a partial ZIP.
 
+#### Estimate capacity on the target computer
+
+`localai hardware plan --release <folder> [--disk <existing-path>] [--json]` verifies the release manifest's signature and combines its model sizes with the current `model-routing.json` and residency policy. It estimates model/context combinations using fresh GPU capacity and available physical RAM measurements, with conservative memory reserves. Every combination requires preflight on this machine before use; existing or transferred residency proofs are ignored. The command loads no models, makes no network requests and changes no residency policy.
+
+The release folder must contain compatible `release-manifest.json` and `release-manifest.sig` files signed by the embedded release key. The ZIP is not read or verified by this command. `--disk` selects an existing local directory; the default is LocalApplicationData. UNC/device paths and mapped network drives are rejected. The JSON envelope contains `plan`, `catalogSource`, `policySource`, `dependencies` and explanatory notices. Missing or corrupt policy files retain the strict default, with `fileFound`/`fileUsed` showing the source; an invalid configured catalog is refused. This administrative command reports cloud-token savings as not applicable.
+
+Capacity uses the largest eligible single GPU, without summing adapters. The shared recommendation engine adds 1 GiB of runtime reserve and 256 KiB per context token to the signed base estimate. RAM is assessed conservatively against the same complete-model estimate. `fits`, `exceeds` and `unknown` are estimates; `residencyProof` is always `preflight-required`. Unknown hardware or unsigned model/context costs remain unknown. Disabled/Never catalog entries are excluded. Policy changes require the existing explicit `localai policy set` command.
+
+Dependency checks establish executable presence on local PATH entries only; versions and usability remain unverified. The disk estimate is a lower bound covering recommended model downloads (once per model) and the package size recorded in the signed manifest. Unpacked runtime files, dependency installers, indexes and temporary-space reserves are not fully included. `complete` remains false even when the known minimum fits. Existing model files are not credited against downloads, and optional/manual models are listed without being included in the default disk total.
+
 #### When something refuses
+
 
 A refusal is a message, not a breakage. Three common ones:
 
