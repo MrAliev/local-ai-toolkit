@@ -101,10 +101,10 @@ public sealed class OfflineEnvironmentTests
         internal OfflineEnvironmentBundle Bundle { get; }
         internal ReleaseManifestVerifier Verifier => verifier;
 
-        internal Fixture()
+        internal Fixture(byte[]? packageBytes = null)
         {
             Directory.CreateDirectory(Source);
-            byte[] package = [1, 2, 3, 4];
+            byte[] package = packageBytes ?? [1, 2, 3, 4];
             var release = new ReleaseManifest(1, "0.0.0-test", "abcdef123456", Catalog.CatalogVersion,
                 BrokerCompatibilityContract.ProtocolVersion, BrokerCompatibilityContract.BuildCompatibilityId,
                 new Uri("https://example.invalid/package.zip"), package.Length, Convert.ToHexString(SHA256.HashData(package)), false, []);

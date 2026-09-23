@@ -11,6 +11,8 @@ internal static class OfflineEnvironmentCommand
     internal static async Task<int> ExecuteAsync(string[] args, CommandStreams streams, bool machineReadable, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
+        if (args.FirstOrDefault() == "plan")
+            return await OfflinePlanCommand.ExecuteAsync(args[1..], streams, machineReadable, token);
         if (args.FirstOrDefault() is "install-dependency" or "import-models")
             return await OfflineApplicationCommand.ExecuteAsync(args, streams, machineReadable, token);
         var building = args.FirstOrDefault() == "bundle";

@@ -1147,4 +1147,10 @@ To keep a worktree whatever its branch: git worktree lock &lt;path&gt;</value>
   <data name="OfflineModelsNotice" xml:space="preserve"><value>Import copies model artifacts only. OLLAMA_MODELS is unchanged; Ollama and models are not started. Residency proofs are not transferred. Before use, configure the Ollama model root and run broker preflight separately.</value></data>
   <data name="OfflineModelsImported" xml:space="preserve"><value>Model artifacts imported to '{0}'. OLLAMA_MODELS was not changed.</value></data>
   <data name="OfflineModelsRefused" xml:space="preserve"><value>Model import refused. Check the trusted manifest hash and model artifacts; --out must name a new folder.</value></data>
+  <data name="OfflinePlanHelp" xml:space="preserve"><value>Recheck the bundle and show component status, installation steps and a disk-space budget. No installation steps are executed.</value></data>
+  <data name="OfflinePlanSummary" xml:space="preserve"><value>Plan generated. Items requiring attention: {0}.</value></data>
+  <data name="OfflinePlanNotice" xml:space="preserve"><value>The plan does not run installers, import models or change configuration. Offline readiness remains unverified. Runtime ZIP structure checks do not replace full package or Authenticode validation.</value></data>
+  <data name="OfflinePlanDiskCaveat" xml:space="preserve"><value>The known disk budget applies to one volume. Space for dependency installation and temporary files, backups, indexes and filesystem overhead is not fully known. Meeting the known budget still leaves the result incomplete.</value></data>
+  <data name="OfflinePlanRefused" xml:space="preserve"><value>Cannot create the offline plan. Check the trusted manifest hash, bundle contents and component metadata.</value></data>
+  <data name="OfflinePlanDiskPathInvalid" xml:space="preserve"><value>--disk must point to an existing local directory for the disk-space estimate.</value></data>
 </root>
