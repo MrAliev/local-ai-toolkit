@@ -72,6 +72,8 @@ public static class UsageReportingRegistry
             ("hardware plan", UsageComparisonKind.NotApplicable, null),
             ("offline bundle", UsageComparisonKind.NotApplicable, null),
             ("offline verify", UsageComparisonKind.NotApplicable, null),
+            ("offline install-dependency", UsageComparisonKind.NotApplicable, null),
+            ("offline import-models", UsageComparisonKind.NotApplicable, null),
             ("ask", UsageComparisonKind.ReplacedGeneration, "ask_local"), ("triage", UsageComparisonKind.ReplacedGeneration, "triage_log"),
             ("read-image", UsageComparisonKind.ReplacedGeneration, "read_image"), ("translate", UsageComparisonKind.ReplacedGeneration, "translate_local"),
             ("capabilities", UsageComparisonKind.NotApplicable, null), ("docs build", UsageComparisonKind.ReplacedGeneration, null),
