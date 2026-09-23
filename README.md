@@ -743,40 +743,62 @@ is not supported.
 See the [PDF parser and OCR measurements](scripts/quality/pdf/README.md) for separate
 text-layer, damaged-document and raster-limit checks, plus the limits of that evidence.
 
-The document-search pilot indexes **scanned PDFs through OCR**. Keep the index outside
-the source folder; only PDFs directly in that folder are included, without recursion.
+Document search indexes **PDF, TXT and Markdown** (`.md`, `.markdown`). Keep the index
+outside the source folder; only supported files directly in that folder are included.
+PDFs still use OCR by default. TXT and Markdown are read directly without a model.
 
 ```powershell
 lai localai documents index --source C:\Documents\Scans --index C:\Documents\SearchIndex
+lai localai documents index --source C:\Documents\Text --index C:\Documents\TextIndex --pdf-mode TextLayer
 lai localai documents search --index C:\Documents\SearchIndex --query "invoice number" --limit 10 --json
 ```
 
-MCP equivalents are `index_documents(sourceDirectory, indexDirectory, model?)` and
+MCP equivalents are `index_documents(sourceDirectory, indexDirectory, model?, pdfMode?)` and
 `search_documents(indexDirectory, query, limit?, sourceContext?)`. Search finds a
 case-insensitive literal phrase, returns at most one excerpt per page, and makes no
-model call. Every hit identifies the file, its SHA-256 version, one-based page,
-normalized whole-page region `(0,0,1,1)`, OCR model and unverified OCR excerpt.
+model call. Every PDF hit identifies the file, its SHA-256 version, one-based page,
+normalized whole-page region `(0,0,1,1)`, extraction kind and source excerpt.
+OCR hits also name the extraction model and mark transcription accuracy unverified.
 `ocrOffset`, `matchLength` and `textOffset` count UTF-16 code units in the page's OCR
 text; they are not coordinates of words in the PDF. No paraphrases or generated answers
 are mixed with that text. OCR can misread or omit text; a missing match proves only
 that the phrase was absent from the indexed OCR.
 
+Explicit `--pdf-mode TextLayer` (MCP `pdfMode: "TextLayer"`) reads embedded PDF text
+with PdfPig 0.1.16. It **never falls back to OCR**: pages with no extracted text are
+listed in the index result's `emptyPages`; reindex with `--pdf-mode Ocr` to recognize
+page images. Embedded text can contain hidden characters or a different reading order.
+`textKind` distinguishes `ocr`, `pdf-text` and `plain-text`; `textVerification` is
+`unverified`, `layout-unverified` or `source-text` respectively. Text-layer extraction
+does not claim a match to the visible page.
+
+TXT/Markdown hits have null `page`, `region`, `model` and `ocrOffset`; their one-based
+`startLine`/`endLine` describe the excerpt and `matchStartLine`/`matchEndLine` describe
+the match. `matchOffset`, `textOffset` and `matchLength` count UTF-16 code units in the
+decoded text file or extracted PDF page. Text is preserved, including line endings;
+UTF-8 and BOM-marked UTF-16/UTF-32 are supported. Invalid encodings and NUL-containing
+input are refused. Plain-text search returns at most one excerpt per file.
+
 Repeat `documents index` to refresh. Unchanged documents are reused; changed documents
-are re-read and deleted entries disappear. Search checks file hashes before returning
+are re-read and deleted entries disappear. Changing PDF mode invalidates extraction
+reuse. Version-one OCR indexes remain searchable; refresh atomically upgrades storage
+to version two. The CLI/MCP response schema remains version one with additive fields;
+`indexSchemaVersion` names the stored format. Search checks file hashes before returning
 hits and reports changed, deleted or unreadable sources in `excludedSources`. Refresh
 after changes; newly added files become searchable after that refresh. Publication is
 atomic and cancellation keeps the previous snapshot; interrupted new OCR work is
 repeated on the next run. Stored text remains local in `snapshot.json`. Its page hashes
 detect accidental corruption, not deliberate tampering by someone able to rewrite it.
 
-Pilot limits: 32 PDFs, 128 pages per PDF, 256 MiB per PDF, 1 GiB of PDFs, 64,000 OCR
-characters per page and 8 million in the index. Results contain at most 2,000 characters
+Pilot limits: 32 files, 128 pages per PDF, 256 MiB per PDF, 8 MiB per text file, 1 GiB
+in total, 64,000 extracted characters per PDF page and 8 million in the index.
+Results contain at most 2,000 characters
 per excerpt and accept a 1–256-character phrase. Indexing reports token savings as not
-applicable. Search compares only the OCR pages represented in returned hits with the
+applicable. Search compares only the source units represented in returned hits with the
 complete tool request/response; this conditional estimate can be negative and is not
 account usage. It does not count the entire corpus or replay earlier OCR usage.
-Text-layer extraction and TXT/Markdown are the next priority, followed by DOCX;
-this pilot reads all accepted PDFs through OCR and does not implement those readers.
+DOCX is the next format priority. PDF parsing has cooperative cancellation between
+pages, not a hard process deadline or memory sandbox.
 
 Languages are given as **names**, not codes: `--to Russian`, not `--to ru`.
 

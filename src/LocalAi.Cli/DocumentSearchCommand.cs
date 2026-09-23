@@ -30,7 +30,7 @@ internal static class DocumentSearchCommand
         var options = new Dictionary<string, string>(StringComparer.Ordinal);
         for (var i = 1; i < args.Length; i += 2)
         {
-            var allowed = args[i] == "--index" || (indexing ? args[i] is "--source" or "--model" : args[i] is "--query" or "--limit");
+            var allowed = args[i] == "--index" || (indexing ? args[i] is "--source" or "--model" or "--pdf-mode" : args[i] is "--query" or "--limit");
             if (!allowed || i + 1 == args.Length || string.IsNullOrWhiteSpace(args[i + 1]) || !options.TryAdd(args[i], args[i + 1]))
                 return Refuse("invalid_arguments", syntax);
         }
@@ -46,9 +46,11 @@ internal static class DocumentSearchCommand
             {
                 var observer = new LocalRunProgress(streams.Error, static () => DateTimeOffset.UtcNow);
                 tasks ??= new LocalTasks(new BrokerLocalModelClient(BrokerClientFactory.CreateDefault(observer: observer)), observer);
-                var summary = await DocumentSearchIndex.RefreshAsync(tasks, options["--source"], index, options.GetValueOrDefault("--model"), cancellationToken);
+                var mode = options.GetValueOrDefault("--pdf-mode", "Ocr");
+                var summary = await DocumentSearchIndex.RefreshAsync(tasks, options["--source"], index, options.GetValueOrDefault("--model"), cancellationToken, mode);
                 result = summary;
                 if (!machineReadable) streams.Out.WriteLine(LocalLmText.Catalogue.Format("DocumentsIndexReady", summary.Documents, summary.Pages));
+                if (!machineReadable && mode == "TextLayer") streams.Out.WriteLine(LocalLmText.Get("DocumentsTextLayerNotice"));
             }
             else
             {
@@ -59,6 +61,7 @@ internal static class DocumentSearchCommand
                     streams.Out.WriteLine(LocalLmText.Get("DocumentsSearchMethod"));
                     streams.Out.WriteLine(LocalLmText.Catalogue.Format("DocumentsSearchSummary", found.Hits.Length, found.ExcludedSources.Length));
                     streams.Out.WriteLine(LocalLmText.Get("DocumentsHitExcerpt"));
+                    if (found.Hits.Any(hit => hit.TextKind == "pdf-text")) streams.Out.WriteLine(LocalLmText.Get("DocumentsTextLayerNotice"));
                     if (found.ExcludedSources.Length > 0) streams.Out.WriteLine(LocalLmText.Get("DocumentsRefreshHint"));
                 }
             }
