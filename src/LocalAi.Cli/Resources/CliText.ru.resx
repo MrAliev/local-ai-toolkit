@@ -1122,4 +1122,12 @@
   <data name="DiagnosticsOutputExists" xml:space="preserve"><value>Выходной файл уже существует. Укажите другой путь --out.</value></data>
   <data name="DiagnosticsInputFailed" xml:space="preserve"><value>Не удалось завершить сбор диагностики из-за ошибки чтения. Проверьте доступ к локальным диагностическим данным.</value></data>
   <data name="DiagnosticsOutputFailed" xml:space="preserve"><value>Не удалось записать диагностический ZIP. Проверьте выходную папку и права на запись.</value></data>
+  <data name="HardwarePlanHelp" xml:space="preserve"><value>Оценить размещение моделей с разными размерами контекста по подписанному релизу и оборудованию этого компьютера. Модели не загружаются, сетевые запросы не выполняются, программы и политика размещения не изменяются.</value></data>
+  <data name="HardwarePlanNotice" xml:space="preserve"><value>Оценки ресурсов учитывают запас. Каждый вариант модели и размера контекста требует новой проверки preflight на этом компьютере; прежние подтверждения размещения не используются.</value></data>
+  <data name="HardwarePlanSummary" xml:space="preserve"><value>Оценено вариантов модели и размера контекста: {0}.</value></data>
+  <data name="HardwarePlanDiskIncomplete" xml:space="preserve"><value>Оценка места на диске — нижняя граница: загрузки моделей и размер пакета из подписанного манифеста. Распакованные файлы среды выполнения, установщики зависимостей, индексы и запас для временных данных учтены не полностью.</value></data>
+  <data name="HardwarePlanDependenciesNotice" xml:space="preserve"><value>Проверка зависимостей определяет только наличие исполняемых файлов. Версии и работоспособность не проверены.</value></data>
+  <data name="HardwarePlanReleaseRejected" xml:space="preserve"><value>Не удалось прочитать или проверить данные релиза. Укажите папку совместимого релиза с файлами release-manifest.json и release-manifest.sig.</value></data>
+  <data name="HardwarePlanCatalogRejected" xml:space="preserve"><value>Текущий model-routing.json недоступен для чтения или некорректен. Исправьте каталог моделей и повторите команду.</value></data>
+  <data name="HardwarePlanDiskPathInvalid" xml:space="preserve"><value>--disk должен указывать существующий локальный каталог для оценки места на диске.</value></data>
 </root>

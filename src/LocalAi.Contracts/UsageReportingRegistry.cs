@@ -69,6 +69,7 @@ public static class UsageReportingRegistry
         {
             ("repo status", UsageComparisonKind.NotApplicable, null), ("doctor", UsageComparisonKind.NotApplicable, null),
             ("diagnostics", UsageComparisonKind.NotApplicable, null),
+            ("hardware plan", UsageComparisonKind.NotApplicable, null),
             ("ask", UsageComparisonKind.ReplacedGeneration, "ask_local"), ("triage", UsageComparisonKind.ReplacedGeneration, "triage_log"),
             ("read-image", UsageComparisonKind.ReplacedGeneration, "read_image"), ("translate", UsageComparisonKind.ReplacedGeneration, "translate_local"),
             ("capabilities", UsageComparisonKind.NotApplicable, null), ("docs build", UsageComparisonKind.ReplacedGeneration, null),
@@ -87,7 +88,7 @@ public static class UsageReportingRegistry
 
         foreach (var command in new[]
         {
-            "help", "--help", "-h", "model", "native", "docs", "documents", "policy", "policy show", "policy set", "update", "semantic", "semantic status",
+            "help", "--help", "-h", "model", "native", "docs", "documents", "hardware", "policy", "policy show", "policy set", "update", "semantic", "semantic status",
             "semantic config", "semantic config show", "semantic config path", "semantic config init",
             "semantic lsp-config", "semantic lsp-config show", "semantic lsp-config path", "semantic lsp-config init",
             "semantic fallback-config", "semantic fallback-config show", "semantic fallback-config path", "semantic fallback-config init",

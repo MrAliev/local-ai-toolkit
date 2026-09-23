@@ -36,13 +36,13 @@ internal static class MachineOutput
     /// existing commands retain their established flag handling.
     /// </summary>
     public static bool Requested(IReadOnlyList<string> arguments) =>
-        arguments.FirstOrDefault() is "documents" or "diagnostics" ? MachineEnvelope.RequestedAsOption(arguments)
+        arguments.FirstOrDefault() is "documents" or "diagnostics" or "hardware" ? MachineEnvelope.RequestedAsOption(arguments)
             : MachineEnvelope.RequestedAnywhere(arguments);
 
     /// <summary>The arguments a command sees, with the flag this class owns taken out.</summary>
     public static string[] Without(IReadOnlyList<string> arguments)
     {
-        if (arguments.FirstOrDefault() is not ("documents" or "diagnostics")) return MachineEnvelope.WithoutFlag(arguments);
+        if (arguments.FirstOrDefault() is not ("documents" or "diagnostics" or "hardware")) return MachineEnvelope.WithoutFlag(arguments);
         var result = new List<string>();
         for (var i = 0; i < arguments.Count; i++)
         {
