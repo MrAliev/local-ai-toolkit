@@ -384,7 +384,7 @@
   <data name="DocumentsPathInvalid" xml:space="preserve"><value>Не удалось использовать путь к папке «{0}». Проверьте путь и права доступа.</value></data>
   <data name="DocumentsIndexUnavailable" xml:space="preserve"><value>Не удалось открыть индекс документов «{0}» для записи. Возможно, он занят или недоступен.</value></data>
   <data name="DocumentsLimitInvalid" xml:space="preserve"><value>--limit должен быть целым числом от 1 до 100.</value></data>
-  <data name="DocumentsFileCountExceeded" xml:space="preserve"><value>В папке-источнике не менее {0} поддерживаемых файлов; ограничение — {1}. Выберите папку с меньшим количеством PDF, TXT или Markdown.</value></data>
+  <data name="DocumentsFileCountExceeded" xml:space="preserve"><value>В папке-источнике не менее {0} поддерживаемых файлов; ограничение — {1}. Выберите папку с меньшим количеством PDF, TXT, Markdown или DOCX.</value></data>
   <data name="DocumentsPageCountExceeded" xml:space="preserve"><value>В PDF «{0}» {1} страниц; ограничение — {2}.</value></data>
   <data name="DocumentsFileSizeExceeded" xml:space="preserve"><value>Файл «{0}» превышает ограничение {1} МиБ.</value></data>
   <data name="DocumentsTotalSizeExceeded" xml:space="preserve"><value>Суммарный размер поддерживаемых файлов превышает ограничение {0} ГиБ.</value></data>
@@ -400,4 +400,10 @@
   <data name="DocumentsTextLayerNotice" xml:space="preserve"><value>Текстовый слой PDF может содержать скрытый текст или другой порядок чтения. Его соответствие видимой странице не проверено.</value></data>
   <data name="DocumentsTextEncodingInvalid" xml:space="preserve"><value>Не удалось прочитать текстовый файл «{0}» в поддерживаемой кодировке. Сохраните его в UTF-8 либо в UTF-16/UTF-32 с меткой порядка байтов (BOM).</value></data>
   <data name="DocumentsTextBinary" xml:space="preserve"><value>Файл «{0}» содержит нулевые символы (NUL) и не может быть проиндексирован как текст.</value></data>
+  <data name="DocumentsDocxUnreadable" xml:space="preserve"><value>Не удалось прочитать «{0}» как документ DOCX.</value></data>
+  <data name="DocumentsDocxUnsupported" xml:space="preserve"><value>DOCX «{0}» использует неподдерживаемую структуру пакета.</value></data>
+  <data name="DocumentsDocxStructureLimit" xml:space="preserve"><value>DOCX «{0}» превышает ограничение извлечения ({1}; максимум: {2}).</value></data>
+  <data name="DocumentsDocxXmlTooComplex" xml:space="preserve"><value>Структура XML в DOCX «{0}» слишком сложна для индексации.</value></data>
+  <data name="DocumentsDocxOmissions" xml:space="preserve"><value>Часть содержимого DOCX не проиндексирована. Подробности — в extractionNotices; additionalNotices показывает число уведомлений сверх первых 64 для каждого файла.</value></data>
+  <data name="DocumentsDocxLocationNotice" xml:space="preserve"><value>Ссылки DOCX указывают на абзацы в структуре документа. Положение на странице и визуальный порядок чтения не проверены.</value></data>
 </root>

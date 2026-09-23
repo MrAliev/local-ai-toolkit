@@ -8,6 +8,46 @@ namespace LocalAi.IntegrationTests;
 
 public sealed class DocumentSearchCommandTests
 {
+    [Fact]
+    public async Task Real_cli_returns_docx_structural_evidence_and_token_notice_without_a_model()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "localai-docx-cli-" + Guid.NewGuid().ToString("N"));
+        var source = Path.Combine(root, "source");
+        var index = Path.Combine(root, "index");
+        Directory.CreateDirectory(source);
+        using (var zip = System.IO.Compression.ZipFile.Open(Path.Combine(source, "letter.docx"), System.IO.Compression.ZipArchiveMode.Create))
+        {
+            var parts = new Dictionary<string, string>
+            {
+                ["[Content_Types].xml"] = "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Override PartName=\"/word/document.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/></Types>",
+                ["_rels/.rels"] = "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"word/document.xml\"/></Relationships>",
+                ["word/document.xml"] = "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p><w:r><w:t>Invoice ALPHA-7319</w:t></w:r></w:p></w:body></w:document>",
+            };
+            foreach (var part in parts)
+            {
+                using var writer = new StreamWriter(zip.CreateEntry(part.Key).Open());
+                writer.Write(part.Value);
+            }
+        }
+        try
+        {
+            var created = await Run(["documents", "index", "--source", source, "--index", index, "--json"]);
+            Assert.Equal(0, created.Exit);
+            Assert.Contains("No model call", created.Error);
+            var searched = await Run(["documents", "search", "--index", index, "--query", "ALPHA-7319", "--json"]);
+            Assert.Equal(0, searched.Exit);
+            using var found = JsonDocument.Parse(searched.Output);
+            var hit = Assert.Single(found.RootElement.GetProperty("data").GetProperty("hits").EnumerateArray());
+            Assert.Equal("docx-text", hit.GetProperty("textKind").GetString());
+            Assert.Equal(1, hit.GetProperty("docxSource").GetProperty("paragraph").GetInt32());
+            Assert.Equal(JsonValueKind.Null, hit.GetProperty("page").ValueKind);
+            Assert.Contains("INPUT", searched.Error);
+            Assert.Contains("OUTPUT", searched.Error);
+            Assert.Contains("No model call", searched.Error);
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
