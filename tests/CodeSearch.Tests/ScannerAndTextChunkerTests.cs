@@ -105,6 +105,8 @@ public class ChunkerFactoryTests
     [InlineData("Order.g.cs", false)]
     [InlineData("package-lock.json", false)]
     [InlineData("bundle.min.js", false)]
+    [InlineData("bundle.min.mjs", false)]
+    [InlineData("bundle.min.cjs", false)]
     public void KnowsWhatIsWorthIndexing(string path, bool indexable) =>
         Assert.Equal(indexable, ChunkerFactory.IsIndexable(path));
 
@@ -128,6 +130,24 @@ public class ChunkerFactoryTests
         // chunks since long before this, and they carry more than a body span can.
         Assert.IsType<RoslynChunker>(ChunkerFactory.Resolve("A.cs", catalog));
         Assert.Null(ChunkerFactory.Resolve("a.dll", catalog));
+    }
+
+    /// <summary>
+    /// The SCIP adapters read `.mjs`, `.cjs` and `.pyi`, so the corpus cuts them like `.js` and `.py`.
+    /// </summary>
+    [Theory]
+    [InlineData("web/app.js")]
+    [InlineData("web/app.mjs")]
+    [InlineData("web/app.cjs")]
+    [InlineData("pkg/api.py")]
+    [InlineData("pkg/api.pyi")]
+    public void Module_and_stub_files_are_chunked_like_the_source_beside_them(string path)
+    {
+        var catalog = SymbolDefinitionCatalog.FromSemanticIndex(IndexWithDefinition(path));
+
+        Assert.IsType<SymbolAwareChunker>(ChunkerFactory.Resolve(path, catalog));
+        Assert.IsType<GenericTextChunker>(
+            ChunkerFactory.Resolve(path, SymbolDefinitionCatalog.Empty));
     }
 
     [Fact]
@@ -301,6 +321,32 @@ public sealed class GitAwareFileScannerTests : IDisposable
         Assert.DoesNotContain(
             files,
             path => path.Contains("Secret.cs", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Enumerates_module_and_stub_files_alongside_js_and_py()
+    {
+        string[] sources =
+        [
+            Path.Combine("web", "app.js"),
+            Path.Combine("web", "app.mjs"),
+            Path.Combine("web", "app.cjs"),
+            Path.Combine("pkg", "api.py"),
+            Path.Combine("pkg", "api.pyi"),
+        ];
+        foreach (var source in sources)
+        {
+            var full = Path.Combine(_root, source);
+            Directory.CreateDirectory(Path.GetDirectoryName(full)!);
+            File.WriteAllText(full, "x = 1\n");
+        }
+
+        Git("init");
+        Git("add", ".");
+
+        var files = FileScanner.Enumerate(_root);
+
+        Assert.All(sources, source => Assert.Contains(source, files));
     }
 
     private void Git(params string[] arguments)
