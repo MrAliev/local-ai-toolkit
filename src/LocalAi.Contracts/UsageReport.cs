@@ -4,7 +4,7 @@ public enum UsageValueStatus { Measured, Estimated, Unknown, NotApplicable }
 public enum UsageTechnicalOutcome { Unknown, Succeeded, Failed, Refused, Cancelled }
 public enum UsageValidation { Unknown, Passed, Failed, NotApplicable }
 public enum UsageDelivery { Unknown, Delivered, Failed, NotAttempted, NotApplicable }
-public enum UsageModelState { Unknown, NotCalled, Called }
+public enum UsageModelState { Unknown, NotCalled, Called, Loaded }
 public enum UsageCache { Unknown, Hit, Miss, NotApplicable }
 public enum UsageOffload { Unknown, None, Partial, Cpu }
 

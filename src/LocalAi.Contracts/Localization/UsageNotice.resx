@@ -6,6 +6,7 @@
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
   <data name="UsageNotice" xml:space="preserve"><value>Call {0} | models: {1} | elapsed: {2} | cloud token savings: INPUT {3}; OUTPUT {4}.</value></data>
   <data name="UsageModelNotCalled" xml:space="preserve"><value>No model call</value></data>
+  <data name="UsageModelLoaded" xml:space="preserve"><value>Loaded without a task ({0})</value></data>
   <data name="UsageUnknown" xml:space="preserve"><value>Unknown</value></data>
   <data name="UsageUnknownReason" xml:space="preserve"><value>Unknown ({0})</value></data>
   <data name="UsageNotApplicableReason" xml:space="preserve"><value>Not applicable ({0})</value></data>

@@ -129,6 +129,39 @@ public sealed class UsageReportContractTests
     }
 
     [Fact]
+    public void A_model_loaded_without_a_task_keeps_its_own_state_and_the_loaded_model()
+    {
+        var report = NewReport("local_model_preflight") with { Models = Loaded() };
+        var json = UsageReportJson.Write(report);
+        var restored = UsageReportJson.Read(json);
+        Assert.Contains("\"state\":\"loaded\"", json, StringComparison.Ordinal);
+        Assert.Equal(UsageModelState.Loaded, restored.Models.State);
+        Assert.Equal(report.Models.Actual, restored.Models.Actual);
+        Assert.Equal(UsageValue.Measured(1), restored.Models.Calls);
+    }
+
+    [Theory]
+    [InlineData("no_model")]
+    [InlineData("count")]
+    [InlineData("backend_tokens")]
+    public void A_load_without_a_task_cannot_hide_its_model_or_claim_inference_tokens(string defect)
+    {
+        var report = NewReport("local_model_preflight");
+        var volumes = report.Volumes.ToDictionary();
+        volumes[UsageVolume.BackendEvalTokens] = UsageValue.Measured(5);
+        report = defect switch
+        {
+            "no_model" => report with { Models = Loaded() with { Calls = UsageValue.Measured(0), Actual = [] } },
+            "count" => report with { Models = Loaded() with { Calls = UsageValue.Measured(2) } },
+            _ => report with { Models = Loaded(), Volumes = volumes },
+        };
+        Assert.Throws<JsonException>(() => UsageReportJson.Write(report));
+    }
+
+    private static UsageModels Loaded() => new(UsageModelState.Loaded, UsageValue.Measured(1),
+        [new("qwen3.5:9b", 1, UsageOffload.Partial, null)], UsageCache.NotApplicable, "no_result_cache");
+
+    [Fact]
     public void Every_registered_operation_can_create_a_valid_report_without_observations()
     {
         foreach (var entry in UsageReportingRegistry.All)

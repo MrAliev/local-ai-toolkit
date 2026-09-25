@@ -65,7 +65,9 @@ public sealed class UsageReporting(string runtimeRoot)
             if (policy.Response == UsageResponseShape.Json) meta["localai/usageNotice"] = notice;
             return new CallToolResult
             {
-                Content = policy.Response == UsageResponseShape.Json ? content : [new TextContentBlock { Text = notice }, .. content],
+                Content = policy.Response == UsageResponseShape.Json
+                    ? [.. content, new TextContentBlock { Text = notice }]
+                    : [new TextContentBlock { Text = notice }, .. content],
                 StructuredContent = result.StructuredContent, IsError = result.IsError, Meta = meta,
             };
         }, payload => JsonSerializer.Serialize(payload, McpJsonUtilities.DefaultOptions),
