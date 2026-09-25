@@ -538,6 +538,13 @@ public static class CodeSearchTools
             // also throw OperationCanceledException — on the readable-text path.
             throw;
         }
+        // A named refusal in its own words: the wrapper would call it a failure and bury the
+        // model's name in Ollama's JSON (#633).
+        catch (EmbeddingModelMissingException missing)
+        {
+            UsageCall.Current?.Refused("model_not_installed");
+            return notice.Above(root, SyncNoticeAudience.Answer) + missing.Message;
+        }
         catch (Exception ex)
         {
             ObserveFailure(ex);

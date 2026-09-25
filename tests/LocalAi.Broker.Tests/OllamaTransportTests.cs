@@ -702,6 +702,104 @@ public sealed class OllamaTransportTests
             result.Body.Deserialize<ChatJobOutput>(LocalAiJson.Strict)!.Content);
     }
 
+    /// <summary>
+    /// Ollama answers a model it does not have with 404. Asked whether it has that model, it says
+    /// no, and that, not the status alone, makes the failure a missing model with a code of its
+    /// own rather than a quoted HTTP 404 (#633).
+    /// </summary>
+    [Fact]
+    public async Task An_embedding_model_Ollama_does_not_have_fails_as_not_installed()
+    {
+        var fake = new FakeOllamaServer();
+        fake.EnqueueJson(
+            HttpStatusCode.NotFound,
+            """{"error":"model \"embed-model\" not found, try pulling it first"}""");
+        fake.EnqueueJson(HttpStatusCode.OK, """{"models":[{"name":"other-model"}]}""");
+        using var client = new HttpClient(fake);
+        using var transport = new OllamaTransport(client, BaseUri, NoDelay);
+
+        var failure = await Assert.ThrowsAsync<EmbeddingModelNotInstalledException>(
+            () => transport.ExecuteAsync(
+                LocalJobRequestFactory.CreateEmbed(
+                    "embed-key",
+                    LocalJobPriority.Background,
+                    "embed-model",
+                    ["chunk"]),
+                TestContext.Current.CancellationToken));
+
+        Assert.Equal("embed-model", failure.Model);
+        Assert.Equal(new Uri(BaseUri, "api/tags"), fake.Requests[^1].Uri);
+    }
+
+    /// <summary>The search path reads the model's digest for its cache first, and fails the same way.</summary>
+    [Fact]
+    public async Task A_search_for_a_model_Ollama_does_not_have_fails_as_not_installed()
+    {
+        var fake = new FakeOllamaServer();
+        fake.EnqueueJson(HttpStatusCode.OK, """{"models":[{"name":"other-model"}]}""");
+        fake.EnqueueJson(
+            HttpStatusCode.NotFound,
+            """{"error":"model \"embed-model\" not found, try pulling it first"}""");
+        fake.EnqueueJson(HttpStatusCode.OK, """{"models":[{"name":"other-model"}]}""");
+        using var client = new HttpClient(fake);
+        using var transport = new OllamaTransport(client, BaseUri, NoDelay);
+
+        var failure = await Assert.ThrowsAsync<EmbeddingModelNotInstalledException>(
+            () => transport.ExecuteAsync(
+                LocalJobRequestFactory.CreateEmbed(
+                    "codesearch:query:missing",
+                    LocalJobPriority.Interactive,
+                    "embed-model",
+                    ["query"]),
+                TestContext.Current.CancellationToken));
+
+        Assert.Equal("embed-model", failure.Model);
+    }
+
+    /// <summary>A 404 for a model Ollama does list is not a missing model, and stays Ollama's own answer.</summary>
+    [Fact]
+    public async Task A_404_for_a_model_Ollama_lists_stays_its_own_answer()
+    {
+        var fake = new FakeOllamaServer();
+        fake.EnqueueJson(HttpStatusCode.NotFound, """{"error":"not found"}""");
+        fake.EnqueueJson(HttpStatusCode.OK, """{"models":[{"name":"embed-model"}]}""");
+        using var client = new HttpClient(fake);
+        using var transport = new OllamaTransport(client, BaseUri, NoDelay);
+
+        var failure = await Assert.ThrowsAsync<HttpRequestException>(
+            () => transport.ExecuteAsync(
+                LocalJobRequestFactory.CreateEmbed(
+                    "embed-key",
+                    LocalJobPriority.Background,
+                    "embed-model",
+                    ["chunk"]),
+                TestContext.Current.CancellationToken));
+
+        Assert.Equal(HttpStatusCode.NotFound, failure.StatusCode);
+    }
+
+    /// <summary>When Ollama cannot say what it has, its own answer stands rather than a guess.</summary>
+    [Fact]
+    public async Task A_404_Ollama_cannot_explain_stays_its_own_answer()
+    {
+        var fake = new FakeOllamaServer();
+        fake.EnqueueJson(HttpStatusCode.NotFound, """{"error":"not found"}""");
+        fake.EnqueueJson(HttpStatusCode.OK, """{"models":[{"name":""}]}""");
+        using var client = new HttpClient(fake);
+        using var transport = new OllamaTransport(client, BaseUri, NoDelay);
+
+        var failure = await Assert.ThrowsAsync<HttpRequestException>(
+            () => transport.ExecuteAsync(
+                LocalJobRequestFactory.CreateEmbed(
+                    "embed-key",
+                    LocalJobPriority.Background,
+                    "embed-model",
+                    ["chunk"]),
+                TestContext.Current.CancellationToken));
+
+        Assert.Equal(HttpStatusCode.NotFound, failure.StatusCode);
+    }
+
     [Fact]
     public async Task ListModels_gets_tags_and_preserves_order_with_ordinal_deduplication()
     {

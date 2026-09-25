@@ -209,6 +209,22 @@
     <value>The embedding job for model '{0}' did not finish. {1}</value>
     <comment>No cause, because the catch cannot establish one. It fires on a single failure code, BackendUnavailableException, and five states arrive under it: runner_unreachable from OllamaTransport's exhausted retries, and active_model_missing, backend_unreachable, backend_http_NNN and backend_io_failure from the watchdog's probe. Only one of the five is consistent with an absent Ollama, and an Ollama that is not running never reaches this catch at all - the job never runs, and BrokerBackendUnreachableException carries its own sentence and its own action, backed by a TCP connect to the endpoint. Measured twice during one build: this line printed while ollama.exe was serving, the model held 11.7 GB of the card at 82-91% utilisation, and llama-server was listening on the very port the body reported as refusing, with 48 sockets to it in TIME_WAIT; the build waited 182.7 s and 204.1 s and resumed on its own. So the sentence states what was observed - the job did not finish - and leaves which state it was to {1}. {1} is BrokerJobFailedException's message, already catalogued and already cut to 200 characters, so the job id and the marker before the backend's own words come with it - do not re-derive them from FailureReason. No action clause either: on the patient path the countdown under this line says the build is waiting, and on the terminal path BuildEmbeddingStopped has already said that running the build again continues from where it stopped. {0} is the embedding model id and is never translated.</comment>
   </data>
+  <data name="EmbeddingModelMissing" xml:space="preserve">
+    <value>Search and indexing need the embedding model {0}, and Ollama does not have it. If it was installed before, check which model directory Ollama is using.</value>
+    <comment>Says only what was checked: Ollama answered /api/embed with 404 and /api/tags does not list the model. The second sentence points where to look without claiming it as the cause. Always followed by one of the EmbeddingModelInstall* sentences.</comment>
+  </data>
+  <data name="EmbeddingModelInstallByBroker" xml:space="preserve">
+    <value>Otherwise install it through the broker: localai-launcher.exe run localai model pull --model {0} --catalog-version {1}</value>
+    <comment>Only when the catalog was read and names the model in its maintenance allowlist; otherwise the broker refuses the pull. No full stop: the line ends in a command somebody copies.</comment>
+  </data>
+  <data name="EmbeddingModelInstallInOllama" xml:space="preserve">
+    <value>Otherwise install it into Ollama yourself — the broker does not download this model: ollama pull {0}</value>
+    <comment>The catalog was read and does not name the model in its maintenance allowlist, so `localai model pull` would refuse it.</comment>
+  </data>
+  <data name="EmbeddingModelInstallInOllamaUnchecked" xml:space="preserve">
+    <value>Otherwise install it into Ollama: ollama pull {0}</value>
+    <comment>The catalog could not be read, so whether the broker would refuse is unknown and it is not named.</comment>
+  </data>
   <data name="BuildEmbeddingStopped" xml:space="preserve">
     <value>Embedding stopped at {0} of {1} chunks. What is embedded is saved — running this build again continues from there.</value>
     <comment>The count is what #389 was filed for, and the second clause is the fact that makes running it again cheap. Both holes are counts and stay invariant. Said only where an embedding checkpoint is configured, and understated by construction: SaveBatch runs before done is incremented, and the halving path saves more, so what the checkpoint holds is never less than what this claims.</comment>

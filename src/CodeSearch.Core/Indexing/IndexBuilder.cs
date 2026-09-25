@@ -1052,9 +1052,11 @@ public sealed class IndexBuilder(
                 pausing,
                 ct);
         }
+        // A missing model is not in any chunk, so nothing is halved for it and no file is named.
         catch (Exception exception) when (
             exception is not OperationCanceledException and
-                not EmbeddingUnavailableException &&
+                not EmbeddingUnavailableException and
+                not EmbeddingModelMissingException &&
             batch.Count > 1)
         {
             _log(IndexText.BuildBatchHalved(batch.Count, exception.Message));
@@ -1084,6 +1086,7 @@ public sealed class IndexBuilder(
         catch (Exception exception) when (
             exception is not OperationCanceledException and
                 not EmbeddingUnavailableException and
+                not EmbeddingModelMissingException and
                 not EmbeddingChunkException)
         {
             var chunk = batch[0];

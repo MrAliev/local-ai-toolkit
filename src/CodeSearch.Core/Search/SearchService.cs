@@ -141,7 +141,8 @@ public sealed class SearchService : IDisposable
         _embeddingClientFactory = embeddingClientFactory ??
             (model => new BrokerEmbeddingClient(
                 model,
-                BrokerClientFactory.CreateDefault()));
+                BrokerClientFactory.CreateDefault(),
+                runtimeRoot));
         _sourceTextReader = sourceTextReader ?? File.ReadAllTextAsync;
         _runtimeRoot = runtimeRoot;
         _timeProvider = timeProvider ?? TimeProvider.System;

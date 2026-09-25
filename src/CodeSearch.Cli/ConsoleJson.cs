@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using CodeSearch.Core.Embedding;
 using CodeSearch.Core.Search;
 using LocalAi.Contracts;
 
@@ -187,16 +188,17 @@ public static class ConsoleJson
     /// What a failure is called, so the flag's promise survives it: a caller that gets prose the
     /// moment something goes wrong has no machine mode at all.
     ///
-    /// Only the two that a caller can act on are named. An index that was never built is answered
-    /// by `localai sync`; one that is stale for this worktree is answered by syncing *this*
-    /// worktree, and the message says so. Everything else is an unexpected failure, and pretending
-    /// otherwise would need typed exceptions this core does not have — the same trade `localai`
-    /// makes with `input_rejected`.
+    /// Only the ones a caller can act on are named. An index that was never built is answered by
+    /// `localai sync`; one that is stale for this worktree is answered by syncing *this*
+    /// worktree, and the message says so; a missing embedding model is answered by installing it,
+    /// and the message says how. Everything else is an unexpected failure — the same trade
+    /// `localai` makes with `input_rejected`.
     /// </summary>
     public static string Classify(Exception exception) => exception switch
     {
         SearchNotReadyException => "index_not_ready",
         FileNotFoundException => "index_not_built",
+        EmbeddingModelMissingException => "model_not_installed",
         _ => "unexpected_failure",
     };
 

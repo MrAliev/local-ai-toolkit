@@ -5,9 +5,14 @@ using LocalAi.Contracts;
 
 namespace CodeSearch.Core.Embedding;
 
+/// <param name="runtimeRoot">
+/// The installation whose catalog says how a missing model is installed; the current user's when
+/// null, which is the one <see cref="BrokerClientFactory.CreateDefault"/> serves.
+/// </param>
 public sealed class BrokerEmbeddingClient(
     string model,
-    IBrokerClient broker) : IEmbeddingClient
+    IBrokerClient broker,
+    string? runtimeRoot = null) : IEmbeddingClient
 {
     public string Model { get; } =
         !string.IsNullOrWhiteSpace(model)
@@ -21,6 +26,7 @@ public sealed class BrokerEmbeddingClient(
     /// </summary>
     private const string BackendUnavailable = "BackendUnavailableException";
     private const string BackendRunnerUnavailable = "BackendRunnerUnavailableException";
+    private const string ModelNotInstalled = "EmbeddingModelNotInstalledException";
 
     public async Task<float[][]> EmbedAsync(
         IReadOnlyList<string> inputs,
@@ -96,6 +102,14 @@ public sealed class BrokerEmbeddingClient(
                 IndexText.EmbeddingBackendUnavailable(Model, exception.Message),
                 exception);
         }
+        catch (BrokerJobFailedException exception)
+            when (exception.FailureCode.Equals(ModelNotInstalled, StringComparison.Ordinal))
+        {
+            throw new EmbeddingModelMissingException(
+                Model,
+                EmbeddingModelAdvice.For(Model, runtimeRoot),
+                exception);
+        }
         // The same rule, by the route nobody guarded. An Ollama that is not running does not fail
         // a job - the job never runs at all, and the wait ends here. This is an
         // InvalidOperationException, so it was neither caught nor excluded from halving: the
@@ -164,6 +178,18 @@ public sealed class EmbeddingRunnerUnavailableException(
 public sealed class EmbeddingChunkException(
     string message,
     Exception innerException) : Exception(message, innerException);
+
+/// <summary>
+/// The embedding model is not installed. Not unavailable — waiting will not bring it — and not a
+/// chunk the model refused, so nothing is halved and no file is blamed (#633).
+/// </summary>
+public sealed class EmbeddingModelMissingException(
+    string model,
+    string message,
+    Exception innerException) : Exception(message, innerException)
+{
+    public string Model { get; } = model;
+}
 
 public static class EmbeddingVector
 {

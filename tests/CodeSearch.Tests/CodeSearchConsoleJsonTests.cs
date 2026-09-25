@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CodeSearch.Cli;
+using CodeSearch.Core.Embedding;
 using CodeSearch.Core.Search;
 using LocalAi.Contracts;
 
@@ -103,6 +104,18 @@ public sealed class CodeSearchConsoleJsonTests
         var exception = (Exception)Activator.CreateInstance(failure, "went wrong")!;
 
         Assert.Equal(code, ConsoleJson.Classify(exception), StringComparer.Ordinal);
+    }
+
+    /// <summary>A model that is not installed is a service that is not there, as it is for a chat task.</summary>
+    [Fact]
+    public void A_missing_embedding_model_carries_its_own_code()
+    {
+        var exception = new EmbeddingModelMissingException(
+            "qwen3-embedding:8b-q8_0",
+            "went wrong",
+            new InvalidOperationException());
+
+        Assert.Equal("model_not_installed", ConsoleJson.Classify(exception), StringComparer.Ordinal);
     }
 
     private static IndexStatus Sample() =>
