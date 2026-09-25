@@ -292,6 +292,7 @@ public sealed class ModelExecutionCoordinator
                 cancellationToken);
         }
 
+        var proof = _warmProof;
         var loadCompleted = _timeProvider.GetUtcNow();
         var resolved = LocalJobRequestFactory.ResolveRoutedChat(
             original,
@@ -330,6 +331,7 @@ public sealed class ModelExecutionCoordinator
                 net,
                 attemptId,
                 null,
+                proof,
                 cancellationToken);
 
             throw new ModelAttemptExecutionException(executionException);
@@ -337,9 +339,9 @@ public sealed class ModelExecutionCoordinator
 
         var executionCompleted = _timeProvider.GetUtcNow();
         var validation = _validate(original, selection, raw);
-        var (shortfall, residentPercent) = _warmProof is null
+        var (shortfall, residentPercent) = proof is null
             ? (ResidencyShortfall.None, (int?)null)
-            : _warmProof.Shortfall();
+            : proof.Shortfall();
         var routing = new LocalRoutingReceipt(
             selection.Profile,
             selection.Model,
@@ -375,6 +377,7 @@ public sealed class ModelExecutionCoordinator
             net,
             attemptId,
             raw,
+            proof,
             cancellationToken);
         return new AttemptResult(result, validation);
     }
@@ -404,6 +407,7 @@ public sealed class ModelExecutionCoordinator
         long net,
         Guid attemptId,
         BrokerExecutionResult? observed,
+        ModelResidencyProof? residency,
         CancellationToken cancellationToken)
     {
         try
@@ -424,6 +428,7 @@ public sealed class ModelExecutionCoordinator
                 net,
                 attemptId,
                 observed,
+                residency,
                 cancellationToken);
         }
         catch (OperationCanceledException)
@@ -456,8 +461,11 @@ public sealed class ModelExecutionCoordinator
         long net,
         Guid attemptId,
         BrokerExecutionResult? observed,
+        ModelResidencyProof? residency,
         CancellationToken cancellationToken)
     {
+        var (shortfall, residentPercent) = residency?.Shortfall() ?? (ResidencyShortfall.None, null);
+        var proven = residentPercent is not null;
         await _telemetry.AppendAsync(
             new ModelTelemetryRecord(
                 original.JobId,
@@ -492,6 +500,9 @@ public sealed class ModelExecutionCoordinator
                 BackendInputTokens = observed?.BackendInputTokens,
                 BackendOutputTokens = observed?.BackendOutputTokens,
                 CloudTokenSavings = UsageValue.Unknown("surface_comparison_required"),
+                Residency = proven ? shortfall : null,
+                VramResidentPercent = residentPercent,
+                ResidencyVerifiedAtUtc = proven ? residency!.VerifiedAtUtc : null,
             },
             cancellationToken);
     }
