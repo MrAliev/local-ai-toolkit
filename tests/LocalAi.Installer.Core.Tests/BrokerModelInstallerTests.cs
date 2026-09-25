@@ -571,6 +571,33 @@ public sealed class BrokerModelInstallerTests : IDisposable
         Assert.Equal("response_invalid", result.Code);
     }
 
+    /// <summary>
+    /// Ollama has reported more in video memory than the model's own size. The broker admits that
+    /// as a full load; checked again here with equality, it was called a misfit.
+    /// </summary>
+    [Fact]
+    public async Task A_load_reported_above_the_models_size_is_accepted_as_full()
+    {
+        var runner = new RecordingProcessRunner(
+            Success(Status(["model-a"], [], "signed-7")),
+            Success(Preflight("model-a", 2048, 100, 103, true)));
+        using var installer = new BrokerModelInstaller(
+            runner,
+            Launcher(),
+            layout,
+            Trust(),
+            TimeSpan.FromMinutes(5),
+            readResidencyPolicy: () => ModelResidencyPolicy.RequireFullVram);
+
+        var result = await installer.InstallAsync(
+            [Request("a", "model-a", 2048, "signed-7")],
+            TestContext.Current.CancellationToken);
+
+        var model = Assert.Single(result.Models);
+        Assert.Equal(BrokerModelInstallOutcome.Accepted, model.Outcome);
+        Assert.False(model.ResidencyDegraded);
+    }
+
     [Fact]
     public async Task Broker_rejection_is_rejected_residency_with_explicit_no_fallback()
     {
