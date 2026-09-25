@@ -249,7 +249,11 @@ twice. Missing evidence produces `unknown` with a reason; unsupported image prof
 fall back to a universal area formula.
 
 Existing numeric response fields retain their JSON shapes. New broker attempt records use
-schema 2, with attempt/workflow identities and observed backend counts where available.
+schema 2, with attempt/workflow identities, observed backend counts where available, and the
+residency proof of the load the attempt ran on. A model's offload in the call report comes
+from its own attempt. Without that proof it is `unknown` with a reason: `no_residency_check`
+for jobs that never check residency, such as embeddings, and `not_recorded` otherwise. A proof
+made for another model or context is never used.
 Attempts cannot prove delivery or cloud savings: their versioned value is `unknown`, and
 their legacy scalar savings fields are zero. Older telemetry remains readable; its unsupported
 scalar estimates are excluded from totals. Final call reports are stored separately, once

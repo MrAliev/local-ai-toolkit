@@ -644,6 +644,68 @@ public sealed class ModelExecutionCoordinatorTests : IDisposable
         Assert.Equal(2, diagnostics.Count);
     }
 
+    [Fact]
+    public async Task Each_attempt_record_keeps_the_residency_of_its_own_load()
+    {
+        var runtime = new FakeRuntime { VramByModel = { ["translategemma:12b"] = 42 } };
+        var coordinator = Create(
+            runtime,
+            (_, _) => Task.FromResult(Result("translated")),
+            (_, selection, _) => selection.Model == "translategemma:12b"
+                ? ModelValidationResult.Fail(ModelExecutionOutcome.StructuralFailure, "fixture")
+                : ModelValidationResult.Pass("fixture"));
+
+        await coordinator.ExecuteAsync(RoutedRequest(), Availability(), TestContext.Current.CancellationToken);
+
+        var records = await new ModelTelemetryStore(_root).ReadAllAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(
+            [
+                ("translategemma:12b", (ResidencyShortfall?)ResidencyShortfall.PartialOffload, (int?)42),
+                ("qwen3.5:9b", ResidencyShortfall.None, 100),
+            ],
+            records.Select(record => (record.Model, record.Residency, record.VramResidentPercent)));
+        Assert.All(records, record => Assert.NotNull(record.ResidencyVerifiedAtUtc));
+    }
+
+    [Fact]
+    public async Task A_failed_execution_keeps_the_residency_of_the_load_it_ran_on()
+    {
+        var runtime = new FakeRuntime { VramByModel = { ["translategemma:12b"] = 42 } };
+        var coordinator = Create(
+            runtime,
+            (request, _) => Assert.IsType<ChatJobPayload>(request.Payload).Model == "translategemma:12b"
+                ? Task.FromException<BrokerExecutionResult>(new IOException("model execution failed"))
+                : Task.FromResult(Result("translated")));
+
+        await coordinator.ExecuteAsync(RoutedRequest(), Availability(), TestContext.Current.CancellationToken);
+
+        var failed = (await new ModelTelemetryStore(_root).ReadAllAsync(TestContext.Current.CancellationToken))[0];
+        Assert.Equal(
+            ("translategemma:12b", ModelExecutionOutcome.TechnicalFailure, (ResidencyShortfall?)ResidencyShortfall.PartialOffload, (int?)42),
+            (failed.Model, failed.Outcome, failed.Residency, failed.VramResidentPercent));
+    }
+
+    [Fact]
+    public async Task A_load_refused_before_its_proof_leaves_no_attempt_claiming_residency()
+    {
+        var runtime = new FakeRuntime
+        {
+            FailureByModel =
+            {
+                ["translategemma:12b"] = new ModelPreflightException(
+                    "translategemma:12b", 2048, ModelExecutionOutcome.CpuOffload, "not fully resident"),
+            },
+        };
+        var coordinator = Create(runtime, (_, _) => Task.FromResult(Result("translated")));
+
+        var result = await coordinator.ExecuteAsync(RoutedRequest(), Availability(), TestContext.Current.CancellationToken);
+
+        Assert.Equal("qwen3.5:9b", result.Routing!.SelectedModel);
+        var record = Assert.Single(await new ModelTelemetryStore(_root).ReadAllAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(("qwen3.5:9b", (ResidencyShortfall?)ResidencyShortfall.None, (int?)100),
+            (record.Model, record.Residency, record.VramResidentPercent));
+    }
+
     private static LocalJobRequest RoutedRequest(
         string key = "translate",
         LocalWorkflowHint? workflow = null) =>
@@ -688,9 +750,13 @@ public sealed class ModelExecutionCoordinatorTests : IDisposable
 
         public ModelPreflightException? Failure { get; set; }
 
+        public Dictionary<string, ModelPreflightException> FailureByModel { get; } = new(StringComparer.Ordinal);
+
         public long SizeBytes { get; init; } = 100;
 
         public long SizeVramBytes { get; set; } = 100;
+
+        public Dictionary<string, long> VramByModel { get; } = new(StringComparer.Ordinal);
 
         public bool IsDisabled(string model, int contextTokens) => false;
 
@@ -706,17 +772,18 @@ public sealed class ModelExecutionCoordinatorTests : IDisposable
             CancellationToken cancellationToken = default)
         {
             Preflights.Add($"{model}:{contextTokens}");
-            if (Failure is not null)
+            if ((Failure ?? FailureByModel.GetValueOrDefault(model)) is { } failure)
             {
-                throw Failure;
+                throw failure;
             }
 
+            var vram = VramByModel.GetValueOrDefault(model, SizeVramBytes);
             return Task.FromResult(new ModelResidencyProof(
                 model,
                 contextTokens,
                 SizeBytes,
-                SizeVramBytes,
-                SizeBytes == SizeVramBytes,
+                vram,
+                SizeBytes == vram,
                 DateTimeOffset.UtcNow));
         }
     }
