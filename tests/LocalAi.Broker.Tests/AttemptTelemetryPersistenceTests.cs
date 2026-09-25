@@ -47,6 +47,26 @@ public sealed class AttemptTelemetryPersistenceTests : IDisposable
         Assert.Equal("legacy_comparison_unavailable", loaded.CloudTokenSavings.Reason);
     }
 
+    [Fact]
+    public async Task An_attempts_own_residency_survives_the_store_and_an_incomplete_one_is_refused()
+    {
+        var store = new ModelTelemetryStore(_root);
+        var record = Record() with
+        {
+            Residency = ResidencyShortfall.PartialOffload, VramResidentPercent = 42, ResidencyVerifiedAtUtc = DateTimeOffset.UnixEpoch,
+        };
+        await store.AppendAsync(record, TestContext.Current.CancellationToken);
+
+        var loaded = Assert.Single(await store.ReadAllAsync(TestContext.Current.CancellationToken));
+        Assert.Equal((record.Residency, record.VramResidentPercent, record.ResidencyVerifiedAtUtc),
+            (loaded.Residency, loaded.VramResidentPercent, loaded.ResidencyVerifiedAtUtc));
+        await Assert.ThrowsAsync<JsonException>(() => store.AppendAsync(
+            Record() with { Residency = ResidencyShortfall.None }, TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<JsonException>(() => store.AppendAsync(
+            Record() with { Residency = ResidencyShortfall.None, VramResidentPercent = 101, ResidencyVerifiedAtUtc = DateTimeOffset.UnixEpoch },
+            TestContext.Current.CancellationToken));
+    }
+
     private static ModelTelemetryRecord Record() => new(Guid.NewGuid(), LocalTaskProfile.ShortSummary,
         "qwen3.5:9b", 2048, LocalSizeBucket.Small, LocalSizeBucket.Small, false, false, false,
         "none", ModelExecutionOutcome.Success, TimeSpan.Zero, TimeSpan.Zero, TimeSpan.FromSeconds(1),
