@@ -214,8 +214,9 @@ public sealed class DoctorUpdateLineTests : IDisposable
         Assert.Equal(known.ExitCode, unknown.ExitCode);
         var before = DoctorCommand.Describe(known);
         var after = DoctorCommand.Describe(unknown);
-        Assert.Equal(0, before["unknown"]!.GetValue<int>());
-        Assert.Equal(1, after["unknown"]!.GetValue<int>());
+        // Relative: this installation has no broker record of its models either, and task-models
+        // counts as unanswered for that on both sides.
+        Assert.Equal(before["unknown"]!.GetValue<int>() + 1, after["unknown"]!.GetValue<int>());
         Assert.Equal(before["warned"]!.GetValue<int>(), after["warned"]!.GetValue<int>());
         Assert.Equal(before["failed"]!.GetValue<int>(), after["failed"]!.GetValue<int>());
     }

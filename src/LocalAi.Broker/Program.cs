@@ -54,9 +54,13 @@ internal static class BrokerProgram
         {
             var queue = new DurableQueue(runtimeRoot);
             var catalog = ModelRoutingCatalog.Load(runtimeRoot);
+            // Every listing of the installed models, whoever asked for it, is what doctor reads.
             using var transport = new OllamaTransport(
                 ollamaUri,
-                disableThinking: catalog.DisablesThinking);
+                disableThinking: catalog.DisablesThinking)
+            {
+                InstalledListed = new InstalledModelsRecorder(runtimeRoot).Record,
+            };
             var policy = new ModelResidencyPolicyStore(runtimeRoot).Read();
             var runtime = new ModelRuntime(
                 transport,
@@ -197,6 +201,8 @@ internal static class BrokerProgram
             using var updateProbe = new UpdateCheckProbe();
             var updates = new UpdateCheckService(runtimeRoot, updateProbe.CheckAsync)
                 .RunAsync(shutdown.Token);
+            var installedModels = new InstalledModelsWatch(transport.ListInstalledAsync)
+                .RunAsync(shutdown.Token);
             try
             {
                 await host.RunAsync(shutdown.Token, () => drain.Requested);
@@ -209,6 +215,7 @@ internal static class BrokerProgram
                 shutdown.Cancel();
                 await ObserveCancellationAsync(heartbeat);
                 await ObserveCancellationAsync(updates);
+                await ObserveCancellationAsync(installedModels);
             }
 
             return 0;

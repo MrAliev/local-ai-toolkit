@@ -728,6 +728,38 @@ public sealed class OllamaTransportTests
             () => ((IList<string>)output.Models).Add("later"));
     }
 
+    /// <summary>Every listing, whoever asked for it, is what doctor learns the installed models from.</summary>
+    [Fact]
+    public async Task A_listing_is_handed_to_whoever_watches_the_installed_models()
+    {
+        var fake = new FakeOllamaServer();
+        fake.EnqueueJson(
+            HttpStatusCode.OK,
+            """{"models":[{"name":"alpha"},{"name":"beta"}]}""");
+        var seen = new List<IReadOnlyList<string>>();
+        using var client = new HttpClient(fake);
+        using var transport = new OllamaTransport(client, BaseUri, NoDelay) { InstalledListed = seen.Add };
+
+        await transport.ListInstalledAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(["alpha", "beta"], Assert.Single(seen));
+    }
+
+    [Fact]
+    public async Task A_listing_that_fails_hands_nothing_on()
+    {
+        var fake = new FakeOllamaServer();
+        fake.EnqueueJson(HttpStatusCode.OK, """{"models":[{"name":""}]}""");
+        var seen = new List<IReadOnlyList<string>>();
+        using var client = new HttpClient(fake);
+        using var transport = new OllamaTransport(client, BaseUri, NoDelay) { InstalledListed = seen.Add };
+
+        await Assert.ThrowsAsync<InvalidDataException>(
+            () => transport.ListInstalledAsync(TestContext.Current.CancellationToken));
+
+        Assert.Empty(seen);
+    }
+
     [Fact]
     public async Task Tags_accepts_official_details_and_forward_compatible_fields()
     {
