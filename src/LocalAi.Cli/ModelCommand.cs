@@ -294,7 +294,7 @@ public static class ModelCommand
         new ModelResidencyPolicyStore(runtimeRoot ?? ModelResidencyPolicyStore.DefaultRuntimeRoot).Read().ModelResidency switch
         {
             ModelResidencyPolicy.RequireFullVram =>
-                proof.FullyResident && proof.SizeVramBytes == proof.SizeBytes,
+                proof.FullyResident && proof.SizeVramBytes >= proof.SizeBytes,
             ModelResidencyPolicy.AllowPartialOffload => proof.SizeVramBytes > 0,
             ModelResidencyPolicy.AllowCpu => true,
             _ => false,
