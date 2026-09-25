@@ -272,17 +272,20 @@ public static class LocalLmText
     public static string NoModelInstalledWithInstall(
         LocalTaskProfile profile,
         string models,
-        string firstModel,
+        string installable,
         string catalogVersion) =>
         Format(
             nameof(NoModelInstalledWithInstall),
             profile,
             models,
-            firstModel,
+            installable,
             catalogVersion);
 
-    public static string NoModelInstalled(LocalTaskProfile profile, string models) =>
-        Format(nameof(NoModelInstalled), profile, models);
+    public static string NoModelInstalledNotDownloadable(LocalTaskProfile profile, string models) =>
+        Format(nameof(NoModelInstalledNotDownloadable), profile, models);
+
+    public static string NoModelCatalogUnreadable(LocalTaskProfile profile) =>
+        Format(nameof(NoModelCatalogUnreadable), profile);
 
     public static string IneligibleWithModels(LocalTaskProfile profile, string models) =>
         Format(nameof(IneligibleWithModels), profile, models);

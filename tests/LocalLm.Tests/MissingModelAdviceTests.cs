@@ -97,4 +97,98 @@ public sealed class MissingModelAdviceTests
         Assert.NotEmpty(advice);
         Assert.Contains("local_models_status", advice, StringComparison.Ordinal);
     }
+
+    /// <summary>
+    /// The broker downloads only what its catalog's maintenance allowlist names, so the command
+    /// names a model it will take, not merely the first the route lists (#633).
+    /// </summary>
+    [Fact]
+    public void The_command_names_a_model_the_broker_will_download()
+    {
+        var (models, advice) = AdviceUnderUserCatalog(
+            LocalTaskProfile.VisualAnalysis,
+            models => [models[^1]]);
+
+        Assert.Contains($"--model {models[^1]} ", advice, StringComparison.Ordinal);
+        Assert.DoesNotContain($"--model {models[0]} ", advice, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void No_command_is_given_when_the_broker_would_refuse_every_model()
+    {
+        var (models, advice) = AdviceUnderUserCatalog(LocalTaskProfile.VisualAnalysis, _ => []);
+
+        Assert.Equal(
+            $"No local model able to do VisualAnalysis is installed. This task runs on {string.Join(", ", models)}, " +
+            "and the model catalog in use lets the broker download none of them; the model-catalog line " +
+            "of localai doctor shows which catalog that is.",
+            advice);
+    }
+
+    /// <summary>
+    /// An unreadable catalog is not an empty one: saying it names no model for the task would be
+    /// false, and so would naming models it was never able to read.
+    /// </summary>
+    [Fact]
+    public void An_unreadable_catalog_is_not_reported_as_naming_no_model()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "locallm-missing-model-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var store = new ModelRoutingCatalogStore(root);
+            Directory.CreateDirectory(Path.GetDirectoryName(store.FilePath)!);
+            File.WriteAllText(store.FilePath, "{ not json");
+
+            Assert.Equal(
+                "No local model able to do VisualAnalysis is installed, and the model catalog cannot be " +
+                "read, so which models the task runs on is unknown; the model-catalog line of localai " +
+                "doctor shows why.",
+                MissingModelAdvice.ForProfile(LocalTaskProfile.VisualAnalysis, root));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    private static (IReadOnlyList<string> Models, string Advice) AdviceUnderUserCatalog(
+        LocalTaskProfile profile,
+        Func<IReadOnlyList<string>, IReadOnlyList<string>> allowed)
+    {
+        var root = Path.Combine(Path.GetTempPath(), "locallm-missing-model-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var document = ModelRoutingCatalogResource.LoadDocument();
+            var route = document.Routes.Single(entry => entry.Profile == profile);
+            IReadOnlyList<string> models =
+                [.. route.Candidates.Concat(route.Fallbacks).Distinct(StringComparer.Ordinal)];
+            Assert.True(models.Count > 1, "The route needs two models for this test to mean anything.");
+            var allowlist = allowed(models);
+            document = document with
+            {
+                Models =
+                [
+                    .. document.Models.Select(model => allowlist.Contains(model.Tag)
+                        ? model with { InstallPolicy = LocalModelInstallPolicy.Recommended }
+                        : model),
+                ],
+                MaintenanceAllowlist = allowlist,
+            };
+            var store = new ModelRoutingCatalogStore(root);
+            Directory.CreateDirectory(Path.GetDirectoryName(store.FilePath)!);
+            File.WriteAllText(store.FilePath, System.Text.Json.JsonSerializer.Serialize(document, LocalAiJson.Strict));
+
+            return (models, MissingModelAdvice.ForProfile(profile, root));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
 }
