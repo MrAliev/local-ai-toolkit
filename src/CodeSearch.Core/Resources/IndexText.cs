@@ -159,6 +159,18 @@ public static class IndexText
     public static string EmbeddingBackendUnavailable(string model, string detail) =>
         Catalogue.Format(nameof(EmbeddingBackendUnavailable), model, detail);
 
+    public static string EmbeddingModelMissing(string model) =>
+        Catalogue.Format(nameof(EmbeddingModelMissing), model);
+
+    public static string EmbeddingModelInstallByBroker(string model, string catalogVersion) =>
+        Catalogue.Format(nameof(EmbeddingModelInstallByBroker), model, catalogVersion);
+
+    public static string EmbeddingModelInstallInOllama(string model) =>
+        Catalogue.Format(nameof(EmbeddingModelInstallInOllama), model);
+
+    public static string EmbeddingModelInstallInOllamaUnchecked(string model) =>
+        Catalogue.Format(nameof(EmbeddingModelInstallInOllamaUnchecked), model);
+
     public static string BuildSaved(string indexPath, int chunks, int files, string seconds) =>
         Catalogue.Format(nameof(BuildSaved), indexPath, chunks, files, seconds);
 

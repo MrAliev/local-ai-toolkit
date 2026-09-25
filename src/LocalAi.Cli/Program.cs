@@ -55,19 +55,9 @@ async Task<int> RunGuardedAsync(TextWriter output, TextWriter error)
     {
         return Failed("run_cancelled", CliText.RunCancelled, 130);
     }
-    catch (EmbeddingUnavailableException exception)
+    catch (Exception exception) when (CliFailure.Classify(exception) is { } named)
     {
-        return Failed("broker_unavailable", exception.Message, 75);
-    }
-    catch (RepositorySyncBusyException exception)
-    {
-        // The same "try again later" family as an unreachable embedder: the other run is doing
-        // this run's work, and a hook or script must be able to tell that from a real fault.
-        return Failed("sync_busy", exception.Message, 75);
-    }
-    catch (EmbeddingChunkException exception)
-    {
-        return Failed("chunk_rejected", exception.Message, 65);
+        return Failed(named.Code, named.Message, named.ExitCode);
     }
     catch (Exception exception)
     {

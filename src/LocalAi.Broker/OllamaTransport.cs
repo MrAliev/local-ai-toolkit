@@ -563,6 +563,50 @@ public sealed partial class OllamaTransport : IModelRuntimeTransport, IDisposabl
         }
     }
 
+    /// <summary>
+    /// Ollama answers 404 for a model it does not have. Asked, it can say whether that was the
+    /// reason; when it cannot say, its own answer stands.
+    /// </summary>
+    private async Task<JsonDocument> SendEmbedAsync(
+        EmbedJobPayload payload,
+        string body,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await SendAsync(
+                HttpMethod.Post,
+                "api/embed",
+                body,
+                payload.Inputs,
+                cancellationToken,
+                maximumResponseBytes: EmbedResponseCeilingBytes,
+                surfaceRunnerFailure: true);
+        }
+        catch (HttpRequestException failure) when (failure.StatusCode == HttpStatusCode.NotFound)
+        {
+            if (await ListsAsync(payload.Model, cancellationToken) is false)
+            {
+                throw new EmbeddingModelNotInstalledException(payload.Model, failure);
+            }
+
+            throw;
+        }
+    }
+
+    private async Task<bool?> ListsAsync(string model, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return (await ListInstalledAsync(cancellationToken)).Contains(model, StringComparer.Ordinal);
+        }
+        catch (Exception exception) when (
+            exception is HttpRequestException or InvalidDataException or IOException or JsonException)
+        {
+            return null;
+        }
+    }
+
     private async Task<BrokerExecutionResult> ExecuteEmbedAsync(
         EmbedJobPayload payload,
         CancellationToken cancellationToken)
@@ -574,14 +618,7 @@ public sealed partial class OllamaTransport : IModelRuntimeTransport, IDisposabl
             Options: payload.RequestedContextTokens is { } contextTokens
                 ? new GenerateOptions(contextTokens)
                 : null));
-        using var document = await SendAsync(
-            HttpMethod.Post,
-            "api/embed",
-            body,
-            payload.Inputs,
-            cancellationToken,
-            maximumResponseBytes: EmbedResponseCeilingBytes,
-            surfaceRunnerFailure: true);
+        using var document = await SendEmbedAsync(payload, body, cancellationToken);
         EmbedResponse response;
         try
         {
