@@ -302,10 +302,35 @@ public static class LocalLmText
     public static string ModelNotConfiguredForTriage(string model) =>
         Format(nameof(ModelNotConfiguredForTriage), model);
 
-    public static string NoTriageModelNoneTried => Get(nameof(NoTriageModelNoneTried));
+    public static string TriageRefusal => Get(nameof(TriageRefusal));
 
-    public static string NoTriageModel(string attempted) =>
-        Format(nameof(NoTriageModel), attempted);
+    public static string TriageRefusalRouteEmpty => Get(nameof(TriageRefusalRouteEmpty));
+
+    public static string TriageRefusalBrokerListEmpty => Get(nameof(TriageRefusalBrokerListEmpty));
+
+    public static string TriageRefusalNotInstalled(string models) =>
+        Format(nameof(TriageRefusalNotInstalled), models);
+
+    public static string TriageRefusalDisabled(string models) =>
+        Format(nameof(TriageRefusalDisabled), models);
+
+    public static string TriageRefusalNotText(string models) =>
+        Format(nameof(TriageRefusalNotText), models);
+
+    public static string TriageRefusalExperiment(string models) =>
+        Format(nameof(TriageRefusalExperiment), models);
+
+    public static string TriageRefusalContextLimit(int limit, string models, string policyPath) =>
+        Format(nameof(TriageRefusalContextLimit), limit, models, policyPath);
+
+    public static string TriageRefusalPostponed(string pairs) =>
+        Format(nameof(TriageRefusalPostponed), pairs);
+
+    public static string TriageRefusalLoadFailed(string pairs) =>
+        Format(nameof(TriageRefusalLoadFailed), pairs);
+
+    public static string TriageRefusalReason(string pair, string reason) =>
+        Format(nameof(TriageRefusalReason), pair, reason);
 
     public static string ExactlyOneSource => Get(nameof(ExactlyOneSource));
 

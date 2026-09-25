@@ -290,6 +290,7 @@ internal static class LocalModelRun
                 ("model_not_installed", MissingModelAdvice.ForProfile(profile), 69),
             BrokerJobFailedException { FailureCode: "NoEligibleModelException" } =>
                 ("model_not_eligible", MissingModelAdvice.ForIneligibleRequest(profile), 69),
+            NoTriageModelException unavailable => ("model_not_available", unavailable.Message, 69),
             // `FailureCode` is an exception type name — PascalCase, and an internal one — so it
             // goes in the message a person reads and never in the code a program switches on.
             BrokerJobFailedException failed => ("local_model_failed", failed.Message, 70),

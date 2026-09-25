@@ -816,6 +816,278 @@ public sealed partial class LocalTasksTests
         Assert.Contains(named, Assert.Single(client.Calls).System!, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// A refusal states only what was established (#633). Models that are not installed were
+    /// never measured, so the refusal names them and says nothing about video memory.
+    /// </summary>
+    [Theory]
+    [InlineData("en")]
+    [InlineData("ru")]
+    public async Task A_triage_whose_models_are_not_installed_names_them_without_blaming_video_memory(
+        string reader)
+    {
+        using var reading = TestCulture.Reading(reader);
+        var client = new FakeLocalModelClient { InstalledModels = ["translategemma:12b"] };
+
+        var refusal = await TriageRefusal(client);
+
+        Assert.Contains("qwen2.5-coder:14b", refusal, StringComparison.Ordinal);
+        Assert.Contains("qwen3.5:9b", refusal, StringComparison.Ordinal);
+        Assert.DoesNotContain("VRAM", refusal, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("видеопамят", refusal, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(client.Preflights);
+    }
+
+    [Fact]
+    public async Task A_triage_on_a_backend_that_lists_no_models_at_all_says_so()
+    {
+        using var reading = TestCulture.Reading("en");
+        var someInstalled = await TriageRefusal(
+            new FakeLocalModelClient { InstalledModels = ["translategemma:12b"] });
+        var noneInstalled = await TriageRefusal(new FakeLocalModelClient { InstalledModels = [] });
+
+        Assert.NotEqual(someInstalled, noneInstalled);
+        Assert.Contains("qwen2.5-coder:14b", noneInstalled, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_named_model_that_is_not_installed_is_refused_as_not_installed()
+    {
+        using var reading = TestCulture.Reading("en");
+        var client = new FakeLocalModelClient { InstalledModels = ["qwen2.5-coder:14b"] };
+
+        var refusal = await TriageRefusal(client, model: "qwen3.5:9b");
+
+        Assert.Contains("qwen3.5:9b", refusal, StringComparison.Ordinal);
+        Assert.DoesNotContain("VRAM", refusal, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(client.Preflights);
+    }
+
+    /// <summary>
+    /// The broker postpones a pair for ten minutes after any failed trial load, whatever the
+    /// cause (ModelRuntime.DisabledFor), so a postponed pair is named as such and is no
+    /// verdict on video memory. Nothing is loaded again.
+    /// </summary>
+    [Theory]
+    [InlineData("en", "VRAM")]
+    [InlineData("ru", "видеопамят")]
+    public async Task A_triage_whose_every_context_is_postponed_names_those_pairs_without_blaming_video_memory(
+        string reader,
+        string videoMemory)
+    {
+        using var reading = TestCulture.Reading(reader);
+        var refused = ModelRoutingCatalogResource.LoadDocument().Models
+            .Where(model => model.Tag is "qwen2.5-coder:14b" or "qwen3.5:9b")
+            .SelectMany(model => model.ContextTokens.Select(context => new ModelContextRef(model.Tag, context)))
+            .ToArray();
+        var client = new FakeLocalModelClient { DisabledContexts = refused };
+
+        var refusal = await TriageRefusal(client);
+
+        Assert.Contains("qwen2.5-coder:14b/32768", refusal, StringComparison.Ordinal);
+        Assert.Contains("qwen3.5:9b/2048", refusal, StringComparison.Ordinal);
+        Assert.DoesNotContain(videoMemory, refusal, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(client.Preflights);
+    }
+
+    [Fact]
+    public async Task A_missing_candidate_and_a_fallback_refused_now_are_both_named()
+    {
+        using var reading = TestCulture.Reading("en");
+        var client = new FakeLocalModelClient
+        {
+            InstalledModels = ["qwen3.5:9b"],
+            MaximumPreflightContextTokens = 0,
+        };
+
+        var refusal = await TriageRefusal(client);
+
+        Assert.Contains("qwen2.5-coder:14b", refusal, StringComparison.Ordinal);
+        Assert.All(client.Preflights, pair => Assert.Contains(
+            $"{pair.Model}/{pair.ContextTokens}", refusal, StringComparison.Ordinal));
+        Assert.NotEmpty(client.Preflights);
+        Assert.DoesNotContain("VRAM", refusal, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Video memory may be named only in the broker's own words, because only the broker
+    /// checked it; the reason is quoted for the last pair that failed.
+    /// </summary>
+    [Fact]
+    public async Task A_failed_trial_load_quotes_the_brokers_reason_for_the_last_pair()
+    {
+        using var reading = TestCulture.Reading("en");
+        const string reason = "Model 'qwen3.5:9b' is not fully resident in VRAM.";
+        var client = new FakeLocalModelClient
+        {
+            InstalledModels = ["qwen3.5:9b"],
+            MaximumPreflightContextTokens = 0,
+            PreflightFailureReason = reason,
+        };
+
+        var refusal = await TriageRefusal(client);
+
+        var last = client.Preflights[^1];
+        Assert.EndsWith($"{last.Model}/{last.ContextTokens}: {reason}", refusal, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// "Local model call failed" would claim a call that never happened: the refusal is
+    /// returned as it is, and the report says no model was called.
+    /// </summary>
+    [Fact]
+    public async Task The_triage_tool_returns_the_refusal_itself_rather_than_a_failed_model_call()
+    {
+        using var reading = TestCulture.Reading("en");
+        var expected = await TriageRefusal(new FakeLocalModelClient { InstalledModels = ["translategemma:12b"] });
+        using var usage = new UsageCall(UsageSurface.Mcp, "locallm", "triage_log");
+
+        var answer = await LocalLm.Mcp.LocalLmTools.TriageLog(
+            new LocalTasks(new FakeLocalModelClient { InstalledModels = ["translategemma:12b"] }),
+            text: "error CS1000",
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(expected, answer);
+        var report = usage.Complete();
+        Assert.Equal(UsageTechnicalOutcome.Refused, report.Outcome.Technical);
+        Assert.Equal(UsageModelState.NotCalled, report.Models.State);
+    }
+
+    [Fact]
+    public async Task A_triage_limit_below_every_context_tier_is_named_instead_of_video_memory()
+    {
+        using var reading = TestCulture.Reading("en");
+        var root = Path.Combine(Path.GetTempPath(), "localai-triage-limit-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var policies = new LogTriagePolicyStore(root);
+            policies.Write(LogTriagePolicy.Default with { MaximumContextTokens = 1024 });
+            var client = new FakeLocalModelClient();
+
+            var refusal = (await Assert.ThrowsAsync<NoTriageModelException>(() =>
+                new LocalTasks(client, policies).TriageLogAsync(
+                    null,
+                    "error CS1000",
+                    null,
+                    null,
+                    TestContext.Current.CancellationToken))).Message;
+
+            Assert.Contains("1024", refusal, StringComparison.Ordinal);
+            Assert.Contains("qwen2.5-coder:14b", refusal, StringComparison.Ordinal);
+            Assert.Contains(
+                LocalLm.Core.Resources.LocalLmText.TriageRefusalContextLimit(
+                    1024, "qwen2.5-coder:14b, qwen3.5:9b", policies.Path),
+                refusal,
+                StringComparison.Ordinal);
+            Assert.DoesNotContain("VRAM", refusal, StringComparison.OrdinalIgnoreCase);
+            Assert.Empty(client.Preflights);
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+        }
+    }
+
+    /// <summary>
+    /// The catalog's own exclusions are named as the catalog's, each model in exactly one
+    /// sentence, and a model that is merely missing is named as missing.
+    /// </summary>
+    [Fact]
+    public async Task A_model_the_catalog_disables_is_named_as_disabled_by_the_catalog()
+    {
+        var refusal = await TriageRefusalUnder(document => WithModel(
+            document, "qwen2.5-coder:14b", model => model with { Lifecycle = LocalModelLifecycle.Disabled }));
+
+        Assert.Contains(LocalLm.Core.Resources.LocalLmText.TriageRefusalDisabled("qwen2.5-coder:14b"), refusal, StringComparison.Ordinal);
+        Assert.Contains(LocalLm.Core.Resources.LocalLmText.TriageRefusalNotInstalled("qwen3.5:9b"), refusal, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_model_without_text_capability_is_named_as_such()
+    {
+        var refusal = await TriageRefusalUnder(document => WithModel(
+            document, "qwen2.5-coder:14b", model => model with { Capabilities = [LocalModelCapability.Code] }));
+
+        Assert.Contains(LocalLm.Core.Resources.LocalLmText.TriageRefusalNotText("qwen2.5-coder:14b"), refusal, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_candidate_held_back_by_its_experiment_is_named_rather_than_dropped()
+    {
+        var refusal = await TriageRefusalUnder(
+            document => WithModel(
+                document, "qwen2.5-coder:14b", model => model with { Lifecycle = LocalModelLifecycle.Experimental }),
+            [new LocalExperimentPairStatus(LocalTaskProfile.LogTriage, "qwen2.5-coder:14b", 3, IsPaused: true, IsCircuitOpen: false, IsPromoted: false, OwnerAction: null)]);
+
+        Assert.Contains(LocalLm.Core.Resources.LocalLmText.TriageRefusalExperiment("qwen2.5-coder:14b"), refusal, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_route_that_names_no_model_says_so()
+    {
+        var refusal = await TriageRefusalUnder(document => document with
+        {
+            Routes = document.Routes.Select(route => route.Profile == LocalTaskProfile.LogTriage
+                ? route with { Mode = LocalRouteMode.Deterministic, Candidates = [], Fallbacks = [] }
+                : route).ToArray(),
+        });
+
+        Assert.Contains(LocalLm.Core.Resources.LocalLmText.TriageRefusalRouteEmpty, refusal, StringComparison.Ordinal);
+    }
+
+    private static ModelRoutingCatalogDocument WithModel(
+        ModelRoutingCatalogDocument document,
+        string tag,
+        Func<ModelCatalogEntry, ModelCatalogEntry> change) =>
+        document with
+        {
+            Models = document.Models.Select(model => model.Tag == tag ? change(model) : model).ToArray(),
+        };
+
+    private static async Task<string> TriageRefusalUnder(
+        Func<ModelRoutingCatalogDocument, ModelRoutingCatalogDocument> change,
+        IReadOnlyList<LocalExperimentPairStatus>? experiments = null)
+    {
+        using var reading = TestCulture.Reading("en");
+        var root = Path.Combine(Path.GetTempPath(), "localai-triage-refusal-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var store = new ModelRoutingCatalogStore(root);
+            Directory.CreateDirectory(Path.GetDirectoryName(store.FilePath)!);
+            File.WriteAllText(
+                store.FilePath,
+                JsonSerializer.Serialize(change(ModelRoutingCatalogResource.LoadDocument()), LocalAiJson.Strict));
+            var client = new FakeLocalModelClient
+            {
+                CatalogVersion = store.Read().CatalogVersion,
+                InstalledModels = ["qwen2.5-coder:14b"],
+                Experiments = experiments ?? [],
+            };
+            var tasks = new LocalTasks(client, new LogTriagePolicyStore(root), modelCatalog: store);
+
+            var refusal = (await Assert.ThrowsAsync<NoTriageModelException>(() => tasks.TriageLogAsync(
+                null,
+                "error CS1000",
+                null,
+                null,
+                TestContext.Current.CancellationToken))).Message;
+            Assert.Empty(client.Preflights);
+            return refusal;
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+        }
+    }
+
+    private static async Task<string> TriageRefusal(FakeLocalModelClient client, string? model = null) =>
+        (await Assert.ThrowsAsync<NoTriageModelException>(() => new LocalTasks(client).TriageLogAsync(
+            null,
+            "error CS1000",
+            null,
+            model,
+            TestContext.Current.CancellationToken))).Message;
+
     [Fact]
     public async Task Log_triage_uses_fixed_profile_and_the_largest_full_vram_context()
     {
@@ -1501,6 +1773,15 @@ public sealed partial class LocalTasksTests
 
         public int MaximumPreflightContextTokens { get; init; } = 32768;
 
+        public IReadOnlyList<string> InstalledModels { get; init; } =
+            ["qwen2.5-coder:14b", "qwen3.5:9b", "translategemma:12b"];
+
+        public IReadOnlyList<ModelContextRef> DisabledContexts { get; init; } = [];
+
+        public string? PreflightFailureReason { get; init; }
+
+        public IReadOnlyList<LocalExperimentPairStatus> Experiments { get; init; } = [];
+
         public Func<RoutedCall, int, string>? RoutedAnswerFactory { get; init; }
 
         public List<ModelContextRef> Preflights { get; } = [];
@@ -1616,17 +1897,13 @@ public sealed partial class LocalTasksTests
             CancellationToken cancellationToken = default) =>
             Task.FromResult(new LocalJobResult<LocalModelsStatusOutput>(
                 new LocalModelsStatusOutput(
-                    [
-                        "qwen2.5-coder:14b",
-                        "qwen3.5:9b",
-                        "translategemma:12b"
-                    ],
+                    InstalledModels,
                     [],
                     [],
-                    [],
+                    Experiments,
                     CatalogVersion,
                     [],
-                    [],
+                    DisabledContexts,
                     []),
                 Receipt("status", "none")));
 
@@ -1642,7 +1919,8 @@ public sealed partial class LocalTasksTests
             {
                 throw new BrokerJobFailedException(
                     Guid.NewGuid(),
-                    "ModelPreflightException");
+                    "ModelPreflightException",
+                    PreflightFailureReason);
             }
 
             return Task.FromResult(new LocalJobResult<LocalModelPreflightOutput>(

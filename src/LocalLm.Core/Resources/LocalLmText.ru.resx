@@ -137,11 +137,41 @@
     <value>Локальных моделей для задачи {0} не установлено. Задача выполняется на моделях: {1}. Установить одну из них через брокер: localai-launcher.exe run localai model pull --model {2} --catalog-version {3}</value>
     <comment>No full stop after the command in either language: a trailing period gets copied into a shell.</comment>
   </data>
-  <data name="NoTriageModel" xml:space="preserve">
-    <value>Ни одна пара модель/контекст для разбора логов не помещается в видеопамять целиком. Проверено: {0}.</value>
+  <data name="TriageRefusal" xml:space="preserve">
+    <value>Ни одну локальную модель не удалось использовать для разбора логов.</value>
+    <comment>Lead of the log-triage refusal. One line: followed, one space apart, by a sentence per fact that holds, in this order: RouteEmpty, BrokerListEmpty, NotInstalled, Disabled, NotText, Experiment, ContextLimit, Postponed, LoadFailed, Reason. Lists join with ', '. Video memory is named only inside the broker's quoted reason, because only the broker checked it.</comment>
   </data>
-  <data name="NoTriageModelNoneTried" xml:space="preserve">
-    <value>Ни одна пара модель/контекст для разбора логов не помещается в видеопамять целиком. Проверять было нечего.</value>
+  <data name="TriageRefusalRouteEmpty" xml:space="preserve">
+    <value>Каталог маршрутизации не называет ни одной.</value>
+  </data>
+  <data name="TriageRefusalBrokerListEmpty" xml:space="preserve">
+    <value>По данным брокера, не установлено ни одной модели.</value>
+  </data>
+  <data name="TriageRefusalNotInstalled" xml:space="preserve">
+    <value>Не установлено: {0}.</value>
+  </data>
+  <data name="TriageRefusalDisabled" xml:space="preserve">
+    <value>В каталоге маршрутизации помечено как Disabled: {0}.</value>
+  </data>
+  <data name="TriageRefusalNotText" xml:space="preserve">
+    <value>В каталоге маршрутизации нет возможности Text: {0}.</value>
+  </data>
+  <data name="TriageRefusalExperiment" xml:space="preserve">
+    <value>Исключено по статусу эксперимента: {0}.</value>
+  </data>
+  <data name="TriageRefusalContextLimit" xml:space="preserve">
+    <value>Нет размера контекста в пределах {0}: {1}. Это предел для разбора логов — MaximumContextTokens в '{2}'.</value>
+  </data>
+  <data name="TriageRefusalPostponed" xml:space="preserve">
+    <value>Отложено после прежней неудачной пробной загрузки: {0}.</value>
+    <comment>The broker holds a pair back after any failed trial load, whatever the cause. No duration: the client cannot see when the hold ends.</comment>
+  </data>
+  <data name="TriageRefusalLoadFailed" xml:space="preserve">
+    <value>Пробная загрузка не удалась в этом запуске: {0}.</value>
+  </data>
+  <data name="TriageRefusalReason" xml:space="preserve">
+    <value>Брокер указал причину для {0}: {1}</value>
+    <comment>{1} is BrokerJobFailedException.FailureReason as recorded — English whatever the reader's language, one line, cut at 200 characters as the exception's own message is. No full stop: the reason ends itself.</comment>
   </data>
   <data name="ProfileHasItsOwnPipeline" xml:space="preserve">
     <value>У профиля задачи '{0}' свой конвейер: модель выбирается для лога, лог читается фрагментами, частичные ответы сводятся. Ни ask_local, ни localai ask этого не делают. Отправьте лог в triage_log или в localai triage в командной строке.</value>

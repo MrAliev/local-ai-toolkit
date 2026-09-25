@@ -599,6 +599,12 @@ public static class LocalLmTools
             UsageCall.Current?.Refused("invalid_input");
             return LocalLmText.InvalidRequest(ex.Message);
         }
+        catch (NoTriageModelException ex)
+        {
+            // Not LocalModelFailed: that one claims a model call, and none happened.
+            ObserveFailure(ex);
+            return ex.Message;
+        }
         catch (Exception ex)
         {
             ObserveFailure(ex);
@@ -609,7 +615,8 @@ public static class LocalLmTools
     private static void ObserveFailure(Exception exception)
     {
         if (UsageCall.Current is not { } usage) return;
-        if (exception is BrokerJobFailedException { FailureCode: "NoModelInstalledException" or "NoEligibleModelException" })
+        if (exception is BrokerJobFailedException { FailureCode: "NoModelInstalledException" or "NoEligibleModelException" }
+            or NoTriageModelException)
         {
             usage.NoInference();
             usage.Refused("model_unavailable");
