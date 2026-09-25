@@ -14,6 +14,7 @@ public sealed class UsageCall : IDisposable
     private readonly HashSet<Guid> attempts = [];
     private readonly HashSet<Guid> workflows = [];
     private readonly List<(UsageModelUse Use, long? Input, long? Output)> models = [];
+    private readonly List<UsageModelUse> loads = [];
     private readonly Dictionary<UsageVolume, UsageValue> volumes = [];
     private readonly Dictionary<UsageTiming, UsageValue> timings = [];
     private readonly Dictionary<(string Root, Guid Job), UsageJobEvidence> evidence = [];
@@ -72,6 +73,11 @@ public sealed class UsageCall : IDisposable
         models.Add((new(model, 1, offload, offload == UsageOffload.Unknown ? reason ?? "not_recorded" : reason),
             inputTokens is >= 0 ? inputTokens : null, outputTokens is >= 0 ? outputTokens : null));
     });
+    public void ModelLoaded(string model, UsageOffload offload, string? reason = null) => Change(() =>
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(model);
+        loads.Add(new(model, 1, offload, offload == UsageOffload.Unknown ? reason ?? "not_recorded" : reason));
+    });
     public void Observe(UsageVolume volume, long value) => Change(() => volumes[volume] = UsageValue.Measured(value));
     public void Observe(UsageTiming timing, long value) => Change(() => timings[timing] = UsageValue.Measured(value));
     public IReadOnlyList<Guid> JobIds { get { lock (gate) return jobs.ToArray(); } }
@@ -105,10 +111,11 @@ public sealed class UsageCall : IDisposable
             var measuredTimings = initial.Timings.ToDictionary();
             foreach (var item in timings) measuredTimings[item.Key] = item.Value;
             measuredTimings[UsageTiming.ElapsedMilliseconds] = UsageValue.Measured((long)Stopwatch.GetElapsedTime(started).TotalMilliseconds);
-            var actual = models.GroupBy(model => (model.Use.Model, model.Use.Offload, model.Use.OffloadReason))
-                .Select(group => new UsageModelUse(group.Key.Model, group.LongCount(), group.Key.Offload, group.Key.OffloadReason)).ToArray();
+            var actual = Group(models.Select(model => model.Use));
+            var loaded = Group(loads);
             var observedModels = actual.Length > 0
                 ? new UsageModels(UsageModelState.Called, UsageValue.Measured(models.Count), actual, cache, null)
+                : loaded.Length > 0 ? new UsageModels(UsageModelState.Loaded, UsageValue.Measured(loads.Count), loaded, cache, null)
                 : pendingInference ? UsageModels.Unrecorded() : UsageModels.NoCall();
             observedModels = observedModels with
             { Cache = cache, CacheReason = cacheReason };
@@ -119,6 +126,10 @@ public sealed class UsageCall : IDisposable
             };
         }
     }
+
+    private static UsageModelUse[] Group(IEnumerable<UsageModelUse> uses) =>
+        uses.GroupBy(use => (use.Model, use.Offload, use.OffloadReason))
+            .Select(group => new UsageModelUse(group.Key.Model, group.LongCount(), group.Key.Offload, group.Key.OffloadReason)).ToArray();
 
     private static UsageValue Sum(IEnumerable<long?> values)
     {

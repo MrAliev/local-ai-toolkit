@@ -243,12 +243,11 @@ public static class ModelCommand
         TextWriter output,
         CancellationToken cancellationToken)
     {
-        var result = await client.PreflightModelAsync(
+        var proof = await new ModelManagementTasks(client).PreflightAsync(
             request.Model!,
             request.ContextTokens,
             request.CatalogVersion!,
-            cancellationToken);
-        var proof = result.Value ?? throw new InvalidOperationException();
+            cancellationToken) ?? throw new InvalidOperationException();
         if (!IsSafeModel(proof.Model) ||
             !string.Equals(proof.Model, request.Model, StringComparison.Ordinal) ||
             proof.ContextTokens != request.ContextTokens ||

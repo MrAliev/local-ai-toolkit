@@ -146,6 +146,30 @@ public sealed class ModelCommandTests
     }
 
     [Fact]
+    public async Task Preflight_records_the_load_it_proved_in_the_report_of_the_call()
+    {
+        var client = new RecordingClient
+        {
+            PreflightResult = Result(new LocalModelPreflightOutput(
+                "qwen3.5:9b", 8192, "signed-7", 123, 123, true, VerifiedUtc)),
+        };
+        using var output = new StringWriter();
+        using var call = new UsageCall(UsageSurface.Cli, "localai", "model preflight");
+
+        var exitCode = await ModelCommand.ExecuteAsync(
+            ["preflight", "--model", "qwen3.5:9b", "--context", "8192",
+             "--catalog-version", "signed-7"],
+            client,
+            output,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(ModelCommand.SuccessExitCode, exitCode);
+        var report = call.Complete();
+        Assert.Equal(UsageModelState.Loaded, report.Models.State);
+        Assert.Equal(new UsageModelUse("qwen3.5:9b", 1, UsageOffload.None, null), Assert.Single(report.Models.Actual));
+    }
+
+    [Fact]
     public async Task Shipped_usage_lists_exact_model_forms_and_preflight_form_is_executable()
     {
         Assert.Contains("localai model status", CliUsage.Text, StringComparison.Ordinal);

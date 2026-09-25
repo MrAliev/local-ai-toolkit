@@ -115,4 +115,20 @@ public sealed class UsagePayloadTests
         }
         finally { CultureInfo.CurrentUICulture = old; }
     }
+
+    [Theory]
+    [InlineData("en", "| models: Loaded without a task (qwen3.5:9b [partial_offload]) |")]
+    [InlineData("ru", "| модели: Загрузка без задачи (qwen3.5:9b [partial_offload]) |")]
+    public void A_load_without_a_task_is_named_before_the_model_it_loaded(string language, string segment)
+    {
+        var old = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(language);
+            using var call = new UsageCall(UsageSurface.Mcp, "locallm", "local_model_preflight");
+            call.ModelLoaded("qwen3.5:9b", UsageOffload.Partial);
+            Assert.Contains(segment, UsageNotice.Render(call.Complete()), StringComparison.Ordinal);
+        }
+        finally { CultureInfo.CurrentUICulture = old; }
+    }
 }
