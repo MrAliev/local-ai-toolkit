@@ -98,7 +98,14 @@ public sealed class BrokerExecutionRouterTests : IDisposable
             LocalAiJson.Strict)!;
         Assert.Equal(["qwen3.5:9b"], status.InstalledModels);
         Assert.Equal(
-            ["glm-ocr:bf16", "translategemma:12b"],
+            [
+                "glm-ocr:bf16",
+                "gpt-oss:20b",
+                "qwen2.5-coder:14b",
+                "qwen3-embedding:8b-q8_0",
+                "qwen3-vl:8b-instruct-q8_0",
+                "translategemma:12b",
+            ],
             status.RecommendedMissingModels);
     }
 

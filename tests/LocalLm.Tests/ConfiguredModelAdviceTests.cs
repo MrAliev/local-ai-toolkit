@@ -37,10 +37,12 @@ public sealed class ConfiguredModelAdviceTests : IDisposable
         var model = document.Models.First(entry => entry.SupportsImages) with
         {
             Tag = "fixture/vision:latest", Source = "fixture/vision:latest",
+            InstallPolicy = LocalModelInstallPolicy.Recommended,
         };
         document = document with
         {
             Models = [.. document.Models, model],
+            MaintenanceAllowlist = [.. document.MaintenanceAllowlist, model.Tag],
             Routes = document.Routes.Select(route => route.Profile == LocalTaskProfile.VisualAnalysis
                 ? route with { Candidates = [model.Tag], Fallbacks = [model.Tag] }
                 : route).ToArray(),
