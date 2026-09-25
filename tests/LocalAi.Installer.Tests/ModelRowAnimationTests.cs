@@ -17,6 +17,7 @@ public sealed class ModelRowAnimationTests
     [Theory]
     [InlineData(ModelProvisioningPhase.Accepted, RunMark.Done, false)]
     [InlineData(ModelProvisioningPhase.Rejected, RunMark.Warned, false)]
+    [InlineData(ModelProvisioningPhase.TrialLoadFailed, RunMark.Failed, false)]
     [InlineData(ModelProvisioningPhase.Accepted, RunMark.Warned, true)]
     public async Task The_shipped_row_style_stops_only_the_completed_models_animation(
         ModelProvisioningPhase verdict,

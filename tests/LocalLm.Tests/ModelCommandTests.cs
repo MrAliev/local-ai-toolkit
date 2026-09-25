@@ -285,7 +285,8 @@ public sealed class ModelCommandTests
         {
             Failure = new BrokerJobFailedException(
                 Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
-                "ModelPreflightException"),
+                "ModelPreflightException",
+                failureOutcome: ModelExecutionOutcome.CpuOffload),
         };
         using var output = new StringWriter();
 
@@ -306,6 +307,46 @@ public sealed class ModelCommandTests
             output.ToString());
         Assert.DoesNotContain("aaaaaaaa", output.ToString(), StringComparison.Ordinal);
         Assert.DoesNotContain("ModelPreflightException", output.ToString(), StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Only a measured misfit is called one. Every other way a trial load fails — a load Ollama
+    /// refused, a context it would not give, a model it did not keep, or a broker too old to say
+    /// what it measured — used to be answered <c>residency_rejected</c> as well (#633).
+    /// </summary>
+    [Theory]
+    [InlineData(ModelExecutionOutcome.TechnicalFailure)]
+    [InlineData(ModelExecutionOutcome.ContextFailure)]
+    [InlineData(ModelExecutionOutcome.StructuralFailure)]
+    [InlineData(null)]
+    public async Task A_trial_load_that_failed_without_measuring_a_misfit_is_not_called_one(
+        ModelExecutionOutcome? outcome)
+    {
+        var client = new RecordingClient
+        {
+            Failure = new BrokerJobFailedException(
+                Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+                "ModelPreflightException",
+                "Trial load of 'qwen3.5:9b/2048' failed: raw backend detail",
+                outcome),
+        };
+        using var output = new StringWriter();
+
+        var exitCode = await ModelCommand.ExecuteAsync(
+            ["preflight", "--model", "qwen3.5:9b", "--context", "2048",
+             "--catalog-version", "signed-7"],
+            client,
+            output,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(ModelCommand.RejectedExitCode, exitCode);
+        Assert.Equal(
+            "{\"schemaVersion\":1,\"operation\":\"preflight\",\"accepted\":false," +
+            "\"model\":\"qwen3.5:9b\",\"contextTokens\":2048," +
+            "\"catalogVersion\":\"signed-7\"," +
+            "\"code\":\"trial_load_failed\"}" + Environment.NewLine,
+            output.ToString());
+        Assert.DoesNotContain("raw backend detail", output.ToString(), StringComparison.Ordinal);
     }
 
     [Fact]

@@ -494,6 +494,83 @@ public sealed class BrokerModelInstallerTests : IDisposable
         Assert.False(model.NoFallbackAvailable);
     }
 
+    /// <summary>
+    /// A trial load that failed without measuring a misfit fails that model rather than calling
+    /// it one: no smaller option is offered for a size nobody measured, the row hears it as it
+    /// happens, and the next model is still tried, as it is after a misfit (#633).
+    /// </summary>
+    [Fact]
+    public async Task A_failed_trial_load_fails_that_model_and_the_batch_goes_on()
+    {
+        var choices = new[]
+        {
+            Choice("model-a", 8192, 100),
+            Choice("model-a", 2048, 100),
+            Choice("model-b", 2048, 60),
+        };
+        var runner = new RecordingProcessRunner(
+            Success(Status(["model-a", "model-b"], [], "signed-7")),
+            new ProcessResult(
+                3,
+                Json(new ModelPreflightCommandRejected(
+                    1, "preflight", false, "model-a", 8192, "signed-7", "trial_load_failed")),
+                string.Empty,
+                false,
+                false),
+            Success(Preflight("model-b", 2048, 60, 60, true)));
+        var steps = new List<ModelProvisioningProgress>();
+        using var installer = Installer(runner, Launcher());
+
+        var result = await installer.InstallAsync(
+            [
+                Request("a", "model-a", 8192, "signed-7", choices: choices),
+                Request("b", "model-b", 2048, "signed-7", choices: choices),
+            ],
+            new ImmediateProgress<ModelProvisioningProgress>(steps.Add),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(BrokerModelBatchStopReason.None, result.StopReason);
+        Assert.Collection(
+            result.Models,
+            failed =>
+            {
+                Assert.Equal("model-a", failed.Model);
+                Assert.Equal(BrokerModelInstallOutcome.Failed, failed.Outcome);
+                Assert.Equal("trial_load_failed", failed.Code);
+                Assert.Empty(failed.FallbackSuggestions);
+                Assert.False(failed.NoFallbackAvailable);
+                Assert.False(failed.ExternalStateMayBeIndeterminate);
+            },
+            accepted => Assert.Equal(BrokerModelInstallOutcome.Accepted, accepted.Outcome));
+        Assert.Contains(
+            steps,
+            step => step.Phase == ModelProvisioningPhase.TrialLoadFailed && step.Model == "model-a");
+        Assert.DoesNotContain(steps, step => step.Phase == ModelProvisioningPhase.Rejected);
+    }
+
+    /// <summary>Widening what a refusal may say is not accepting anything it says.</summary>
+    [Fact]
+    public async Task A_refusal_with_a_code_nobody_defined_is_still_a_protocol_failure()
+    {
+        var runner = new RecordingProcessRunner(
+            Success(Status(["model-a"], [], "signed-7")),
+            new ProcessResult(
+                3,
+                Json(new ModelPreflightCommandRejected(
+                    1, "preflight", false, "model-a", 2048, "signed-7", "model_on_fire")),
+                string.Empty,
+                false,
+                false));
+        using var installer = Installer(runner, Launcher());
+
+        var result = await installer.InstallAsync(
+            [Request("a", "model-a", 2048, "signed-7")],
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(BrokerModelBatchStopReason.ProtocolFailure, result.StopReason);
+        Assert.Equal("response_invalid", result.Code);
+    }
+
     [Fact]
     public async Task Broker_rejection_is_rejected_residency_with_explicit_no_fallback()
     {

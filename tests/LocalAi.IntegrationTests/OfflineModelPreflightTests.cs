@@ -52,6 +52,7 @@ public sealed class OfflineModelPreflightTests
     [InlineData("malformed", "failed", "preflight-response-invalid")]
     [InlineData("truncated", "failed", "preflight-response-invalid")]
     [InlineData("rejected", "failed", "residency-rejected")]
+    [InlineData("trial-load-failed", "failed", "trial-load-failed")]
     [InlineData("policy", "failed", "residency-rejected")]
     [InlineData("policy-changed", "failed", "residency-policy-changed")]
     [InlineData("launcher-changed", "failed", "preflight-trust-or-process-failed")]
@@ -178,8 +179,8 @@ public sealed class OfflineModelPreflightTests
             if (Mode == "policy-changed") new ModelResidencyPolicyStore(Source.Layout.Root).Write(BrokerPolicy.Default with { ModelResidency = ModelResidencyPolicy.AllowCpu });
             if (Mode == "termination") throw new ProcessTerminationException(1, ProcessTerminationCause.Timeout, "fixture");
             if (Mode is "cancelled" or "timeout") return Task.FromResult(new ProcessResult(null, "", "", Mode == "timeout", Mode == "cancelled"));
-            if (Mode == "rejected") return Task.FromResult(Answer(new ModelPreflightCommandRejected(1, "preflight", false, Model.Model,
-                Model.ContextTokens, CatalogVersion, "residency_rejected"), 3));
+            if (Mode is "rejected" or "trial-load-failed") return Task.FromResult(Answer(new ModelPreflightCommandRejected(1, "preflight", false, Model.Model,
+                Model.ContextTokens, CatalogVersion, Mode == "rejected" ? "residency_rejected" : "trial_load_failed"), 3));
             var proof = new ModelPreflightCommandSuccess(1, "preflight", true, Mode == "model" ? "other:latest" : Model.Model,
                 Mode == "context" ? 17 : Model.ContextTokens, CatalogVersion, 123, Mode == "policy" ? 0 : 123, Mode != "policy",
                 Mode == "future" ? DateTimeOffset.UtcNow.AddDays(1) : DateTimeOffset.UtcNow);

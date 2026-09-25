@@ -39,6 +39,7 @@ public enum ModelProvisioningPhase
     Checking,
     Accepted,
     Rejected,
+    TrialLoadFailed,
 }
 
 /// <summary>

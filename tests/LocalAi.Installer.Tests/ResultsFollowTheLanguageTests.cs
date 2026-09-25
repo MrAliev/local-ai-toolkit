@@ -237,6 +237,25 @@ public sealed class ResultsFollowTheLanguageTests : IDisposable
         Assert.Equal("не удалось (pull_failed)", wizard.ModelRuns[3].Detail);
     }
 
+    /// <summary>The same words whether the run said it as it happened or the batch said it after.</summary>
+    [Fact]
+    public void A_failed_trial_load_is_worded_in_the_language_chosen()
+    {
+        var (wizard, presentation) = Wizard();
+        foreach (var model in new[] { "reported", "settled" })
+        {
+            wizard.ApplyModelStep(new ModelProvisioningProgress(model, 2048, ModelProvisioningPhase.Planned, 0, 2));
+        }
+
+        wizard.ApplyModelStep(new ModelProvisioningProgress("reported", 2048, ModelProvisioningPhase.TrialLoadFailed, 1, 2));
+        wizard.ModelRuns[1].Settled(BrokerModelInstallOutcome.Failed, downloaded: false, [], "trial_load_failed");
+
+        presentation.ChooseLanguage(InstallerLanguage.Russian);
+
+        Assert.Equal("пробная загрузка не удалась", wizard.ModelRuns[0].Detail);
+        Assert.Equal("пробная загрузка не удалась", wizard.ModelRuns[1].Detail);
+    }
+
     /// <summary>A real run is the only way to these two rows, so their words are asked for directly.</summary>
     [Fact]
     public void The_package_and_path_rows_are_worded_in_the_language_chosen()
