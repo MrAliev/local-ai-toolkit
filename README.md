@@ -258,8 +258,9 @@ multiply its savings. Incompatible comparison profiles are not summed. `localai 
 applies the telemetry retention policy to both attempts and final reports.
 
 MCP results carry schema-versioned data in `_meta["localai/usage"]`. Text tools include the
-notice outside untrusted-content boundaries; JSON tools keep their content unchanged and
-place the notice in metadata. Cancellation remains protocol cancellation. Supply a unique
+notice outside untrusted-content boundaries; JSON tools keep their content unchanged as the
+first block and add the notice after it as a separate text block, with the same text in
+`_meta["localai/usageNotice"]`. Cancellation remains protocol cancellation. Supply a unique
 GUID in request `_meta["localai/callId"]` before starting a cancellable call, then retrieve
 the partial report with `localai telemetry --call-id <guid>`.
 

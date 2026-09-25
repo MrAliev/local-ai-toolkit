@@ -53,12 +53,31 @@ public sealed class ModelManagementTasks(ILocalModelClient client)
         string model,
         int contextTokens,
         string catalogVersion,
-        CancellationToken cancellationToken = default) =>
-        (await _client.PreflightModelAsync(
-            model,
-            contextTokens,
-            catalogVersion,
-            cancellationToken)).Value;
+        CancellationToken cancellationToken = default)
+    {
+        LocalModelPreflightOutput proof;
+        try
+        {
+            proof = (await _client.PreflightModelAsync(
+                model,
+                contextTokens,
+                catalogVersion,
+                cancellationToken)).Value;
+        }
+        // A refused argument never reached the broker; any other failure leaves the load unproven.
+        catch (Exception exception) when (exception is not ArgumentException)
+        {
+            UsageCall.Current?.UnknownInference();
+            throw;
+        }
+
+        UsageCall.Current?.ModelLoaded(
+            proof.Model,
+            proof.FullyResident ? UsageOffload.None
+                : proof.SizeVramBytes > 0 ? UsageOffload.Partial
+                : UsageOffload.Cpu);
+        return proof;
+    }
 
     /// <summary>
     /// Installs the recommended models that are missing, and comes back saying what happened to
