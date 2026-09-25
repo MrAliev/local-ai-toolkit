@@ -68,7 +68,7 @@ public sealed class DurableQueue : ISelectableBrokerQueue
         cancellationToken.ThrowIfCancellationRequested();
 
         using var mutex = EnterMutex(cancellationToken);
-        MaintainActiveRoot();
+        MaintainActiveRoot(cancellationToken);
         foreach (var entry in ReadEntries())
         {
             if (entry.State.State is not (LocalJobState.Queued or LocalJobState.Running))
@@ -120,7 +120,7 @@ public sealed class DurableQueue : ISelectableBrokerQueue
             0,
             null);
         AtomicWriteJson(GetStatePath(stagingDirectory), state);
-        Directory.Move(stagingDirectory, jobDirectory);
+        MoveDirectory(stagingDirectory, jobDirectory, cancellationToken);
         return Task.FromResult(new EnqueueResult(request.JobId, sequence, JoinedExisting: false));
     }
 
@@ -132,7 +132,7 @@ public sealed class DurableQueue : ISelectableBrokerQueue
         cancellationToken.ThrowIfCancellationRequested();
 
         using var mutex = EnterMutex(cancellationToken);
-        MaintainActiveRoot();
+        MaintainActiveRoot(cancellationToken);
         var now = _timeProvider.GetUtcNow();
         RecoverExpiredLeases(now);
         var entries = ReadEntries();
@@ -159,7 +159,7 @@ public sealed class DurableQueue : ISelectableBrokerQueue
     {
         cancellationToken.ThrowIfCancellationRequested();
         using var mutex = EnterMutex(cancellationToken);
-        MaintainActiveRoot();
+        MaintainActiveRoot(cancellationToken);
         RecoverExpiredLeases(_timeProvider.GetUtcNow());
         var candidates = ReadEntries()
             .Where(entry => entry.State.State == LocalJobState.Queued)
@@ -186,7 +186,7 @@ public sealed class DurableQueue : ISelectableBrokerQueue
         ValidateWorkerId(workerId);
         cancellationToken.ThrowIfCancellationRequested();
         using var mutex = EnterMutex(cancellationToken);
-        MaintainActiveRoot();
+        MaintainActiveRoot(cancellationToken);
         var now = _timeProvider.GetUtcNow();
         RecoverExpiredLeases(now);
         var entries = ReadEntries();
@@ -347,7 +347,7 @@ public sealed class DurableQueue : ISelectableBrokerQueue
         var response = new JobResponse(1, jobId, now, body.Clone());
         AtomicWriteJson(Path.Combine(entry.Directory, "response.json"), response);
         WriteState(entry.Directory, ToTerminal(entry.State, LocalJobState.Succeeded, now, null));
-        Archive(entry.Directory, jobId);
+        Archive(entry.Directory, jobId, cancellationToken);
         return Task.CompletedTask;
     }
 
@@ -389,7 +389,7 @@ public sealed class DurableQueue : ISelectableBrokerQueue
         }
 
         WriteState(entry.Directory, ToTerminal(entry.State, LocalJobState.Failed, now, failureCode));
-        Archive(entry.Directory, jobId);
+        Archive(entry.Directory, jobId, cancellationToken);
         return Task.CompletedTask;
     }
 
@@ -447,7 +447,7 @@ public sealed class DurableQueue : ISelectableBrokerQueue
         }
 
         WriteState(entry.Directory, ToTerminal(entry.State, LocalJobState.Cancelled, now, null));
-        Archive(entry.Directory, jobId);
+        Archive(entry.Directory, jobId, cancellationToken);
         return Task.CompletedTask;
     }
 
@@ -761,7 +761,7 @@ public sealed class DurableQueue : ISelectableBrokerQueue
     private string GetArchiveDirectory(Guid jobId) =>
         Path.Combine(_archiveRoot, jobId.ToString("N"));
 
-    private void MaintainActiveRoot()
+    private void MaintainActiveRoot(CancellationToken cancellationToken)
     {
         SweepArchiveCore(force: false);
         foreach (var staging in Directory.EnumerateDirectories(_stagingRoot, "*.tmp"))
@@ -785,7 +785,7 @@ public sealed class DurableQueue : ISelectableBrokerQueue
                 ValidateCrossFile(directory, state, ReadRequest(directory));
                 if (state.State is LocalJobState.Succeeded or LocalJobState.Failed or LocalJobState.Cancelled)
                 {
-                    Archive(directory, state.JobId);
+                    Archive(directory, state.JobId, cancellationToken);
                 }
             }
             catch (Exception exception) when (
@@ -1055,7 +1055,7 @@ public sealed class DurableQueue : ISelectableBrokerQueue
         }
     }
 
-    private void Archive(string activeDirectory, Guid jobId)
+    private void Archive(string activeDirectory, Guid jobId, CancellationToken cancellationToken)
     {
         var destination = GetArchiveDirectory(jobId);
         if (Directory.Exists(destination))
@@ -1063,8 +1063,36 @@ public sealed class DurableQueue : ISelectableBrokerQueue
             throw new InvalidDataException($"Archive already contains job '{jobId}'.");
         }
 
-        Directory.Move(activeDirectory, destination);
+        MoveDirectory(activeDirectory, destination, cancellationToken);
     }
+
+    // Every client's RuntimeAcl pass rewrites job ACLs outside this mutex, holding a handle in a
+    // job directory for moments, and Windows refuses to move a directory while one is held
+    // (#568); so would any other process. Pauses of 10 ms doubling, 1.27 s in all.
+    private const int MoveRetries = 7;
+
+    private void MoveDirectory(string source, string destination, CancellationToken cancellationToken)
+    {
+        for (var attempt = 0; ; attempt++)
+        {
+            try
+            {
+                Directory.Move(source, destination);
+                return;
+            }
+            catch (IOException exception) when (attempt < MoveRetries && IsHeldOpen(exception))
+            {
+                // Blocking: the queue mutex must be released by the thread that took it.
+                Task.Delay(TimeSpan.FromMilliseconds(10 << attempt), _timeProvider, cancellationToken)
+                    .GetAwaiter().GetResult();
+            }
+        }
+    }
+
+    // A handle on the directory itself without delete sharing makes a sharing violation; any
+    // handle on a file inside it, an access denial.
+    private static bool IsHeldOpen(IOException exception) =>
+        exception.HResult is unchecked((int)0x80070020) or unchecked((int)0x80070005);
 
     public const string QuarantineMarkerFileName = "quarantined.marker";
 
