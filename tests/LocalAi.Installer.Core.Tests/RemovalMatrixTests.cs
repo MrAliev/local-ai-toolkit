@@ -1,3 +1,4 @@
+using LocalAi.Contracts;
 using LocalAi.Installer.Core.Removal;
 
 namespace LocalAi.Installer.Core.Tests;
@@ -142,6 +143,7 @@ public sealed class RemovalMatrixTests
     [InlineData("jobs", RemovalItem.TransientState)]
     [InlineData("telemetry", RemovalItem.TransientState)]
     [InlineData("host.json", RemovalItem.TransientState)]
+    [InlineData(InstalledModelsSnapshot.FileName, RemovalItem.TransientState)]
     [InlineData("release-signing", RemovalItem.SigningKeys)]
     // Whatever the runtime writes next belongs to somebody, and a matrix that silently kept it
     // would make a full uninstall incomplete without saying so.

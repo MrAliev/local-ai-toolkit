@@ -40,6 +40,9 @@ public sealed partial class OllamaTransport : IModelRuntimeTransport, IDisposabl
 
     public string? ActiveModel => Volatile.Read(ref _activeModel);
 
+    /// <summary>Handed every list of installed models this transport reads, as it was read.</summary>
+    public Action<IReadOnlyList<string>>? InstalledListed { get; init; }
+
     public OllamaTransport(
         HttpClient httpClient,
         Uri baseUri,
@@ -122,11 +125,13 @@ public sealed partial class OllamaTransport : IModelRuntimeTransport, IDisposabl
             throw new InvalidDataException("Ollama returned a blank model name.");
         }
 
-        return Array.AsReadOnly(
+        var installed = Array.AsReadOnly(
             response.Models
                 .Select(model => model.Name)
                 .Distinct(StringComparer.Ordinal)
                 .ToArray());
+        InstalledListed?.Invoke(installed);
+        return installed;
     }
 
     public async Task<IReadOnlyList<OllamaProcessInfo>> ListProcessesAsync(

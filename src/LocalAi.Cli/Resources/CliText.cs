@@ -211,6 +211,35 @@ public static class CliText
 
     public static string UpdateNeverChecked => Catalogue.Get(nameof(UpdateNeverChecked));
 
+    public static string TaskModelsCatalogUnreadable => Catalogue.Get(nameof(TaskModelsCatalogUnreadable));
+
+    public static string TaskModelsNeverChecked => Catalogue.Get(nameof(TaskModelsNeverChecked));
+
+    public static string TaskModelsStale(string checkedAt, int minutes) =>
+        Catalogue.Format(nameof(TaskModelsStale), checkedAt, minutes);
+
+    public static string TaskModelsAllCovered(string checkedAt) =>
+        Catalogue.Format(nameof(TaskModelsAllCovered), checkedAt);
+
+    /// <summary><c>{3}</c> is one entry per task, «task (models)», joined by «; ».</summary>
+    public static string TaskModelsSomeUncovered(int uncovered, int tasks, string checkedAt, string offers) =>
+        Catalogue.Format(nameof(TaskModelsSomeUncovered), uncovered, tasks, checkedAt, offers);
+
+    public static string TaskModelsOneOf(string allButLast, string last) =>
+        Catalogue.Format(nameof(TaskModelsOneOf), allButLast, last);
+
+    public static string TaskModelsNoneEnabled(string task) =>
+        Catalogue.Format(nameof(TaskModelsNoneEnabled), task);
+
+    public static string TaskModelsNoneReadsImages(string task) =>
+        Catalogue.Format(nameof(TaskModelsNoneReadsImages), task);
+
+    public static string TaskModelsNoneInstalled(string checkedAt) =>
+        Catalogue.Format(nameof(TaskModelsNoneInstalled), checkedAt);
+
+    public static string TaskModelsNoneUsed(int listed, string checkedAt) =>
+        Catalogue.Format(nameof(TaskModelsNoneUsed), listed, checkedAt);
+
     /// <summary>
     /// What the last check verified. The timestamp arrives already formatted, so the resource
     /// carries no format specifier for a translator to alter.
