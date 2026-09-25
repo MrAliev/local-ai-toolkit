@@ -189,7 +189,6 @@ public static class PolicyCommand
         output.WriteLine(enabled
             ? OutputCulture.Pick(UpdateCheckPolicy.Disclosure, UpdateCheckPolicy.DisclosureRussian)
             : CliText.PolicyUpdateCheckNothingFetched);
-        output.WriteLine(CliText.PolicyRestartNote);
         return 0;
     }
 
