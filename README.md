@@ -241,8 +241,9 @@ than by your subscription.
 first. From there the agent decides for itself: it sees a "where does this live" question and
 reaches for `search_code` instead of opening files.
 
-**Runtime token reports use one shared record per call.** MCP tools and both CLIs emit a
-compact notice with separate signed cloud INPUT and OUTPUT savings. Without an explicit
+**Runtime token reports use one shared record per call.** MCP tools and both CLIs, except for
+`localai model` commands, emit a compact notice with separate signed cloud INPUT and OUTPUT
+savings. Without an explicit
 comparison scenario and supported profile, the value is `unknown`, not zero. Character-based
 values are explicitly marked as heuristic estimates; measured text counts identify their
 tokenizer profile. Legacy numeric JSON fields remain compatible and are not calibrated measurements.
