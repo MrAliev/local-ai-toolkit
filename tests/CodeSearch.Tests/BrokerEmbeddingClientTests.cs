@@ -228,6 +228,35 @@ public sealed class BrokerEmbeddingClientTests
         Assert.Same(failure, error);
     }
 
+    /// <summary>
+    /// A missing model is named, and it is neither a backend that is away nor a chunk the model
+    /// refused: waiting will not bring it, and no file is to blame (#633).
+    /// </summary>
+    [Fact]
+    public async Task A_missing_embedding_model_is_named_for_what_it_is()
+    {
+        var failure = new BrokerJobFailedException(
+            Guid.NewGuid(),
+            "EmbeddingModelNotInstalledException",
+            "Embedding model 'embed-model' is not installed in Ollama.");
+        var runtimeRoot = Path.Combine(Path.GetTempPath(), "no-runtime-" + Guid.NewGuid().ToString("N"));
+        var client = new BrokerEmbeddingClient(
+            "embed-model",
+            new ThrowingBrokerClient(failure),
+            runtimeRoot);
+
+        var error = await Assert.ThrowsAsync<EmbeddingModelMissingException>(
+            () => client.EmbedAsync(
+                ["text"],
+                LocalJobPriority.Background,
+                "chunks:tree",
+                TestContext.Current.CancellationToken));
+
+        Assert.Equal("embed-model", error.Model);
+        Assert.Equal(EmbeddingModelAdvice.For("embed-model", runtimeRoot), error.Message);
+        Assert.Same(failure, error.InnerException);
+    }
+
     private sealed class FakeBrokerClient(
         IReadOnlyList<IReadOnlyList<double>> embeddings) : IBrokerClient
     {

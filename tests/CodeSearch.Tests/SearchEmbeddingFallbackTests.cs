@@ -110,6 +110,53 @@ public sealed class SearchEmbeddingFallbackTests : IDisposable
         Assert.Same(unavailable, error);
     }
 
+    /// <summary>
+    /// Literal matches stand in for a backend that is away and may come back. A missing model will
+    /// not come back by itself, and literal hits would hide that it is missing (#633).
+    /// </summary>
+    [Fact]
+    public async Task A_missing_embedding_model_is_not_answered_with_literal_matches()
+    {
+        var missing = new EmbeddingModelMissingException(
+            CalibratedModel,
+            "missing",
+            new InvalidOperationException());
+
+        var error = await Assert.ThrowsAsync<EmbeddingModelMissingException>(
+            () => ServiceThrowing(missing).SearchAsync(
+                "ExactSymbol",
+                _root,
+                new SearchOptions(),
+                TestContext.Current.CancellationToken));
+
+        Assert.Same(missing, error);
+    }
+
+    /// <summary>
+    /// A known refusal with its own words, not "search_code failed:" and an exception chain that
+    /// hides the model's name inside Ollama's JSON (#633).
+    /// </summary>
+    [Fact]
+    public async Task Mcp_answers_a_missing_embedding_model_with_what_to_do()
+    {
+        using var call = new UsageCall(UsageSurface.Mcp, "codesearch", "search_code");
+        var response = await CodeSearchTools.SearchCode(
+            ServiceThrowing(
+                new EmbeddingModelMissingException(
+                    CalibratedModel,
+                    "Search and indexing need the embedding model.",
+                    new InvalidOperationException("Embedding model is not installed in Ollama."))),
+            NoBuildRunning.Notice,
+            "ExactSymbol",
+            _root,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal("Search and indexing need the embedding model.", response);
+        var outcome = call.Complete().Outcome;
+        Assert.Equal(UsageTechnicalOutcome.Refused, outcome.Technical);
+        Assert.Equal("model_not_installed", outcome.TechnicalReason);
+    }
+
     [Fact]
     public async Task Mcp_returns_lexical_results_when_embeddings_are_unavailable()
     {
