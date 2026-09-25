@@ -44,6 +44,7 @@ public sealed class ARowPerModelTests
     [Theory]
     [InlineData(ModelProvisioningPhase.Accepted, ModelRunState.Ready, RunMark.Done, "ready")]
     [InlineData(ModelProvisioningPhase.Rejected, ModelRunState.Rejected, RunMark.Warned, "does not fit")]
+    [InlineData(ModelProvisioningPhase.TrialLoadFailed, ModelRunState.Failed, RunMark.Failed, "trial load failed")]
     public void A_verdict_updates_the_row_and_its_bindings_before_the_batch_finishes(
         ModelProvisioningPhase verdict,
         ModelRunState expectedState,
@@ -232,6 +233,24 @@ public sealed class ARowPerModelTests
         Assert.Equal(5, new[] { waiting, working, ready, rejected, failed }.Distinct().Count());
         row.NeverReached();
         Assert.Equal(waiting, row.Mark);
+    }
+
+    /// <summary>
+    /// The batch's verdict replaces the phrase the run left on the row. For a trial load that
+    /// failed it says the same thing again rather than a code; any other failure keeps its code.
+    /// </summary>
+    [Fact]
+    public void A_failed_trial_load_keeps_its_words_when_the_batch_settles_it()
+    {
+        var trial = new ModelRunRow("model-a", 2048);
+        var other = new ModelRunRow("model-b", 2048);
+
+        trial.Settled(BrokerModelInstallOutcome.Failed, false, [], "trial_load_failed");
+        other.Settled(BrokerModelInstallOutcome.Failed, false, [], "process_failure");
+
+        Assert.Equal(ModelRunState.Failed, trial.State);
+        Assert.Equal("trial load failed", trial.Detail);
+        Assert.Equal("failed (process_failure)", other.Detail);
     }
 
     private static ModelProvisioningProgress Step(

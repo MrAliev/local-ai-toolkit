@@ -353,6 +353,7 @@ public sealed class ModelRunRow(string tag, int contextTokens) : ObservableObjec
                         ", ",
                         verdict.Smaller.Select(choice => $"{choice.Model} / {choice.ContextTokens}"))),
             BrokerModelInstallOutcome.Cancelled => PageLabels.ModelCancelled,
+            BrokerModelInstallOutcome.Failed when verdict.Code == "trial_load_failed" => PageLabels.ModelTrialLoadFailed,
             _ => string.Format(CultureInfo.InvariantCulture, PageLabels.ModelFailed, verdict.Code),
         };
 
@@ -379,6 +380,7 @@ public sealed class ModelRunRow(string tag, int contextTokens) : ObservableObjec
             ModelProvisioningPhase.Accepted when step.ResidencyDegraded => ModelRunState.ReadyWithLimitations,
             ModelProvisioningPhase.Accepted => ModelRunState.Ready,
             ModelProvisioningPhase.Rejected => ModelRunState.Rejected,
+            ModelProvisioningPhase.TrialLoadFailed => ModelRunState.Failed,
             _ => ModelRunState.Working,
         };
         OnPropertyChanged(nameof(Detail));

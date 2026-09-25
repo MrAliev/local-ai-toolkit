@@ -65,6 +65,7 @@ public sealed class ModelRunCompletionTests
     [Theory]
     [InlineData(ModelProvisioningPhase.Accepted)]
     [InlineData(ModelProvisioningPhase.Rejected)]
+    [InlineData(ModelProvisioningPhase.TrialLoadFailed)]
     public void A_verdict_received_during_the_batch_also_survives_late_progress(
         ModelProvisioningPhase verdict)
     {

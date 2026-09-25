@@ -514,10 +514,16 @@ public sealed class BrokerModelInstaller : IDisposable
                         action.Model,
                         action.ContextSize,
                         trust.CatalogVersion);
-                    results.Add(Rejected(request, pullAttempted, pullCompleted));
+                    var measured = rejected.Code == "residency_rejected";
+                    results.Add(measured
+                        ? Rejected(request, pullAttempted, pullCompleted)
+                        : TrialLoadFailed(request, pullAttempted, pullCompleted));
                     // Per model, as it happens. Reported only in the batch result, six verdicts
                     // arrived together and none of them said which model the run was on.
-                    Report(action, ModelProvisioningPhase.Rejected, results.Count);
+                    Report(
+                        action,
+                        measured ? ModelProvisioningPhase.Rejected : ModelProvisioningPhase.TrialLoadFailed,
+                        results.Count);
                     continue;
                 }
 
@@ -994,10 +1000,7 @@ public sealed class BrokerModelInstaller : IDisposable
                 response.CatalogVersion,
                 catalogVersion,
                 StringComparison.Ordinal) ||
-            !string.Equals(
-                response.Code,
-                "residency_rejected",
-                StringComparison.Ordinal))
+            response.Code is not ("residency_rejected" or "trial_load_failed"))
         {
             throw Failure(
                 BrokerModelBatchStopReason.ProtocolFailure,
@@ -1317,6 +1320,22 @@ public sealed class BrokerModelInstaller : IDisposable
             suggestions,
             "residency_rejected");
     }
+
+    /// <summary>No smaller option: nothing measured the size it would have to beat.</summary>
+    private static BrokerModelInstallResult TrialLoadFailed(
+        BrokerModelInstallRequest request,
+        bool pullAttempted,
+        bool pullCompleted) =>
+        new(
+            request.Action.ActionId,
+            request.Action.Model,
+            request.Action.ContextSize,
+            BrokerModelInstallOutcome.Failed,
+            pullAttempted,
+            pullCompleted,
+            false,
+            [],
+            "trial_load_failed");
 
     private static BrokerModelInstallOutcome ToOutcome(
         BrokerModelBatchStopReason stopReason) =>

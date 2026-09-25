@@ -1,4 +1,6 @@
-﻿using LocalAi.Broker;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
+using LocalAi.Broker;
 using LocalAi.Broker.Client;
 using LocalAi.Contracts;
 
@@ -133,10 +135,145 @@ public sealed class AFailedJobKeepsItsReasonTests
         Assert.Equal(Reason, reported.Reason);
     }
 
+    /// <summary>
+    /// What a failed trial load measured travels beside the reason rather than inside it: a model
+    /// that does not fit and a load that failed are different answers, and a caller has to tell
+    /// them apart without parsing a sentence (#633).
+    /// </summary>
+    [Fact]
+    public async Task The_outcome_a_trial_load_failed_with_survives_the_queue()
+    {
+        using var root = new TemporaryRuntimeRoot();
+        var queue = new DurableQueue(root.Path);
+        var lease = await FailNextAsync(
+            queue, "ModelPreflightException", Reason, ModelExecutionOutcome.CpuOffload);
+
+        var status = await queue.GetStatusAsync(lease.Request.JobId, TestContext.Current.CancellationToken);
+
+        Assert.NotNull(status);
+        Assert.Equal(ModelExecutionOutcome.CpuOffload, status.FailureOutcome);
+        Assert.Equal(Reason, status.FailureReason);
+    }
+
+    [Fact]
+    public async Task An_outcome_is_kept_when_no_reason_was_given()
+    {
+        using var root = new TemporaryRuntimeRoot();
+        var queue = new DurableQueue(root.Path);
+        var lease = await FailNextAsync(
+            queue, "ModelPreflightException", failureReason: null, ModelExecutionOutcome.TechnicalFailure);
+
+        var status = await queue.GetStatusAsync(lease.Request.JobId, TestContext.Current.CancellationToken);
+
+        Assert.NotNull(status);
+        Assert.Equal(ModelExecutionOutcome.TechnicalFailure, status.FailureOutcome);
+        Assert.Null(status.FailureReason);
+    }
+
+    /// <summary>
+    /// The release before this one reads the failure file with unmapped members refused. Written
+    /// only when there is an outcome, the field leaves every other failure's file as that release
+    /// wrote it, so a console it left running still reads the reason.
+    /// </summary>
+    [Fact]
+    public async Task A_failure_without_an_outcome_stays_readable_to_the_release_before()
+    {
+        using var root = new TemporaryRuntimeRoot();
+        var queue = new DurableQueue(root.Path);
+        var lease = await FailNextAsync(queue, "HttpRequestException", Reason);
+        var file = Path.Combine(
+            queue.RuntimeRoot, "archive", lease.Request.JobId.ToString("N"), "failure.json");
+
+        var older = JsonSerializer.Deserialize<ReasonOnlyFailure>(
+            File.ReadAllText(file), LocalAiJson.Strict);
+
+        Assert.NotNull(older);
+        Assert.Equal(Reason, older.Reason);
+    }
+
+    [Fact]
+    public async Task The_client_hands_the_outcome_to_whoever_awaited_the_job()
+    {
+        using var root = new TemporaryRuntimeRoot();
+        var queue = new DurableQueue(root.Path);
+        var client = new BrokerClient(
+            queue,
+            new AlreadyRunningBroker(),
+            static (delay, token) => Task.Delay(TimeSpan.FromMilliseconds(5), token),
+            TimeSpan.FromSeconds(30));
+        var request = LocalJobRequestFactory.CreateModelPreflight(
+            "preflight:outcome", LocalJobPriority.Interactive, "model-a", 2048, "signed-7");
+
+        var pending = client.ExecuteAsync<LocalModelPreflightOutput>(
+            request,
+            TestContext.Current.CancellationToken);
+        await FailNextAsync(
+            queue, "ModelPreflightException", Reason, ModelExecutionOutcome.ContextFailure);
+
+        var error = await Assert.ThrowsAsync<BrokerJobFailedException>(() => pending);
+
+        Assert.Equal(ModelExecutionOutcome.ContextFailure, error.FailureOutcome);
+    }
+
+    [Fact]
+    public async Task The_broker_records_what_a_failed_trial_load_measured()
+    {
+        var status = await StatusAfterFailingWith(new ModelPreflightException(
+            "model-a",
+            2048,
+            ModelExecutionOutcome.CpuOffload,
+            "Model 'model-a' is not fully resident in VRAM."));
+
+        Assert.Equal(ModelExecutionOutcome.CpuOffload, status.FailureOutcome);
+    }
+
+    [Fact]
+    public async Task A_failure_that_measured_nothing_records_no_outcome()
+    {
+        var status = await StatusAfterFailingWith(new HttpRequestException(Reason));
+
+        Assert.Null(status.FailureOutcome);
+    }
+
+    private static async Task<JobStatus> StatusAfterFailingWith(Exception failure)
+    {
+        using var root = new TemporaryRuntimeRoot();
+        var queue = new DurableQueue(root.Path);
+        var queued = await queue.EnqueueAsync(
+            LocalJobRequestFactory.CreateModelPreflight(
+                "preflight:failing", LocalJobPriority.Interactive, "model-a", 2048, "signed-7"),
+            TestContext.Current.CancellationToken);
+        using var stop = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+        var host = new BrokerHost(
+            queue,
+            "failing-worker",
+            (_, _, _) => throw failure,
+            idleDelay: (_, _) =>
+            {
+                stop.Cancel();
+                return Task.CompletedTask;
+            });
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => host.RunAsync(stop.Token));
+
+        var status = await queue.GetStatusAsync(queued.JobId, TestContext.Current.CancellationToken);
+        Assert.NotNull(status);
+        Assert.Equal(LocalJobState.Failed, status.State);
+        return status;
+    }
+
+    /// <summary>The failure file as the release before this one reads it.</summary>
+    private sealed record ReasonOnlyFailure(
+        [property: JsonRequired] int SchemaVersion,
+        [property: JsonRequired] Guid JobId,
+        [property: JsonRequired] DateTimeOffset FailedAtUtc,
+        [property: JsonRequired] string Reason);
+
     private static async Task<LeasedJob> FailNextAsync(
         DurableQueue queue,
         string failureCode,
-        string? failureReason)
+        string? failureReason,
+        ModelExecutionOutcome? failureOutcome = null)
     {
         var lease = await queue.LeaseNextAsync("test-worker", TestContext.Current.CancellationToken);
         if (lease is null)
@@ -158,6 +295,7 @@ public sealed class AFailedJobKeepsItsReasonTests
             lease.LeaseId,
             failureCode,
             failureReason,
+            failureOutcome,
             TestContext.Current.CancellationToken);
         return lease;
     }

@@ -62,6 +62,7 @@ public static class ModelStepWording
         ModelProvisioningPhase.Accepted when step.ResidencyDegraded => "ready with limitations",
         ModelProvisioningPhase.Accepted => "ready",
         ModelProvisioningPhase.Rejected => "does not fit, so it is not used",
+        ModelProvisioningPhase.TrialLoadFailed => "trial load failed",
         _ => string.Empty,
     };
 
@@ -77,6 +78,7 @@ public static class ModelStepWording
         ModelProvisioningPhase.Accepted when step.ResidencyDegraded => "готова с ограничениями",
         ModelProvisioningPhase.Accepted => "готова",
         ModelProvisioningPhase.Rejected => "не помещается, поэтому не используется",
+        ModelProvisioningPhase.TrialLoadFailed => "пробная загрузка не удалась",
         _ => string.Empty,
     };
 

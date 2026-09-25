@@ -1276,6 +1276,7 @@ internal sealed class ScriptedBrokerQueue(params LeasedJob[] leases) : IBrokerQu
         Guid leaseId,
         string failureCode,
         string? failureReason,
+        ModelExecutionOutcome? failureOutcome = null,
         CancellationToken cancellationToken = default)
     {
         FailCalls++;

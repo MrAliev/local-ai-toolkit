@@ -163,7 +163,10 @@ public static class ModelCommand
                     request.Model!,
                     request.ContextTokens,
                     request.CatalogVersion!,
-                    "residency_rejected"));
+                    // A broker too old to record an outcome proves no misfit either.
+                    exception.FailureOutcome == ModelExecutionOutcome.CpuOffload
+                        ? "residency_rejected"
+                        : "trial_load_failed"));
             return RejectedExitCode;
         }
         catch (OperationCanceledException)
