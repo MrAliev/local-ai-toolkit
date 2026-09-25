@@ -38,15 +38,16 @@ public sealed class ThemeDictionariesTests
         Assert.NotEmpty(Keys("Light.xaml"));
     }
 
+    /// <summary>The system brushes are WPF objects, so they are made on the helper's thread.</summary>
     [Fact]
-    public void High_contrast_covers_every_palette_token_with_system_brushes()
+    public Task High_contrast_covers_every_palette_token_with_system_brushes() => WpfTestThread.Run(() =>
     {
         var palette = ViewModels.HighContrastPalette.Create();
         Assert.Equal(Keys("Light.xaml").OrderBy(key => key), palette.Keys.Cast<string>().OrderBy(key => key));
         Assert.Same(System.Windows.SystemColors.WindowBrush, palette["WindowFill"]);
         Assert.Same(System.Windows.SystemColors.WindowTextBrush, palette["TextPrimary"]);
         Assert.Same(System.Windows.SystemColors.HighlightTextBrush, palette["AccentForeground"]);
-    }
+    });
 
     /// <summary>
     /// Every brush is a literal colour. A palette that referenced another resource would make

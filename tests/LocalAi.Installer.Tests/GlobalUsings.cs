@@ -10,3 +10,4 @@ global using Xunit;
 // for the whole assembly, and xunit never runs two tests of one collection at the same time.
 [assembly: CollectionBehavior(CollectionBehavior.CollectionPerAssembly)]
 [assembly: LocalAi.Installer.Tests.PinInstallerLanguage]
+[assembly: LocalAi.Installer.Tests.NoUiThreadOutlivesItsTest]
