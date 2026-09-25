@@ -137,11 +137,41 @@
     <value>No local model able to do {0} is installed. This task runs on {1}. Install one through the broker: localai-launcher.exe run localai model pull --model {2} --catalog-version {3}</value>
     <comment>No full stop after the command in either language: a trailing period gets copied into a shell.</comment>
   </data>
-  <data name="NoTriageModel" xml:space="preserve">
-    <value>No full-VRAM log-triage model/context is available. Tried: {0}.</value>
+  <data name="TriageRefusal" xml:space="preserve">
+    <value>No local model could be used for log triage.</value>
+    <comment>Lead of the log-triage refusal. One line: followed, one space apart, by a sentence per fact that holds, in this order: RouteEmpty, BrokerListEmpty, NotInstalled, Disabled, NotText, Experiment, ContextLimit, Postponed, LoadFailed, Reason. Lists join with ', '. Video memory is named only inside the broker's quoted reason, because only the broker checked it.</comment>
   </data>
-  <data name="NoTriageModelNoneTried" xml:space="preserve">
-    <value>No full-VRAM log-triage model/context is available. Tried: none.</value>
+  <data name="TriageRefusalRouteEmpty" xml:space="preserve">
+    <value>The routing catalog names none.</value>
+  </data>
+  <data name="TriageRefusalBrokerListEmpty" xml:space="preserve">
+    <value>The broker reports no installed models at all.</value>
+  </data>
+  <data name="TriageRefusalNotInstalled" xml:space="preserve">
+    <value>Not installed: {0}.</value>
+  </data>
+  <data name="TriageRefusalDisabled" xml:space="preserve">
+    <value>Marked Disabled in the routing catalog: {0}.</value>
+  </data>
+  <data name="TriageRefusalNotText" xml:space="preserve">
+    <value>No Text capability in the routing catalog: {0}.</value>
+  </data>
+  <data name="TriageRefusalExperiment" xml:space="preserve">
+    <value>Excluded by experiment status: {0}.</value>
+  </data>
+  <data name="TriageRefusalContextLimit" xml:space="preserve">
+    <value>No context size within {0}: {1}. That is the log-triage limit, MaximumContextTokens in '{2}'.</value>
+  </data>
+  <data name="TriageRefusalPostponed" xml:space="preserve">
+    <value>Postponed after an earlier failed trial load: {0}.</value>
+    <comment>The broker holds a pair back after any failed trial load, whatever the cause. No duration: the client cannot see when the hold ends.</comment>
+  </data>
+  <data name="TriageRefusalLoadFailed" xml:space="preserve">
+    <value>Trial load failed in this run: {0}.</value>
+  </data>
+  <data name="TriageRefusalReason" xml:space="preserve">
+    <value>The broker's reason for {0}: {1}</value>
+    <comment>{1} is BrokerJobFailedException.FailureReason as recorded — English whatever the reader's language, one line, cut at 200 characters as the exception's own message is. No full stop: the reason ends itself.</comment>
   </data>
   <data name="ProfileHasItsOwnPipeline" xml:space="preserve">
     <value>Task profile '{0}' has a pipeline of its own: a model chosen for the log, the log read in fragments, the findings merged. Neither ask_local nor localai ask runs any of it. Send the log to triage_log, or to localai triage on the command line.</value>
