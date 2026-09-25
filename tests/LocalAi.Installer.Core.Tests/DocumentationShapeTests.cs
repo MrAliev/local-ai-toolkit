@@ -1,3 +1,6 @@
+using System.Security.AccessControl;
+using System.Security.Principal;
+
 namespace LocalAi.Installer.Core.Tests;
 
 /// <summary>
@@ -22,7 +25,7 @@ public sealed class DocumentationShapeTests
     [Fact]
     public void Every_document_has_a_translation()
     {
-        var missing = Documents()
+        var missing = Documents(RepositoryRoot())
             .Where(document => !File.Exists(Pair(document)))
             .Select(Relative)
             .OrderBy(path => path, StringComparer.Ordinal)
@@ -37,7 +40,7 @@ public sealed class DocumentationShapeTests
     public void Every_document_links_to_its_translation()
     {
         var unlinked = new List<string>();
-        foreach (var document in Documents())
+        foreach (var document in Documents(RepositoryRoot()))
         {
             var text = File.ReadAllText(document);
             var expected = Path.GetFileName(Pair(document));
@@ -56,6 +59,41 @@ public sealed class DocumentationShapeTests
             string.Join(", ", unlinked.OrderBy(path => path, StringComparer.Ordinal)));
     }
 
+    /// <summary>
+    /// Excluded folders are never entered, so what lies inside them cannot fail the walk: a
+    /// self-nesting node_modules under publish once did, with PathTooLongException.
+    /// </summary>
+    [Fact]
+    public void An_excluded_folder_that_cannot_be_read_does_not_stop_the_walk()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "localai-doc-walk-" + Guid.NewGuid().ToString("N"));
+        var locked = Directory.CreateDirectory(Path.Combine(root, "publish", "locked"));
+        File.WriteAllText(Path.Combine(root, "README.md"), "[Русская версия](README.ru.md)");
+        File.WriteAllText(Path.Combine(root, "README.ru.md"), "[English version](README.md)");
+        var deny = new FileSystemAccessRule(
+            WindowsIdentity.GetCurrent().User!,
+            FileSystemRights.ListDirectory,
+            AccessControlType.Deny);
+        var security = locked.GetAccessControl();
+        security.AddAccessRule(deny);
+        locked.SetAccessControl(security);
+        try
+        {
+            var found = Documents(root)
+                .Select(document => Path.GetRelativePath(root, document).Replace('\\', '/'))
+                .OrderBy(path => path, StringComparer.Ordinal)
+                .ToArray();
+
+            Assert.Equal(["README.md", "README.ru.md"], found);
+        }
+        finally
+        {
+            security.RemoveAccessRule(deny);
+            locked.SetAccessControl(security);
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
     private static string Pair(string document) =>
         document.EndsWith(RussianSuffix, StringComparison.OrdinalIgnoreCase)
             ? document[..^RussianSuffix.Length] + ".md"
@@ -68,22 +106,36 @@ public sealed class DocumentationShapeTests
     /// Every markdown file the repository ships, minus test fixtures and anything under a
     /// build output directory — a published tree can carry a copy of somebody else's readme.
     /// </summary>
-    private static IEnumerable<string> Documents()
+    private static IEnumerable<string> Documents(string root)
     {
-        var root = RepositoryRoot();
-        return Directory
-            .EnumerateFiles(root, "*.md", SearchOption.AllDirectories)
-            .Where(path =>
+        var pending = new Stack<string>([root]);
+        while (pending.Count > 0)
+        {
+            var directory = pending.Pop();
+            foreach (var document in Directory.EnumerateFiles(directory, "*.md"))
             {
-                var relative = Path.GetRelativePath(root, path).Replace('\\', '/');
-                return !relative.Contains("/bin/", StringComparison.OrdinalIgnoreCase) &&
-                    !relative.Contains("/obj/", StringComparison.OrdinalIgnoreCase) &&
-                    !relative.Contains("/Fixtures/", StringComparison.OrdinalIgnoreCase) &&
-                    !relative.StartsWith("publish/", StringComparison.OrdinalIgnoreCase) &&
-                    !relative.StartsWith(".claude/", StringComparison.OrdinalIgnoreCase) &&
-                    !relative.StartsWith(".github/", StringComparison.OrdinalIgnoreCase);
-            });
+                yield return document;
+            }
+
+            foreach (var child in Directory.EnumerateDirectories(directory))
+            {
+                if (!Excluded(directory == root, Path.GetFileName(child)))
+                {
+                    pending.Push(child);
+                }
+            }
+        }
     }
+
+    /// <summary>Checked before descending: build output, test fixtures, and the untracked trees at the root.</summary>
+    private static bool Excluded(bool atRoot, string name) =>
+        atRoot
+            ? name.Equals("publish", StringComparison.OrdinalIgnoreCase) ||
+              name.Equals(".claude", StringComparison.OrdinalIgnoreCase) ||
+              name.Equals(".github", StringComparison.OrdinalIgnoreCase)
+            : name.Equals("bin", StringComparison.OrdinalIgnoreCase) ||
+              name.Equals("obj", StringComparison.OrdinalIgnoreCase) ||
+              name.Equals("Fixtures", StringComparison.OrdinalIgnoreCase);
 
     private static string RepositoryRoot()
     {
