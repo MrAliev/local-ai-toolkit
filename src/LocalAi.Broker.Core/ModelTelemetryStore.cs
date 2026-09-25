@@ -35,6 +35,9 @@ public sealed record ModelTelemetryRecord(
     public long? BackendInputTokens { get; init; }
     public long? BackendOutputTokens { get; init; }
     public UsageValue CloudTokenSavings { get; init; } = UsageValue.Unknown("legacy_comparison_unavailable");
+    public ResidencyShortfall? Residency { get; init; }
+    public int? VramResidentPercent { get; init; }
+    public DateTimeOffset? ResidencyVerifiedAtUtc { get; init; }
 }
 
 public sealed record ExperimentTaskTelemetryRecord(
@@ -220,6 +223,11 @@ public sealed class ModelTelemetryStore
             || record.BackendInputTokens < 0 || record.BackendOutputTokens < 0
             || record.CloudTokenSavings is not { Status: UsageValueStatus.Unknown, Value: null }))
             throw new JsonException("invalid_attempt_usage");
+        if (record.Residency is { } residency && !Enum.IsDefined(residency)
+            || (record.Residency is null) != (record.VramResidentPercent is null)
+            || (record.Residency is null) != (record.ResidencyVerifiedAtUtc is null)
+            || record.VramResidentPercent is < 0 or > 100)
+            throw new JsonException("invalid_attempt_residency");
         return record;
     }
 

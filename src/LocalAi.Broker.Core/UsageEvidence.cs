@@ -20,10 +20,15 @@ public static class UsageEvidence
                 var attempts = byJob[job.JobId].ToArray();
                 foreach (var attempt in attempts)
                 {
-                    var routing = job.Receipt?.Routing;
-                    call.ModelCalled(attempt.Model,
-                        routing is not null && routing.SelectedModel == attempt.Model
-                            ? Offload(routing.ResidencyShortfall) : UsageOffload.Unknown,
+                    // An attempt's own proof first; a record from an older broker has none, and only
+                    // a receipt proven for that same model and context may stand in for it.
+                    var (offload, reason) = attempt.Residency is { } residency
+                        ? (Offload(residency), null)
+                        : job.Receipt?.Routing is { VramResidentPercent: not null } routing
+                            && routing.SelectedModel == attempt.Model && routing.ContextTokens == attempt.ContextTokens
+                            ? (Offload(routing.ResidencyShortfall), null)
+                            : (UsageOffload.Unknown, "not_recorded");
+                    call.ModelCalled(attempt.Model, offload, reason,
                         inputTokens: attempt.BackendInputTokens, outputTokens: attempt.BackendOutputTokens,
                         attemptId: attempt.AttemptId);
                     call.AddTiming(UsageTiming.LoadMilliseconds, (long)attempt.LoadDuration.TotalMilliseconds);
@@ -31,8 +36,15 @@ public static class UsageEvidence
                 if (job.Receipt is { } receipt)
                 {
                     if (attempts.Length == 0)
-                        call.ModelCalled(receipt.Model, receipt.Routing is { } routing
-                            ? Offload(routing.ResidencyShortfall) : UsageOffload.Unknown);
+                    {
+                        var (offload, reason) = receipt.Routing switch
+                        {
+                            null => (UsageOffload.Unknown, "no_residency_check"),
+                            { VramResidentPercent: null } => (UsageOffload.Unknown, "not_recorded"),
+                            var routing => (Offload(routing.ResidencyShortfall), (string?)null),
+                        };
+                        call.ModelCalled(receipt.Model, offload, reason);
+                    }
                     call.AddTiming(UsageTiming.QueueMilliseconds, (long)receipt.QueueDuration.TotalMilliseconds);
                     call.AddTiming(UsageTiming.ExecutionMilliseconds, (long)receipt.ExecutionDuration.TotalMilliseconds);
                 }
