@@ -45,20 +45,30 @@ public sealed class AccessibleControlsTests
             bar.Arrange(new Rect(0, 0, 900, 200));
             bar.UpdateLayout();
             Dispatcher.CurrentDispatcher.Invoke(() => { }, DispatcherPriority.DataBind);
-            var expected = language == InstallerLanguage.Russian ? "Тема" : "Theme";
             var radios = Descendants(bar).OfType<RadioButton>().ToArray();
             Assert.Equal(3, radios.Length);
-            // A screen reader names the segments by the peer that holds exactly these three.
-            var group = Assert.Single(PeerTree(Peer(bar)), peer =>
-                peer.GetChildren()?.Any(child => child is UIElementAutomationPeer { Owner: RadioButton }) == true);
-            Assert.Equal(radios, group.GetChildren()!.Select(child => (child as UIElementAutomationPeer)?.Owner));
-            Assert.Equal(AutomationControlType.Group, group.GetAutomationControlType());
-            Assert.Equal(expected, group.GetName());
-            var owner = ((UIElementAutomationPeer)group).Owner;
-            Assert.False(owner.Focusable);
-            var label = Assert.IsType<TextBlock>(AutomationProperties.GetLabeledBy(owner));
-            Assert.Equal(expected, label.Text);
+            CheckGroup(Peer(bar), radios, language == InstallerLanguage.Russian ? "Тема" : "Theme");
         }
+    }
+
+    // A screen reader says what a set of options chooses by the group that holds exactly them.
+    private static void CheckGroup(AutomationPeer scope, IEnumerable<RadioButton> radios, string label)
+    {
+        var options = radios.ToHashSet<UIElement>();
+        var group = Assert.Single(PeerTree(scope), peer =>
+            peer.GetAutomationControlType() == AutomationControlType.Group &&
+            options.SetEquals(PeerTree(peer).OfType<UIElementAutomationPeer>().Select(item => item.Owner).OfType<RadioButton>()));
+        Assert.Equal(label, group.GetName());
+        var owner = ((UIElementAutomationPeer)group).Owner;
+        Assert.False(owner.Focusable);
+        Assert.Equal(label, Assert.IsType<TextBlock>(AutomationProperties.GetLabeledBy(owner)).Text);
+    }
+
+    private static void CheckGroup(Window window, string groupName, string label)
+    {
+        var radios = Descendants(window.Content).OfType<RadioButton>().Where(radio => radio.GroupName == groupName).ToArray();
+        Assert.NotEmpty(radios);
+        CheckGroup(Peer(Ancestors(radios[0]).OfType<ScrollViewer>().First()), radios, label);
     }
 
     private static IEnumerable<AutomationPeer> PeerTree(AutomationPeer root)
@@ -168,6 +178,10 @@ public sealed class AccessibleControlsTests
                         Assert.False(string.IsNullOrWhiteSpace(Peer(radio).GetHelpText()));
                         Assert.Equal(radio.IsChecked == true, ((ISelectionItemProvider)Peer(radio).GetPattern(PatternInterface.SelectionItem)!).IsSelected);
                     }
+                    CheckGroup(window, "Residency", russian ? "Видеопамять" : "Video memory");
+                    CheckGroup(window, "ModelMode", russian ? "Локальные модели" : "Local models");
+                    CheckHelp(window, Bound<RadioButton>(window, ToggleButton.IsCheckedProperty, "Models.IsAutomatic"), wizard.Models.AutomaticSummary);
+                    CheckHelp(window, Bound<RadioButton>(window, ToggleButton.IsCheckedProperty, "Models.IsSkip"), PageLabels.SkipModelSetupHint);
                     CheckField(window, Selector.SelectedItemProperty, "Models.SelectedModel", russian ? "Модель для установки" : "Model to install");
                     CheckField(window, Selector.SelectedItemProperty, "Models.SelectedContext", russian ? "Размер контекста модели" : "Model context size");
 
@@ -180,7 +194,26 @@ public sealed class AccessibleControlsTests
                         Assert.Equal((russian ? "Интеграция с " : "Integration with ") + row.DisplayName, Peer(client).GetName());
                         Assert.NotNull(AutomationProperties.GetLabeledBy(client));
                     }
+                    foreach (var claude in new[] { AgentChoice.NoChange, AgentChoice.McpAndInstructions })
+                    {
+                        wizard.Agents.SetChoice("claude", claude);
+                        Layout(window);
+                        Assert.Equal(claude != AgentChoice.NoChange, wizard.Agents.ShowsWorktreePlacement);
+                        // The worktree sentence is help only in a row that shows it: hidden, it
+                        // describes an effect that is not coming.
+                        foreach (var client in Descendants(window.Content).OfType<ComboBox>().Where(item => item.DataContext is AgentOption))
+                        {
+                            var hint = Descendants(VisualTreeHelper.GetParent(client)).OfType<TextBlock>()
+                                .Single(text => text.Text == wizard.Agents.WorktreePlacementHint);
+                            Assert.Equal(hint.Visibility == Visibility.Visible ? hint.Text : string.Empty, Peer(client).GetHelpText());
+                        }
+                        var gate = Descendants(window.Content).OfType<CheckBox>()
+                            .Single(item => item.DataContext is AgentOption { HasTextSearchGate: true });
+                        CheckHelp(window, gate, wizard.Agents.TextSearchHint);
+                    }
                     ShowPage(window, wizard, InstallerPage.Confirm);
+                    CheckHelp(window, Bound<CheckBox>(window, ToggleButton.IsCheckedProperty, "Review.EnableUpdateCheck"),
+                        PageLabels.UpdateCheckHint, wizard.Review.UpdateCheckDisclosure);
                     var apply = CheckDefaultAction(window, wizard.InstallCommand);
                     Assert.False(apply.IsEnabled);
                     Assert.Throws<ElementNotEnabledException>(() => ((IInvokeProvider)Peer(apply).GetPattern(PatternInterface.Invoke)!).Invoke());
@@ -254,6 +287,7 @@ public sealed class AccessibleControlsTests
                         Assert.Equal(preset.IsSelected, ((ISelectionItemProvider)Peer(control).GetPattern(PatternInterface.SelectionItem)!).IsSelected);
                     }
                 }
+                CheckGroup(removal, "Preset", russian ? "С чего начать" : "Start from");
                 Assert.False(removalWizard.RemoveSigningKeys);
                 Assert.False(removalWizard.IsConfirmed);
             }
@@ -513,6 +547,28 @@ public sealed class AccessibleControlsTests
         Assert.Equal(expected, Peer(control).GetName());
         Assert.Equal(expected, Assert.IsType<TextBlock>(label).Text);
         Assert.Equal(expected, Peer(label).GetName());
+    }
+
+    // Help is the explanation already on the page, not a second wording of it.
+    private static void CheckHelp(Window window, UIElement control, params string[] explanation)
+    {
+        var shown = Descendants(window.Content).OfType<TextBlock>().Select(text => text.Text).ToHashSet();
+        Assert.All(explanation, part =>
+        {
+            Assert.False(string.IsNullOrWhiteSpace(part));
+            Assert.Contains(part, shown);
+        });
+        Assert.Equal(string.Join(" ", explanation), Peer(control).GetHelpText());
+    }
+
+    private static T Bound<T>(Window window, DependencyProperty property, string path) where T : DependencyObject =>
+        Descendants(window.Content).OfType<T>().Single(item =>
+            BindingOperations.GetBindingExpression(item, property)?.ParentBinding.Path.Path == path);
+
+    private static IEnumerable<DependencyObject> Ancestors(DependencyObject element)
+    {
+        for (var parent = VisualTreeHelper.GetParent(element); parent is not null; parent = VisualTreeHelper.GetParent(parent))
+            yield return parent;
     }
 
     // Only selects a presentation fixture: never starts detection, installation or removal.

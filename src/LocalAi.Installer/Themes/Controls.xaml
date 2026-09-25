@@ -42,6 +42,18 @@
         <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
     </Style>
 
+    <!-- A group a screen reader can name, drawing nothing: UI Automation skips a panel, and a
+         GroupBox is what it exposes as a group. -->
+    <Style x:Key="NamedGroup" TargetType="GroupBox">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="GroupBox">
+                    <ContentPresenter />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style TargetType="Button">
         <Setter Property="MinHeight" Value="32" />
         <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRingVisual}" />
