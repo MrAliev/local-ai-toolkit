@@ -93,10 +93,10 @@ public sealed class UpdateCheckProbe : IDisposable
     {
         try
         {
-            var tag = await ResolveLatestTagAsync(cancellationToken).ConfigureAwait(false);
+            var (tag, failure) = await ResolveLatestTagAsync(cancellationToken).ConfigureAwait(false);
             if (tag is null)
             {
-                return Unavailable(now);
+                return Unavailable(now, failure ?? UpdateCheckFailure.Unexpected);
             }
 
             var manifestJson = await DownloadAsync(
@@ -111,7 +111,7 @@ public sealed class UpdateCheckProbe : IDisposable
                 .ConfigureAwait(false);
             if (manifestJson is null || signature is null)
             {
-                return Unavailable(now);
+                return Unavailable(now, UpdateCheckFailure.AssetsUnavailable);
             }
 
             using var verifier = trustedPublicKey is null
@@ -132,13 +132,20 @@ public sealed class UpdateCheckProbe : IDisposable
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             // A timeout, which is a network answer rather than somebody asking to stop.
-            return Unavailable(now);
+            return Unavailable(now, UpdateCheckFailure.Timeout);
+        }
+        catch (Exception exception) when (exception is HttpRequestException or IOException)
+        {
+            return Unavailable(now, UpdateCheckFailure.Network);
+        }
+        catch (ReleaseVerificationException)
+        {
+            return Unavailable(now, UpdateCheckFailure.VerificationFailed);
         }
         catch (Exception exception) when (
-            exception is HttpRequestException or IOException or JsonException or
-                ReleaseVerificationException or InvalidOperationException or UriFormatException)
+            exception is JsonException or InvalidOperationException or UriFormatException)
         {
-            return Unavailable(now);
+            return Unavailable(now, UpdateCheckFailure.InvalidResponse);
         }
     }
 
@@ -150,8 +157,8 @@ public sealed class UpdateCheckProbe : IDisposable
         }
     }
 
-    private static UpdateCheckState Unavailable(DateTimeOffset now) =>
-        new(1, UpdateCheckStatus.Unavailable, now, null, null);
+    private static UpdateCheckState Unavailable(DateTimeOffset now, string reason) =>
+        new(1, UpdateCheckStatus.Unavailable, now, null, null) { FailureReason = reason };
 
     /// <summary>
     /// Which release is newest, from the redirect that answers it without spending API quota.
@@ -159,10 +166,12 @@ public sealed class UpdateCheckProbe : IDisposable
     /// behind one address and a check that burns one where a redirect would do is a check that
     /// breaks on an office network for no reason.
     /// </summary>
-    private async Task<string?> ResolveLatestTagAsync(CancellationToken cancellationToken)
+    private async Task<(string? Tag, string? Failure)> ResolveLatestTagAsync(CancellationToken cancellationToken)
     {
         var redirected = await TryTagByRedirectAsync(cancellationToken).ConfigureAwait(false);
-        return redirected ?? await TryTagByApiAsync(cancellationToken).ConfigureAwait(false);
+        return redirected is not null
+            ? (redirected, null)
+            : await TryTagByApiAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<string?> TryTagByRedirectAsync(CancellationToken cancellationToken)
@@ -189,7 +198,11 @@ public sealed class UpdateCheckProbe : IDisposable
             : null;
     }
 
-    private async Task<string?> TryTagByApiAsync(CancellationToken cancellationToken)
+    /// <summary>
+    /// Only a 404 says there is no release; a rate limit or a refusal says nothing about
+    /// releases, and naming it "no_release" would claim what the lookup never learned.
+    /// </summary>
+    private async Task<(string? Tag, string? Failure)> TryTagByApiAsync(CancellationToken cancellationToken)
     {
         using var timeout = Timeout(cancellationToken);
         using var request = new HttpRequestMessage(
@@ -202,14 +215,17 @@ public sealed class UpdateCheckProbe : IDisposable
             .ConfigureAwait(false);
         if (response.StatusCode != HttpStatusCode.OK)
         {
-            return null;
+            return (null, response.StatusCode == HttpStatusCode.NotFound
+                ? UpdateCheckFailure.NoRelease
+                : UpdateCheckFailure.UnexpectedStatus);
         }
 
         using var document = JsonDocument.Parse(
             await response.Content.ReadAsByteArrayAsync(timeout.Token).ConfigureAwait(false));
-        return document.RootElement.TryGetProperty("tag_name", out var tag)
-            ? tag.GetString()
-            : null;
+        return document.RootElement.TryGetProperty("tag_name", out var tag) &&
+            tag.GetString() is { Length: > 0 } name
+            ? (name, null)
+            : (null, UpdateCheckFailure.InvalidResponse);
     }
 
     /// <summary>

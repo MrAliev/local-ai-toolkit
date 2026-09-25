@@ -593,12 +593,21 @@
   <data name="SummaryNoProblems" xml:space="preserve">
     <value>Проблем нет.</value>
   </data>
+  <data name="SummaryNoProblemsUnanswered" xml:space="preserve">
+    <value>Проблем нет. Без ответа {0}.</value>
+  </data>
   <data name="SummaryNoProblemsWithNotes" xml:space="preserve">
     <value>Проблем нет. Стоит прочитать {0}.</value>
+  </data>
+  <data name="SummaryNoProblemsWithNotesUnanswered" xml:space="preserve">
+    <value>Проблем нет. Стоит прочитать {0}, без ответа {1}.</value>
   </data>
   <data name="SummaryProblems" xml:space="preserve">
     <value>Проблем {0}, стоит прочитать {1}.</value>
     <comment>Noun-first in Russian: ResourceManager has no plural support and genitive plural is correct for every count.</comment>
+  </data>
+  <data name="SummaryProblemsUnanswered" xml:space="preserve">
+    <value>Проблем {0}, стоит прочитать {1}, без ответа {2}.</value>
   </data>
   <data name="SyncBusy" xml:space="preserve">
     <value>Этот репозиторий уже собирает другая синхронизация. Запустите синхронизацию снова, когда она завершится. Repository: {0}</value>
@@ -762,11 +771,14 @@
   <data name="UpdateQueueWaiting" xml:space="preserve">
     <value>В очереди заданий {0}; ожидание их завершения...</value>
   </data>
+  <data name="UpdateStale" xml:space="preserve">
+    <value>неизвестно — на {1} UTC обновлений не было (установлена {0}), но с тех пор прошло больше двух интервалов проверки</value>
+  </data>
   <data name="UpdateUnknownOption" xml:space="preserve">
     <value>Неизвестная опция: '{0}'.</value>
   </data>
   <data name="UpdateUnknownUnavailable" xml:space="preserve">
-    <value>неизвестно — последняя проверка не дала ничего, чему можно верить (попытка {0} UTC)</value>
+    <value>неизвестно — последняя проверка не дала ничего, чему можно верить (попытка {0} UTC, причина: {1})</value>
   </data>
   <data name="UpdateUpToDate" xml:space="preserve">
     <value>обновлений нет, установлена {0} (проверено {1} UTC)</value>

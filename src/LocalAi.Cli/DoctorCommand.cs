@@ -14,7 +14,8 @@ public enum DoctorStatus
 {
     Ok,
     Warning,
-    Failed
+    Failed,
+    Unknown
 }
 
 /// <summary>
@@ -42,7 +43,10 @@ public sealed record DoctorReport(IReadOnlyList<DoctorCheck> Checks)
     /// </summary>
     public int ExitCode => Checks.Any(check => check.Status == DoctorStatus.Failed) ? 1 : 0;
 
-    /// <summary>The report in one word, for a caller that wants the answer before the detail.</summary>
+    /// <summary>
+    /// The report in one word, for a caller that wants the answer before the detail. An
+    /// <see cref="DoctorStatus.Unknown"/> check moves neither this nor the exit code.
+    /// </summary>
     public DoctorStatus Verdict =>
         Checks.Any(check => check.Status == DoctorStatus.Failed)
             ? DoctorStatus.Failed
@@ -79,7 +83,8 @@ public static class DoctorCommand
     public static DoctorReport Inspect(
         string runtimeRoot,
         string? repositoryRoot = null,
-        string? workingDirectory = null)
+        string? workingDirectory = null,
+        DateTimeOffset? now = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(runtimeRoot);
         var root = Path.GetFullPath(runtimeRoot);
@@ -91,7 +96,7 @@ public static class DoctorCommand
             CheckQueue(root),
             CheckModelCatalog(root),
         };
-        checks.AddRange(CheckPolicies(root));
+        checks.AddRange(CheckPolicies(root, now ?? DateTimeOffset.UtcNow));
         if (!string.IsNullOrWhiteSpace(repositoryRoot))
         {
             checks.Add(CheckRepository(root, repositoryRoot));
@@ -366,7 +371,7 @@ public static class DoctorCommand
     /// looks configured, and no longer does anything. Reading each one back and comparing against
     /// the defaults is the only way to see it.
     /// </summary>
-    private static IEnumerable<DoctorCheck> CheckPolicies(string root)
+    private static IEnumerable<DoctorCheck> CheckPolicies(string root, DateTimeOffset now)
     {
         yield return PolicyCheck(
             "policy.models",
@@ -408,7 +413,7 @@ public static class DoctorCommand
                     .ToArray()),
                 ("fileFound", found)));
 
-        yield return CheckUpdates(root);
+        yield return CheckUpdates(root, now);
     }
 
     /// <summary>
@@ -420,7 +425,7 @@ public static class DoctorCommand
     /// installation a version behind is working perfectly well, and a diagnostic that exits
     /// non-zero for it teaches whoever wired it into a script to ignore the exit code.
     /// </summary>
-    private static DoctorCheck CheckUpdates(string root)
+    private static DoctorCheck CheckUpdates(string root, DateTimeOffset now)
     {
         var policy = new UpdateCheckPolicyStore(root).Read();
         if (!policy.Enabled)
@@ -429,60 +434,48 @@ public static class DoctorCommand
                 "update",
                 DoctorStatus.Ok,
                 CliText.UpdateCheckDisabled,
-                Facts(("enabled", false)));
+                Facts(("enabled", false), ("result", "disabled")));
         }
 
         var state = new UpdateCheckStateStore(root).Read();
         var installed = InstalledVersionReader.Read(root);
         var availability = UpdateComparison.Compare(state, installed);
-        var updateFacts = Facts(
-            ("enabled", true),
-            ("availability", availability.ToString()),
-            ("latestVersion", state.LatestVersion),
-            ("releaseUrl", state.ReleaseUrl),
-            ("checkedAtUtc", state.CheckedAtUtc?.ToUniversalTime()
-                .ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture)));
-        return availability switch
+        var stale = availability == UpdateAvailability.UpToDate &&
+                    UpdateCheckSchedule.IsStale(policy, state, now);
+        var verified = state.Status == UpdateCheckStatus.Verified;
+        var reason = state.Status == UpdateCheckStatus.Unavailable
+            ? UpdateCheckFailure.Describe(state.FailureReason)
+            : null;
+        var checkedAt = state.CheckedAtUtc?.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
+        var (status, result, detail) = availability switch
         {
-            UpdateAvailability.Available => new DoctorCheck(
-                "update",
-                DoctorStatus.Warning,
-                CliText.UpdateAvailable(
-                    state.LatestVersion,
-                    installed.DisplayName,
-                    state.ReleaseUrl),
-                updateFacts),
-            UpdateAvailability.UpToDate => new DoctorCheck(
-                "update",
-                DoctorStatus.Ok,
-                CliText.UpdateUpToDate(
-                    installed.DisplayName,
-                    state.CheckedAtUtc?.ToString(
-                        "yyyy-MM-dd HH:mm",
-                        CultureInfo.InvariantCulture)),
-                updateFacts),
-            _ when state.Status == UpdateCheckStatus.Unavailable => new DoctorCheck(
-                "update",
-                DoctorStatus.Ok,
-                CliText.UpdateUnknownUnavailable(state.CheckedAtUtc?.ToString(
-                    "yyyy-MM-dd HH:mm",
-                    CultureInfo.InvariantCulture)),
-                updateFacts),
-            // Verified, but nothing here can be compared against it: an installation made
-            // before the release version was recorded knows only its directory name. Said
-            // plainly, because answering "up to date" from a comparison that failed is the
-            // defect this check was rewritten for.
-            _ when state.Status == UpdateCheckStatus.Verified => new DoctorCheck(
-                "update",
-                DoctorStatus.Ok,
-                CliText.UpdateIncomparable(state.LatestVersion),
-                updateFacts),
-            _ => new DoctorCheck(
-                "update",
-                DoctorStatus.Ok,
-                CliText.UpdateNeverChecked,
-                updateFacts),
+            UpdateAvailability.Available => (DoctorStatus.Warning, "update_available",
+                CliText.UpdateAvailable(state.LatestVersion, installed.DisplayName, state.ReleaseUrl)),
+            UpdateAvailability.UpToDate when stale => (DoctorStatus.Unknown, "stale",
+                CliText.UpdateStale(installed.DisplayName, checkedAt)),
+            UpdateAvailability.UpToDate => (DoctorStatus.Ok, "up_to_date",
+                CliText.UpdateUpToDate(installed.DisplayName, checkedAt)),
+            // Verified, but an installation made before the release version was recorded knows
+            // only its directory name, so there is nothing to compare the release against.
+            _ when verified => (DoctorStatus.Unknown, "incomparable",
+                CliText.UpdateIncomparable(state.LatestVersion)),
+            _ when reason is not null => (DoctorStatus.Unknown, "unavailable",
+                CliText.UpdateUnknownUnavailable(checkedAt, reason)),
+            _ => (DoctorStatus.Unknown, "never_checked", CliText.UpdateNeverChecked),
         };
+        return new DoctorCheck(
+            "update",
+            status,
+            detail,
+            Facts(
+                ("enabled", true),
+                ("availability", (stale ? UpdateAvailability.Unknown : availability).ToString()),
+                ("result", result),
+                ("reason", reason),
+                ("latestVersion", verified ? state.LatestVersion : null),
+                ("releaseUrl", verified ? state.ReleaseUrl : null),
+                ("checkedAtUtc", state.CheckedAtUtc?.ToUniversalTime()
+                    .ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture))));
     }
 
     /// <summary>
@@ -727,6 +720,7 @@ public static class DoctorCommand
             ["verdict"] = report.Verdict.ToString(),
             ["failed"] = report.Checks.Count(check => check.Status == DoctorStatus.Failed),
             ["warned"] = report.Checks.Count(check => check.Status == DoctorStatus.Warning),
+            ["unknown"] = report.Checks.Count(check => check.Status == DoctorStatus.Unknown),
             ["checks"] = checks,
         };
 
@@ -759,13 +753,17 @@ public static class DoctorCommand
 
         var failed = report.Checks.Count(check => check.Status == DoctorStatus.Failed);
         var warned = report.Checks.Count(check => check.Status == DoctorStatus.Warning);
+        var unknown = report.Checks.Count(check => check.Status == DoctorStatus.Unknown);
         text.AppendLine();
-        text.AppendLine(
-            failed > 0
-                ? CliText.SummaryProblems(failed, warned)
-                : warned > 0
-                    ? CliText.SummaryNoProblemsWithNotes(warned)
-                    : CliText.SummaryNoProblems);
+        text.AppendLine((failed, warned, unknown) switch
+        {
+            ( > 0, _, > 0) => CliText.SummaryProblemsUnanswered(failed, warned, unknown),
+            ( > 0, _, _) => CliText.SummaryProblems(failed, warned),
+            (_, > 0, > 0) => CliText.SummaryNoProblemsWithNotesUnanswered(warned, unknown),
+            (_, > 0, _) => CliText.SummaryNoProblemsWithNotes(warned),
+            (_, _, > 0) => CliText.SummaryNoProblemsUnanswered(unknown),
+            _ => CliText.SummaryNoProblems,
+        });
         return text.ToString();
     }
 
@@ -773,6 +771,8 @@ public static class DoctorCommand
     {
         DoctorStatus.Ok => "ok  ",
         DoctorStatus.Warning => "note",
-        _ => "FAIL",
+        DoctorStatus.Unknown => "unkn",
+        DoctorStatus.Failed => "FAIL",
+        _ => throw new ArgumentOutOfRangeException(nameof(status), status, null),
     };
 }

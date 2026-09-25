@@ -592,12 +592,21 @@ Everything named above is under {2}.</value>
   <data name="SummaryNoProblems" xml:space="preserve">
     <value>No problems.</value>
   </data>
+  <data name="SummaryNoProblemsUnanswered" xml:space="preserve">
+    <value>No problems. {0} unanswered.</value>
+  </data>
   <data name="SummaryNoProblemsWithNotes" xml:space="preserve">
     <value>No problems. {0} worth reading.</value>
+  </data>
+  <data name="SummaryNoProblemsWithNotesUnanswered" xml:space="preserve">
+    <value>No problems. {0} worth reading, {1} unanswered.</value>
   </data>
   <data name="SummaryProblems" xml:space="preserve">
     <value>{0} problem(s), {1} worth reading.</value>
     <comment>Noun-first in Russian: ResourceManager has no plural support and genitive plural is correct for every count.</comment>
+  </data>
+  <data name="SummaryProblemsUnanswered" xml:space="preserve">
+    <value>{0} problem(s), {1} worth reading, {2} unanswered.</value>
   </data>
   <data name="SyncBusy" xml:space="preserve">
     <value>Another sync is already building this repository. Run sync again once it finishes. Repository: {0}</value>
@@ -761,11 +770,14 @@ Everything named above is under {2}.</value>
   <data name="UpdateQueueWaiting" xml:space="preserve">
     <value>Waiting for {0} queued job(s) to finish...</value>
   </data>
+  <data name="UpdateStale" xml:space="preserve">
+    <value>unknown; up to date at {0} as of {1} UTC, but more than two check intervals have passed since</value>
+  </data>
   <data name="UpdateUnknownOption" xml:space="preserve">
     <value>Unknown option '{0}'.</value>
   </data>
   <data name="UpdateUnknownUnavailable" xml:space="preserve">
-    <value>unknown; the last check produced nothing to believe (tried {0} UTC)</value>
+    <value>unknown; the last check produced nothing to believe (tried {0} UTC, reason: {1})</value>
   </data>
   <data name="UpdateUpToDate" xml:space="preserve">
     <value>up to date at {0} (checked {1} UTC)</value>
