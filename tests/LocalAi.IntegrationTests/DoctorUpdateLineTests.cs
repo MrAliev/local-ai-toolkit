@@ -187,14 +187,20 @@ public sealed class DoctorUpdateLineTests : IDisposable
     public void An_unverified_version_never_becomes_a_warning()
     {
         Enable();
-        new UpdateCheckStateStore(root).Write(
-            new UpdateCheckState(1, UpdateCheckStatus.Unavailable, Checked, "9.9.9", null));
+        new UpdateCheckStateStore(root).Write(new UpdateCheckState(
+            1,
+            UpdateCheckStatus.Unavailable,
+            Checked,
+            "9.9.9",
+            "https://example.invalid/releases/tag/v9.9.9"));
 
         var check = Check();
+        var update = Update();
 
         Assert.Equal(DoctorStatus.Unknown, check.Status);
         Assert.DoesNotContain("9.9.9", check.Detail, StringComparison.Ordinal);
-        Assert.DoesNotContain("9.9.9", Update().ToJsonString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("9.9.9", update.ToJsonString(), StringComparison.Ordinal);
+        Assert.Null(update["releaseUrl"]);
     }
 
     [Fact]
@@ -212,6 +218,23 @@ public sealed class DoctorUpdateLineTests : IDisposable
         Assert.Equal(1, after["unknown"]!.GetValue<int>());
         Assert.Equal(before["warned"]!.GetValue<int>(), after["warned"]!.GetValue<int>());
         Assert.Equal(before["failed"]!.GetValue<int>(), after["failed"]!.GetValue<int>());
+    }
+
+    [Theory]
+    [InlineData(DoctorStatus.Ok)]
+    [InlineData(DoctorStatus.Warning)]
+    [InlineData(DoctorStatus.Failed)]
+    public void An_unknown_check_leaves_the_verdict_and_the_exit_code_to_the_others(DoctorStatus other)
+    {
+        var alone = new DoctorReport([new DoctorCheck("other", other, "detail")]);
+        var withUnknown = new DoctorReport(
+        [
+            new DoctorCheck("other", other, "detail"),
+            new DoctorCheck("update", DoctorStatus.Unknown, "detail"),
+        ]);
+
+        Assert.Equal(other, withUnknown.Verdict);
+        Assert.Equal(alone.ExitCode, withUnknown.ExitCode);
     }
 
     [Fact]
