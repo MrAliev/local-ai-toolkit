@@ -90,6 +90,22 @@ public sealed class UsageCallTests
     }
 
     [Fact]
+    public void A_model_loaded_without_a_task_is_reported_as_a_load_with_its_own_residency()
+    {
+        using var call = new UsageCall(UsageSurface.Mcp, "locallm", "local_model_preflight");
+        call.UnknownInference();
+        call.ModelLoaded("qwen3.5:9b", UsageOffload.Partial);
+        var report = call.Complete();
+        Assert.Equal(UsageModelState.Loaded, report.Models.State);
+        Assert.Equal(UsageValue.Measured(1), report.Models.Calls);
+        Assert.Equal(new UsageModelUse("qwen3.5:9b", 1, UsageOffload.Partial, null), Assert.Single(report.Models.Actual));
+        Assert.Equal(UsageValueStatus.Unknown, report.Volumes[UsageVolume.BackendEvalTokens].Status);
+        var restored = UsageReportJson.Read(UsageReportJson.Write(report));
+        Assert.Equal(UsageModelState.Loaded, restored.Models.State);
+        Assert.Equal(report.Models.Actual, restored.Models.Actual);
+    }
+
+    [Fact]
     public async Task Concurrent_calls_do_not_share_outcomes_or_metrics()
     {
         using var outer = NewCall();

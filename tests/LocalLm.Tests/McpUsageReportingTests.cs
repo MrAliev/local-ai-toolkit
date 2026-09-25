@@ -196,11 +196,14 @@ public sealed class McpUsageReportingTests : IDisposable
         var json = JsonSerializer.Serialize(new { name = new string('я', length) });
         var result = await new UsageReporting(root).InvokeAsync("locallm", "local_models_status", id,
             _ => ValueTask.FromResult(Text(json)), TestContext.Current.CancellationToken);
-        Assert.Equal(json, Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text);
+        Assert.Equal(2, result.Content.Count);
+        Assert.Equal(json, Assert.IsType<TextContentBlock>(result.Content[0]).Text);
         using var parsed = JsonDocument.Parse(Assert.IsType<TextContentBlock>(result.Content[0]).Text);
         Assert.Equal(length, parsed.RootElement.GetProperty("name").GetString()!.Length);
         var report = await Report(id);
+        Assert.Equal(LocalAi.Contracts.Localization.UsageNotice.Render(report), Assert.IsType<TextContentBlock>(result.Content[1]).Text);
         Assert.NotNull(result.Meta);
+        Assert.Equal(Assert.IsType<TextContentBlock>(result.Content[1]).Text, result.Meta["localai/usageNotice"]!.GetValue<string>());
         Assert.Equal(UsageReportJson.Write(report), result.Meta["localai/usage"]!.ToJsonString());
         var serialized = JsonSerializer.Serialize(result, McpJsonUtilities.DefaultOptions);
         Assert.Equal(serialized.Length, report.Volumes[UsageVolume.ResponseCharacters].Value);

@@ -78,11 +78,13 @@ public static class UsageReportJson
                 Require(models.Calls == UsageValue.Measured(0) && models.Actual.Count == 0, "unexpected_model_calls"); break;
             case UsageModelState.Called:
                 Require(models.Calls.Status == UsageValueStatus.Measured && calls > 0 && models.Calls.Value == calls, "inconsistent_model_calls"); break;
+            case UsageModelState.Loaded:
+                Require(models.Calls.Status == UsageValueStatus.Measured && calls > 0 && models.Calls.Value == calls, "inconsistent_model_loads"); break;
         }
 
         Map(report.Timings, _ => false);
         Map(report.Volumes, _ => false);
-        if (models.State == UsageModelState.NotCalled)
+        if (models.State is UsageModelState.NotCalled or UsageModelState.Loaded)
         {
             Require(report.Volumes[UsageVolume.BackendPromptTokens].Value is null or 0
                 && report.Volumes[UsageVolume.BackendEvalTokens].Value is null or 0, "backend_tokens_without_model_call");
