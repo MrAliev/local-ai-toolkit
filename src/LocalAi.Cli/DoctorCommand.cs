@@ -95,6 +95,7 @@ public static class DoctorCommand
             CheckBroker(root),
             CheckQueue(root),
             CheckModelCatalog(root),
+            CheckTaskModels(root, now ?? DateTimeOffset.UtcNow),
         };
         checks.AddRange(CheckPolicies(root, now ?? DateTimeOffset.UtcNow));
         if (!string.IsNullOrWhiteSpace(repositoryRoot))
@@ -132,6 +133,114 @@ public static class DoctorCommand
                 DoctorStatus.Failed,
                 CliText.ModelCatalogUnreadable(store.FilePath, failure.InnerException?.Message ?? failure.Message),
                 Facts(("path", store.FilePath), ("fileUsed", false)));
+        }
+    }
+
+    /// <summary>
+    /// Whether each task has a model installed, from the list the broker last recorded. A valid
+    /// catalogue used to be the whole answer, and it read as healthy while Ollama pointed at an
+    /// empty model directory (#633).
+    ///
+    /// Installed, not ready: a task counted here may still fail its trial load. A model counts
+    /// for a task when the router could pick it: not disabled, and able to read images when the
+    /// task sends them. Context and image sizes belong to a request, and there is none here.
+    /// </summary>
+    private static DoctorCheck CheckTaskModels(string root, DateTimeOffset now)
+    {
+        const string name = "task-models";
+        var snapshot = new InstalledModelsSnapshotStore(root).Read();
+        var seen = snapshot?.CheckedAtUtc.ToUniversalTime();
+        var checkedAt = seen?.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
+        var checkedAtUtc = seen?.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
+        ModelRoutingCatalogDocument catalog;
+        try
+        {
+            catalog = new ModelRoutingCatalogStore(root).Read();
+        }
+        catch (InvalidDataException)
+        {
+            return new DoctorCheck(
+                name,
+                DoctorStatus.Unknown,
+                CliText.TaskModelsCatalogUnreadable,
+                Facts(("result", "catalog_unreadable"), ("checkedAtUtc", checkedAtUtc)));
+        }
+
+        if (snapshot is null)
+        {
+            return new DoctorCheck(
+                name,
+                DoctorStatus.Unknown,
+                CliText.TaskModelsNeverChecked,
+                Facts(("result", "never_checked")));
+        }
+
+        // Nothing that looks like an answer: the list on disk is not one any more.
+        if (snapshot.IsStale(now))
+        {
+            return new DoctorCheck(
+                name,
+                DoctorStatus.Unknown,
+                CliText.TaskModelsStale(
+                    checkedAt!,
+                    (int)InstalledModelsSnapshot.StaleAfter.TotalMinutes),
+                Facts(("result", "stale"), ("checkedAtUtc", checkedAtUtc)));
+        }
+
+        var installed = snapshot.InstalledModels.ToHashSet(StringComparer.Ordinal);
+        var models = catalog.Models.ToDictionary(model => model.Tag, StringComparer.Ordinal);
+        var tasks = catalog.Routes.Where(route => route.Mode == LocalRouteMode.Model).ToArray();
+        var uncovered = tasks
+            .Where(route => !Serving(route).Any(installed.Contains))
+            .ToArray();
+        var (status, result, detail) = uncovered.Length == 0
+            ? (DoctorStatus.Ok, "all_covered", CliText.TaskModelsAllCovered(checkedAt!))
+            : uncovered.Length < tasks.Length
+                ? (DoctorStatus.Warning, "some_uncovered", CliText.TaskModelsSomeUncovered(
+                    uncovered.Length,
+                    tasks.Length,
+                    checkedAt!,
+                    string.Join("; ", uncovered.Select(Offer))))
+                : snapshot.InstalledModels.Count == 0
+                    ? (DoctorStatus.Failed, "none_covered", CliText.TaskModelsNoneInstalled(checkedAt!))
+                    : (DoctorStatus.Failed, "none_covered",
+                        CliText.TaskModelsNoneUsed(snapshot.InstalledModels.Count, checkedAt!));
+        return new DoctorCheck(
+            name,
+            status,
+            detail,
+            Facts(
+                ("result", result),
+                ("checkedAtUtc", checkedAtUtc),
+                ("tasksChecked", tasks.Length),
+                ("tasksWithoutModel", uncovered.Select(route => route.Profile.ToString()).ToArray()),
+                ("installedModels", snapshot.InstalledModels)));
+
+        // The router's order: candidates first, then fallbacks.
+        IEnumerable<string> Enabled(TaskRouteEntry route) =>
+            route.Candidates
+                .Concat(route.Fallbacks)
+                .Distinct(StringComparer.Ordinal)
+                .Where(tag =>
+                    models.TryGetValue(tag, out var model) &&
+                    model.Lifecycle != LocalModelLifecycle.Disabled);
+
+        IEnumerable<string> Serving(TaskRouteEntry route) =>
+            LocalLm.Core.LocalTasks.IsImageProfile(route.Profile)
+                ? Enabled(route).Where(tag => models[tag].SupportsImages)
+                : Enabled(route);
+
+        string Offer(TaskRouteEntry route)
+        {
+            var task = route.Profile.ToString();
+            var serving = Serving(route).ToArray();
+            return serving.Length switch
+            {
+                0 when !Enabled(route).Any() => CliText.TaskModelsNoneEnabled(task),
+                0 => CliText.TaskModelsNoneReadsImages(task),
+                1 => $"{task} ({serving[0]})",
+                _ => $"{task} ({CliText.TaskModelsOneOf(string.Join(", ", serving[..^1]), serving[^1])})",
+            };
         }
     }
 

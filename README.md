@@ -174,13 +174,18 @@ unsaved buffer — and in a shell there is no such buffer, so there is nothing t
 The agent has no use for it in that shape — it gets a report line for every call it makes,
 and `index_status` answers for the index. A person needs the wider picture:
 
-- `localai doctor` — what is wrong with the installation: reachability, models, permissions,
-  paths. Read-only; it starts nothing and repairs nothing.
+- `localai doctor` — what is wrong with the installation: its version and files, the broker and
+  its queue, the model catalog and whether each task has an installed model, the policy files,
+  the last update check, and the repository you are in (or name with `--root`). Read-only; it
+  starts nothing and repairs nothing.
   Each check ends `Ok`, `Warning`, `Unknown` or `Failed`. The verdict is `Failed` if any check
   failed, else `Warning` if any warned, else `Ok`; the exit code is 1 only for `Failed`.
   `Unknown` means this machine holds no trusted, current answer to what the check asks, and it
-  changes neither the verdict nor the exit code. `--json` returns the verdict with the counts
-  `failed`, `warned` and `unknown`; an `Ok` verdict can come with `unknown` above zero.
+  changes neither the verdict nor the exit code. `task-models` takes the installed models from
+  a list the broker records at start, every 15 minutes while it runs, and whenever it picks a
+  model for a task or answers `localai model status`; when that list is more than 30 minutes
+  old, the check is `Unknown`. `--json` returns the verdict with the counts `failed`, `warned`
+  and `unknown`; an `Ok` verdict can come with `unknown` above zero.
 - `localai telemetry` — distinct jobs, attempts, known workflows, and confirmed delivered
   calls. Model/profile tables show attempt outcomes and durations; cloud input/output
   comparisons have separate totals and known/unknown coverage.
