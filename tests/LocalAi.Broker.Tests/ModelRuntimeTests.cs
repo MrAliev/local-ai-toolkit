@@ -246,6 +246,37 @@ public sealed class ModelRuntimeTests
     }
 
     // Shared with the residency-policy tests so both suites drive the same fake transport.
+    /// <summary>
+    /// A trial load that failed for another reason keeps that reason and claims no video-memory
+    /// check (#633): the broker records this message as the job's reason, and clients quote it.
+    /// </summary>
+    [Fact]
+    public async Task A_trial_load_that_failed_for_another_reason_keeps_it_and_claims_no_video_memory_check()
+    {
+        var runtime = new ModelRuntime(new FakeRuntimeTransport(), ModelRoutingCatalog.LoadEmbedded());
+
+        var error = await Assert.ThrowsAsync<ModelPreflightException>(
+            () => runtime.EnsureReadyAsync("qwen3.5:9b", 2048, TestContext.Current.CancellationToken));
+
+        Assert.Equal(ModelExecutionOutcome.TechnicalFailure, error.Outcome);
+        Assert.Contains("Model 'qwen3.5:9b' is not installed.", error.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("VRAM", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_trial_load_whose_unload_also_failed_keeps_both_reasons()
+    {
+        var runtime = new ModelRuntime(
+            new FakeRuntimeTransport { UnloadFailure = new HttpRequestException("Ollama request failed with HTTP 500.") },
+            ModelRoutingCatalog.LoadEmbedded());
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => runtime.EnsureReadyAsync("qwen3.5:9b", 2048, TestContext.Current.CancellationToken));
+
+        Assert.Contains("Model 'qwen3.5:9b' is not installed.", error.Message, StringComparison.Ordinal);
+        Assert.Contains("Ollama request failed with HTTP 500.", error.Message, StringComparison.Ordinal);
+    }
+
     internal sealed class FakeRuntimeTransport : IModelRuntimeTransport
     {
         public IReadOnlyList<string> Installed { get; init; } = [];
@@ -263,6 +294,8 @@ public sealed class ModelRuntimeTests
         public List<string> Unloaded { get; } = [];
 
         public bool RejectEmbeddingGenerationPreflight { get; init; }
+
+        public Exception? UnloadFailure { get; init; }
 
         public Task<IReadOnlyList<string>> ListInstalledAsync(CancellationToken ct) =>
             Task.FromResult(Installed);
@@ -310,6 +343,11 @@ public sealed class ModelRuntimeTests
 
         public Task UnloadAsync(string model, CancellationToken ct)
         {
+            if (UnloadFailure is { } failure)
+            {
+                throw failure;
+            }
+
             Unloaded.Add(model);
             return Task.CompletedTask;
         }
