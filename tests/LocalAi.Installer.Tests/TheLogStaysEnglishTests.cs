@@ -103,6 +103,7 @@ public sealed class TheLogStaysEnglishTests : IDisposable
     [Theory]
     [InlineData(ModelProvisioningPhase.Accepted)]
     [InlineData(ModelProvisioningPhase.Rejected)]
+    [InlineData(ModelProvisioningPhase.TrialLoadFailed)]
     [InlineData(ModelProvisioningPhase.Planned)]
     public void A_verdict_is_not_the_log_s_to_write(ModelProvisioningPhase phase) =>
         Assert.Null(ModelStepWording.LogLine(Step(phase)));

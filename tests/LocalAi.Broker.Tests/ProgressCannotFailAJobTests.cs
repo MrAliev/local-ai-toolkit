@@ -160,8 +160,8 @@ public sealed class ProgressCannotFailAJobTests
         public Task CompleteAsync(Guid jobId, string workerId, Guid leaseId, JsonElement body, CancellationToken cancellationToken = default) =>
             inner.CompleteAsync(jobId, workerId, leaseId, body, cancellationToken);
 
-        public Task FailAsync(Guid jobId, string workerId, Guid leaseId, string failureCode, string? failureReason, CancellationToken cancellationToken = default) =>
-            inner.FailAsync(jobId, workerId, leaseId, failureCode, failureReason, cancellationToken);
+        public Task FailAsync(Guid jobId, string workerId, Guid leaseId, string failureCode, string? failureReason, ModelExecutionOutcome? failureOutcome = null, CancellationToken cancellationToken = default) =>
+            inner.FailAsync(jobId, workerId, leaseId, failureCode, failureReason, failureOutcome, cancellationToken);
 
         public Task CancelAsync(Guid jobId, string workerId, Guid leaseId, CancellationToken cancellationToken = default) =>
             inner.CancelAsync(jobId, workerId, leaseId, cancellationToken);
@@ -188,8 +188,8 @@ public sealed class ProgressCannotFailAJobTests
         public Task CompleteAsync(Guid jobId, string workerId, Guid leaseId, JsonElement body, CancellationToken cancellationToken = default) =>
             inner.CompleteAsync(jobId, workerId, leaseId, body, cancellationToken);
 
-        public Task FailAsync(Guid jobId, string workerId, Guid leaseId, string failureCode, string? failureReason, CancellationToken cancellationToken = default) =>
-            inner.FailAsync(jobId, workerId, leaseId, failureCode, failureReason, cancellationToken);
+        public Task FailAsync(Guid jobId, string workerId, Guid leaseId, string failureCode, string? failureReason, ModelExecutionOutcome? failureOutcome = null, CancellationToken cancellationToken = default) =>
+            inner.FailAsync(jobId, workerId, leaseId, failureCode, failureReason, failureOutcome, cancellationToken);
 
         public Task CancelAsync(Guid jobId, string workerId, Guid leaseId, CancellationToken cancellationToken = default) =>
             inner.CancelAsync(jobId, workerId, leaseId, cancellationToken);
