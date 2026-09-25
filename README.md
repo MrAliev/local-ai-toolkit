@@ -176,6 +176,11 @@ and `index_status` answers for the index. A person needs the wider picture:
 
 - `localai doctor` — what is wrong with the installation: reachability, models, permissions,
   paths. Read-only; it starts nothing and repairs nothing.
+  Each check ends `Ok`, `Warning`, `Unknown` or `Failed`. The verdict is `Failed` if any check
+  failed, else `Warning` if any warned, else `Ok`; the exit code is 1 only for `Failed`.
+  `Unknown` means this machine holds no trusted, current answer to what the check asks, and it
+  changes neither the verdict nor the exit code. `--json` returns the verdict with the counts
+  `failed`, `warned` and `unknown`; an `Ok` verdict can come with `unknown` above zero.
 - `localai telemetry` — distinct jobs, attempts, known workflows, and confirmed delivered
   calls. Model/profile tables show attempt outcomes and durations; cloud input/output
   comparisons have separate totals and known/unknown coverage.

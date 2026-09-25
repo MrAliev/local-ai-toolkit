@@ -200,8 +200,11 @@ public static class CliText
     public static string UpdateUpToDate(string? installed, string? checkedAt) =>
         Catalogue.Format(nameof(UpdateUpToDate), installed, checkedAt);
 
-    public static string UpdateUnknownUnavailable(string? triedAt) =>
-        Catalogue.Format(nameof(UpdateUnknownUnavailable), triedAt);
+    public static string UpdateUnknownUnavailable(string? triedAt, string reason) =>
+        Catalogue.Format(nameof(UpdateUnknownUnavailable), triedAt, reason);
+
+    public static string UpdateStale(string? installed, string? checkedAt) =>
+        Catalogue.Format(nameof(UpdateStale), installed, checkedAt);
 
     public static string UpdateIncomparable(string? latest) =>
         Catalogue.Format(nameof(UpdateIncomparable), latest);
@@ -484,6 +487,15 @@ public static class CliText
         Catalogue.Format(nameof(SummaryNoProblemsWithNotes), warned);
 
     public static string SummaryNoProblems => Catalogue.Get(nameof(SummaryNoProblems));
+
+    public static string SummaryProblemsUnanswered(int failed, int warned, int unknown) =>
+        Catalogue.Format(nameof(SummaryProblemsUnanswered), failed, warned, unknown);
+
+    public static string SummaryNoProblemsWithNotesUnanswered(int warned, int unknown) =>
+        Catalogue.Format(nameof(SummaryNoProblemsWithNotesUnanswered), warned, unknown);
+
+    public static string SummaryNoProblemsUnanswered(int unknown) =>
+        Catalogue.Format(nameof(SummaryNoProblemsUnanswered), unknown);
 
     public static string JsonNotSupported => Catalogue.Get(nameof(JsonNotSupported));
 

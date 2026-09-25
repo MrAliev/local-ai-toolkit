@@ -153,7 +153,8 @@ public static class PolicyCommand
                 state.LatestVersion,
                 state.CheckedAtUtc?.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)),
             UpdateCheckStatus.Unavailable => CliText.UpdateUnknownUnavailable(
-                state.CheckedAtUtc?.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)),
+                state.CheckedAtUtc?.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture),
+                UpdateCheckFailure.Describe(state.FailureReason)),
             _ => CliText.UpdateNeverChecked,
         };
 
