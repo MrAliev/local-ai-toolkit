@@ -728,8 +728,10 @@ Evidence is bounded to 16,384 distinct source units per call; longer streams rep
 lai localai triage build.log --question "why did the build fail"
 ```
 
-Reads output of any length: it measures free video memory and works through the file in
-bounded pieces. It takes a stream too, so the log need not be saved at all:
+Reads a log file of any length: it trial-loads the models configured for log triage, largest
+context first, until the broker accepts a load (by default, only when the model loads entirely
+into video memory), and works through the file in pieces sized to the accepted context.
+It takes a stream too, so the log need not be saved at all:
 
 ```powershell
 dotnet build 2>&1 | lai localai triage -
