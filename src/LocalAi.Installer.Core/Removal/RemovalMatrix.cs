@@ -333,5 +333,7 @@ public static class RemovalMatrix
         // What the last update check learned. Rebuilt by the next one, and meaningless without
         // the installation it describes.
         "update-state.json",
+        // What the broker last saw installed. Rebuilt by the next listing.
+        InstalledModelsSnapshot.FileName,
     ];
 }

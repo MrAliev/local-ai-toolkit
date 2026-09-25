@@ -609,6 +609,46 @@
   <data name="SummaryProblemsUnanswered" xml:space="preserve">
     <value>Проблем {0}, стоит прочитать {1}, без ответа {2}.</value>
   </data>
+  <data name="TaskModelsNeverChecked" xml:space="preserve">
+    <value>неизвестно — брокер ещё не записал, какие модели установлены. Записать сейчас (брокер запустится, если не запущен): localai model status</value>
+    <comment>The command is named because doctor itself starts nothing; the clause about the broker says why running it is not as harmless as doctor. The Russian ends on the command, as UpdateCheckDisabled does.</comment>
+  </data>
+  <data name="TaskModelsStale" xml:space="preserve">
+    <value>неизвестно — брокер в последний раз записал установленные модели {0} UTC, больше {1} мин назад. Записать сейчас (брокер запустится, если не запущен): localai model status</value>
+    <comment>{0} is yyyy-MM-dd HH:mm, invariant. {1} is InstalledModelsSnapshot.StaleAfter in minutes, the figure the check judges by; never written into the text by hand. «мин» as BrokerSilent has it, so the Russian needs no agreement.</comment>
+  </data>
+  <data name="TaskModelsAllCovered" xml:space="preserve">
+    <value>у всех задач, которым нужна модель, она установлена (проверено {0} UTC)</value>
+    <comment>Installed, never ready: a covered task may still fail its trial load.</comment>
+  </data>
+  <data name="TaskModelsSomeUncovered" xml:space="preserve">
+    <value>задач, для которых не установлено ни одной модели: {0} из {1} (проверено {2} UTC) — {3}</value>
+    <comment>{0} tasks without a model, {1} tasks checked, {2} the time, {3} one entry per task — «Task (model)», «Task (TaskModelsOneOf)», TaskModelsNoneEnabled or TaskModelsNoneReadsImages — joined by «; » in the catalog's route order.</comment>
+  </data>
+  <data name="TaskModelsOneOf" xml:space="preserve">
+    <value>{0} или {1}</value>
+    <comment>{0} every model but the last, joined by «, »; {1} the last. Any one of them would give the task a model.</comment>
+  </data>
+  <data name="TaskModelsNoneEnabled" xml:space="preserve">
+    <value>{0} (в каталоге нет включённых моделей)</value>
+    <comment>{0} is a task profile name, an identifier.</comment>
+  </data>
+  <data name="TaskModelsNoneReadsImages" xml:space="preserve">
+    <value>{0} (в каталоге нет включённых моделей, читающих изображения)</value>
+    <comment>{0} is an image task's profile name. Its models are enabled, but none can read the images the task sends, so none is offered.</comment>
+  </data>
+  <data name="TaskModelsNoneInstalled" xml:space="preserve">
+    <value>ни у одной задачи нет установленной модели: Ollama вернула пустой список установленных моделей (проверено {0} UTC)</value>
+    <comment>Says what was seen, not why: the check cannot tell a wrong model directory from an empty one.</comment>
+  </data>
+  <data name="TaskModelsNoneUsed" xml:space="preserve">
+    <value>ни у одной задачи нет установленной модели: ни одна из моделей в списке Ollama ({0}) не используется ни одной задачей (проверено {1} UTC)</value>
+    <comment>{0} how many models Ollama listed, {1} the time.</comment>
+  </data>
+  <data name="TaskModelsCatalogUnreadable" xml:space="preserve">
+    <value>неизвестно — без читаемого каталога моделей нет списка задач для проверки; см. model-catalog</value>
+    <comment>model-catalog is the name of the report line that fails for this, an identifier.</comment>
+  </data>
   <data name="SyncBusy" xml:space="preserve">
     <value>Этот репозиторий уже собирает другая синхронизация. Запустите синхронизацию снова, когда она завершится. Repository: {0}</value>
     <comment>The hole is last because a 64-character repository id in the middle pushes the actionable clause past the wrap in a hook log. Repository: stays English, matching this command's own SYNCED repository= and REFUSED repository=.</comment>
