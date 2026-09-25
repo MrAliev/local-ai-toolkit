@@ -6,7 +6,7 @@
       "Tag": "qwen2.5-coder:14b",
       "Source": "ollama",
       "Lifecycle": "Established",
-      "InstallPolicy": "Existing",
+      "InstallPolicy": "Recommended",
       "Capabilities": [ "Text", "Code" ],
       "ContextTokens": [ 2048, 4096, 8192, 16384, 32768 ],
       "SupportsImages": false,
@@ -16,7 +16,7 @@
       "Tag": "qwen3-vl:8b-instruct-q8_0",
       "Source": "ollama",
       "Lifecycle": "Established",
-      "InstallPolicy": "Existing",
+      "InstallPolicy": "Recommended",
       "Capabilities": [ "Text", "Vision", "Ocr" ],
       "ContextTokens": [ 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144 ],
       "SupportsImages": true,
@@ -26,7 +26,7 @@
       "Tag": "qwen3-embedding:8b-q8_0",
       "Source": "ollama",
       "Lifecycle": "Established",
-      "InstallPolicy": "Existing",
+      "InstallPolicy": "Recommended",
       "Capabilities": [ "Embedding" ],
       "ContextTokens": [ 2048, 4096, 8192, 16384, 32768 ],
       "SupportsImages": false,
@@ -36,7 +36,7 @@
       "Tag": "gpt-oss:20b",
       "Source": "ollama",
       "Lifecycle": "Established",
-      "InstallPolicy": "Existing",
+      "InstallPolicy": "Recommended",
       "Capabilities": [ "Text", "Reasoning" ],
       "ContextTokens": [ 2048, 4096, 8192, 16384, 32768, 65536, 131072 ],
       "SupportsImages": false,
@@ -46,7 +46,7 @@
       "Tag": "qwen3.5:9b",
       "Source": "ollama",
       "Lifecycle": "Established",
-      "InstallPolicy": "Existing",
+      "InstallPolicy": "Recommended",
       "Capabilities": [ "Text", "Translation", "Vision", "Reasoning" ],
       "ContextTokens": [ 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144 ],
       "SupportsImages": true,
@@ -196,5 +196,13 @@
       "DefaultDuration": "Long"
     }
   ],
-  "MaintenanceAllowlist": [ "translategemma:12b", "glm-ocr:bf16" ]
+  "MaintenanceAllowlist": [
+    "qwen2.5-coder:14b",
+    "qwen3-vl:8b-instruct-q8_0",
+    "qwen3-embedding:8b-q8_0",
+    "gpt-oss:20b",
+    "qwen3.5:9b",
+    "translategemma:12b",
+    "glm-ocr:bf16"
+  ]
 }

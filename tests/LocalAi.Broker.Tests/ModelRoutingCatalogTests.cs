@@ -113,6 +113,23 @@ public sealed class ModelRoutingCatalogTests
     }
 
     /// <summary>
+    /// The broker downloads only what the allowlist names, and the installer and
+    /// local_models_sync download through it: a task model left off had no install route (#633).
+    /// </summary>
+    [Fact]
+    public void Every_model_a_task_runs_on_can_be_installed_through_the_broker()
+    {
+        var catalog = ModelRoutingCatalog.LoadEmbedded();
+
+        Assert.Empty(
+            catalog.Routes
+                .SelectMany(route => route.Candidates.Concat(route.Fallbacks))
+                .Distinct(StringComparer.Ordinal)
+                .Where(tag => !catalog.IsMaintenanceAllowed(tag))
+                .Order(StringComparer.Ordinal));
+    }
+
+    /// <summary>
     /// qwen3.5:9b thinks by default, and on the small context tiers routing favours the
     /// thinking alone exhausts the window: a full `thinking`, an empty `content`, a technical
     /// failure the fallback absorbs — every one recorded in a month on the reference machine.

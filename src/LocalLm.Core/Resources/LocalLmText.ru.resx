@@ -130,8 +130,11 @@
   <data name="NoModelAndCatalogNamesNone" xml:space="preserve">
     <value>Локальных моделей для задачи {0} не установлено, и каталог маршрутизации ни одной для неё не называет. Посмотреть, что установлено: local_models_status.</value>
   </data>
-  <data name="NoModelInstalled" xml:space="preserve">
-    <value>Локальных моделей для задачи {0} не установлено. Задача выполняется на моделях: {1}.</value>
+  <data name="NoModelCatalogUnreadable" xml:space="preserve">
+    <value>Локальных моделей для задачи {0} не установлено, а каталог моделей не читается, поэтому неизвестно, на каких моделях выполняется задача; почему, показывает строка model-catalog в localai doctor.</value>
+  </data>
+  <data name="NoModelInstalledNotDownloadable" xml:space="preserve">
+    <value>Локальных моделей для задачи {0} не установлено. Задача выполняется на моделях: {1}, но используемый каталог моделей не разрешает брокеру скачать ни одну из них; какой это каталог, показывает строка model-catalog в localai doctor.</value>
   </data>
   <data name="NoModelInstalledWithInstall" xml:space="preserve">
     <value>Локальных моделей для задачи {0} не установлено. Задача выполняется на моделях: {1}. Установить одну из них через брокер: localai-launcher.exe run localai model pull --model {2} --catalog-version {3}</value>
