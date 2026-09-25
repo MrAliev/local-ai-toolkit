@@ -55,16 +55,19 @@ public sealed class DoctorReportFollowsTheReaderTests : IDisposable
     }
 
     /// <summary>
-    /// The skeleton. Every line still starts with one of three four-character markers, and every
+    /// The skeleton. Every line still starts with one of four four-character markers, and every
     /// check still answers to the name it always had.
     /// </summary>
     [Fact]
     public void The_markers_and_the_check_names_do_not_move()
     {
         using var reading = TestCulture.Reading("ru");
+        new LocalAi.Contracts.UpdateCheckPolicyStore(root).Write(
+            LocalAi.Contracts.UpdateCheckPolicy.Default with { Enabled = true });
 
         var rendered = DoctorCommand.Render(DoctorCommand.Inspect(root));
 
+        Assert.Contains("unkn  update", rendered, StringComparison.Ordinal);
         foreach (var line in rendered
                      .Split('\n')
                      .Select(line => line.TrimEnd('\r'))
@@ -73,6 +76,7 @@ public sealed class DoctorReportFollowsTheReaderTests : IDisposable
             Assert.True(
                 line.StartsWith("ok  ", StringComparison.Ordinal) ||
                 line.StartsWith("note", StringComparison.Ordinal) ||
+                line.StartsWith("unkn", StringComparison.Ordinal) ||
                 line.StartsWith("FAIL", StringComparison.Ordinal) ||
                 line.StartsWith("Проблем", StringComparison.Ordinal),
                 $"A report line begins with something that is not a marker: {line}");
@@ -113,6 +117,36 @@ public sealed class DoctorReportFollowsTheReaderTests : IDisposable
             "localai policy set --update-check on",
             rendered,
             StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("en", "", "No problems.")]
+    [InlineData("en", "U", "No problems. 1 unanswered.")]
+    [InlineData("en", "WU", "No problems. 1 worth reading, 1 unanswered.")]
+    [InlineData("en", "FWU", "1 problem(s), 1 worth reading, 1 unanswered.")]
+    [InlineData("en", "F", "1 problem(s), 0 worth reading.")]
+    [InlineData("ru", "U", "Проблем нет. Без ответа 1.")]
+    [InlineData("ru", "WU", "Проблем нет. Стоит прочитать 1, без ответа 1.")]
+    [InlineData("ru", "FWU", "Проблем 1, стоит прочитать 1, без ответа 1.")]
+    public void The_summary_counts_unanswered_checks_only_when_there_are_some(string language, string statuses, string summary)
+    {
+        using var reading = TestCulture.Reading(language);
+        var checks = new List<DoctorCheck> { new("ok", DoctorStatus.Ok, "fine") };
+        foreach (var status in statuses)
+        {
+            checks.Add(status switch
+            {
+                'F' => new DoctorCheck("failed", DoctorStatus.Failed, "broken"),
+                'W' => new DoctorCheck("warned", DoctorStatus.Warning, "read me"),
+                _ => new DoctorCheck("unanswered", DoctorStatus.Unknown, "no answer"),
+            });
+        }
+
+        var rendered = DoctorCommand.Render(new DoctorReport(checks)).TrimEnd();
+
+        Assert.EndsWith(Environment.NewLine + summary, rendered, StringComparison.Ordinal);
+        if (statuses.Contains('U'))
+            Assert.Contains("unkn  unanswered", rendered, StringComparison.Ordinal);
     }
 
     [Fact]

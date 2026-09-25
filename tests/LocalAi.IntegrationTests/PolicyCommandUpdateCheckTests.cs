@@ -180,9 +180,25 @@ public sealed class PolicyCommandUpdateCheckTests : IDisposable
 
         Assert.Equal(0, exit);
         Assert.Contains(
-            "unknown; the last check produced nothing to believe",
+            "latest verified release: unknown; the last check produced nothing to believe " +
+            "(tried 2026-08-31 09:30 UTC, reason: not_recorded)",
             output.ToString(),
             StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Show_names_why_the_last_check_produced_nothing()
+    {
+        new UpdateCheckStateStore(root).Write(new UpdateCheckState(
+            1,
+            UpdateCheckStatus.Unavailable,
+            new DateTimeOffset(2026, 8, 31, 9, 30, 0, TimeSpan.Zero),
+            null,
+            null) { FailureReason = "network" });
+
+        Run("show");
+
+        Assert.Contains("(tried 2026-08-31 09:30 UTC, reason: network)", output.ToString(), StringComparison.Ordinal);
     }
 
     private int Run(params string[] args) =>

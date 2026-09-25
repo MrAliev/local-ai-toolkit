@@ -130,6 +130,7 @@ public sealed class UpdateCheckServiceTests : IDisposable
         Assert.True(checked_);
         Assert.Equal(UpdateCheckStatus.Unavailable, State().Status);
         Assert.Equal(Noon, State().CheckedAtUtc);
+        Assert.Equal("unexpected", State().FailureReason);
     }
 
     [Fact]

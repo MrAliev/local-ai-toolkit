@@ -65,6 +65,7 @@ public sealed class UpdateCheckProbeTests : IDisposable
 
         Assert.Equal(UpdateCheckStatus.Unavailable, state.Status);
         Assert.Null(state.LatestVersion);
+        Assert.Equal("verification_failed", state.FailureReason);
     }
 
     [Fact]
@@ -79,6 +80,7 @@ public sealed class UpdateCheckProbeTests : IDisposable
         var state = await probe.CheckAsync(Now, TestContext.Current.CancellationToken);
 
         Assert.Equal(UpdateCheckStatus.Unavailable, state.Status);
+        Assert.Equal("verification_failed", state.FailureReason);
     }
 
     [Fact]
@@ -90,6 +92,71 @@ public sealed class UpdateCheckProbeTests : IDisposable
 
         Assert.Equal(UpdateCheckStatus.Unavailable, state.Status);
         Assert.Equal(Now, state.CheckedAtUtc);
+        Assert.Equal("network", state.FailureReason);
+    }
+
+    [Fact]
+    public async Task A_request_that_timed_out_is_recorded_as_a_timeout()
+    {
+        using var probe = Probe(new ThrowingHandler(new TaskCanceledException("timed out")));
+
+        var state = await probe.CheckAsync(Now, TestContext.Current.CancellationToken);
+
+        Assert.Equal(UpdateCheckStatus.Unavailable, state.Status);
+        Assert.Equal("timeout", state.FailureReason);
+    }
+
+    [Fact]
+    public async Task A_release_answer_that_does_not_parse_is_recorded_as_invalid()
+    {
+        var handler = new RoutingHandler();
+        handler.Map(
+            ReleaseAssets.LatestRelease(Repository),
+            _ => new HttpResponseMessage(HttpStatusCode.OK));
+        handler.Map(ReleaseAssets.LatestReleaseApi(Repository), _ => Json("{"));
+        using var probe = Probe(handler);
+
+        var state = await probe.CheckAsync(Now, TestContext.Current.CancellationToken);
+
+        Assert.Equal(UpdateCheckStatus.Unavailable, state.Status);
+        Assert.Equal("invalid_response", state.FailureReason);
+    }
+
+    [Fact]
+    public async Task A_release_answer_without_a_tag_is_recorded_as_invalid_rather_than_as_no_release()
+    {
+        var handler = new RoutingHandler();
+        handler.Map(
+            ReleaseAssets.LatestRelease(Repository),
+            _ => new HttpResponseMessage(HttpStatusCode.OK));
+        handler.Map(ReleaseAssets.LatestReleaseApi(Repository), _ => Json("{}"));
+        using var probe = Probe(handler);
+
+        var state = await probe.CheckAsync(Now, TestContext.Current.CancellationToken);
+
+        Assert.Equal("invalid_response", state.FailureReason);
+    }
+
+    /// <summary>
+    /// A rate limit or a refusal is not an answer about releases: printing "no_release" for a
+    /// 403 would tell the reader something the lookup never learned.
+    /// </summary>
+    [Theory]
+    [InlineData(HttpStatusCode.Forbidden)]
+    [InlineData(HttpStatusCode.TooManyRequests)]
+    [InlineData(HttpStatusCode.InternalServerError)]
+    public async Task A_refused_release_lookup_is_not_reported_as_a_missing_release(HttpStatusCode status)
+    {
+        var handler = new RoutingHandler();
+        handler.Map(
+            ReleaseAssets.LatestRelease(Repository),
+            _ => new HttpResponseMessage(HttpStatusCode.OK));
+        handler.Map(ReleaseAssets.LatestReleaseApi(Repository), _ => new HttpResponseMessage(status));
+        using var probe = Probe(handler);
+
+        var state = await probe.CheckAsync(Now, TestContext.Current.CancellationToken);
+
+        Assert.Equal("unexpected_status", state.FailureReason);
     }
 
     [Fact]
@@ -107,6 +174,7 @@ public sealed class UpdateCheckProbeTests : IDisposable
         var state = await probe.CheckAsync(Now, TestContext.Current.CancellationToken);
 
         Assert.Equal(UpdateCheckStatus.Unavailable, state.Status);
+        Assert.Equal("no_release", state.FailureReason);
     }
 
     /// <summary>
@@ -165,6 +233,7 @@ public sealed class UpdateCheckProbeTests : IDisposable
         var state = await probe.CheckAsync(Now, TestContext.Current.CancellationToken);
 
         Assert.Equal(UpdateCheckStatus.Unavailable, state.Status);
+        Assert.Equal("assets_unavailable", state.FailureReason);
         Assert.DoesNotContain(
             handler.Requested,
             uri => uri.Scheme == Uri.UriSchemeHttp);
@@ -187,6 +256,7 @@ public sealed class UpdateCheckProbeTests : IDisposable
         var state = await probe.CheckAsync(Now, TestContext.Current.CancellationToken);
 
         Assert.Equal(UpdateCheckStatus.Unavailable, state.Status);
+        Assert.Equal("assets_unavailable", state.FailureReason);
     }
 
     /// <summary>
@@ -211,6 +281,7 @@ public sealed class UpdateCheckProbeTests : IDisposable
         var state = await probe.CheckAsync(Now, TestContext.Current.CancellationToken);
 
         Assert.Equal(UpdateCheckStatus.Unavailable, state.Status);
+        Assert.Equal("assets_unavailable", state.FailureReason);
     }
 
     /// <summary>

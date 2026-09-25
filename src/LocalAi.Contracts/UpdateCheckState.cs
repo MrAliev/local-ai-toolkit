@@ -18,8 +18,9 @@ public enum UpdateCheckStatus
     /// <summary>
     /// The last attempt produced no answer worth believing — the network, or a signature that
     /// did not verify. Deliberately the same outcome for both: a manifest nobody signed says
-    /// nothing about what the newest release is, and the difference belongs in a log rather
-    /// than in a banner urging somebody to act.
+    /// nothing about what the newest release is, and the difference is kept as
+    /// <see cref="UpdateCheckState.FailureReason"/> for diagnosis, never in a banner urging
+    /// somebody to act.
     /// </summary>
     Unavailable,
 }
@@ -49,6 +50,9 @@ public sealed record UpdateCheckState(
     public const string FileName = "update-state.json";
 
     public static UpdateCheckState Unknown { get; } = new(1, UpdateCheckStatus.Unknown, null, null, null);
+
+    /// <summary>Why the last attempt produced nothing trusted: one of <see cref="UpdateCheckFailure"/>.</summary>
+    public string? FailureReason { get; init; }
 
     /// <summary>
     /// Whether <paramref name="installedVersion"/> is behind what was last verified. Compared
@@ -132,6 +136,32 @@ public sealed class UpdateCheckStateStore
 }
 
 /// <summary>
+/// Why an update check produced nothing to believe, as a bounded code. It names the kind of
+/// failure, never what the other side answered.
+/// </summary>
+public static class UpdateCheckFailure
+{
+    public const string Network = "network";
+    public const string Timeout = "timeout";
+    public const string NoRelease = "no_release";
+    public const string UnexpectedStatus = "unexpected_status";
+    public const string AssetsUnavailable = "assets_unavailable";
+    public const string InvalidResponse = "invalid_response";
+    public const string VerificationFailed = "verification_failed";
+    public const string Unexpected = "unexpected";
+
+    private static readonly HashSet<string> Known =
+    [
+        Network, Timeout, NoRelease, UnexpectedStatus, AssetsUnavailable, InvalidResponse,
+        VerificationFailed, Unexpected,
+    ];
+
+    /// <summary>The code to show. A record kept before reasons existed has none.</summary>
+    public static string Describe(string? reason) =>
+        reason is null ? "not_recorded" : Known.Contains(reason) ? reason : "unrecognized";
+}
+
+/// <summary>
 /// When the next check is allowed. A pure function of the policy, the last result and the
 /// clock, so the rule can be tested without a network, a broker or a wait.
 /// </summary>
@@ -173,6 +203,15 @@ public static class UpdateCheckSchedule
         ArgumentNullException.ThrowIfNull(policy);
         var interval = TimeSpan.FromHours(policy.IntervalHours);
         return checkedAtUtc + interval + (interval * JitterFraction * Offset(seed));
+    }
+
+    /// <summary>Older than two intervals: well past the jitter a working check allows.</summary>
+    public static bool IsStale(UpdateCheckPolicy policy, UpdateCheckState state, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(policy);
+        ArgumentNullException.ThrowIfNull(state);
+        return state.CheckedAtUtc is { } checkedAt &&
+            now - checkedAt > TimeSpan.FromHours(policy.IntervalHours * 2.0);
     }
 
     /// <summary>A stable number in [0, 1) for this machine.</summary>
