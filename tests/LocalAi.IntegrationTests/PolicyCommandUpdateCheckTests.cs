@@ -87,6 +87,25 @@ public sealed class PolicyCommandUpdateCheckTests : IDisposable
             StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// The broker rereads the update policy on every pass, so switching the check needs no
+    /// restart, and a note saying otherwise would be untrue here.
+    /// </summary>
+    [Theory]
+    [InlineData("on")]
+    [InlineData("off")]
+    public void Switching_the_check_claims_no_broker_restart(string value)
+    {
+        using var reading = TestCulture.Reading("en");
+
+        Assert.Equal(0, Run("set", "--update-check", value));
+
+        Assert.DoesNotContain(
+            LocalAi.Cli.Resources.CliText.PolicyRestartNote,
+            output.ToString(),
+            StringComparison.Ordinal);
+    }
+
     [Fact]
     public void Switching_it_off_again_says_nothing_more_will_be_fetched()
     {
