@@ -831,6 +831,7 @@ public sealed partial class LocalTasksTests
 
         var refusal = await TriageRefusal(client);
 
+        Assert.StartsWith(LocalLm.Core.Resources.LocalLmText.TriageRefusal + " ", refusal, StringComparison.Ordinal);
         Assert.Contains("qwen2.5-coder:14b", refusal, StringComparison.Ordinal);
         Assert.Contains("qwen3.5:9b", refusal, StringComparison.Ordinal);
         Assert.DoesNotContain("VRAM", refusal, StringComparison.OrdinalIgnoreCase);
@@ -884,8 +885,15 @@ public sealed partial class LocalTasksTests
 
         var refusal = await TriageRefusal(client);
 
-        Assert.Contains("qwen2.5-coder:14b/32768", refusal, StringComparison.Ordinal);
-        Assert.Contains("qwen3.5:9b/2048", refusal, StringComparison.Ordinal);
+        var catalog = ModelRoutingCatalogResource.LoadDocument();
+        var postponed = string.Join(", ", new[] { "qwen2.5-coder:14b", "qwen3.5:9b" }.SelectMany(tag =>
+            catalog.Models.Single(model => model.Tag == tag).ContextTokens
+                .OrderDescending()
+                .Select(context => $"{tag}/{context}")));
+        Assert.Contains(
+            LocalLm.Core.Resources.LocalLmText.TriageRefusalPostponed(postponed),
+            refusal,
+            StringComparison.Ordinal);
         Assert.DoesNotContain(videoMemory, refusal, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(client.Preflights);
     }
