@@ -546,7 +546,7 @@ public sealed class BrokerModelInstaller : IDisposable
                     continue;
                 }
 
-                var residencyDegraded = !proof.FullyResident || proof.SizeVramBytes != proof.SizeBytes;
+                var residencyDegraded = !proof.FullyResident || proof.SizeVramBytes < proof.SizeBytes;
                 results.Add(new BrokerModelInstallResult(
                     action.ActionId,
                     action.Model,
@@ -1279,7 +1279,7 @@ public sealed class BrokerModelInstaller : IDisposable
         readResidencyPolicy() switch
         {
             ModelResidencyPolicy.RequireFullVram =>
-                proof.FullyResident && proof.SizeVramBytes == proof.SizeBytes,
+                proof.FullyResident && proof.SizeVramBytes >= proof.SizeBytes,
             ModelResidencyPolicy.AllowPartialOffload => proof.SizeVramBytes > 0,
             ModelResidencyPolicy.AllowCpu => true,
             _ => false,

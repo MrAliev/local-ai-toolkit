@@ -66,7 +66,7 @@ public sealed class ModelControlService(
                         process.SizeBytes,
                         process.SizeVramBytes,
                         process.SizeBytes > 0 &&
-                        process.SizeVramBytes == process.SizeBytes,
+                        process.SizeVramBytes >= process.SizeBytes,
                         process.ExpiresAtUtc))
                     .ToArray()),
             Array.AsReadOnly(
