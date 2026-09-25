@@ -386,7 +386,8 @@ public sealed class ModelRuntime : IModelRuntime
                 !cancellationToken.IsCancellationRequested)
             {
                 throw new InvalidOperationException(
-                    $"Model '{model}' failed preflight and could not be unloaded.",
+                    $"Trial load of '{model}/{contextTokens}' failed: {exception.Message} " +
+                    $"Unloading the model afterwards failed: {unloadException.Message}",
                     new AggregateException(exception, unloadException));
             }
 
@@ -399,7 +400,7 @@ public sealed class ModelRuntime : IModelRuntime
                 model,
                 contextTokens,
                 LocalAi.Contracts.ModelExecutionOutcome.TechnicalFailure,
-                $"Model '{model}' failed full-VRAM preflight and was unloaded.",
+                $"Trial load of '{model}/{contextTokens}' failed: {exception.Message}",
                 exception);
         }
     }
