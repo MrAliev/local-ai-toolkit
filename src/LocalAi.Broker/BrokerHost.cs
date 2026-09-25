@@ -462,6 +462,7 @@ public sealed class BrokerHost
                 lease.LeaseId,
                 executionException.GetType().Name,
                 executionException.Message,
+                (executionException as ModelPreflightException)?.Outcome,
                 CancellationToken.None);
         }
         // One block, because a lost lease needs nothing of its own here and the branch that

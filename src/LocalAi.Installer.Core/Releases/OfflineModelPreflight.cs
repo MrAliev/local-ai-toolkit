@@ -51,9 +51,14 @@ public sealed partial class OfflineBundleApplication
             if (process.ExitCode == 3)
             {
                 var rejected = Parse<ModelPreflightCommandRejected>(process);
-                return rejected.SchemaVersion == 1 && !rejected.Accepted && rejected.Operation == "preflight" &&
-                    rejected.Model == selection.Model && rejected.ContextTokens == selection.ContextTokens && rejected.CatalogVersion == plan.CatalogVersion &&
-                    rejected.Code == "residency_rejected" ? Result("failed", "residency-rejected", 3) : Result("failed", "preflight-response-invalid", 3);
+                var named = rejected.SchemaVersion == 1 && !rejected.Accepted && rejected.Operation == "preflight" &&
+                    rejected.Model == selection.Model && rejected.ContextTokens == selection.ContextTokens && rejected.CatalogVersion == plan.CatalogVersion;
+                return !named ? Result("failed", "preflight-response-invalid", 3) : rejected.Code switch
+                {
+                    "residency_rejected" => Result("failed", "residency-rejected", 3),
+                    "trial_load_failed" => Result("failed", "trial-load-failed", 3),
+                    _ => Result("failed", "preflight-response-invalid", 3),
+                };
             }
             if (process.ExitCode != 0) return Result("failed", "broker-preflight-failed", process.ExitCode);
             var proof = Parse<ModelPreflightCommandSuccess>(process);

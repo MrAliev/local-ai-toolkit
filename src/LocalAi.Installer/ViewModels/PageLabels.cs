@@ -299,6 +299,11 @@ public static class PageLabels
         "Smaller options that fit: {0}",
         "Помещаются варианты меньше: {0}");
 
+    /// <summary>The phrase the run showed as it happened; the code stays in the log line.</summary>
+    public static string ModelTrialLoadFailed => InstallerCulture.Pick(
+        "trial load failed",
+        "пробная загрузка не удалась");
+
     /// <summary><c>{0}</c> is a status token from the run, never translated.</summary>
     public static string ModelFailed => InstallerCulture.Pick(
         "failed ({0})",

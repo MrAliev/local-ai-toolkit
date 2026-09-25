@@ -364,12 +364,14 @@ public sealed class DurableQueue : ISelectableBrokerQueue
     /// the caller: this is a durable file, and the caller is not always the one transport that
     /// already bounds and redacts what a backend said.
     /// </param>
+    /// <param name="failureOutcome">What a failed trial load measured, or null for any other failure.</param>
     public Task FailAsync(
         Guid jobId,
         string workerId,
         Guid leaseId,
         string failureCode,
         string? failureReason,
+        ModelExecutionOutcome? failureOutcome = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(failureCode);
@@ -378,11 +380,12 @@ public sealed class DurableQueue : ISelectableBrokerQueue
         var entry = RequireLease(jobId, workerId, leaseId);
         var now = _timeProvider.GetUtcNow();
         EnsureLeaseIsCurrent(entry.State, now);
-        if (Bound(failureReason) is { } reason)
+        var reason = Bound(failureReason);
+        if (reason is not null || failureOutcome is not null)
         {
             AtomicWriteJson(
                 Path.Combine(entry.Directory, FailureFileName),
-                new JobFailure(1, jobId, now, reason));
+                new JobFailure(1, jobId, now, reason) { Outcome = failureOutcome });
         }
 
         WriteState(entry.Directory, ToTerminal(entry.State, LocalJobState.Failed, now, failureCode));
@@ -397,7 +400,7 @@ public sealed class DurableQueue : ISelectableBrokerQueue
                 ? failureReason
                 : failureReason[..MaximumFailureReasonCharacters];
 
-    private static string? ReadFailureReason(JobEntry entry)
+    private static JobFailure? ReadFailure(JobEntry entry)
     {
         if (entry.State.State != LocalJobState.Failed)
         {
@@ -414,13 +417,14 @@ public sealed class DurableQueue : ISelectableBrokerQueue
         {
             var failure = JsonSerializer.Deserialize<JobFailure>(File.ReadAllText(path), JsonOptions);
             return failure?.SchemaVersion == 1 && failure.JobId == entry.State.JobId
-                ? failure.Reason
+                ? failure
                 : null;
         }
         catch (Exception exception) when (exception is JsonException or IOException)
         {
-            // The reason is an explanation, not a fact the caller acts on. A file that cannot be
-            // read must not turn a job that plainly failed into a job that cannot be read at all.
+            // A file that cannot be read must not turn a job that plainly failed into a job that
+            // cannot be read at all. Read as saying nothing, it claims no outcome either, and a
+            // caller deciding on one then claims no measurement.
             return null;
         }
     }
@@ -502,8 +506,9 @@ public sealed class DurableQueue : ISelectableBrokerQueue
                 throw new InvalidDataException("The polled job metadata is invalid.");
             }
             var entry = new JobEntry(directory, state);
+            var failure = ReadFailure(entry);
             return Task.FromResult<JobStatus?>(new JobStatus(
-                state.JobId, state.State, state.FailureCode, ReadFailureReason(entry), ReadProgress(entry)));
+                state.JobId, state.State, state.FailureCode, failure?.Reason, ReadProgress(entry), failure?.Outcome));
         }
         return Task.FromResult<JobStatus?>(null);
     }
@@ -535,7 +540,7 @@ public sealed class DurableQueue : ISelectableBrokerQueue
             state.AttemptCount,
             state.RecoveryCount,
             state.FailureCode,
-            ReadFailureReason(entry),
+            ReadFailure(entry)?.Reason,
             ReadProgress(entry)));
     }
 
@@ -1302,19 +1307,28 @@ public sealed record JobProgressDocument(
     [property: JsonRequired] long Completed,
     [property: JsonRequired] long Total);
 
-/// <summary>The sentence recorded with a failed job, if anything was.</summary>
+/// <summary>What was recorded with a failed job: the sentence, and what a trial load measured.</summary>
 public sealed record JobFailure(
     [property: JsonRequired] int SchemaVersion,
     [property: JsonRequired] Guid JobId,
     [property: JsonRequired] DateTimeOffset FailedAtUtc,
-    [property: JsonRequired] string Reason);
+    [property: JsonRequired] string? Reason)
+{
+    /// <summary>
+    /// Written only when there is one: the release before this one reads this file with
+    /// unmapped members refused, and every other failure's file stays as it wrote it.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ModelExecutionOutcome? Outcome { get; init; }
+}
 
 public sealed record JobStatus(
     Guid JobId,
     LocalJobState State,
     string? FailureCode,
     string? FailureReason,
-    JobProgress? Progress);
+    JobProgress? Progress,
+    ModelExecutionOutcome? FailureOutcome);
 
 public sealed record JobDiagnostic(
     Guid JobId,
@@ -1360,6 +1374,7 @@ public interface IBrokerQueue
         Guid leaseId,
         string failureCode,
         string? failureReason,
+        ModelExecutionOutcome? failureOutcome = null,
         CancellationToken cancellationToken = default);
 
     Task ReportProgressAsync(

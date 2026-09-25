@@ -136,7 +136,8 @@ public sealed class BrokerClient : IBrokerClient
                     throw new BrokerJobFailedException(
                         jobId,
                         status.FailureCode ?? "UnknownFailure",
-                        status.FailureReason);
+                        status.FailureReason,
+                        status.FailureOutcome);
 
                 case LocalJobState.Cancelled:
                     throw new BrokerJobCancelledException(jobId);
@@ -192,7 +193,8 @@ public sealed class BrokerBackendUnreachableException(string endpoint)
 public sealed class BrokerJobFailedException(
     Guid jobId,
     string failureCode,
-    string? failureReason = null)
+    string? failureReason = null,
+    ModelExecutionOutcome? failureOutcome = null)
     : InvalidOperationException(Describe(jobId, failureCode, failureReason))
 {
     /// <summary>
@@ -217,6 +219,12 @@ public sealed class BrokerJobFailedException(
 
     /// <summary>The part of <see cref="FailureReason"/> the message shows, for a caller quoting it.</summary>
     public string? ShownReason => Excerpt(FailureReason);
+
+    /// <summary>
+    /// What a failed trial load measured, or null when the job failed any other way. Ours, like
+    /// <see cref="FailureCode"/>, so a caller may decide on it.
+    /// </summary>
+    public ModelExecutionOutcome? FailureOutcome { get; } = failureOutcome;
 
     private static string Describe(Guid jobId, string failureCode, string? failureReason) =>
         Excerpt(failureReason) is { } reason
