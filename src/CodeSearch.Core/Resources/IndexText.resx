@@ -217,13 +217,13 @@
     <value>Otherwise install it through the broker: localai-launcher.exe run localai model pull --model {0} --catalog-version {1}</value>
     <comment>Only when the catalog was read and names the model in its maintenance allowlist; otherwise the broker refuses the pull. No full stop: the line ends in a command somebody copies.</comment>
   </data>
-  <data name="EmbeddingModelInstallInOllama" xml:space="preserve">
-    <value>Otherwise install it into Ollama yourself — the broker does not download this model: ollama pull {0}</value>
-    <comment>The catalog was read and does not name the model in its maintenance allowlist, so `localai model pull` would refuse it.</comment>
+  <data name="EmbeddingModelInstallNotAllowed" xml:space="preserve">
+    <value>Otherwise the broker will not download it: the model catalog in use does not list it in MaintenanceAllowlist, and the model-catalog line of localai doctor shows which catalog that is.</value>
+    <comment>The catalog was read and does not name the model in its maintenance allowlist, so `localai model pull` would refuse it; no command is named.</comment>
   </data>
-  <data name="EmbeddingModelInstallInOllamaUnchecked" xml:space="preserve">
-    <value>Otherwise install it into Ollama: ollama pull {0}</value>
-    <comment>The catalog could not be read, so whether the broker would refuse is unknown and it is not named.</comment>
+  <data name="EmbeddingModelInstallCatalogUnreadable" xml:space="preserve">
+    <value>Otherwise first fix '{0}': the install command depends on that catalog, and the model-catalog line of localai doctor shows why it cannot be read.</value>
+    <comment>{0} is the user catalog file that could not be read; the pull command's catalog version comes from it.</comment>
   </data>
   <data name="BuildEmbeddingStopped" xml:space="preserve">
     <value>Embedding stopped at {0} of {1} chunks. What is embedded is saved — running this build again continues from there.</value>

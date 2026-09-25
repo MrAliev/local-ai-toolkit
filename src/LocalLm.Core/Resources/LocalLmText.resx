@@ -130,8 +130,11 @@
   <data name="NoModelAndCatalogNamesNone" xml:space="preserve">
     <value>No local model able to do {0} is installed, and the routing catalog names none for it. Run local_models_status to see what is installed.</value>
   </data>
-  <data name="NoModelInstalled" xml:space="preserve">
-    <value>No local model able to do {0} is installed. This task runs on {1}.</value>
+  <data name="NoModelCatalogUnreadable" xml:space="preserve">
+    <value>No local model able to do {0} is installed, and the model catalog cannot be read, so which models the task runs on is unknown; the model-catalog line of localai doctor shows why.</value>
+  </data>
+  <data name="NoModelInstalledNotDownloadable" xml:space="preserve">
+    <value>No local model able to do {0} is installed. This task runs on {1}, and the model catalog in use lets the broker download none of them; the model-catalog line of localai doctor shows which catalog that is.</value>
   </data>
   <data name="NoModelInstalledWithInstall" xml:space="preserve">
     <value>No local model able to do {0} is installed. This task runs on {1}. Install one through the broker: localai-launcher.exe run localai model pull --model {2} --catalog-version {3}</value>
