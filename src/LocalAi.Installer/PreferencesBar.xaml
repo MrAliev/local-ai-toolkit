@@ -94,11 +94,21 @@
             <!-- "System" is not a third colour scheme: it is the answer somebody already gave
                  Windows, and the installer keeps following it. -->
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="24,0,0,0">
-                <TextBlock Text="{vm:Label ThemeLabel}" Foreground="{DynamicResource TextSecondary}"
+                <TextBlock x:Name="ThemeLabel" Text="{vm:Label ThemeLabel}" Foreground="{DynamicResource TextSecondary}"
                            VerticalAlignment="Center" Margin="0,0,8,0" />
-                <Border CornerRadius="3" VerticalAlignment="Center"
-                        BorderBrush="{DynamicResource ControlBorder}" BorderThickness="1"
-                        Background="{DynamicResource ControlFill}" SnapsToDevicePixels="True">
+                <!-- A GroupBox, not a Border: UI Automation skips a Border or a panel, so a name
+                     put there never reaches a screen reader. -->
+                <GroupBox VerticalAlignment="Center" SnapsToDevicePixels="True"
+                          AutomationProperties.LabeledBy="{x:Reference ThemeLabel}">
+                    <GroupBox.Template>
+                        <ControlTemplate TargetType="GroupBox">
+                            <Border CornerRadius="3"
+                                    BorderBrush="{DynamicResource ControlBorder}" BorderThickness="1"
+                                    Background="{DynamicResource ControlFill}">
+                                <ContentPresenter />
+                            </Border>
+                        </ControlTemplate>
+                    </GroupBox.Template>
                     <StackPanel Orientation="Horizontal">
                         <RadioButton Style="{StaticResource ThemeSegment}"
                                      Content="{vm:Label ThemeSystem}"
@@ -115,7 +125,7 @@
                                      Tag="Dark" Checked="OnChooseTheme"
                                      IsChecked="{Binding IsDarkTheme, Mode=OneWay}" />
                     </StackPanel>
-                </Border>
+                </GroupBox>
             </StackPanel>
         </WrapPanel>
 
