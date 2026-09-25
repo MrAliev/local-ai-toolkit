@@ -15,7 +15,8 @@ internal sealed class LogTriagePipeline(
     ILocalModelClient client,
     LogTriagePolicy policy,
     ILocalRunObserver? observer = null,
-    ModelRoutingCatalogStore? modelCatalog = null)
+    ModelRoutingCatalogStore? modelCatalog = null,
+    string? policyPath = null)
 {
     private const string DefaultQuestion =
         "What failed, and why? Give the exact file and line if the log names one.";
@@ -186,28 +187,57 @@ internal sealed class LogTriagePipeline(
         var orderedModels = modelOverride is null
             ? OrderRouteModels(route, catalog, status)
             : [modelOverride];
-        var attempted = new List<string>();
+        var refusal = new TriageRefusal
+        {
+            RouteEmpty = permitted.Length == 0,
+            BrokerListEmpty = status.InstalledModels.Count == 0,
+        };
+        if (modelOverride is null)
+        {
+            refusal.Experiment.AddRange(route.Candidates.Except(orderedModels, StringComparer.Ordinal));
+        }
+
         foreach (var model in orderedModels)
         {
             var entry = catalog.Models.Single(candidate =>
                 string.Equals(candidate.Tag, model, StringComparison.Ordinal));
-            if (!installed.Contains(model) ||
-                entry.Lifecycle == LocalModelLifecycle.Disabled ||
-                !entry.Capabilities.Contains(LocalModelCapability.Text))
+            if (entry.Lifecycle == LocalModelLifecycle.Disabled)
             {
+                refusal.Disabled.Add(model);
                 continue;
             }
 
-            foreach (var contextTokens in entry.ContextTokens
-                         .Where(value => value <= policy.MaximumContextTokens)
-                         .OrderDescending())
+            if (!entry.Capabilities.Contains(LocalModelCapability.Text))
             {
+                refusal.NotText.Add(model);
+                continue;
+            }
+
+            if (!installed.Contains(model))
+            {
+                refusal.NotInstalled.Add(model);
+                continue;
+            }
+
+            var contexts = entry.ContextTokens
+                .Where(value => value <= policy.MaximumContextTokens)
+                .OrderDescending()
+                .ToArray();
+            if (contexts.Length == 0)
+            {
+                refusal.BeyondLimit.Add(model);
+                continue;
+            }
+
+            foreach (var contextTokens in contexts)
+            {
+                var pair = $"{model}/{contextTokens}";
                 if (disabled.Contains(new ModelContextRef(model, contextTokens)))
                 {
+                    refusal.Postponed.Add(pair);
                     continue;
                 }
 
-                attempted.Add($"{model}/{contextTokens}");
                 try
                 {
                     var proof = (await client.PreflightModelAsync(
@@ -224,14 +254,68 @@ internal sealed class LogTriagePipeline(
                 {
                     // ModelRuntime disables only this failed model/context pair. Trying the next
                     // smaller tier is the actual capacity probe, not a guessed hardware profile.
+                    refusal.LoadFailed.Add(pair);
+                    refusal.LastFailureReason = exception.ShownReason;
                 }
             }
         }
 
-        throw new InvalidOperationException(
-            attempted.Count == 0
-                ? LocalLmText.NoTriageModelNoneTried
-                : LocalLmText.NoTriageModel(string.Join(", ", attempted)));
+        throw new NoTriageModelException(refusal.Describe(
+            policy.MaximumContextTokens,
+            policyPath ?? new LogTriagePolicyStore(LogTriagePolicyStore.DefaultRuntimeRoot).Path));
+    }
+
+    /// <summary>What a refused triage established, stated in the order the lead's resx comment gives.</summary>
+    private sealed class TriageRefusal
+    {
+        public bool RouteEmpty { get; init; }
+
+        public bool BrokerListEmpty { get; init; }
+
+        public List<string> NotInstalled { get; } = [];
+
+        public List<string> Disabled { get; } = [];
+
+        public List<string> NotText { get; } = [];
+
+        public List<string> Experiment { get; } = [];
+
+        public List<string> BeyondLimit { get; } = [];
+
+        public List<string> Postponed { get; } = [];
+
+        public List<string> LoadFailed { get; } = [];
+
+        public string? LastFailureReason { get; set; }
+
+        public string Describe(int limit, string policyPath)
+        {
+            var sentences = new List<string> { LocalLmText.TriageRefusal };
+            if (RouteEmpty) sentences.Add(LocalLmText.TriageRefusalRouteEmpty);
+            if (BrokerListEmpty) sentences.Add(LocalLmText.TriageRefusalBrokerListEmpty);
+            if (NotInstalled.Count > 0) sentences.Add(LocalLmText.TriageRefusalNotInstalled(Join(NotInstalled)));
+            if (Disabled.Count > 0) sentences.Add(LocalLmText.TriageRefusalDisabled(Join(Disabled)));
+            if (NotText.Count > 0) sentences.Add(LocalLmText.TriageRefusalNotText(Join(NotText)));
+            if (Experiment.Count > 0) sentences.Add(LocalLmText.TriageRefusalExperiment(Join(Experiment)));
+            if (BeyondLimit.Count > 0)
+            {
+                sentences.Add(LocalLmText.TriageRefusalContextLimit(limit, Join(BeyondLimit), policyPath));
+            }
+
+            if (Postponed.Count > 0) sentences.Add(LocalLmText.TriageRefusalPostponed(Join(Postponed)));
+            if (LoadFailed.Count > 0)
+            {
+                sentences.Add(LocalLmText.TriageRefusalLoadFailed(Join(LoadFailed)));
+                if (LastFailureReason is { } reason)
+                {
+                    sentences.Add(LocalLmText.TriageRefusalReason(LoadFailed[^1], reason));
+                }
+            }
+
+            return string.Join(' ', sentences);
+        }
+
+        private static string Join(List<string> items) => string.Join(", ", items);
     }
 
     private static IReadOnlyList<string> OrderRouteModels(

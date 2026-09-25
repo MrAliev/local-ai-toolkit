@@ -215,6 +215,9 @@ public sealed class BrokerJobFailedException(
     /// </summary>
     public string? FailureReason { get; } = failureReason;
 
+    /// <summary>The part of <see cref="FailureReason"/> the message shows, for a caller quoting it.</summary>
+    public string? ShownReason => Excerpt(FailureReason);
+
     private static string Describe(Guid jobId, string failureCode, string? failureReason) =>
         Excerpt(failureReason) is { } reason
             ? BrokerClientText.BrokerJobFailedWithReason(jobId, failureCode, reason)

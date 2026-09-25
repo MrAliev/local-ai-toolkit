@@ -564,7 +564,7 @@ public sealed class LocalTasks
         string? question,
         string? model,
         CancellationToken ct) =>
-        new LogTriagePipeline(client, logTriagePolicies.Read(), observer, modelCatalog)
+        new LogTriagePipeline(client, logTriagePolicies.Read(), observer, modelCatalog, logTriagePolicies.Path)
             .RunAsync(path, text, question, model, ct);
 
     /// <summary>
