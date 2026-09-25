@@ -28,9 +28,45 @@ public sealed class AccessibleControlsTests
                 {
                     Source = new Uri($"/LocalAi.Installer;component/Themes/{resource}.xaml", UriKind.Relative),
                 });
-            try { CheckButtonTextFollowsItsState(app); CheckWindows(); }
+            try { CheckButtonTextFollowsItsState(app); CheckThemeGroup(); CheckWindows(); }
             finally { app.Shutdown(); }
         });
+    }
+
+    private static void CheckThemeGroup()
+    {
+        using var machine = new RemovalFixture();
+        var presentation = new InstallerPresentation(new InstallerPreferencesStore(Path.Combine(machine.Root, "preferences")));
+        var bar = new PreferencesBar { DataContext = presentation };
+        foreach (var language in new[] { InstallerLanguage.English, InstallerLanguage.Russian })
+        {
+            presentation.ChooseLanguage(language);
+            bar.Measure(new Size(900, 200));
+            bar.Arrange(new Rect(0, 0, 900, 200));
+            bar.UpdateLayout();
+            Dispatcher.CurrentDispatcher.Invoke(() => { }, DispatcherPriority.DataBind);
+            var expected = language == InstallerLanguage.Russian ? "Тема" : "Theme";
+            var radios = Descendants(bar).OfType<RadioButton>().ToArray();
+            Assert.Equal(3, radios.Length);
+            // A screen reader names the segments by the peer that holds exactly these three.
+            var group = Assert.Single(PeerTree(Peer(bar)), peer =>
+                peer.GetChildren()?.Any(child => child is UIElementAutomationPeer { Owner: RadioButton }) == true);
+            Assert.Equal(radios, group.GetChildren()!.Select(child => (child as UIElementAutomationPeer)?.Owner));
+            Assert.Equal(AutomationControlType.Group, group.GetAutomationControlType());
+            Assert.Equal(expected, group.GetName());
+            var owner = ((UIElementAutomationPeer)group).Owner;
+            Assert.False(owner.Focusable);
+            var label = Assert.IsType<TextBlock>(AutomationProperties.GetLabeledBy(owner));
+            Assert.Equal(expected, label.Text);
+        }
+    }
+
+    private static IEnumerable<AutomationPeer> PeerTree(AutomationPeer root)
+    {
+        yield return root;
+        foreach (var child in root.GetChildren() ?? [])
+        foreach (var nested in PeerTree(child))
+            yield return nested;
     }
 
     private static void CheckButtonTextFollowsItsState(Application app)
