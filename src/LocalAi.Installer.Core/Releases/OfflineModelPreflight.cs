@@ -68,7 +68,7 @@ public sealed partial class OfflineBundleApplication
                 return Result("failed", "preflight-response-invalid");
             var acceptable = policy switch
             {
-                ModelResidencyPolicy.RequireFullVram => proof.FullyResident && proof.SizeBytes == proof.SizeVramBytes,
+                ModelResidencyPolicy.RequireFullVram => proof.FullyResident && proof.SizeVramBytes >= proof.SizeBytes,
                 ModelResidencyPolicy.AllowPartialOffload => proof.SizeVramBytes > 0,
                 ModelResidencyPolicy.AllowCpu => true,
                 _ => false,

@@ -63,6 +63,33 @@ public sealed class ModelCommandTests
         finally { Directory.Delete(root, true); }
     }
 
+    /// <summary>
+    /// Ollama has reported more in video memory than the model's own size, and the broker admits
+    /// that as a full load. Checked again here with equality, the proof was turned into
+    /// <c>broker_failure</c> for a model that had loaded completely.
+    /// </summary>
+    [Fact]
+    public async Task A_load_reported_above_the_models_size_is_a_full_load()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "localai-model-root-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            new ModelResidencyPolicyStore(root).Write(
+                BrokerPolicy.Default with { ModelResidency = ModelResidencyPolicy.RequireFullVram });
+            var client = new RecordingClient { PreflightResult = Result(new LocalModelPreflightOutput(
+                "qwen3.5:9b", 8192, "signed-7", 123, 127, true, VerifiedUtc)) };
+            using var output = new StringWriter();
+
+            var exit = await ModelCommand.ExecuteAsync(["preflight", "--model", "qwen3.5:9b", "--context", "8192",
+                "--catalog-version", "signed-7", "--runtime-root", root], client, output, TestContext.Current.CancellationToken);
+
+            Assert.Equal(ModelCommand.SuccessExitCode, exit);
+            Assert.Contains("\"accepted\":true", output.ToString(), StringComparison.Ordinal);
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
     private static readonly DateTimeOffset VerifiedUtc =
         new(2026, 7, 31, 8, 9, 10, TimeSpan.Zero);
 

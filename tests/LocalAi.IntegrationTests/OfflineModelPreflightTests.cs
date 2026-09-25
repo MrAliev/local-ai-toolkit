@@ -43,6 +43,7 @@ public sealed class OfflineModelPreflightTests
 
     [Theory]
     [InlineData("valid", "applied", null)]
+    [InlineData("over-reported", "applied", null)]
     [InlineData("missing", "failed", "model-not-installed")]
     [InlineData("pending-pull", "failed", "model-pull-pending")]
     [InlineData("catalog", "failed", "preflight-response-invalid")]
@@ -182,7 +183,7 @@ public sealed class OfflineModelPreflightTests
             if (Mode is "rejected" or "trial-load-failed") return Task.FromResult(Answer(new ModelPreflightCommandRejected(1, "preflight", false, Model.Model,
                 Model.ContextTokens, CatalogVersion, Mode == "rejected" ? "residency_rejected" : "trial_load_failed"), 3));
             var proof = new ModelPreflightCommandSuccess(1, "preflight", true, Mode == "model" ? "other:latest" : Model.Model,
-                Mode == "context" ? 17 : Model.ContextTokens, CatalogVersion, 123, Mode == "policy" ? 0 : 123, Mode != "policy",
+                Mode == "context" ? 17 : Model.ContextTokens, CatalogVersion, 123, Mode == "policy" ? 0 : Mode == "over-reported" ? 127 : 123, Mode != "policy",
                 Mode == "future" ? DateTimeOffset.UtcNow.AddDays(1) : DateTimeOffset.UtcNow);
             return Task.FromResult(Mode == "malformed" ? new(0, "{", "", false, false) : Answer(proof) with { StandardOutputTruncated = Mode == "truncated" });
         }

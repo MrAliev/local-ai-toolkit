@@ -63,6 +63,39 @@ public sealed class ModelControlServiceTests : IDisposable
         Assert.Equal(1, Assert.Single(status.Experiments).CompletedAttempts);
     }
 
+    /// <summary>
+    /// Ollama has reported more in video memory than the model's own size. The trial load reads
+    /// that as a full load; the status read it as a partial one.
+    /// </summary>
+    [Fact]
+    public async Task A_load_reported_above_the_models_size_is_fully_resident()
+    {
+        var transport = new FakeTransport
+        {
+            Installed = ["qwen3.5:9b"],
+            Processes =
+            [
+                new OllamaProcessInfo(
+                    "qwen3.5:9b",
+                    100,
+                    103,
+                    2048,
+                    DateTimeOffset.UtcNow.AddMinutes(5))
+            ]
+        };
+        var service = new ModelControlService(
+            ModelRoutingCatalog.LoadEmbedded(),
+            transport,
+            new ExperimentStateStore(_root),
+            new ModelTelemetryStore(_root),
+            runtime: null,
+            new DurableQueue(_root));
+
+        var status = await service.StatusAsync(TestContext.Current.CancellationToken);
+
+        Assert.True(Assert.Single(status.Residency!).FullyResident);
+    }
+
     [Fact]
     public async Task Feedback_updates_only_the_requested_profile_model_pair()
     {
