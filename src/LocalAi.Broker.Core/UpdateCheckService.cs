@@ -69,7 +69,10 @@ public sealed class UpdateCheckService(
             // The probe already turns its own failures into "unavailable"; this is the guard
             // for anything it did not anticipate. The check is the least important thing this
             // process does, and it must never be the thing that stops it.
-            result = new UpdateCheckState(1, UpdateCheckStatus.Unavailable, now, null, null);
+            result = new UpdateCheckState(1, UpdateCheckStatus.Unavailable, now, null, null)
+            {
+                FailureReason = UpdateCheckFailure.Unexpected,
+            };
         }
 
         try

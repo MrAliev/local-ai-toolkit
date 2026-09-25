@@ -56,6 +56,34 @@ public sealed class UpdateCheckStateTests : IDisposable
     }
 
     [Fact]
+    public void Why_a_check_found_nothing_survives_a_round_trip_and_an_older_record_has_no_reason()
+    {
+        var store = new UpdateCheckStateStore(root);
+        store.Write(new UpdateCheckState(1, UpdateCheckStatus.Unavailable, Noon, null, null) { FailureReason = "network" });
+
+        Assert.Equal("network", store.Read().FailureReason);
+
+        File.WriteAllText(
+            Path.Combine(root, UpdateCheckState.FileName),
+            """{"SchemaVersion":1,"Status":"Unavailable","CheckedAtUtc":"2026-08-31T12:00:00+00:00"}""",
+            new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        var legacy = store.Read();
+        Assert.Equal(UpdateCheckStatus.Unavailable, legacy.Status);
+        Assert.Null(legacy.FailureReason);
+    }
+
+    [Fact]
+    public void Information_older_than_two_check_intervals_is_stale()
+    {
+        var policy = UpdateCheckPolicy.Default with { Enabled = true, IntervalHours = 24 };
+        var state = new UpdateCheckState(1, UpdateCheckStatus.Verified, Noon, "0.1.50", null);
+
+        Assert.False(UpdateCheckSchedule.IsStale(policy, state, Noon.AddHours(48)));
+        Assert.True(UpdateCheckSchedule.IsStale(policy, state, Noon.AddHours(48).AddMinutes(1)));
+        Assert.False(UpdateCheckSchedule.IsStale(policy, UpdateCheckState.Unknown, Noon.AddYears(1)));
+    }
+
+    [Fact]
     public void What_a_check_learned_survives_a_round_trip()
     {
         var store = new UpdateCheckStateStore(root);
