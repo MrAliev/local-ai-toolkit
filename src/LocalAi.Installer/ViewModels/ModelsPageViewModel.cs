@@ -153,8 +153,11 @@ public sealed class ModelsPageViewModel : ObservableObject
         {
             SetProperty(ref isOffline, value);
             OnPropertyChanged(nameof(NetworkNote));
+            OnPropertyChanged(nameof(HasNetworkNote));
         }
     }
+
+    public bool HasNetworkNote => isOffline;
 
     public string NetworkNote => isOffline
         ? InstallerCulture.Pick(
