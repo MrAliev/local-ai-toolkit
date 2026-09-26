@@ -1,6 +1,8 @@
 using System.Globalization;
 using LocalAi.Installer.Core;
 using LocalAi.Installer.Core.Activation;
+using LocalAi.Installer.Core.Models;
+using LocalAi.Installer.Core.Releases;
 using LocalAi.Installer.Core.Removal;
 
 namespace LocalAi.Installer.ViewModels;
@@ -34,6 +36,43 @@ public sealed record PackageOutcome(
                 ? PackageOutcomeKind.Refused
                 : PackageOutcomeKind.Failed,
             Reason: message);
+}
+
+public enum ModelStepFailureKind
+{
+    /// <summary>The batch stopped early; the detail is its status token.</summary>
+    Stopped,
+    Cancelled,
+
+    /// <summary>Models were asked for and none was requested; the detail is the reasons.</summary>
+    NothingRequested,
+}
+
+/// <summary>
+/// How model setup ended when it did not finish. A batch that stops before its first model
+/// leaves no row to say so, and the summary called that "not attempted" while the run failed on
+/// it. <see cref="Detail"/> comes from the run and is never translated.
+/// </summary>
+public sealed record ModelStepFailure(ModelStepFailureKind Kind, string Detail)
+{
+    public static ModelStepFailure? Of(ReleaseModelInstallReport? models) =>
+        models is null
+            ? null
+            : models.Batch is { } batch
+                ? Of(batch.StopReason, batch.Code)
+                : new(
+                    ModelStepFailureKind.NothingRequested,
+                    models.Excluded.Count == 0
+                        ? "The installer produced no model request."
+                        : string.Join(" ", models.Excluded));
+
+    internal static ModelStepFailure? Of(BrokerModelBatchStopReason stopReason, string code) =>
+        stopReason switch
+        {
+            BrokerModelBatchStopReason.None => null,
+            BrokerModelBatchStopReason.Cancelled => new(ModelStepFailureKind.Cancelled, code),
+            _ => new(ModelStepFailureKind.Stopped, code),
+        };
 }
 
 public enum PathOutcome
@@ -110,14 +149,19 @@ public static class RunResults
 
     /// <summary>
     /// The count, marked by the worst thing that happened to any of them. Which model did what is
-    /// already on the install page, row by row.
+    /// already on the install page, row by row. A step that did not finish is marked by that
+    /// too, and says how it ended when no model got as far as a row.
     /// </summary>
-    public static RunResultRow Models(IReadOnlyList<ModelRunRow> models)
+    public static RunResultRow Models(
+        IReadOnlyList<ModelRunRow> models,
+        ModelStepFailure? failure = null)
     {
         ArgumentNullException.ThrowIfNull(models);
         var limited = models.Count(model => model.State == ModelRunState.ReadyWithLimitations);
         var ready = models.Count(model => model.State == ModelRunState.Ready) + limited;
-        var mark = models.Count == 0
+        var mark = failure is { Kind: not ModelStepFailureKind.Cancelled }
+            ? RunMark.Failed
+            : models.Count == 0
             ? RunMark.None
             : models.Any(model => model.State == ModelRunState.Failed)
                 ? RunMark.Failed
@@ -148,9 +192,16 @@ public static class RunResults
         return new(
             mark,
             PageLabels.LocalModels,
-            models.Count == 0
-                ? PageLabels.ResultNotAttempted
-                : string.Join("; ", details));
+            models.Count > 0
+                ? string.Join("; ", details)
+                : failure?.Kind switch
+                {
+                    null => PageLabels.ResultNotAttempted,
+                    ModelStepFailureKind.Stopped => string.Format(
+                        CultureInfo.InvariantCulture, PageLabels.ModelFailed, failure.Detail),
+                    ModelStepFailureKind.Cancelled => PageLabels.ResultModelsCancelledBeforeFirst,
+                    _ => PageLabels.ResultModelsNoneRequested,
+                });
 
         void AddCount(ModelRunState state, string wording)
         {

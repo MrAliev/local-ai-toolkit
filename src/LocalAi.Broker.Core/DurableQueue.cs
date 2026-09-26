@@ -39,7 +39,7 @@ public sealed class DurableQueue : ISelectableBrokerQueue
         _stagingRoot = Path.Combine(RuntimeRoot, "staging");
         _quarantineRoot = Path.Combine(RuntimeRoot, "quarantine");
         _sequencePath = Path.Combine(RuntimeRoot, "sequence.json");
-        _sweepMarkerPath = Path.Combine(RuntimeRoot, "archive-sweep.json");
+        _sweepMarkerPath = Path.Combine(RuntimeRoot, RuntimeRetentionPolicy.SweepMarkerFileName);
         _retention = (retention ?? new RuntimeRetentionPolicyStore(RuntimeRoot).Read())
             .Normalized();
         _timeProvider = timeProvider ?? TimeProvider.System;
