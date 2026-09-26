@@ -129,7 +129,7 @@ public sealed class AccessibleControlsTests
             var wizard = (InstallerWizardViewModel)window.DataContext;
             wizard.Dependencies.SetConsent("Git", true);
             wizard.Dependencies.SetInstalled("Ollama", true);
-            wizard.Dependencies.Dependencies.Add(new DependencySelection("manual", "Manual tool", false) { IsInstallable = false });
+            wizard.Dependencies.Dependencies.Add(new DependencySelection("manual", "Manual tool", false) { HasAutomatedInstaller = false });
             try
             {
                 CheckLogHistory(window, wizard, presentation);

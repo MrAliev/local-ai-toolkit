@@ -315,7 +315,21 @@
                                                         <Setter Property="Visibility" Value="Collapsed" />
                                                         <Setter Property="TextWrapping" Value="Wrap" />
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsInstallable}" Value="False">
+                                                            <DataTrigger Binding="{Binding HasAutomatedInstaller}" Value="False">
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                            <TextBlock Text="{Binding InstallerHint, Mode=OneWay}"
+                                                       FontSize="11" Margin="0,2,0,0">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource Muted}">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                        <Setter Property="TextWrapping" Value="Wrap" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding HasInstallerHint}" Value="True">
                                                                 <Setter Property="Visibility" Value="Visible" />
                                                             </DataTrigger>
                                                         </Style.Triggers>
@@ -327,6 +341,9 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
+                        <Button Content="{vm:Label CheckAgain}" MinWidth="140" Padding="12,0" MinHeight="32" HorizontalAlignment="Left"
+                                Command="{Binding CheckPrerequisitesAgainCommand}"
+                                Visibility="{Binding Dependencies.NeedsCheckAgain, Converter={StaticResource BoolToVisibility}}" />
                     </StackPanel>
 
                     <!-- LocalAi package -->

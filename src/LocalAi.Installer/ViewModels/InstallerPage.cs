@@ -155,6 +155,14 @@ public sealed class EnvironmentCheck(string Name, CheckStatus Status, string Det
     };
 }
 
+/// <summary>The tool a prerequisite's recipe runs, when the check did not find it.</summary>
+internal enum MissingInstaller
+{
+    None,
+    WinGet,
+    Npm,
+}
+
 public sealed class DependencySelection(string Id, string Title, bool IsRequired) : ObservableObject
 {
     public string Id { get; } = Id;
@@ -171,7 +179,37 @@ public sealed class DependencySelection(string Id, string Title, bool IsRequired
     /// False when no automated recipe exists. Such an item is shown as information rather
     /// than as a checkbox that would quietly do nothing.
     /// </summary>
-    public bool IsInstallable { get; init; } = true;
+    public bool HasAutomatedInstaller { get; init; } = true;
+
+    private MissingInstaller missing;
+    private Uri? download;
+
+    /// <summary>A recipe, and the tool it runs found on this computer.</summary>
+    public bool IsInstallable => HasAutomatedInstaller && missing == MissingInstaller.None;
+
+    /// <summary>Why a missing component cannot be ticked, and where to get it instead.</summary>
+    public string InstallerHint => IsInstalled ? string.Empty : missing switch
+    {
+        MissingInstaller.WinGet => string.Format(
+            InstallerCulture.Pick(
+                "WinGet was not found, so this installer cannot install it. After installing it " +
+                "yourself, check again. Download: {0}",
+                "WinGet не найден, поэтому установить автоматически не получится. Установите " +
+                "вручную и проверьте снова. Скачать: {0}"),
+            download),
+        MissingInstaller.Npm => InstallerCulture.Pick(
+            "npm was not found; it comes with Node.js 20. With Node.js 20 installed, check again.",
+            "npm не найден; он входит в Node.js 20. Когда Node.js 20 будет установлен, проверьте снова."),
+        _ => string.Empty,
+    };
+
+    public bool HasInstallerHint => InstallerHint.Length > 0;
+
+    internal void SetMissing(MissingInstaller installer, Uri? link)
+    {
+        missing = installer;
+        download = link;
+    }
 
     public string StateText => IsInstalled
         ? InstallerCulture.Pick("Already installed", "Уже установлен")
@@ -197,7 +235,7 @@ public sealed class DependencySelection(string Id, string Title, bool IsRequired
     }
 
     /// <summary>
-    /// Whether the wizard refuses to continue without it. Shown, because a list where
+    /// Whether LocalAi needs it, even where this installer cannot install it. Shown, because a list where
     /// every line looks equally mandatory makes an optional item feel like an obligation —
     /// and most of this list is exactly that: three to four gigabytes and several UAC
     /// prompts for capabilities a given user may not want.
