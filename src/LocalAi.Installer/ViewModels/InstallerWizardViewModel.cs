@@ -373,6 +373,8 @@ public sealed class InstallerWizardViewModel : ObservableObject
     /// </summary>
     internal string RuntimeRoot { get; init; } = ModelResidencyPolicyStore.DefaultRuntimeRoot;
 
+    internal TimeProvider Clock { get; init; } = TimeProvider.System;
+
     /// <summary>
     /// Scratch space for downloaded release assets; each installation downloads and unpacks
     /// into a directory of its own below it.
@@ -1181,9 +1183,10 @@ public sealed class InstallerWizardViewModel : ObservableObject
         {
             var directory = LogDirectory;
             Directory.CreateDirectory(directory);
+            // UTC, like the journal beside it: one run's two files name the same moment.
             var path = Path.Combine(
                 directory,
-                $"install-{DateTime.Now:yyyyMMdd-HHmmss}.log");
+                $"install-{Clock.GetUtcNow().UtcDateTime:yyyyMMdd-HHmmss}.log");
             File.WriteAllText(path, report.ToString());
             // Its own field. Appended to the summary it was the last line of a box 110 high, and
             // the screenshot that started this work has it clipped mid-path.
