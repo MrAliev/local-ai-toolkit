@@ -199,7 +199,7 @@ public static class RunResults
                     null => PageLabels.ResultNotAttempted,
                     ModelStepFailureKind.Stopped => string.Format(
                         CultureInfo.InvariantCulture, PageLabels.ModelFailed, failure.Detail),
-                    ModelStepFailureKind.Cancelled => PageLabels.ModelCancelled,
+                    ModelStepFailureKind.Cancelled => PageLabels.ResultModelsCancelledBeforeFirst,
                     _ => PageLabels.ResultModelsNoneRequested,
                 });
 
