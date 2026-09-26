@@ -127,6 +127,31 @@ public sealed class PagesSpeakRussianTests : IDisposable
         RussianText.AssertRussian(row.Detail, "network row");
     }
 
+    /// <summary>
+    /// "No network connection" is what an unavailable network is, whatever the probe said about
+    /// it. A check that failed never found that out, so it keeps its own reason, and without one
+    /// the state is unknown rather than disconnected.
+    /// </summary>
+    [Theory]
+    [InlineData(ObservationState.Unavailable, "No active network interface was reported.", "подключения к сети нет")]
+    [InlineData(ObservationState.Failed, "Сетевая подсистема не ответила.", "Сетевая подсистема не ответила.")]
+    [InlineData(ObservationState.Failed, null, "неизвестно")]
+    public void Only_an_unavailable_network_is_called_disconnected(
+        ObservationState state,
+        string? reason,
+        string expected)
+    {
+        var page = new DiagnosePageViewModel();
+        page.Load(HermeticDiagnosis.Supported(network: new NetworkSnapshot(state, reason)));
+
+        InstallerCulture.Current = InstallerLanguage.Russian;
+        page.Relabel();
+
+        var row = page.Checks.Single(check => check.Name == "Сеть");
+        Assert.Equal(CheckStatus.Warning, row.Status);
+        Assert.Equal(expected, row.Detail);
+    }
+
     [Fact]
     public void The_english_pages_are_left_exactly_as_they_were()
     {
