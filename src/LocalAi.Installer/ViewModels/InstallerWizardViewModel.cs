@@ -287,8 +287,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             () => HasInterruptedRun && !isRunning,
             ReportUnexpectedError);
 
-        // Relaxing the residency policy immediately widens what the models page can offer,
-        // so the two pages stay consistent instead of contradicting each other.
+        // The models group names the rule it sits under, so a rule change reaches it at once.
         residency.PropertyChanged += (_, args) =>
         {
             if (args.PropertyName == nameof(ResidencyPageViewModel.Policy))
@@ -2170,8 +2169,8 @@ public sealed class InstallerWizardViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Re-applies the last recommendation under the current residency choice, so relaxing
-    /// the policy immediately widens what the models page offers.
+    /// Re-applies the last recommendation under the current residency choice, so the models
+    /// group names the rule now chosen.
     /// </summary>
     public void OnResidencyChanged()
     {

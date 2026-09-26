@@ -96,10 +96,9 @@ public static class WizardText
                 "Choose the LocalAi release to install.",
                 "Выберите релиз LocalAi для установки."),
             InstallerPage.Models => InstallerCulture.Pick(
-                "Video memory decides which models fit. Choose the rule first; the list below " +
-                "follows it.",
-                "Что поместится, решает видеопамять. Сначала выберите правило — список ниже " +
-                "следует за ним."),
+                "Video memory decides which models are set up. The rule decides how they may run.",
+                "Какие модели будут установлены, решает видеопамять. Правило решает, как они " +
+                "могут работать."),
             InstallerPage.Agents => InstallerCulture.Pick(
                 "Choose how each client application should be integrated.",
                 "Выберите, как интегрировать каждое клиентское приложение."),

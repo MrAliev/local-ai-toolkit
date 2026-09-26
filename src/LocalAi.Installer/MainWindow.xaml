@@ -374,9 +374,8 @@
                         <TextBlock Text="{Binding Package.StatusText}" Style="{StaticResource Muted}" Margin="0,10,0,0" />
                     </StackPanel>
 
-                    <!-- Models and memory: the rule that decides what fits, above the list
-                         that follows from it. These were two pages, and the recompute the rule
-                         triggers landed on a page the reader had already left (#257). -->
+                    <!-- Models and memory: the rule for how models may run, above the list of
+                         models setup installs. These were two pages (#257). -->
                     <StackPanel>
                         <StackPanel.Style>
                             <Style TargetType="StackPanel">

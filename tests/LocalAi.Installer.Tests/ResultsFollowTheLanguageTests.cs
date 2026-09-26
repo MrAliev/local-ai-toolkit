@@ -352,7 +352,7 @@ public sealed class ResultsFollowTheLanguageTests : IDisposable
 
         Assert.StartsWith("Размеры моделей получить не удалось", wizard.Models.AutomaticSummary, StringComparison.Ordinal);
         Assert.Equal(offered, wizard.Models.AutomaticSelection.Count);
-        Assert.All(wizard.Models.AutomaticSelection, line => Assert.EndsWith("размер неизвестен", line, StringComparison.Ordinal));
+        Assert.All(wizard.Models.AutomaticSelection, line => Assert.EndsWith("размер неизвестен; ставится, только если помещается", line, StringComparison.Ordinal));
         Assert.StartsWith("Вся модель в видеопамяти", wizard.Models.RuleSummary, StringComparison.Ordinal);
     }
 
