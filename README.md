@@ -302,9 +302,10 @@ GUID in request `_meta["localai/callId"]` before starting a cancellable call, th
 the partial report with `localai telemetry --call-id <guid>`.
 
 CLI stdout keeps its existing text or JSON contract; the compact report goes to stderr.
-The installer's version-one `localai model` protocol permits no extra stderr records, so
-those reports are only persisted. Reports are stored at `%LOCALAPPDATA%\LocalAi\telemetry\usage`;
-they contain technical measurements and identifiers, never prompts or document contents.
+The installer's version-one `localai model` protocol permits no extra stderr records other
+than the reason a command failed with `broker_failure`, so those reports are only persisted.
+Reports are stored at `%LOCALAPPDATA%\LocalAi\telemetry\usage`; they contain technical
+measurements and identifiers, never prompts or document contents.
 A storage failure preserves the command result and is reported separately where the protocol
 permits it.
 

@@ -457,14 +457,65 @@ public sealed class ModelCommandTests
     [Fact]
     public async Task A_wait_that_ran_out_on_a_silent_Ollama_names_it()
     {
+        using var root = new TemporaryDirectory("localai-model-silent");
+
         var (_, _, error) = await FailAsync(
-            ["status"],
+            ["status", "--runtime-root", root.Path],
             new BrokerBackendUnreachableException(OllamaEndpoint),
             _ => throw new InvalidOperationException("The broker already said."));
 
         Assert.Equal(
             "localai: " + CliText.ModelOllamaNotAnswering(OllamaEndpoint) + Environment.NewLine,
             error);
+    }
+
+    /// <summary>
+    /// The broker starts Ollama itself only from the launch record the installer wrote, so the
+    /// advice is chosen by that record too.
+    /// </summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task An_Ollama_the_broker_can_start_asks_for_the_command_again(bool waitRanOut)
+    {
+        using var root = new TemporaryDirectory("localai-model-launch");
+        new OllamaLaunchRecordStore(root.Path).Save(root.Combine("ollama.exe"), "0.12.0");
+
+        var (_, _, error) = await FailAsync(
+            ["status", "--runtime-root", root.Path],
+            waitRanOut ? new BrokerBackendUnreachableException(OllamaEndpoint) : RefusedConnection(),
+            _ => OllamaEndpoint);
+
+        Assert.Equal(
+            "localai: " + CliText.ModelOllamaNotAnsweringStartsItself(OllamaEndpoint) +
+            Environment.NewLine,
+            error);
+    }
+
+    /// <summary>
+    /// Started by hand without the recorded models folder, Ollama would serve the default one
+    /// (#633), so the folder is named.
+    /// </summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task An_Ollama_recorded_with_a_models_folder_names_the_folder(bool waitRanOut)
+    {
+        using var root = new TemporaryDirectory("localai-model-launch");
+        var models = Directory.CreateDirectory(root.Combine("models")).FullName;
+        new OllamaLaunchRecordStore(root.Path).Save(root.Combine("ollama.exe"), "0.12.0", models);
+
+        var (_, _, error) = await FailAsync(
+            ["status", "--runtime-root", root.Path],
+            waitRanOut ? new BrokerBackendUnreachableException(OllamaEndpoint) : RefusedConnection(),
+            _ => OllamaEndpoint);
+
+        Assert.Equal(
+            "localai: " + CliText.ModelOllamaNotAnsweringModelsFolder(OllamaEndpoint, models) +
+            Environment.NewLine,
+            error);
+        Assert.Contains("OLLAMA_MODELS", error, StringComparison.Ordinal);
+        Assert.Contains(models, error, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -522,14 +573,16 @@ public sealed class ModelCommandTests
     [Fact]
     public async Task The_sentence_follows_the_readers_language()
     {
+        using var root = new TemporaryDirectory("localai-model-silent");
+        string[] arguments = ["status", "--runtime-root", root.Path];
         string english;
         using (TestCulture.Reading("en"))
         {
-            english = (await FailAsync(["status"], RefusedConnection(), _ => OllamaEndpoint)).Error;
+            english = (await FailAsync(arguments, RefusedConnection(), _ => OllamaEndpoint)).Error;
         }
 
         using var russian = TestCulture.Reading("ru");
-        var error = (await FailAsync(["status"], RefusedConnection(), _ => OllamaEndpoint)).Error;
+        var error = (await FailAsync(arguments, RefusedConnection(), _ => OllamaEndpoint)).Error;
 
         Assert.NotEqual(english, error);
         Assert.Equal(

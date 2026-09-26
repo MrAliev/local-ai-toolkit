@@ -228,13 +228,26 @@ public static class ModelCommand
         exception switch
         {
             BrokerBackendUnreachableException unreachable =>
-                CliText.ModelOllamaNotAnswering(unreachable.Endpoint),
+                OllamaNotAnswering(unreachable.Endpoint, runtimeRoot),
             BrokerJobFailedException { FailureCode: "HttpRequestException" } when
                 silentBackend?.Invoke(runtimeRoot) is { } endpoint =>
-                CliText.ModelOllamaNotAnswering(endpoint),
+                OllamaNotAnswering(endpoint, runtimeRoot),
             BrokerJobFailedException failed => failed.Message,
             BrokerBootstrapException bootstrap => CliText.ModelBrokerNotStarted(bootstrap.Message),
             _ => UnexpectedFailure.Describe(exception),
+        };
+
+    /// <summary>
+    /// The broker starts Ollama only from the installer's launch record, with its models folder
+    /// when one is named, so the advice reads the same record.
+    /// </summary>
+    private static string OllamaNotAnswering(string endpoint, string runtimeRoot) =>
+        new OllamaLaunchRecordStore(runtimeRoot).Read() switch
+        {
+            null => CliText.ModelOllamaNotAnswering(endpoint),
+            { ModelsDirectory: { } models } =>
+                CliText.ModelOllamaNotAnsweringModelsFolder(endpoint, models),
+            _ => CliText.ModelOllamaNotAnsweringStartsItself(endpoint),
         };
 
     private static async Task<int> StatusAsync(
