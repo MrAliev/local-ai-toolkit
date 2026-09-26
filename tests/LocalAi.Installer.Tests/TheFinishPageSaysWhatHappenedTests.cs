@@ -1,4 +1,3 @@
-using System.Runtime.InteropServices;
 using System.Text;
 using LocalAi.Installer.Core.Diagnosis;
 using LocalAi.Installer.Core.Models;
@@ -59,7 +58,7 @@ public sealed class TheFinishPageSaysWhatHappenedTests
         var wizard = new InstallerWizardViewModel(
             StartChoice.UpdateOrRepair,
             () => null,
-            detectEnvironment: _ => Task.FromResult(Diagnosis()))
+            detectEnvironment: _ => Task.FromResult(HermeticDiagnosis.Supported()))
         {
             EnableDependencyActions = true,
             LogDirectory = logs.Path,
@@ -191,36 +190,5 @@ public sealed class TheFinishPageSaysWhatHappenedTests
         Assert.False(await wizard.RunAsync(stop.Token));
         Assert.True(wizard.Finish.HasNextSteps);
         return wizard;
-    }
-
-    private static EnvironmentDiagnosis Diagnosis()
-    {
-        static DependencySnapshot Found(string name) =>
-            new(name, DependencyState.Detected, @"C:\absent\" + name + ".exe", "1.0", null);
-
-        return new EnvironmentDiagnosis(
-            new OperatingSystemSnapshot(
-                "Windows",
-                new Version(10, 0, 26200),
-                Architecture.X64,
-                SupportStatus.Supported,
-                SupportStatus.Supported),
-            new DiskSnapshot(ObservationState.Available, 100L * 1024 * 1024 * 1024, null),
-            new NetworkSnapshot(ObservationState.Available, null),
-            Found("winget"),
-            Found("git"),
-            Found("gh"),
-            Found("gh-auth"),
-            Found("ollama"),
-            Found("dotnet"),
-            Found("node"),
-            Found("npm"),
-            Found("scip-typescript"),
-            Found("python"),
-            Found("scip-python"),
-            new GpuSnapshot(ObservationState.Unavailable, [], "none in this test"),
-            new ExistingLocalAiSnapshot(ExistingLocalAiState.Absent, null, null, null),
-            [],
-            []);
     }
 }
