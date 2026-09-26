@@ -195,7 +195,7 @@ public sealed class LocalAiPackageInstaller
         {
             layoutLease = layoutLeaseFactory(
                 layout,
-                existing.State == ExistingLocalAiState.Absent);
+                existing.State.NothingInstalled());
         }
         catch (LocalAiPackageInstallationException exception)
         {
@@ -266,7 +266,7 @@ public sealed class LocalAiPackageInstaller
                 if ((existing.State == ExistingLocalAiState.Compatible &&
                      (!priorPointer.Exists || !priorPointer.IsCanonical ||
                       !string.Equals(priorPointer.Version, existing.Version, StringComparison.Ordinal))) ||
-                    (existing.State == ExistingLocalAiState.Absent && priorPointer.Exists))
+                    (existing.State.NothingInstalled() && priorPointer.Exists))
                 {
                     return new(
                         LocalAiPackageInstallStatus.Refused,

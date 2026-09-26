@@ -30,6 +30,27 @@ public enum ExistingLocalAiState
     Absent,
     Compatible,
     Unrecognized,
+
+    /// <summary>
+    /// No current-version pointer, but something besides the signing keys is still in the
+    /// runtime root, or the launcher is still on the user's PATH: a removal that stopped.
+    /// </summary>
+    Leftovers,
+
+    /// <summary>
+    /// No current-version pointer, and the signing keys alone in the runtime root: what a full
+    /// removal keeps on purpose.
+    /// </summary>
+    SigningKeysOnly,
+}
+
+public static class ExistingLocalAiStates
+{
+    /// <summary>No current-version pointer: whatever else is still here, nothing is installed.</summary>
+    public static bool NothingInstalled(this ExistingLocalAiState state) =>
+        state is ExistingLocalAiState.Absent or
+            ExistingLocalAiState.Leftovers or
+            ExistingLocalAiState.SigningKeysOnly;
 }
 
 public enum AgentKind

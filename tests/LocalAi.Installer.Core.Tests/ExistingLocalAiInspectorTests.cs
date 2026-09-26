@@ -23,6 +23,107 @@ public sealed class ExistingLocalAiInspectorTests : IDisposable
         Assert.Equal(ExistingLocalAiState.Absent, snapshot.State);
     }
 
+    /// <summary>
+    /// What the removal stopped after bin left behind (#614): the runtime's own files, names the
+    /// installer never wrote, and the keys. Nothing is installed, but it is not nothing either.
+    /// </summary>
+    [Fact]
+    public void A_root_left_without_a_pointer_is_leftovers()
+    {
+        foreach (var directory in new[] { "settings", "jobs", "telemetry", "seed-unknown-dir", "release-signing" })
+        {
+            Directory.CreateDirectory(Path.Combine(RuntimeRoot, directory));
+        }
+
+        foreach (var file in new[] { "retention.json", "diagnostics.jsonl", "update-state.json", "seed-файл с пробелом.txt" })
+        {
+            File.WriteAllText(Path.Combine(RuntimeRoot, file), "{}");
+        }
+
+        var snapshot = CreateInspector().Inspect(_root);
+
+        Assert.Equal(ExistingLocalAiState.Leftovers, snapshot.State);
+        Assert.Null(snapshot.Version);
+        Assert.Null(snapshot.Reason);
+    }
+
+    /// <summary>One entry beside the keys is enough, a bin without its pointer included.</summary>
+    [Theory]
+    [InlineData("bin", true)]
+    [InlineData("retention.json", false)]
+    public void Anything_beside_the_signing_keys_is_a_leftover(string name, bool directory)
+    {
+        Directory.CreateDirectory(Path.Combine(RuntimeRoot, "release-signing"));
+        if (directory)
+        {
+            Directory.CreateDirectory(Path.Combine(RuntimeRoot, name));
+        }
+        else
+        {
+            File.WriteAllText(Path.Combine(RuntimeRoot, name), "{}");
+        }
+
+        Assert.Equal(ExistingLocalAiState.Leftovers, CreateInspector().Inspect(_root).State);
+    }
+
+    [Fact]
+    public void The_signing_keys_alone_are_what_a_full_removal_keeps()
+    {
+        Directory.CreateDirectory(Path.Combine(RuntimeRoot, "release-signing"));
+
+        Assert.Equal(ExistingLocalAiState.SigningKeysOnly, CreateInspector().Inspect(_root).State);
+    }
+
+    /// <summary>
+    /// The PATH step runs after the files, so a removal stopped between them leaves the entry
+    /// with nothing, or only the keys, in the root.
+    /// </summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void The_launcher_still_on_the_path_is_a_leftover(bool keysKept)
+    {
+        if (keysKept)
+        {
+            Directory.CreateDirectory(Path.Combine(RuntimeRoot, "release-signing"));
+        }
+
+        userPath = @"C:\Tools;" + Path.Combine(RuntimeRoot, "bin", "launcher") + @"\";
+
+        Assert.Equal(ExistingLocalAiState.Leftovers, CreateInspector().Inspect(_root).State);
+    }
+
+    [Fact]
+    public void An_empty_root_and_a_clean_path_are_absent()
+    {
+        Directory.CreateDirectory(RuntimeRoot);
+        userPath = @"C:\Tools";
+
+        Assert.Equal(ExistingLocalAiState.Absent, CreateInspector().Inspect(_root).State);
+    }
+
+    [Fact]
+    public void A_root_that_cannot_be_listed_is_not_taken_for_the_keys_alone()
+    {
+        var snapshot = new ExistingLocalAiInspector(new UnlistableFileSystem(), () => null)
+            .Inspect(_root);
+
+        Assert.Equal(ExistingLocalAiState.Leftovers, snapshot.State);
+    }
+
+    [Fact]
+    public void A_path_that_cannot_be_read_names_no_launcher()
+    {
+        Directory.CreateDirectory(RuntimeRoot);
+
+        var snapshot = new ExistingLocalAiInspector(
+                new SystemFileSystemProbe(),
+                () => throw new System.Security.SecurityException("denied"))
+            .Inspect(_root);
+
+        Assert.Equal(ExistingLocalAiState.Absent, snapshot.State);
+    }
+
     [Fact]
     public void Classifies_complete_strict_pointer_as_compatible()
     {
@@ -190,10 +291,13 @@ public sealed class ExistingLocalAiInspectorTests : IDisposable
         }
     }
 
-    private string BinRoot => Path.Combine(_root, "LocalAi", "bin");
+    private string RuntimeRoot => Path.Combine(_root, "LocalAi");
+    private string BinRoot => Path.Combine(RuntimeRoot, "bin");
     private string VersionsRoot => Path.Combine(BinRoot, "versions");
 
-    private ExistingLocalAiInspector CreateInspector() => new(new SystemFileSystemProbe());
+    private string? userPath;
+
+    private ExistingLocalAiInspector CreateInspector() => new(new SystemFileSystemProbe(), () => userPath);
 
     private void CreateComplete(string version)
     {
@@ -222,6 +326,7 @@ public sealed class ExistingLocalAiInspectorTests : IDisposable
         public string ReadAllText(string path) => _inner.ReadAllText(path);
         public string GetFullPath(string path) => _inner.GetFullPath(path);
         public FileMetadataSnapshot GetMetadata(string path) => _inner.GetMetadata(path);
+        public IEnumerable<string> EnumerateEntries(string directory) => _inner.EnumerateEntries(directory);
         public string ResolvePhysicalPath(string path) =>
             string.Equals(
                 Path.TrimEndingDirectorySeparator(path),
@@ -244,6 +349,7 @@ public sealed class ExistingLocalAiInspectorTests : IDisposable
         public string ReadAllText(string path) => _inner.ReadAllText(path);
         public string GetFullPath(string path) => _inner.GetFullPath(path);
         public FileMetadataSnapshot GetMetadata(string path) => _inner.GetMetadata(path);
+        public IEnumerable<string> EnumerateEntries(string directory) => _inner.EnumerateEntries(directory);
 
         public string ResolvePhysicalPath(string path)
         {
@@ -272,6 +378,7 @@ public sealed class ExistingLocalAiInspectorTests : IDisposable
         public string ReadAllText(string path) => _inner.ReadAllText(path);
         public string GetFullPath(string path) => _inner.GetFullPath(path);
         public FileMetadataSnapshot GetMetadata(string path) => _inner.GetMetadata(path);
+        public IEnumerable<string> EnumerateEntries(string directory) => _inner.EnumerateEntries(directory);
 
         public string ResolvePhysicalPath(string path)
         {
@@ -284,6 +391,20 @@ public sealed class ExistingLocalAiInspectorTests : IDisposable
         }
     }
 
+    private sealed class UnlistableFileSystem : IFileSystemProbe
+    {
+        private readonly SystemFileSystemProbe _inner = new();
+
+        public bool FileExists(string path) => _inner.FileExists(path);
+        public bool DirectoryExists(string path) => true;
+        public string ReadAllText(string path) => _inner.ReadAllText(path);
+        public string GetFullPath(string path) => _inner.GetFullPath(path);
+        public FileMetadataSnapshot GetMetadata(string path) => _inner.GetMetadata(path);
+        public string ResolvePhysicalPath(string path) => _inner.ResolvePhysicalPath(path);
+        public IEnumerable<string> EnumerateEntries(string directory) =>
+            throw new UnauthorizedAccessException("listing denied");
+    }
+
     private sealed class FailingPhysicalPathFileSystem : IFileSystemProbe
     {
         private readonly SystemFileSystemProbe _inner = new();
@@ -293,6 +414,7 @@ public sealed class ExistingLocalAiInspectorTests : IDisposable
         public string ReadAllText(string path) => _inner.ReadAllText(path);
         public string GetFullPath(string path) => _inner.GetFullPath(path);
         public FileMetadataSnapshot GetMetadata(string path) => _inner.GetMetadata(path);
+        public IEnumerable<string> EnumerateEntries(string directory) => _inner.EnumerateEntries(directory);
         public string ResolvePhysicalPath(string path) =>
             throw new System.ComponentModel.Win32Exception(
                 "physical path failed");

@@ -18,6 +18,7 @@ public interface IFileSystemProbe
     string GetFullPath(string path);
     string ResolvePhysicalPath(string path);
     FileMetadataSnapshot GetMetadata(string path);
+    IEnumerable<string> EnumerateEntries(string directory);
 }
 
 public interface IInstalledApplicationProbe
