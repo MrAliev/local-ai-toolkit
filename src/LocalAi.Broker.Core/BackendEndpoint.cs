@@ -13,8 +13,11 @@ namespace LocalAi.Broker;
 ///
 /// A socket rather than a request, because the question is only whether a server is there, and any
 /// HTTP answer at all already settles it.
+///
+/// Shared with the broker client, because <c>localai model</c> asks the same question before it
+/// names Ollama as the reason a job failed.
 /// </summary>
-internal static class BackendEndpoint
+public static class BackendEndpoint
 {
     /// <summary>
     /// How long to wait for the connection. On a loopback address an accept and a refusal both
