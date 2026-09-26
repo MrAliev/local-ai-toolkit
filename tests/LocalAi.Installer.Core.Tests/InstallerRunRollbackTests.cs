@@ -237,6 +237,31 @@ public sealed class InstallerRunRollbackTests : IDisposable
     }
 
     /// <summary>
+    /// Earlier installers journalled the launcher's PATH entry as reversible, and nothing takes
+    /// it back. A run they left interrupted is rolled back by a later installer.
+    /// </summary>
+    [Fact]
+    public async Task A_launcher_path_entry_journalled_as_reversible_is_left_in_place()
+    {
+        using var journal = InstallerRunJournal.Start(journalDirectory);
+        var step = journal.BeginStep(
+            InstallerRunEffectKind.LauncherPath,
+            @"PATH entry for C:\LocalAi\bin\launcher");
+        journal.CompleteStep(step, "Added to the user PATH.", isReversible: true);
+        journal.Finish(InstallerRunOutcome.Failed);
+
+        var result = await Rollback(NoProcessRunner()).RollbackAsync(journal, TestContext.Current.CancellationToken);
+
+        var report = Assert.Single(result.Steps);
+        Assert.Equal(InstallerRollbackStepOutcome.LeftInPlace, report.Outcome);
+        Assert.Contains("Not undone", report.Detail);
+        Assert.True(result.AllReversibleUndone);
+        Assert.Equal(
+            InstallerRunOutcome.RolledBack,
+            InstallerRunJournal.Load(journal.JournalPath).Snapshot.Outcome);
+    }
+
+    /// <summary>
     /// A step whose outcome was never written is the trace of a killed process: the effect
     /// may or may not have happened, and there is no undo data either way. Saying "state
     /// unknown, check by hand" is the only honest report.
