@@ -13,9 +13,9 @@ namespace LocalAi.ReleaseSigner;
 /// lifted disk, another account with a misconfigured ACL. The working copy is now a
 /// DPAPI-wrapped blob bound to this Windows account on this machine, and every use first
 /// verifies that the key directory's ACL grants access to nobody beyond SYSTEM,
-/// Administrators and the current user. The offline out-of-band backup that the signing
-/// runbook mandates stays the raw PKCS#8: a DPAPI blob does not travel across accounts or
-/// machines, so the backup must never be the protected form.
+/// Administrators and the current user. The offline backup stays the raw PKCS#8: a DPAPI
+/// blob does not travel across accounts or machines, so the backup must never be the
+/// protected form.
 /// </summary>
 [SupportedOSPlatform("windows")]
 public static class ReleaseSigningKeyStore
@@ -80,8 +80,8 @@ public static class ReleaseSigningKeyStore
     /// <summary>
     /// Converts the raw working copy into the DPAPI-wrapped one: validate, wrap, verify
     /// the round trip, then scrub and delete the raw file. The scrub is best effort — an
-    /// SSD or NTFS may keep older copies of the sectors — which is why the runbook's
-    /// offline backup, not this file, is the custody copy of record.
+    /// SSD or NTFS may keep older copies of the sectors — which is why the offline backup,
+    /// not this file, is the custody copy of record.
     /// </summary>
     public static int Protect(string? explicitRawPath, string directory, TextWriter output)
     {
@@ -99,8 +99,9 @@ public static class ReleaseSigningKeyStore
         if (!File.Exists(rawPath))
         {
             throw new InvalidOperationException(
-                $"No raw key at {rawPath}. Nothing to protect; the signing runbook " +
-                "describes how to generate or restore one.");
+                $"No raw key at {rawPath}, so there is nothing to protect. Restore the raw " +
+                "key from the offline backup to that path, or name its file with " +
+                "--private-key.");
         }
 
         VerifyDirectoryAcl(Path.GetDirectoryName(Path.GetFullPath(rawPath))!);
@@ -174,8 +175,10 @@ public static class ReleaseSigningKeyStore
 
         throw new InvalidOperationException(
             $"No release signing key in {directory} — neither {ProtectedKeyFileName} " +
-            $"nor {RawKeyFileName}. The signing runbook describes how to generate or " +
-            "restore one.");
+            $"nor {RawKeyFileName}. Restore the raw key from the offline backup into " +
+            $"that folder as {RawKeyFileName} and run " +
+            "`localai-release-signer protect-key`, or give `sign` a key file with " +
+            "--private-key.");
     }
 
     private static byte[] Unprotect(byte[] blob, string path)

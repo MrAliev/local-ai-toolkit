@@ -1,5 +1,6 @@
 using System.Security.AccessControl;
 using System.Security.Principal;
+using System.Text.RegularExpressions;
 
 namespace LocalAi.Installer.Core.Tests;
 
@@ -92,6 +93,122 @@ public sealed class DocumentationShapeTests
             locked.SetAccessControl(security);
             Directory.Delete(root, recursive: true);
         }
+    }
+
+    /// <summary>
+    /// Every link into this repository reaches a file that exists. Most of docs/ was deleted on
+    /// purpose, and a link left pointing into it promises a page there is none of.
+    /// </summary>
+    [Fact]
+    public void Every_link_into_the_repository_reaches_a_file_that_exists()
+    {
+        var dead = Documents(RepositoryRoot())
+            .SelectMany(document => DeadLinks(document).Select(link => $"{Relative(document)} -> {link}"))
+            .OrderBy(entry => entry, StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.True(dead.Length == 0, "These links lead nowhere: " + string.Join(", ", dead));
+    }
+
+    [Fact]
+    public void A_link_to_a_deleted_page_is_reported_and_nothing_else_is()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "localai-doc-links-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(root, "docs", "images"));
+        File.WriteAllText(Path.Combine(root, "docs", "kept.md"), string.Empty);
+        File.WriteAllText(Path.Combine(root, "docs", "images", "mark.png"), string.Empty);
+        var document = Path.Combine(root, "README.md");
+        File.WriteAllText(
+            document,
+            """
+            [kept](docs/kept.md#top) ![mark](docs/images/mark.png "Mark") [here](#section)
+            [web](https://example.com/docs/overview.md) [folder](docs/images)
+            [gone](docs/overview.md)
+            [absolute](https://github.com/MrAliev/local-ai-toolkit/blob/main/docs/mcp-tools.md#tools)
+            [absolute kept](https://github.com/MrAliev/local-ai-toolkit/blob/main/docs/kept.md)
+            <img src="docs/images/missing.svg">
+            [policy]: docs/code-signing-policy.md
+            """);
+        try
+        {
+            Assert.Equal(
+                [
+                    "docs/overview.md",
+                    "https://github.com/MrAliev/local-ai-toolkit/blob/main/docs/mcp-tools.md#tools",
+                    "docs/images/missing.svg",
+                    "docs/code-signing-policy.md",
+                ],
+                DeadLinks(document));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    private static readonly Regex LinkTargets = new(
+        """\]\((?<target>[^)\s]+)(?:\s+"[^"]*")?\)|(?:src|href)="(?<target>[^"]+)"|^\s*\[[^\]]+\]:\s*(?<target>\S+)""",
+        RegexOptions.CultureInvariant | RegexOptions.Multiline);
+
+    private static readonly Regex OwnRepository = new(
+        @"^https://github\.com/MrAliev/local-ai-toolkit/(?:blob|tree|raw)/[^/]+/(?<path>.+)$",
+        RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+
+    /// <summary>
+    /// Link targets in one document that name a path in this repository and miss. A relative
+    /// target resolves against the document's folder, an absolute one into this repository
+    /// against its root; anything else on the web and an in-page anchor are not this test's
+    /// business.
+    /// </summary>
+    private static List<string> DeadLinks(string document)
+    {
+        var folder = Path.GetDirectoryName(document)!;
+        var root = RootOf(folder);
+        var dead = new List<string>();
+        foreach (Match match in LinkTargets.Matches(File.ReadAllText(document)))
+        {
+            var target = match.Groups["target"].Value;
+            var own = OwnRepository.Match(target);
+            string relative;
+            string baseFolder;
+            if (own.Success)
+            {
+                relative = own.Groups["path"].Value;
+                baseFolder = root;
+            }
+            else if (target.StartsWith('#') || target.Contains(':', StringComparison.Ordinal))
+            {
+                continue;
+            }
+            else
+            {
+                relative = target;
+                baseFolder = folder;
+            }
+
+            var path = Uri.UnescapeDataString(relative.Split('#')[0]);
+            var full = Path.GetFullPath(Path.Combine(baseFolder, path));
+            if (!File.Exists(full) && !Directory.Exists(full))
+            {
+                dead.Add(target);
+            }
+        }
+
+        return dead;
+    }
+
+    /// <summary>The repository root when there is one above the folder, else the folder itself — a test's own temporary tree.</summary>
+    private static string RootOf(string folder)
+    {
+        for (var directory = new DirectoryInfo(folder); directory is not null; directory = directory.Parent)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "LocalAi.slnx")))
+            {
+                return directory.FullName;
+            }
+        }
+
+        return folder;
     }
 
     private static string Pair(string document) =>
