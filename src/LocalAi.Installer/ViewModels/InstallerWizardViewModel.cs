@@ -186,6 +186,12 @@ public sealed class InstallerWizardViewModel : ObservableObject
     private bool isComplete;
     private bool hasRunError;
 
+    /// <summary>
+    /// A choice from the confirm page the run could not apply — the update check or the PATH
+    /// entry — without failing the installation.
+    /// </summary>
+    private bool choiceNotApplied;
+
     /// <summary>The clients this run actually wrote to, which is what has to be restarted.</summary>
     private readonly List<string> configuredAgents = [];
     private readonly List<ClientRunOutcome> clientOutcomes = [];
@@ -503,7 +509,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             CurrentPage,
             IsUpdate,
             ActionText,
-            hasRunError,
+            hasRunError || choiceNotApplied,
             isChecking: diagnose.IsChecking,
             isReleaseFolded: IsReleaseFolded,
             areSettingsFolded: AreSettingsFolded);
@@ -522,6 +528,9 @@ public sealed class InstallerWizardViewModel : ObservableObject
     public bool IsComplete => isComplete;
 
     public bool HasRunError => hasRunError;
+
+    /// <summary>Whether the finish page opens its log.</summary>
+    public bool OpensTheLog => hasRunError || choiceNotApplied;
 
     public bool IsCanceled => wasCancelled;
 
@@ -890,6 +899,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         isRunning = true;
         isComplete = false;
         hasRunError = false;
+        choiceNotApplied = false;
         wasCancelled = false;
         // A second attempt after a failure reports on itself, not on the one before it.
         configuredAgents.Clear();
@@ -1396,6 +1406,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 report,
                 "Claude Code hooks: skipped, because the LocalAi package was not installed " +
                 "and this run did not get far enough to change it.");
+            hooksOutcome = new("Claude Code", ClientRunState.Skipped);
             hasRunError = true;
             return;
         }
@@ -1487,6 +1498,11 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 report,
                 "Client applications: skipped, because the LocalAi package was not installed " +
                 "and the registration would point at a launcher that is not there.");
+            for (var index = 0; index < clientOutcomes.Count; index++)
+            {
+                clientOutcomes[index] = clientOutcomes[index] with { State = ClientRunState.Skipped };
+            }
+
             hasRunError = true;
             return;
         }
@@ -1699,8 +1715,11 @@ public sealed class InstallerWizardViewModel : ObservableObject
     /// A failure here never fails the run. Not knowing whether a newer release exists is a
     /// smaller problem than an installation reported as failed, and the setting can be changed
     /// afterwards with one command — which the log names.
+    ///
+    /// Internal so a test can make the write fail: no test can reach it through a run that
+    /// installed a package.
     /// </summary>
-    private void ApplyUpdateCheckPolicy(StringBuilder report)
+    internal void ApplyUpdateCheckPolicy(StringBuilder report)
     {
         string? step = null;
         try
@@ -1746,6 +1765,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
             JournalFail(step, exception.Message);
+            choiceNotApplied = true;
             AppendLog(
                 report,
                 $"Could not store the update check setting: {exception.Message}. The " +
@@ -1969,6 +1989,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         OnPropertyChanged(nameof(IsRunning));
         OnPropertyChanged(nameof(IsComplete));
         OnPropertyChanged(nameof(HasRunError));
+        OnPropertyChanged(nameof(OpensTheLog));
         OnPropertyChanged(nameof(ReviewText));
         OnPropertyChanged(nameof(ReviewGroups));
         OnPropertyChanged(nameof(CanRollback));
@@ -2055,7 +2076,8 @@ public sealed class InstallerWizardViewModel : ObservableObject
         finish.NextSteps = InstallerRunMessages.NextSteps(new InstallerRunMessageFacts(
             WasCancelled: wasCancelled,
             HasRunError: hasRunError,
-            NoValidatedModels: ModelRuns.Count > 0 &&
+            // A cancelled run's rows are cancelled or not reached, not refused.
+            NoValidatedModels: !wasCancelled && ModelRuns.Count > 0 &&
                 !ModelRuns.Any(model => model.State is ModelRunState.Ready or ModelRunState.ReadyWithLimitations),
             HasRollbackReport: finish.HasRollbackReport,
             CanRollback: CanRollback,
@@ -2515,16 +2537,20 @@ public sealed class InstallerWizardViewModel : ObservableObject
                     ? $"PATH: {directory} added for this account. A console already open keeps " +
                         "the path it started with; a new one finds localai-launcher.exe."
                     : $"PATH: {directory} was already there, nothing changed.");
+            // Not reversible, and no rollback procedure exists for it: the launcher directory is
+            // shared by every version, so after an undone update the entry still leads to a
+            // working launcher.
             JournalComplete(
                 step,
                 added ? "Added to the user PATH." : "Already present; nothing written.",
-                isReversible: true);
+                isReversible: false);
         }
         catch (Exception exception) when (
             exception is System.Security.SecurityException or InvalidOperationException or
                 InstallationLayoutException)
         {
             JournalFail(step, exception.Message);
+            choiceNotApplied = true;
             pathMark = RunMark.Failed;
             pathOutcome = PathOutcome.Failed;
             AppendLog(
@@ -2675,6 +2701,17 @@ public sealed class InstallerWizardViewModel : ObservableObject
             JournalFail(modelsStep ?? packageStep, "Cancelled before it could finish.");
             throw;
         }
+        catch (LocalAiPackageInstallationException exception) when (packageInstalled)
+        {
+            // Activation had already reported the package installed, so this came from the model
+            // step: the package keeps its row and gets what an installed package gets.
+            JournalFail(modelsStep, exception.Message);
+            AppendLog(report, $"Local models: {exception.Message}");
+            hasRunError = true;
+            RegisterUninstallEntry(report, resolved.Manifest.ReleaseVersion);
+            RegisterLauncherPath(report);
+            return;
+        }
         catch (LocalAiPackageInstallationException exception)
         {
             JournalFail(packageStep, exception.Message);
@@ -2685,7 +2722,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             // defect. It is caught here so the advice can name the directory and say what is
             // in it, and so the run still finishes its own reporting instead of aborting.
             packageInstalled = false;
-            packageOutcome = new(PackageOutcomeKind.Refused, Reason: exception.Message);
+            packageOutcome = PackageOutcome.FromInstallationFailure(exception.Message);
             AppendLog(report, $"LocalAi package: {exception.Message}");
             var layout = InstallationLayout.CreateDefault();
             var advice = InstallationFailureAdvice.ForLayoutFailure(

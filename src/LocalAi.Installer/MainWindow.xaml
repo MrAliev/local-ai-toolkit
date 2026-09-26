@@ -786,11 +786,10 @@
                                     Padding="12,4" Margin="8,0,0,0" Click="OnOpenReportFolder" />
                         </Grid>
 
-                        <!-- A run that went wrong opens its log; a run that went right folds it.
-                             Nothing that failed is hidden either way, because every failure is
-                             also a row above. -->
+                        <!-- A run where something did not complete opens its log; a run that went
+                             right folds it. -->
                         <Expander Header="{vm:Label Log}" Margin="0,14,0,0"
-                                  IsExpanded="{Binding HasRunError, Mode=OneWay}">
+                                  IsExpanded="{Binding OpensTheLog, Mode=OneWay}">
                             <local:LogView LogText="{Binding Finish.Progress, Mode=OneWay}" Height="220" Margin="0,6,0,0" />
                         </Expander>
                         <!-- Only after a failed or cancelled run with reversible effects:
