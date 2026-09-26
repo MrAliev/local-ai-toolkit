@@ -95,6 +95,14 @@
   <data name="BrokerNotRunning" xml:space="preserve">
     <value>Не запущен. Запускается по требованию, так что это просто к сведению.</value>
   </data>
+  <data name="ModelOllamaNotAnswering" xml:space="preserve">
+    <value>Ollama не отвечает по адресу {0}, поэтому брокер не смог выполнить команду. Запустите Ollama (если на этом компьютере её нет, сначала установите) и повторите команду.</value>
+    <comment>0 is the address the broker reaches Ollama at, as the broker publishes it. Said only when nothing answers there.</comment>
+  </data>
+  <data name="ModelBrokerNotStarted" xml:space="preserve">
+    <value>Не удалось запустить брокер LocalAi, поэтому к Ollama не обращались. Повторите команду; если ошибка повторится, проверьте установку командой localai doctor. Причина: {0}</value>
+    <comment>0 is the broker client's own account, English whatever the reader's language, so it is quoted last. No closing period: the reason brings its own or ends in a path.</comment>
+  </data>
   <data name="BrokerSilent" xml:space="preserve">
     <value>процесс {0}, последний сигнал {1} мин назад — либо остановлен без очистки host.json, либо завис.</value>
   </data>

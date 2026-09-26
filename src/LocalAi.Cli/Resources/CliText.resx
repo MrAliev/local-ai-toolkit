@@ -95,6 +95,14 @@
   <data name="BrokerNotRunning" xml:space="preserve">
     <value>Not running. It starts on demand, so this is only worth noting.</value>
   </data>
+  <data name="ModelOllamaNotAnswering" xml:space="preserve">
+    <value>Ollama is not answering at {0}, so the broker could not carry out this command. Start Ollama (install it first if this computer does not have it), then run the command again.</value>
+    <comment>0 is the address the broker reaches Ollama at, as the broker publishes it. Said only when nothing answers there.</comment>
+  </data>
+  <data name="ModelBrokerNotStarted" xml:space="preserve">
+    <value>The LocalAi broker could not be started, so Ollama was not asked. Run the command again; if it fails the same way, run localai doctor to check the installation. Reason: {0}</value>
+    <comment>0 is the broker client's own account, English whatever the reader's language, so it is quoted last. No closing period: the reason brings its own or ends in a path.</comment>
+  </data>
   <data name="BrokerSilent" xml:space="preserve">
     <value>process {0}, last heartbeat {1} min ago — either stopped without clearing host.json, or wedged.</value>
   </data>
