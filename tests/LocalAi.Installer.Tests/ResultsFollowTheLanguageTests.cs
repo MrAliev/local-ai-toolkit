@@ -113,7 +113,10 @@ public sealed class ResultsFollowTheLanguageTests : IDisposable
 
         Assert.True(wizard.CanRun);
         Assert.Contains("  удалить " + jobs, wizard.PreviewText, StringComparison.Ordinal);
-        Assert.Contains("перепишет все три", wizard.KeepNotice, StringComparison.Ordinal);
+        Assert.Contains(
+            "снова заработают, когда следующая установка вернёт его на место",
+            wizard.KeepNotice,
+            StringComparison.Ordinal);
     }
 
     /// <summary>The removal half of a reinstall: it takes the binaries and never plans the registry entry.</summary>

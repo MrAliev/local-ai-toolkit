@@ -56,7 +56,7 @@ public sealed class UninstallWizardViewModelTests : IDisposable
         Assert.False(Row(wizard, RemovalItem.RepositoryIndexes).IsSelected);
         Assert.False(Row(wizard, RemovalItem.Settings).IsSelected);
         // The three client rows used to arrive here undecided. They are pinned to kept now:
-        // a reinstall rewrites all three, so asking was asking twice.
+        // all three call the launcher a reinstall puts back, so asking was asking twice.
         Assert.False(Row(wizard, RemovalItem.ClaudeIntegration).IsSelected);
         Assert.False(Row(wizard, RemovalItem.CodexIntegration).IsSelected);
         Assert.False(Row(wizard, RemovalItem.GitHooks).IsSelected);
@@ -69,7 +69,7 @@ public sealed class UninstallWizardViewModelTests : IDisposable
     /// and on the other nothing does.
     /// </summary>
     [Fact]
-    public async Task A_reinstall_says_the_installation_will_rewrite_what_it_keeps()
+    public async Task A_reinstall_says_what_it_keeps_works_again_once_the_launcher_is_back()
     {
         var wizard = await Wizard(
             preset: RemovalPreset.ReinstallFriendly,
@@ -78,10 +78,32 @@ public sealed class UninstallWizardViewModelTests : IDisposable
         Assert.True(await wizard.MoveNextAsync(TestContext.Current.CancellationToken));
 
         Assert.True(wizard.HasKeepNotice);
-        Assert.Contains(
-            "the installation that follows this removal rewrites all three",
+        Assert.StartsWith(
+            "The Claude and Codex registrations and the Git hook dispatchers are left exactly " +
+            "as they are. All three call the launcher this run removes, and work again once " +
+            "the installation that follows puts it back.",
             wizard.KeepNotice,
             StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// With the binaries row unticked the launcher stays, so nothing the notice keeps stops
+    /// working and the sentence about the launcher has nothing to be about.
+    /// </summary>
+    [Fact]
+    public async Task A_reinstall_that_keeps_the_binaries_says_nothing_about_the_launcher()
+    {
+        var wizard = await Wizard(
+            preset: RemovalPreset.ReinstallFriendly,
+            offersInstallAfterwards: true);
+        Row(wizard, RemovalItem.Binaries).IsSelected = false;
+
+        Assert.True(await wizard.MoveNextAsync(TestContext.Current.CancellationToken));
+
+        Assert.Equal(
+            "The Claude and Codex registrations and the Git hook dispatchers are left exactly " +
+            "as they are.",
+            wizard.KeepNotice);
     }
 
     /// <summary>
@@ -101,13 +123,13 @@ public sealed class UninstallWizardViewModelTests : IDisposable
     }
 
     /// <summary>
-    /// The notice lists what this preset keeps, and the gate stopped being one of those things:
-    /// it points at the launcher, which the same preset deletes. Left as it was, the page would
-    /// tell the reader their Claude setup is untouched while the run takes an entry out of the
-    /// settings file in their home directory.
+    /// The notice lists what this preset keeps, and the hooks LocalAi wrote into Claude Code's
+    /// settings are not among them: they point at the launcher, which the same preset deletes.
+    /// That is the text-search gate and the worktree pair alike, so the sentence names neither
+    /// alone.
     /// </summary>
     [Fact]
-    public async Task A_reinstall_says_the_gate_goes_even_though_claude_is_kept()
+    public async Task A_reinstall_says_the_claude_hooks_go_even_though_claude_is_kept()
     {
         var wizard = await Wizard(
             preset: RemovalPreset.ReinstallFriendly,
@@ -115,29 +137,52 @@ public sealed class UninstallWizardViewModelTests : IDisposable
 
         Assert.True(await wizard.MoveNextAsync(TestContext.Current.CancellationToken));
 
-        Assert.Contains(
-            "hook that refuses text searches",
+        Assert.EndsWith(
+            " The hooks LocalAi wrote into Claude Code's settings.json are not among them: " +
+            "they go with the launcher, and the installation that follows writes them again " +
+            "from what you choose there.",
             wizard.KeepNotice,
             StringComparison.Ordinal);
-        Assert.Contains("asks about it again", wizard.KeepNotice, StringComparison.Ordinal);
     }
 
     /// <summary>
     /// And when nothing follows, the same fact without the promise: no installation is coming
-    /// to ask about it again, so the sentence must not imply one.
+    /// to write them again, so the sentence must not imply one.
     /// </summary>
     [Fact]
-    public async Task Picking_the_preset_by_hand_is_told_the_gate_goes_too()
+    public async Task Picking_the_preset_by_hand_is_told_the_claude_hooks_go_too()
     {
         var wizard = await Wizard(preset: RemovalPreset.ReinstallFriendly);
 
         Assert.True(await wizard.MoveNextAsync(TestContext.Current.CancellationToken));
 
-        Assert.Contains(
-            "hook that refuses text searches",
+        Assert.EndsWith(
+            " The hooks LocalAi wrote into Claude Code's settings.json still go: they point at " +
+            "the launcher, which this run removes.",
             wizard.KeepNotice,
             StringComparison.Ordinal);
         Assert.DoesNotContain("follows", wizard.KeepNotice, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The notice reads the rows, not the preset, so its reason must not credit the preset:
+    /// here a full uninstall is still chosen and would disconnect both clients.
+    /// </summary>
+    [Fact]
+    public async Task Unticking_both_clients_by_hand_is_not_credited_to_the_preset()
+    {
+        var wizard = await Wizard();
+        Row(wizard, RemovalItem.ClaudeIntegration).IsSelected = false;
+        Row(wizard, RemovalItem.CodexIntegration).IsSelected = false;
+
+        Assert.True(await wizard.MoveNextAsync(TestContext.Current.CancellationToken));
+
+        Assert.Equal(RemovalPreset.FullUninstall, wizard.SelectedPreset);
+        Assert.StartsWith(
+            "The Claude and Codex registrations are left exactly as they are: this removal " +
+            "disconnects no clients.",
+            wizard.KeepNotice,
+            StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -317,6 +362,51 @@ public sealed class UninstallWizardViewModelTests : IDisposable
     }
 
     /// <summary>
+    /// The failed step of a refused run is the stop request, which removes nothing, so the
+    /// report calls it failed rather than a removal that may have left partial changes — two
+    /// lines after saying nothing was removed.
+    /// </summary>
+    [Fact]
+    public async Task A_refused_stop_is_reported_as_failed_rather_than_as_a_partial_removal()
+    {
+        var wizard = await Wizard(new StubProcessRunner
+        {
+            Result = new ProcessResult(1, string.Empty, "broker_still_running", false, false),
+        });
+        await wizard.MoveNextAsync(TestContext.Current.CancellationToken);
+        wizard.IsConfirmed = true;
+
+        Assert.False(await wizard.RunAsync(TestContext.Current.CancellationToken));
+
+        Assert.Contains(
+            "\nFailed: Ask LocalAi to finish and exit: ",
+            wizard.Report,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("partial changes", wizard.Report, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// By then the run has usually rewritten client configurations and deleted dispatchers, so
+    /// a partial failure counts those as the success summary does rather than denying them.
+    /// </summary>
+    [Fact]
+    public async Task A_partial_removal_counts_the_configurations_and_hooks_it_changed()
+    {
+        var held = Path.Combine(machine.Runtime, "jobs", "job.json");
+        using var handle = new FileStream(held, FileMode.Open, FileAccess.Read, FileShare.None);
+        var wizard = await Wizard();
+        await wizard.MoveNextAsync(TestContext.Current.CancellationToken);
+        wizard.IsConfirmed = true;
+
+        Assert.False(await wizard.RunAsync(TestContext.Current.CancellationToken));
+
+        Assert.StartsWith("Could not be removed: 1; removed: ", wizard.Summary, StringComparison.Ordinal);
+        Assert.Contains(" Client configurations updated: ", wizard.Summary, StringComparison.Ordinal);
+        Assert.Contains(" Git hook dispatchers removed: ", wizard.Summary, StringComparison.Ordinal);
+        Assert.DoesNotContain("Nothing else was touched", wizard.Summary, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// One wizard writing the runtime while another removes it leaves a tree neither of them
     /// describes. The live lock the journal already keeps is what recognises the other one.
     /// </summary>
@@ -401,7 +491,10 @@ public sealed class UninstallWizardViewModelTests : IDisposable
         Assert.True(await wizard.RunAsync(TestContext.Current.CancellationToken));
 
         Assert.True(wizard.CanContinueToInstall);
-        Assert.Contains("Continue to install", wizard.StepDescription, StringComparison.Ordinal);
+        Assert.Contains(
+            "Continue to the installation to finish the reinstall.",
+            wizard.StepDescription,
+            StringComparison.Ordinal);
         Assert.True(Directory.Exists(Path.Combine(machine.Runtime, "repositories")));
     }
 
@@ -423,10 +516,37 @@ public sealed class UninstallWizardViewModelTests : IDisposable
         Assert.True(await wizard.RunAsync(TestContext.Current.CancellationToken));
 
         Assert.DoesNotContain("either way", wizard.StepDescription, StringComparison.Ordinal);
-        Assert.Contains(
-            "will not work again until the launcher is back",
+        Assert.EndsWith(
+            " Until it finishes, the Git hooks in your connected repositories fail: they call " +
+            "the launcher this run removed.",
             wizard.StepDescription,
             StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// That consequence is stated only when the run caused it: not when the hooks row took the
+    /// dispatchers as well, and not when the binaries row kept the launcher.
+    /// </summary>
+    [Theory]
+    [InlineData(RemovalItem.GitHooks, true)]
+    [InlineData(RemovalItem.Binaries, false)]
+    public async Task The_finish_page_mentions_the_hooks_only_when_the_run_left_them_failing(
+        RemovalItem item,
+        bool selected)
+    {
+        var wizard = await Wizard(
+            preset: RemovalPreset.ReinstallFriendly,
+            offersInstallAfterwards: true);
+        Row(wizard, item).IsSelected = selected;
+        await wizard.MoveNextAsync(TestContext.Current.CancellationToken);
+        wizard.IsConfirmed = true;
+
+        Assert.True(await wizard.RunAsync(TestContext.Current.CancellationToken));
+
+        Assert.Equal(
+            "Everything selected was removed. Continue to the installation to finish the " +
+            "reinstall.",
+            wizard.StepDescription);
     }
 
     [Fact]

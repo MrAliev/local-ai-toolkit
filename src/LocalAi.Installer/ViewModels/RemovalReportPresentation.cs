@@ -25,6 +25,10 @@ public static class RemovalReportPresentation
         RemovalReportState.NotStarted => InstallerCulture.Pick("Not started: ", "Не начато: "),
         RemovalReportState.Retained => InstallerCulture.Pick("Kept: ", "Оставлено: "),
         RemovalReportState.Unknown => InstallerCulture.Pick("Outcome unknown: ", "Результат неизвестен: "),
+        // Other is the stop request, the empty runtime root, and repeats of a configuration or
+        // hook failure whose own line already carries the partial-changes caveat.
+        RemovalReportState.Failed when entry.Kind == RemovalReportKind.Other =>
+            InstallerCulture.Pick("Failed: ", "Не выполнено: "),
         RemovalReportState.Failed => InstallerCulture.Pick(
             "Could not remove (partial changes possible): ", "Не удалось удалить (возможны частичные изменения): "),
         _ => entry.Kind switch
