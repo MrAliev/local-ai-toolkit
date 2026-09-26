@@ -69,11 +69,11 @@ calls them itself, whenever a question is cheaper to ask locally.
 | `read_image` | read images from disk or one PDF page by page |
 | `index_documents` / `search_documents` | index scanned PDFs and find OCR phrases with file versions and page references |
 | `translate_local` | translate, structure intact |
-| `index_status` | whether an index exists, what built it, how far behind HEAD |
+| `index_status` | whether an index exists, what built it, whether the mainline branch has moved since |
 | `index_refresh` | refresh the index after a commit |
 | `index_unload` | free the memory a loaded index holds |
 | `local_models_status` | what is installed, what is resident, what is missing |
-| `local_model_preflight` | prove a model fits entirely in video memory |
+| `local_model_preflight` | prove where a model loads: entirely in video memory under the default policy |
 | `local_models_sync` | fetch the recommended models that are missing |
 | `local_model_experiment_report` | statistics for one task-and-model pair |
 | `local_model_feedback` | decide a model's fate: promote, keep as fallback, disable |
@@ -976,7 +976,7 @@ residency, and both cloud savings estimates. Results that use a model keep their
 
 ```powershell
 lai localai repo status --root C:\work\myapp   # is the repository connected
-lai codesearch status --root C:\work\myapp     # where the index is, how far behind HEAD
+lai codesearch status --root C:\work\myapp     # where the index is, whether the mainline has moved past it
 lai localai model status                       # which models are installed and resident
 lai localai policy show                        # residency and update policy
 lai localai telemetry                          # a summary of local jobs
