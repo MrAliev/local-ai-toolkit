@@ -1,6 +1,8 @@
+using System.Runtime.Versioning;
 using LocalAi.Contracts.Activation;
 using LocalAi.Installer.Core.Abstractions;
 using LocalAi.Installer.Core.Activation;
+using LocalAi.Installer.Core.Removal;
 
 namespace LocalAi.Installer.Core.Transactions;
 
@@ -36,13 +38,15 @@ public sealed record InstallerRollbackReport(
 /// this installer cannot claim back; a pulled model belongs to Ollama and to whatever else
 /// uses it; a first installation's root directory holds runtime state (indexes included) the
 /// moment the broker starts. Those are reported as left in place. What is undone is what the
-/// run can prove it changed: the active-version pointer, and files whose current content
-/// still hashes to what the run wrote.
+/// run can prove it changed: the active-version pointer, and files and the Apps &amp; features
+/// version that still hold what the run wrote.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public sealed class InstallerRunRollback(
     IProcessRunner processRunner,
     InstallationLayout layout,
-    TimeSpan activationTimeout)
+    TimeSpan activationTimeout,
+    string? uninstallRegistrySubKey = null)
 {
     private readonly IProcessRunner processRunner =
         processRunner ?? throw new ArgumentNullException(nameof(processRunner));
@@ -78,7 +82,10 @@ public sealed class InstallerRunRollback(
                 InstallerRunStepStatus.UndoFailed => (
                     InstallerRollbackStepOutcome.Failed,
                     step.Detail ?? "An earlier rollback failed on this step."),
-                _ when !step.IsReversible => (
+                // Earlier installers journalled the PATH entry as reversible. Nothing takes it
+                // back: it leads to the launcher every version shares.
+                _ when !step.IsReversible ||
+                    step.Kind == InstallerRunEffectKind.LauncherPath => (
                     InstallerRollbackStepOutcome.LeftInPlace,
                     step.Detail is { Length: > 0 } completedDetail
                         ? $"Not undone by this installer. {completedDetail}"
@@ -217,15 +224,68 @@ public sealed class InstallerRunRollback(
                 $"Reactivation ran but could not be verified: {exception.Message}");
         }
 
-        return after.Exists && string.Equals(after.Version, prior, StringComparison.Ordinal)
-            ? (
-                InstallerRollbackStepOutcome.Undone,
-                $"Version {prior} is active again. The {activated} version directory and " +
-                "the updated launcher stay on disk: versions are immutable and the " +
-                "launcher is the stable entry point.")
-            : (
+        if (!after.Exists || !string.Equals(after.Version, prior, StringComparison.Ordinal))
+        {
+            return (
                 InstallerRollbackStepOutcome.Failed,
                 $"The launcher reported success but {prior} is not the active version.");
+        }
+
+        // Only now, with the pointer back: the release record and the list describe the active
+        // version, and restored ahead of it they would describe one that is not.
+        var notes = new List<string>
+        {
+            $"Version {prior} is active again. The {activated} version directory and " +
+            "the updated launcher stay on disk: versions are immutable and the " +
+            "launcher is the stable entry point.",
+        };
+        var anyFailed = false;
+        foreach (var file in step.Undo.Files ?? [])
+        {
+            var (outcome, note) = RestoreFile(file);
+            anyFailed |= outcome == InstallerRollbackStepOutcome.Failed;
+            notes.Add($"{file.Path}: {note}");
+        }
+
+        if (step.Undo.UninstallEntryVersion is { } entryVersion)
+        {
+            var (outcome, note) = RestoreEntryVersion(entryVersion);
+            anyFailed |= outcome == InstallerRollbackStepOutcome.Failed;
+            notes.Add(note);
+        }
+
+        return (
+            anyFailed ? InstallerRollbackStepOutcome.Failed : InstallerRollbackStepOutcome.Undone,
+            string.Join(" ", notes));
+    }
+
+    private (InstallerRollbackStepOutcome, string) RestoreEntryVersion(InstallerRunValueUndo version)
+    {
+        try
+        {
+            var shown = new UninstallRegistration(layout, uninstallRegistrySubKey)
+                .ReplaceDisplayVersion(version.After, version.Before);
+            return shown is null
+                ? (
+                    InstallerRollbackStepOutcome.Skipped,
+                    "Apps & features: no entry for this installation; nothing to restore.")
+                : string.Equals(shown, version.Before, StringComparison.Ordinal)
+                    ? (
+                        InstallerRollbackStepOutcome.Undone,
+                        $"Apps & features: shows {version.Before} again.")
+                    : (
+                        InstallerRollbackStepOutcome.Skipped,
+                        $"Apps & features: shows {shown}, not the {version.After} this run " +
+                        "wrote; left alone.");
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException or
+                System.Security.SecurityException)
+        {
+            return (
+                InstallerRollbackStepOutcome.Failed,
+                $"Apps & features: could not show {version.Before} again: {exception.Message}");
+        }
     }
 
     private CurrentPointerSnapshot ReadPointer()
