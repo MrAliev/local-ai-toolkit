@@ -1,4 +1,6 @@
 using System.Text;
+using LocalAi.Contracts;
+using LocalAi.Installer.Core;
 using LocalAi.Installer.Core.Diagnosis;
 using LocalAi.Installer.Core.Models;
 using LocalAi.Installer.ViewModels;
@@ -159,6 +161,103 @@ public sealed class TheFinishPageSaysWhatHappenedTests
             "Some actions did not complete. The log below shows what happened.",
             wizard.StepDescription);
         Assert.True(wizard.OpensTheLog);
+    }
+
+    /// <summary>
+    /// The memory rule the run could not store failed the run, and only the log said so: the
+    /// finish page listed every other thing the run touched and not this one.
+    /// </summary>
+    [Fact]
+    public async Task A_memory_rule_that_could_not_be_stored_has_its_own_row()
+    {
+        using var root = new TemporaryDirectory("LocalAi-finish-policy");
+        var runtime = root.Combine("runtime");
+        // A directory where the file goes, so the write is refused.
+        Directory.CreateDirectory(Path.Combine(runtime, "settings", BrokerPolicy.FileName));
+        var wizard = RunOver(runtime, root.Combine("logs"));
+        wizard.Residency.Policy = ModelResidencyPolicy.AllowPartialOffload;
+
+        Assert.False(await wizard.RunAsync(TestContext.Current.CancellationToken));
+
+        var row = Assert.Single(wizard.Finish.Results, row => row.Title == "Video memory");
+        Assert.Equal(RunMark.Failed, row.Mark);
+        Assert.StartsWith(
+            "could not be stored. Technical details: ",
+            row.Detail,
+            StringComparison.Ordinal);
+
+        InstallerCulture.Current = InstallerLanguage.Russian;
+        Assert.Equal(
+            new RunResultRow(
+                RunMark.Failed,
+                "Видеопамять",
+                "не удалось сохранить. Технические сведения: доступ запрещён"),
+            RunResults.ResidencyNotStored("доступ запрещён"));
+    }
+
+    /// <summary>
+    /// A repair that keeps both settings has nothing to store, so a read-only settings file is
+    /// no reason for anything to fail, and the journal holds no step for a write that never
+    /// happened.
+    /// </summary>
+    [Fact]
+    public async Task Settings_the_run_keeps_are_not_written_again()
+    {
+        using var root = new TemporaryDirectory("LocalAi-finish-kept");
+        var runtime = root.Combine("runtime");
+        Directory.CreateDirectory(runtime);
+        var policy = new ModelResidencyPolicyStore(runtime);
+        policy.Write(policy.Read() with { ModelResidency = ModelResidencyPolicy.RequireFullVram });
+        new UpdateCheckPolicyStore(runtime).Write(UpdateCheckPolicy.Default);
+        var settings = Directory.EnumerateFiles(Path.Combine(runtime, "settings")).ToArray();
+        foreach (var file in settings)
+        {
+            File.SetAttributes(file, FileAttributes.ReadOnly);
+        }
+
+        try
+        {
+            var logs = root.Combine("logs");
+            var wizard = RunOver(runtime, logs);
+            wizard.Residency.Policy = ModelResidencyPolicy.RequireFullVram;
+            wizard.Review.EnableUpdateCheck = false;
+
+            await wizard.RunAsync(TestContext.Current.CancellationToken);
+
+            Assert.DoesNotContain("Could not store", wizard.Finish.Progress, StringComparison.Ordinal);
+            Assert.DoesNotContain(wizard.Finish.Results, row => row.Title == "Video memory");
+            var journal = File.ReadAllText(Assert.Single(Directory.EnumerateFiles(logs, "journal-*.json")));
+            Assert.DoesNotContain("Model residency policy", journal, StringComparison.Ordinal);
+            Assert.DoesNotContain("Update check policy", journal, StringComparison.Ordinal);
+        }
+        finally
+        {
+            foreach (var file in settings)
+            {
+                File.SetAttributes(file, FileAttributes.Normal);
+            }
+        }
+    }
+
+    /// <summary>A package-less run over a runtime root the test owns.</summary>
+    private static InstallerWizardViewModel RunOver(string runtime, string logs)
+    {
+        var wizard = new InstallerWizardViewModel(
+            StartChoice.UpdateOrRepair,
+            () => null,
+            detectEnvironment: _ => Task.FromResult(HermeticDiagnosis.Supported()))
+        {
+            EnableDependencyActions = true,
+            LogDirectory = logs,
+            RuntimeRoot = runtime,
+        };
+        // No catalogue means nothing to weigh, so the check makes no registry request.
+        wizard.Models.CatalogModels.Clear();
+        wizard.Diagnose.IsChecking = false;
+        wizard.Diagnose.SetResult(supported: true);
+        Assert.True(wizard.MoveNext());
+        wizard.SetReviewConfirmed(true);
+        return wizard;
     }
 
     private static async Task<InstallerWizardViewModel> RunEndedByTheCheck(bool cancelled)
