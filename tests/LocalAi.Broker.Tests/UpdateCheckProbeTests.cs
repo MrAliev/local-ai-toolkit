@@ -24,7 +24,7 @@ public sealed class UpdateCheckProbeTests : IDisposable
     private static readonly DateTimeOffset Now =
         new(2026, 8, 31, 12, 0, 0, TimeSpan.Zero);
 
-    private const string Repository = "MrAliev/local-ai-developer-toolkit";
+    private const string Repository = "MrAliev/local-ai-toolkit";
 
     private readonly ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
 

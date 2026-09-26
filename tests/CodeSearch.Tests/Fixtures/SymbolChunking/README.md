@@ -4,10 +4,10 @@ Source files whose only purpose is to be handed to `scip-typescript` and
 `scip-python`, so that what those indexers emit for a definition can be checked
 against the source rather than against the SCIP schema.
 
-They exist for [#82](https://github.com/MrAliev/local-ai-developer-toolkit/issues/82)
+They exist for [#82](https://github.com/MrAliev/local-ai-toolkit/issues/82)
 — chunking TypeScript and Python by symbol instead of by a 60-line window — and
 were written for its phase 0,
-[#87](https://github.com/MrAliev/local-ai-developer-toolkit/issues/87): whether
+[#87](https://github.com/MrAliev/local-ai-toolkit/issues/87): whether
 the adapters emit `enclosing_range`, the field that gives the span of the body
 of a definition rather than the span of its name.
 

@@ -77,6 +77,18 @@ public sealed class ReleaseConsistencyTests
     }
 
     /// <summary>
+    /// What the check expects is the asset installers download, in the repository as it is named
+    /// now; otherwise every manifest the publish script writes is reported as pointing elsewhere.
+    /// </summary>
+    [Fact]
+    public void The_expected_package_uri_is_the_asset_installers_download()
+    {
+        Assert.Equal(
+            ReleaseAssets.Asset("0.1.35", ReleaseAssets.PackageAsset),
+            ReleaseConsistency.ExpectedPackageUri(ReleaseVersion.Parse("0.1.35")));
+    }
+
+    /// <summary>
     /// The manifest published for 0.1.35, byte for byte as the signer wrote it.
     ///
     /// The document is produced by a canonical writer rather than by the serializer that reads it
@@ -91,14 +103,13 @@ public sealed class ReleaseConsistencyTests
         Assert.Equal("0.1.35", manifest.ReleaseVersion);
         Assert.Equal("cfa6449df663", manifest.VersionDirectory);
         Assert.Equal(235178344, manifest.PackageSize);
-        Assert.Equal(
-            ReleaseConsistency.ExpectedPackageUri(ReleaseVersion.Parse("0.1.35")),
-            manifest.PackageUri);
+        Assert.Equal(new Uri(PublishedPackageUri), manifest.PackageUri);
         // This document is also the record of the defect: 0.1.35 was published with an empty
         // model list, like every release from 0.1.29 to 0.1.44, so the installer set up all
-        // the binaries and not one model. The consistency check now says so.
+        // the binaries and not one model. The consistency check now says so, and also that its
+        // package uri names the repository by the name it had before the rename.
         Assert.Equal(
-            ["The manifest carries no models"],
+            ["The manifest points installers at " + PublishedPackageUri, "The manifest carries no models"],
             ReleaseConsistency.Check(manifest, ReleaseVersion.Parse("0.1.35"), Commit)
                 .Select(problem => problem.Split(',')[0]));
     }
@@ -132,6 +143,9 @@ public sealed class ReleaseConsistencyTests
             problems,
             problem => problem.Contains("carries no models", StringComparison.Ordinal));
     }
+
+    private const string PublishedPackageUri =
+        "https://github.com/MrAliev/local-ai-developer-toolkit/releases/download/0.1.35/localai-package.zip";
 
     private const string Published =
         """
