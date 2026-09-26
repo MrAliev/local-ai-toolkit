@@ -298,6 +298,10 @@ public sealed class InstallerWizardViewModel : ObservableObject
         CancelCommand = new RelayCommand(Cancel, () => CanCancel);
         RevealSettingsCommand = new RelayCommand(RevealSettings, () => AreSettingsFolded);
         RevealReleaseCommand = new RelayCommand(RevealRelease, () => IsReleaseFolded);
+        CheckPrerequisitesAgainCommand = new AsyncRelayCommand(
+            CheckPrerequisitesAgainAsync,
+            () => !isRunning && !diagnose.IsChecking,
+            ReportUnexpectedError);
         RollbackCommand = new AsyncRelayCommand(
             () => RollbackThisRunAsync(),
             () => CanRollback,
@@ -452,6 +456,12 @@ public sealed class InstallerWizardViewModel : ObservableObject
     public AsyncRelayCommand RollbackCommand { get; }
 
     public AsyncRelayCommand RollbackPreviousRunCommand { get; }
+
+    public AsyncRelayCommand CheckPrerequisitesAgainCommand { get; }
+
+    /// <summary>The check from the first page, again: for a component installed by hand since.</summary>
+    public Task CheckPrerequisitesAgainAsync() =>
+        RefreshEnvironmentDiagnosticsAsync(CancellationToken.None);
 
     public DiagnosePageViewModel Diagnose => diagnose;
     public DependenciesPageViewModel Dependencies => dependencies;
@@ -1073,11 +1083,12 @@ public sealed class InstallerWizardViewModel : ObservableObject
                     "continues, but rollback will not be available for it.");
             }
 
-            await RefreshEnvironmentDiagnosticsAsync(token);
-
+            // What the review showed, taken before the check below can untick a component that
+            // stopped being installable: that one is tried, and its row says why it failed.
             var selected = dependencies.Dependencies
-                .Where(dependency => dependency.IsConsented && dependency.IsInstallable)
+                .Where(dependency => dependency.IsConsented)
                 .ToArray();
+            await RefreshEnvironmentDiagnosticsAsync(token);
             requested = selected.Length;
             requestedPrerequisites.AddRange(selected);
             AppendLog(report, selected.Length == 0
@@ -1094,7 +1105,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
                         InstallerCulture.Pick("Installing {0}...", "Устанавливаю {0}…"),
                         dependency.Title));
 
-                var definition = ResolveDependencyDefinition(dependency.Id);
+                var definition = DependenciesPageViewModel.Definition(dependency.Id);
                 if (definition is null or { InstallerKind: DependencyInstallerKind.Npm, PackageVersion: null or "" })
                 {
                     AppendLog(report, $"{dependency.Title}: no automated installer available.");
@@ -2139,6 +2150,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         CancelCommand.RaiseCanExecuteChanged();
         RollbackCommand.RaiseCanExecuteChanged();
         RollbackPreviousRunCommand.RaiseCanExecuteChanged();
+        CheckPrerequisitesAgainCommand.RaiseCanExecuteChanged();
     }
 
     /// <summary>
@@ -2172,7 +2184,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         finish.Results.Add(RunResults.Package(
             packageOutcome is { } outcome ? RunResults.PackageDetail(outcome, packageInstalled) : null,
             packageInstalled));
-        finish.Results.Add(RunResults.Prerequisites(requested, installed, failed));
+        finish.Results.Add(RunResults.Prerequisites(requested, installed, failed, dependencies.StillNeeded));
         foreach (var prerequisite in requestedPrerequisites)
         {
             if (prerequisiteOutcomes.TryGetValue(prerequisite.Id, out var result))
@@ -2291,6 +2303,9 @@ public sealed class InstallerWizardViewModel : ObservableObject
         dependencies.SetInstalled(
             "ScipPython",
             diagnosis.ScipPython.State == DependencyState.Detected);
+        dependencies.SetInstallers(
+            winGetFound: diagnosis.WinGet.State == DependencyState.Detected,
+            npmFound: diagnosis.Npm.State == DependencyState.Detected);
 
         OnPropertyChanged(nameof(Diagnose));
         OnPropertyChanged(nameof(Dependencies));
@@ -2412,20 +2427,6 @@ public sealed class InstallerWizardViewModel : ObservableObject
                     ? null
                     : new GitHubReleaseFeed(processRunner, gitHubCliPath: GitHubCliPath))
             : new DirectoryReleaseFeed(package.SourceFolder));
-
-    private static DependencyDefinition? ResolveDependencyDefinition(string dependencyId) =>
-        dependencyId switch
-        {
-            "Git" => DependencyCatalog.Git,
-            "Ollama" => DependencyCatalog.Ollama,
-            "GitHubCli" => DependencyCatalog.GitHubCli,
-            "DotNetSdk" => DependencyCatalog.DotNetSdk,
-            "NodeJs" => DependencyCatalog.NodeJs,
-            "ScipTypeScript" => DependencyCatalog.ScipTypeScript,
-            "Python" => DependencyCatalog.Python,
-            "ScipPython" => DependencyCatalog.ScipPython,
-            _ => null,
-        };
 
     /// <summary>
     /// Resolves and verifies the requested release. Failures are shown on the package page

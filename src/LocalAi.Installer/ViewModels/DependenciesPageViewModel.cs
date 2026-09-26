@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using LocalAi.Installer.Core;
+using LocalAi.Installer.Core.Dependencies;
 
 namespace LocalAi.Installer.ViewModels;
 
@@ -84,8 +85,8 @@ public sealed class DependenciesPageViewModel : ObservableObject
         [.. Dependencies.Where(dependency => dependency.IsConsented)];
 
     /// <summary>
-    /// A required dependency blocks the wizard only while it is neither present nor selected
-    /// for installation. Nothing is pre-selected: consent is the user's to give.
+    /// A required dependency blocks the wizard only while this installer can install it and it
+    /// is neither present nor selected. Nothing is pre-selected: consent is the user's to give.
     /// </summary>
     public bool CanContinue =>
         !Dependencies.Any(dependency =>
@@ -107,14 +108,59 @@ public sealed class DependenciesPageViewModel : ObservableObject
                         ? InstallerCulture.Pick("reinstall", "переустановка")
                         : InstallerCulture.Pick("install", "установка")))
                 .ToArray();
-            return selected.Length == 0
+            var text = selected.Length == 0
                 ? InstallerCulture.Pick(
                     "Dependencies: nothing selected",
                     "Компоненты: ничего не выбрано")
                 : InstallerCulture.Pick("Dependencies: ", "Компоненты: ") +
                     string.Join(", ", selected);
+            return StillNeeded.Count == 0
+                ? text
+                : text + string.Format(
+                    InstallerCulture.Pick(
+                        "; still needed, install by hand: {0}",
+                        "; ещё нужны, установить вручную: {0}"),
+                    string.Join(", ", StillNeeded));
         }
     }
+
+    /// <summary>Something missing that this installer cannot install: a manual install is checked for here.</summary>
+    public bool NeedsCheckAgain =>
+        Dependencies.Any(dependency => !dependency.IsInstalled && !dependency.IsInstallable);
+
+    /// <summary>Required, missing, and not installable by this installer.</summary>
+    public IReadOnlyList<string> StillNeeded =>
+        [.. Dependencies
+            .Where(dependency => dependency.IsRequired && !dependency.IsInstalled && !dependency.IsInstallable)
+            .Select(dependency => dependency.Title)];
+
+    private bool winGetFound = true;
+    private bool npmFound = true;
+
+    /// <summary>
+    /// Whether the check found WinGet and npm, which the recipes run. Taken as found until a check
+    /// says otherwise.
+    /// </summary>
+    internal void SetInstallers(bool winGetFound, bool npmFound)
+    {
+        this.winGetFound = winGetFound;
+        this.npmFound = npmFound;
+        Notify();
+    }
+
+    internal static DependencyDefinition? Definition(string dependencyId) =>
+        dependencyId switch
+        {
+            "Git" => DependencyCatalog.Git,
+            "Ollama" => DependencyCatalog.Ollama,
+            "GitHubCli" => DependencyCatalog.GitHubCli,
+            "DotNetSdk" => DependencyCatalog.DotNetSdk,
+            "NodeJs" => DependencyCatalog.NodeJs,
+            "ScipTypeScript" => DependencyCatalog.ScipTypeScript,
+            "Python" => DependencyCatalog.Python,
+            "ScipPython" => DependencyCatalog.ScipPython,
+            _ => null,
+        };
 
     public void SetConsent(string id, bool consent)
     {
@@ -151,8 +197,33 @@ public sealed class DependenciesPageViewModel : ObservableObject
 
     private void Notify()
     {
+        // Node.js ticked beside WinGet brings npm: the run installs it first and checks the
+        // machine again after every component.
+        var nodeComes = winGetFound &&
+            Dependencies.Any(dependency => dependency.Id == "NodeJs" && dependency.IsConsented);
+        foreach (var dependency in Dependencies)
+        {
+            var definition = Definition(dependency.Id);
+            dependency.SetMissing(
+                definition?.InstallerKind switch
+                {
+                    DependencyInstallerKind.WinGet when !winGetFound => MissingInstaller.WinGet,
+                    DependencyInstallerKind.Npm when !npmFound && !nodeComes => MissingInstaller.Npm,
+                    _ => MissingInstaller.None,
+                },
+                definition?.OfficialInstallerUri);
+            if (!dependency.IsInstallable)
+            {
+                dependency.IsConsented = false;
+            }
+
+            dependency.AnnounceEverything();
+        }
+
         OnPropertyChanged(nameof(Dependencies));
         OnPropertyChanged(nameof(CanContinue));
         OnPropertyChanged(nameof(ReviewText));
+        OnPropertyChanged(nameof(NeedsCheckAgain));
+        OnPropertyChanged(nameof(StillNeeded));
     }
 }

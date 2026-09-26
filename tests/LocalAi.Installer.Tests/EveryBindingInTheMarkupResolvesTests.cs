@@ -143,7 +143,8 @@ public sealed class EveryBindingInTheMarkupResolvesTests
         ["Heading", "Agent", "Choice", "HasTextSearchGate", "DisplayName", "DetectionText"];
 
     private static string[] DependencyRowBindings() =>
-        ["Id", "IsConsented", "IsInstallable", "HeadLine", "RequirementText"];
+        ["Id", "IsConsented", "IsInstallable", "HeadLine", "RequirementText", "HasAutomatedInstaller",
+            "InstallerHint", "HasInstallerHint"];
 
     private static string Source() => InstallerMarkup.Read(Markup);
 
