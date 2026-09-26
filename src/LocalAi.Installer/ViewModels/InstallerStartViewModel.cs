@@ -252,11 +252,13 @@ public sealed class InstallerStartViewModel : ObservableObject
             (existing.Reason is { Length: > 0 } englishReason
                 ? "Reason: " + englishReason
                 : "The installation could not be read.") +
-            "\nInstalling again repairs it; removing clears it away.",
+            "\nA clean reinstall replaces the binaries; removing takes LocalAi off this " +
+            "computer.",
             (existing.Reason is { Length: > 0 } reason
                 ? "Причина: " + reason
                 : "Установку не удалось прочитать.") +
-            "\nПовторная установка это исправит; удаление — уберёт."),
+            "\nЧистая переустановка заменит бинарные файлы; удаление уберёт LocalAi с этого " +
+            "компьютера."),
         _ => InstallerCulture.Pick(
             "Install it to give your assistants local code search and local models.",
             "Установите его, чтобы дать вашим ассистентам локальный поиск по коду и локальные " +
@@ -281,12 +283,10 @@ public sealed class InstallerStartViewModel : ObservableObject
         // installed" is the answer — naming a build id there repeats the headline's old
         // mistake in smaller type.
         var version = Release;
-        // The row this sentence sends the reader to is titled "Repair this installation" on an
-        // unrecognised installation, so naming "Update or repair" there sent them to a label
-        // that was not on the screen. Hoisted because BuildOptions yields Install first.
-        var repairTitle = installed && existing.State == ExistingLocalAiState.Unrecognized
-            ? InstallerCulture.Pick("Repair this installation", "Восстановить эту установку")
-            : InstallerCulture.Pick("Update or repair", "Обновить или восстановить");
+        var working = existing.State == ExistingLocalAiState.Compatible;
+        // Hoisted because BuildOptions yields Install first, and its reason names these rows.
+        var repairTitle = InstallerCulture.Pick("Update or repair", "Обновить или восстановить");
+        var reinstallTitle = InstallerCulture.Pick("Clean reinstall", "Чистая переустановка");
         yield return new StartActionOption(
             StartChoice.Install,
             InstallerCulture.Pick("Install LocalAi", "Установить LocalAi"),
@@ -295,7 +295,7 @@ public sealed class InstallerStartViewModel : ObservableObject
                 "Устанавливает необходимые компоненты, рантайм и интеграции с клиентскими " +
                 "приложениями."),
             !installed,
-            existing.State == ExistingLocalAiState.Compatible
+            working
                 ? string.Format(
                     InstallerCulture.Pick(
                         "LocalAi{0} is already installed — choose “{1}”.",
@@ -305,10 +305,10 @@ public sealed class InstallerStartViewModel : ObservableObject
                 : string.Format(
                     InstallerCulture.Pick(
                         "There is already a LocalAi directory here — choose “{0}”, which " +
-                        "installs over it.",
+                        "removes its binaries first.",
                         "Каталог LocalAi здесь уже есть — выберите «{0}»: этот вариант " +
-                        "устанавливает поверх."),
-                    repairTitle));
+                        "сначала удаляет его бинарные файлы."),
+                    reinstallTitle));
         yield return new StartActionOption(
             StartChoice.UpdateOrRepair,
             repairTitle,
@@ -320,13 +320,18 @@ public sealed class InstallerStartViewModel : ObservableObject
                 "and client integrations are kept.",
                 "Устанавливает текущий релиз поверх имеющегося. Индексы, настройки и " +
                 "интеграции с клиентскими приложениями сохраняются."),
-            installed,
-            InstallerCulture.Pick(
-                "Nothing is installed to update.",
-                "Нечего обновлять — ничего не установлено."));
+            // The package installer refuses to install over an unrecognised installation.
+            working,
+            installed
+                ? InstallerCulture.Pick(
+                    "It is not a working installation, so nothing can be installed over it.",
+                    "Это не рабочая установка, поэтому поверх неё ничего не установить.")
+                : InstallerCulture.Pick(
+                    "Nothing is installed to update.",
+                    "Нечего обновлять — ничего не установлено."));
         yield return new StartActionOption(
             StartChoice.CleanReinstall,
-            InstallerCulture.Pick("Clean reinstall", "Чистая переустановка"),
+            reinstallTitle,
             InstallerCulture.Pick(
                 "Removes the binaries and the transient state, keeps the repository indexes " +
                 "and the settings a fresh install would honour, then installs again.",

@@ -70,12 +70,12 @@ public sealed class InstallerStartViewModelTests : IDisposable
     }
 
     /// <summary>
-    /// A directory that is there but unreadable is the case somebody most needs this screen
-    /// for: both ways out — install over it, or clear it away — stay open, and the reason it
-    /// could not be read is on the page.
+    /// A directory that is there but not a working installation cannot be installed over: the
+    /// package installer refuses it. The ways out are a clean reinstall, which removes the
+    /// binaries first, and removal; the reason it could not be read is on the page.
     /// </summary>
     [Fact]
-    public void A_broken_installation_can_be_repaired_or_removed_and_says_what_is_wrong()
+    public void A_broken_installation_can_be_reinstalled_or_removed_but_not_installed_over()
     {
         File.Delete(Path.Combine(
             machine.Runtime,
@@ -89,8 +89,17 @@ public sealed class InstallerStartViewModelTests : IDisposable
         Assert.Equal(ExistingLocalAiState.Unrecognized, start.State);
         Assert.True(start.HasProblem);
         Assert.Contains("codesearch.exe", start.Detail, StringComparison.Ordinal);
-        Assert.Equal("Repair this installation", start.Option(StartChoice.UpdateOrRepair).Title);
-        Assert.True(start.Option(StartChoice.UpdateOrRepair).IsAvailable);
+        Assert.Contains(
+            "A clean reinstall replaces the binaries",
+            start.Detail,
+            StringComparison.Ordinal);
+        var repair = start.Option(StartChoice.UpdateOrRepair);
+        Assert.Equal("Update or repair", repair.Title);
+        Assert.False(repair.IsAvailable);
+        Assert.Equal(
+            "It is not a working installation, so nothing can be installed over it.",
+            repair.UnavailableReason);
+        Assert.True(start.Option(StartChoice.CleanReinstall).IsAvailable);
         Assert.True(start.Option(StartChoice.Remove).IsAvailable);
         Assert.False(start.Option(StartChoice.Install).IsAvailable);
     }
@@ -151,7 +160,7 @@ public sealed class InstallerStartViewModelTests : IDisposable
     /// <summary>
     /// The inspector is the only thing this page reads the machine with, so a probe that
     /// throws must not take the wizard down with it — it reports an unrecognised installation,
-    /// which leaves repair and removal available.
+    /// which leaves a clean reinstall and removal available.
     /// </summary>
     [Fact]
     public void An_installation_that_cannot_be_read_is_still_something_to_act_on()
