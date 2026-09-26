@@ -59,6 +59,34 @@ public sealed class RemovalPreviewSpeaksRussianTests : IDisposable
         Assert.Contains("  keep release-signing", text, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// The entry goes first and the copy it runs right after, before any other path — so a run
+    /// stopped halfway never leaves an entry offering a removal whose program is gone. The line
+    /// used to say the copy went last, which stopped being true when the removal stopped
+    /// running from it.
+    /// </summary>
+    [Fact]
+    public void The_registration_line_says_the_entry_goes_before_the_copy_it_runs()
+    {
+        var plan = Plan() with { RemovesAppsAndFeaturesEntry = true };
+
+        InstallerCulture.Current = InstallerLanguage.English;
+        var english = plan.PreviewText;
+        InstallerCulture.Current = InstallerLanguage.Russian;
+        var russian = plan.PreviewText;
+
+        Assert.Contains(
+            "  remove the Apps & features entry, then the uninstaller copy it runs" +
+            Environment.NewLine,
+            english,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "  удалить запись в «Приложениях и возможностях», затем копию деинсталлятора, " +
+            "которую она запускает" + Environment.NewLine,
+            russian,
+            StringComparison.Ordinal);
+    }
+
     private static UninstallPlan Plan() =>
         new(
             RuntimeRoot: "C:\\LocalAi",
