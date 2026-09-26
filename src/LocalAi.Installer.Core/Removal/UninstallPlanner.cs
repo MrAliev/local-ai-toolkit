@@ -1,6 +1,7 @@
 using LocalAi.Contracts;
 using LocalAi.Installer.Core.Activation;
 using LocalAi.Installer.Core.Agents;
+using LocalAi.Installer.Core.Dependencies;
 using LocalAi.Repository;
 
 namespace LocalAi.Installer.Core.Removal;
@@ -65,6 +66,8 @@ public sealed class UninstallPlanner
         ArgumentNullException.ThrowIfNull(selection);
         var hooks = await PlanHooksAsync(selection, cancellationToken);
         var (removed, retained) = PlanPaths(selection);
+        var leavesDispatchers = selection.Includes(RemovalItem.Binaries) &&
+            await KeepsAnyDispatcherAsync(hooks, cancellationToken);
         return new UninstallPlan(
             layout.Root,
             selection,
@@ -72,9 +75,29 @@ public sealed class UninstallPlanner
             retained,
             PlanAgentConfigurations(selection),
             hooks,
-            Retained(selection, hooks, installationFollows),
+            Retained(selection, hooks, installationFollows, leavesDispatchers),
             PlansAppsAndFeaturesRemoval(selection, installationFollows),
-            PlansLauncherPathRemoval(selection, installationFollows));
+            PlansLauncherPathRemoval(selection, installationFollows),
+            leavesDispatchers);
+    }
+
+    /// <summary>
+    /// Whether a connected repository still carries a dispatcher once <paramref name="hooks"/>
+    /// has run: the hooks row unticked, or a repository left out of it.
+    /// </summary>
+    private async Task<bool> KeepsAnyDispatcherAsync(
+        IReadOnlyList<HookRemovalEntry> hooks,
+        CancellationToken cancellationToken)
+    {
+        var removed = hooks
+            .Where(hook => hook.HasWork)
+            .Select(hook => hook.RepositoryId)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var inventory = await PlanHooksAsync(
+            RemovalSelection.FromPreset(RemovalPreset.FullUninstall),
+            cancellationToken);
+        return inventory.Any(hook =>
+            hook.Dispatchers.Count > 0 && !removed.Contains(hook.RepositoryId));
     }
 
     /// <summary>
@@ -165,7 +188,8 @@ public sealed class UninstallPlanner
     }
 
     /// <summary>
-    /// Whether this removal takes the text-search gate out of the client's settings.
+    /// Whether this removal takes our hooks — the text-search gate and the worktree pair — out
+    /// of the client's settings.
     ///
     /// One predicate rather than the same condition written twice: the plan that removes the
     /// entry and the notice that explains what is left on the event have to agree, and they are
@@ -199,12 +223,12 @@ public sealed class UninstallPlanner
         //
         // Its own plan, applied and failed on its own. `settings.json` is a file the person edits
         // by hand and `.claude.json` is not, so the two fail for different reasons and one
-        // failing must not take the other's removal with it (#423). The command is not consulted
-        // on this path — an entry is recognised as ours by its signature, so a launcher directory
-        // standing in for an installation directory here is harmless.
+        // failing must not take the other's removal with it (#423). The worktree pair points at
+        // the launcher as well and goes with the gate. Nothing is written back, so the command
+        // is not consulted — an entry is recognised as ours by its signature.
         if (GateGoes(selection))
         {
-            plans.Add(claude.PreviewGate(register: false));
+            plans.Add(claude.PreviewSettings(gate: false, worktree: false));
         }
 
         if (selection.Includes(RemovalItem.CodexIntegration))
@@ -456,16 +480,19 @@ public sealed class UninstallPlanner
     }
 
     /// <summary>
-    /// What this run leaves alone, and how to deal with each one by hand. Two of them are
-    /// machine-wide and belong to other software as much as to LocalAi; one is the record of
-    /// what installs did and outlives them on purpose; the rest are whatever the matrix was
-    /// told to keep.
+    /// What this run leaves alone, and how to deal with each one by hand. Prerequisites,
+    /// indexers and models may serve other software as much as LocalAi; the journal is the
+    /// record of what installs did and outlives them on purpose; the rest are whatever the
+    /// matrix was told to keep.
     /// </summary>
     private IReadOnlyList<RetainedNotice> Retained(
         RemovalSelection selection,
         IReadOnlyList<HookRemovalEntry> hooks,
-        bool installationFollows)
+        bool installationFollows,
+        bool leavesDispatchers)
     {
+        var indexerPackages = DependencyCatalog.ScipTypeScript.PackageId + " " +
+            DependencyCatalog.ScipPython.PackageId;
         var notices = new List<RetainedNotice>
         {
             new(
@@ -473,12 +500,22 @@ public sealed class UninstallPlanner
                     "Prerequisites installed through winget",
                     "Компоненты, установленные через winget"),
                 InstallerCulture.Pick(
-                    "Git, Ollama, the .NET SDK, Node, Python and the indexers are machine-wide " +
-                    "and other software may use them. Remove the ones you no longer want with " +
+                    "Git, Ollama, the GitHub CLI, the .NET SDK, Node.js and Python may be used " +
+                    "by other software. Remove the ones you no longer want with " +
                     "`winget uninstall <id>`.",
-                    "Git, Ollama, .NET SDK, Node, Python и индексаторы установлены для всей " +
-                    "машины, и ими может пользоваться другое ПО. Ненужные удалите " +
-                    "командой `winget uninstall <id>`.")),
+                    "Git, Ollama, GitHub CLI, .NET SDK, Node.js и Python может использовать " +
+                    "другое ПО. Ненужные удалите командой `winget uninstall <id>`.")),
+            new(
+                InstallerCulture.Pick(
+                    "Indexers installed through npm",
+                    "Индексаторы, установленные через npm"),
+                string.Format(
+                    InstallerCulture.Pick(
+                        "SCIP TypeScript and SCIP Python. Remove them with " +
+                        "`npm uninstall --global {0}`.",
+                        "SCIP TypeScript и SCIP Python. Удалить их: " +
+                        "`npm uninstall --global {0}`."),
+                    indexerPackages)),
             new(
                 InstallerCulture.Pick("Ollama models", "Модели Ollama"),
                 InstallerCulture.Pick(
@@ -533,11 +570,12 @@ public sealed class UninstallPlanner
                     others.Path)));
         }
 
-        if (!selection.Includes(RemovalItem.SigningKeys))
+        var signingKeys = Path.Combine(layout.Root, RemovalMatrix.SigningKeyDirectoryName);
+        if (!selection.Includes(RemovalItem.SigningKeys) && Directory.Exists(signingKeys))
         {
             notices.Add(new(
                 RemovalMatrix.Title(RemovalItem.SigningKeys),
-                Path.Combine(layout.Root, RemovalMatrix.SigningKeyDirectoryName) +
+                signingKeys +
                 InstallerCulture.Pick(
                     " stays. Removing it needs its own confirmation, because the offline " +
                     "backup would then be the only copy.",
@@ -557,11 +595,9 @@ public sealed class UninstallPlanner
             }
         }
 
-        // A launcher that is gone with dispatchers still pointing at it is the one combination
-        // the matrix allows that leaves something visibly broken behind, so it is stated rather
-        // than left to be discovered at the next commit.
-        if (selection.Includes(RemovalItem.Binaries) &&
-            !selection.Includes(RemovalItem.GitHooks))
+        // A launcher that is gone with dispatchers still pointing at it leaves something visibly
+        // broken behind, so it is stated rather than left to be discovered at the next commit.
+        if (leavesDispatchers)
         {
             notices.Add(new(
                 RemovalMatrix.Title(RemovalItem.GitHooks),
