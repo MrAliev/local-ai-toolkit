@@ -234,8 +234,8 @@ public sealed class ModelsPageViewModel : ObservableObject
                 fit.ContextTokens));
         }
 
-        // Setup plans only the signed manifest's models: a release that sized the rest leaves
-        // these out of setup, while the registry leaves them for setup to weigh.
+        // Setup plans only the signed manifest's models. Sized by the release, these are missing
+        // from it; sized by the registry, setup still weighs them against it.
         foreach (var tag in UnsizedTags())
         {
             AutomaticSelection.Add(string.Format(
