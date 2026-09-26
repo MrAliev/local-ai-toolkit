@@ -66,22 +66,25 @@ public static class WizardText
     /// or "Update". The confirm page used to spell it out, which was already wrong on an update
     /// run before any translation, and in Russian the word also has to move to the end of the
     /// sentence.
+    ///
+    /// The two folds decide the confirm page's route: a folded group comes back through its button
+    /// under the list, and with both folded Back leads to the system check, where nothing changes.
     /// </summary>
     public static string Description(
         InstallerPage page,
         bool isUpdate,
         string actionText,
         bool hasRunError,
-        bool isChecking = false) =>
+        bool isChecking = false,
+        bool isReleaseFolded = false,
+        bool areSettingsFolded = false) =>
         page switch
         {
             // The shipped line stopped being true the moment results appeared, so it says one
             // thing while the probe runs and another once there is a table to read.
             InstallerPage.Diagnose when isChecking => InstallerCulture.Pick(
-                "Checking this computer. Starting winget, git and ollama to see what is " +
-                "installed — this takes a few seconds.",
-                "Проверяю этот компьютер. Запускаю winget, git и ollama, чтобы увидеть, что " +
-                "установлено, — это займёт несколько секунд."),
+                "Checking this computer and the programs LocalAi uses.",
+                "Проверяю этот компьютер и программы, которые использует LocalAi."),
             InstallerPage.Diagnose => InstallerCulture.Pick(
                 "What was found on this computer. Items marked as a warning still allow " +
                 "installation.",
@@ -93,18 +96,31 @@ public static class WizardText
                 "Choose the LocalAi release to install.",
                 "Выберите релиз LocalAi для установки."),
             InstallerPage.Models => InstallerCulture.Pick(
-                "Video memory decides which models fit. Choose the rule first; the list below " +
-                "follows it.",
-                "Что поместится, решает видеопамять. Сначала выберите правило — список ниже " +
-                "следует за ним."),
+                "Video memory decides which models are set up. The rule decides how they may run.",
+                "Какие модели будут установлены, решает видеопамять. Правило решает, как они " +
+                "могут работать."),
             InstallerPage.Agents => InstallerCulture.Pick(
                 "Choose how each client application should be integrated.",
                 "Выберите, как интегрировать каждое клиентское приложение."),
-            InstallerPage.Confirm => InstallerCulture.Pick(
-                "Review what is about to happen. To change anything click Back; to apply it " +
-                $"click {actionText}.",
-                "Прочитайте, что сейчас произойдёт. Чтобы что-то изменить, нажмите «Назад»; " +
-                $"чтобы применить — «{actionText}»."),
+            InstallerPage.Confirm => (isReleaseFolded, areSettingsFolded) switch
+            {
+                (true, true) => InstallerCulture.Pick(
+                    "Review what is about to happen. To change anything, use the buttons under " +
+                    $"the list; to apply it, click {actionText}.",
+                    "Прочитайте, что сейчас произойдёт. Чтобы что-то изменить, воспользуйтесь " +
+                    $"кнопками под списком; чтобы применить — нажмите «{actionText}»."),
+                (false, false) => InstallerCulture.Pick(
+                    "Review what is about to happen. To change anything, go back; to apply it, " +
+                    $"click {actionText}.",
+                    "Прочитайте, что сейчас произойдёт. Чтобы что-то изменить, вернитесь назад; " +
+                    $"чтобы применить — нажмите «{actionText}»."),
+                _ => InstallerCulture.Pick(
+                    "Review what is about to happen. To change anything, go back or use the " +
+                    $"button under the list; to apply it, click {actionText}.",
+                    "Прочитайте, что сейчас произойдёт. Чтобы что-то изменить, вернитесь назад " +
+                    "или воспользуйтесь кнопкой под списком; чтобы применить — нажмите " +
+                    $"«{actionText}»."),
+            },
             InstallerPage.Progress => InstallerCulture.Pick(
                 "Applying the selected actions.",
                 "Применяю выбранные действия."),

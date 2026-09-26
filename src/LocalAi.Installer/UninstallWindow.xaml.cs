@@ -41,8 +41,8 @@ public partial class UninstallWindow : Window, IReturnsToStart
         viewModel.InstallRequested += (_, _) =>
         {
             // The errand travels: without it the install half of a clean reinstall runs
-            // as a plain install, and the two strings written for this path — the window
-            // title and the consent line — were unreachable.
+            // as a plain install, under a window title and a consent line written for
+            // another errand.
             var installer = new MainWindow(viewModel.Presentation, StartChoice.CleanReinstall);
             Application.Current.MainWindow = installer;
             installer.Show();

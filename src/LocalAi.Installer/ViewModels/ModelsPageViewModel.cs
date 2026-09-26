@@ -126,33 +126,29 @@ public sealed class ModelsPageViewModel : ObservableObject
         ? InstallerCulture.Pick(
             "Model sizes have not been checked yet.",
             "Размеры моделей ещё не проверялись.")
+        // Setup weighs the signed manifest's models itself, so without sizes it still installs
+        // only what fits.
         : !recommendation.SizesKnown
             ? InstallerCulture.Pick(
-                "Model sizes could not be retrieved, so nothing was weighed against this " +
-                "computer. Every catalogue model will be offered.",
-                "Размеры моделей получить не удалось, поэтому под этот " +
-                "компьютер ничего не взвешивалось. Будут предложены все " +
-                "модели каталога.")
-            // The rule is now above this list on the same page, so "the previous page" would
-            // name a route that no longer exists (#257).
+                "Model sizes could not be retrieved, so this page cannot say which models fit. " +
+                "Setup weighs the release's models against this computer's video memory and " +
+                "installs only those that fit.",
+                "Размеры моделей получить не удалось, поэтому здесь нельзя сказать, какие " +
+                "модели поместятся. Установка сверит модели релиза с видеопамятью этого " +
+                "компьютера и поставит только те, что помещаются.")
             : AutomaticSelection.Count > 0
                 ? string.Empty
                 : InstallerCulture.Pick(
-                    "No catalogue model fits the detected video memory. Pick a relaxed rule " +
-                    "above to use this computer anyway, or skip model setup for now.",
-                    "Ни одна модель каталога не помещается в обнаруженную " +
-                    "видеопамять. Выберите смягчённое правило выше, чтобы всё же " +
-                    "пользоваться этим компьютером, или пока пропустите " +
-                    "настройку моделей.");
+                    "No catalogue model fits the detected video memory, so none will be set up.",
+                    "Ни одна модель каталога не помещается в обнаруженную видеопамять, поэтому " +
+                    "ни одна не будет установлена.");
 
     /// <summary>
     /// Applies a computed recommendation.
     ///
-    /// <paramref name="residencyRequiresVideoMemory"/> comes from the residency page: the
-    /// engine weighs models against dedicated video memory, which is the right question only
-    /// while the strict policy is in force. Once the user has accepted running from system
-    /// memory, refusing a model for not fitting the adapter would contradict the choice they
-    /// just made, so the fit is reported as information rather than as a filter.
+    /// <paramref name="residencyRequiresVideoMemory"/> names the rule in the summary line only.
+    /// The list is what setup installs, and the planner takes the models that fit the video
+    /// memory under any rule; the rule decides how they may run.
     /// </summary>
     public void ApplyRecommendation(
         CatalogRecommendation value,
@@ -182,35 +178,42 @@ public sealed class ModelsPageViewModel : ObservableObject
     private void RebuildAutomaticSelection()
     {
         AutomaticSelection.Clear();
-        if (!recommendation.SizesKnown)
+        foreach (var fit in recommendation.Fitting
+                     .GroupBy(fit => fit.Tag, StringComparer.Ordinal)
+                     .Select(group => group.OrderByDescending(fit => fit.ContextTokens).First()))
         {
-            foreach (var model in CatalogModels)
-            {
-                AutomaticSelection.Add(string.Format(
-                    InstallerCulture.Pick("{0} — size unknown", "{0} — размер неизвестен"),
-                    model.Tag));
-            }
+            AutomaticSelection.Add(string.Format(
+                InstallerCulture.Pick(
+                    "{0} — {1:N1} GB, context {2}",
+                    "{0} — {1:N1} ГБ, контекст {2}"),
+                fit.Tag,
+                fit.DownloadSizeBytes / (1024d * 1024 * 1024),
+                fit.ContextTokens));
         }
-        else
+
+        // The registry did not size these; setup weighs them against the signed manifest.
+        foreach (var tag in UnsizedTags())
         {
-            var usable = residencyRequiresVideoMemory
-                ? recommendation.Fitting
-                : recommendation.Fits;
-            foreach (var fit in usable
-                         .GroupBy(fit => fit.Tag, StringComparer.Ordinal)
-                         .Select(group => group.OrderByDescending(fit => fit.ContextTokens).First()))
-            {
-                AutomaticSelection.Add(string.Format(
-                    InstallerCulture.Pick(
-                        "{0} — {1:N1} GB, context {2}",
-                        "{0} — {1:N1} ГБ, контекст {2}"),
-                    fit.Tag,
-                    fit.DownloadSizeBytes / (1024d * 1024 * 1024),
-                    fit.ContextTokens));
-            }
+            AutomaticSelection.Add(string.Format(
+                InstallerCulture.Pick(
+                    "{0} — size unknown; set up only if it fits",
+                    "{0} — размер неизвестен; ставится, только если помещается"),
+                tag));
         }
 
         OnPropertyChanged(nameof(AutomaticSelection));
+    }
+
+    /// <summary>Catalogue models without an entry in the recommendation.</summary>
+    private IEnumerable<string> UnsizedTags()
+    {
+        var weighed = recommendation.Fits
+            .Select(fit => fit.Tag)
+            .ToHashSet(StringComparer.Ordinal);
+        return CatalogModels
+            .Select(model => model.Tag)
+            .Distinct(StringComparer.Ordinal)
+            .Where(tag => !weighed.Contains(tag));
     }
 
     public bool CanContinue => Mode switch
@@ -257,11 +260,12 @@ public sealed class ModelsPageViewModel : ObservableObject
             "Взвешиваю модели под этот компьютер.");
 
     /// <summary>
-    /// "Whole model in video memory - 4 of 6 catalogue models fit", or its relaxed form.
+    /// "Whole model in video memory - 4 of 6 catalogue models fit", under either rule.
     ///
     /// Named for the rule rather than for the policy enum, and counted against the catalogue
     /// rather than against the fits list, so the number answers "how much of what is on offer
-    /// can this computer take".
+    /// can this computer take". Models the registry did not size are counted apart rather than
+    /// as not fitting.
     /// </summary>
     private string BuildRuleSummary()
     {
@@ -277,30 +281,27 @@ public sealed class ModelsPageViewModel : ObservableObject
                 rule);
         }
 
-        var catalogue = CatalogModels.Count;
-        if (!residencyRequiresVideoMemory)
-        {
-            return catalogue == 0
-                ? rule
-                : string.Format(
-                    InstallerCulture.Pick(
-                        "{0} — all {1} catalogue models offered",
-                        "{0} — предложены все модели каталога ({1})"),
-                    rule,
-                    catalogue);
-        }
-
         var fitting = recommendation.Fitting
             .Select(fit => fit.Tag)
             .Distinct(StringComparer.Ordinal)
             .Count();
-        return string.Format(
-            InstallerCulture.Pick(
-                "{0} — {1} of {2} catalogue models fit",
-                "{0} — подходящих моделей: {1} из {2}"),
-            rule,
-            fitting,
-            catalogue);
+        var unsized = UnsizedTags().Count();
+        return unsized == 0
+            ? string.Format(
+                InstallerCulture.Pick(
+                    "{0} — {1} of {2} catalogue models fit",
+                    "{0} — подходящих моделей: {1} из {2}"),
+                rule,
+                fitting,
+                CatalogModels.Count)
+            : string.Format(
+                InstallerCulture.Pick(
+                    "{0} — {1} of {2} catalogue models fit; size unknown: {3}",
+                    "{0} — подходящих моделей: {1} из {2}; без размера: {3}"),
+                rule,
+                fitting,
+                CatalogModels.Count,
+                unsized);
     }
 
     public string ReviewText => Mode switch
@@ -318,9 +319,9 @@ public sealed class ModelsPageViewModel : ObservableObject
             ? InstallerCulture.Pick("Models: ", "Модели: ") +
                 string.Join(", ", AutomaticSelection)
             : InstallerCulture.Pick(
-                "Models: none fit this computer with the current video memory setting",
-                "Модели: при текущей настройке видеопамяти ни одна не " +
-                "подходит этому компьютеру"),
+                "Models: none fit this computer's video memory, so none will be set up",
+                "Модели: ни одна не помещается в видеопамять этого компьютера, поэтому ни одна " +
+                "не будет установлена"),
     };
 
     private void RebuildContexts()

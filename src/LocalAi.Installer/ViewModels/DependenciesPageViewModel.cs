@@ -46,8 +46,8 @@ public sealed class DependenciesPageViewModel : ObservableObject
         new("NodeJs", "Node.js 20", false)
         {
             ConsequenceWording = (
-                "only needed to run the TypeScript indexer",
-                "нужен только для индексатора TypeScript"),
+                "needed to install and run SCIP TypeScript and SCIP Python",
+                "нужен, чтобы установить и запускать SCIP TypeScript и SCIP Python"),
         },
         new("ScipTypeScript", "SCIP TypeScript", false)
         {

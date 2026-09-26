@@ -27,8 +27,10 @@ public static class PageLabels
 
     // --- System check -------------------------------------------------------------------
     public static string Probing => InstallerCulture.Pick(
-        "Starting winget, git and ollama…",
-        "Запускаю winget, git и ollama…");
+        "Part of this goes online: model sizes come from the Ollama registry, and an " +
+        "installed GitHub CLI is asked whether it is signed in.",
+        "Часть проверки идёт через сеть: размеры моделей берутся из реестра Ollama, а у " +
+        "установленного GitHub CLI запрашивается, выполнен ли вход в GitHub.");
 
     public static string InterruptedRun => InstallerCulture.Pick(
         "Interrupted previous run",
@@ -135,8 +137,9 @@ public static class PageLabels
     /// otherwise discover by being refused: it applies to the commands they type themselves.
     /// </summary>
     public static string RefuseTextSearch => InstallerCulture.Pick(
-        "Refuse text searches in Claude Code, including the ones you type",
-        "Отклонять текстовый поиск в Claude Code, включая набранный вами");
+        "Refuse text searches and whole-log reads in Claude Code, including the ones you type",
+        "Отклонять текстовый поиск и чтение логов целиком в Claude Code, включая набранные " +
+        "вами команды");
 
     /// <summary>
     /// Under the combo rather than beside a checkbox: this is an effect of configuring the
@@ -156,13 +159,20 @@ public static class PageLabels
     public static string RefuseTextSearchHint => InstallerCulture.Pick(
         "grep, rg, findstr, Select-String and Claude Code's own Grep and Glob are turned down " +
         "before they run, with a message naming the codesearch tools that answer the same " +
-        "question. Who is calling is not checked, so the commands you type yourself are " +
-        "refused too. git log --grep reads commit messages rather than the tree and still runs.",
+        "question. Reading a whole log is turned down too, with a message naming triage_log: " +
+        "cat, type, awk and similar readers on a .log, .jsonl or .ndjson file or on anything " +
+        "in a logs folder, and tail, head or Get-Content on one without a small line or byte " +
+        "count, or while following it. Who is calling is not checked, so the commands you " +
+        "type yourself are refused too. git log --grep reads commit messages rather than the " +
+        "tree and still runs.",
         "grep, rg, findstr, Select-String, а также собственные Grep и Glob в Claude Code " +
         "отклоняются до запуска — с сообщением, которое называет инструменты codesearch, " +
-        "отвечающие на тот же вопрос. Кто вызывает, не проверяется, поэтому набранные вами " +
-        "команды отклоняются тоже. git log --grep читает сообщения коммитов, а не дерево, и " +
-        "работает по-прежнему.");
+        "отвечающие на тот же вопрос. Чтение лога целиком тоже отклоняется — с сообщением, " +
+        "которое называет triage_log: cat, type, awk и похожие команды по файлу .log, .jsonl " +
+        "или .ndjson либо по чему угодно в папке logs, а также tail, head или Get-Content по " +
+        "такому файлу без небольшого ограничения по строкам или байтам либо в режиме " +
+        "слежения. Кто вызывает, не проверяется, поэтому набранные вами команды отклоняются " +
+        "тоже. git log --grep читает сообщения коммитов, а не дерево, и работает по-прежнему.");
 
     /// <summary>
     /// Shown instead when the choice above does not register the MCP servers. It has to say both
@@ -172,12 +182,10 @@ public static class PageLabels
     public static string RefuseTextSearchNeedsMcp => InstallerCulture.Pick(
         "Available when the choice above registers the MCP servers: the refusal names the " +
         "codesearch tools that answer the same question instead, and without them it would only " +
-        "get in the way. This computer keeps the setting it has now — nothing is written to " +
-        "settings.json.",
+        "get in the way. This computer keeps the refusal setting it has now.",
         "Доступно, когда выбор выше регистрирует MCP-серверы: отказ называет инструменты " +
         "codesearch, которые отвечают на тот же вопрос вместо поиска, а без них он только " +
-        "мешал бы. На этом компьютере остаётся то, что настроено сейчас, — в settings.json " +
-        "ничего не пишется.");
+        "мешал бы. На этом компьютере остаётся та настройка отказа, что есть сейчас.");
 
     // --- Confirm ------------------------------------------------------------------------
     /// <summary>

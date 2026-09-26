@@ -152,8 +152,8 @@ public sealed class TheFinishPageAnswersTheQuestionTests
     }
 
     /// <summary>
-    /// A run that went wrong opens its log; a run that went right folds it away. Nothing that
-    /// failed is hidden either way, because every failure is also a row.
+    /// A run where something did not complete opens its log; a run that went right folds it
+    /// away. A setting the run could not store has no row of its own, so the log opens for it too.
     /// </summary>
     [Fact]
     public void The_log_opens_itself_on_a_run_that_went_wrong()
@@ -164,7 +164,7 @@ public sealed class TheFinishPageAnswersTheQuestionTests
             .Single(element => element.Attribute("Header")?.Value == "{vm:Label Log}");
 
         Assert.Equal(
-            "{Binding HasRunError, Mode=OneWay}",
+            "{Binding OpensTheLog, Mode=OneWay}",
             expander.Attribute("IsExpanded")?.Value);
     }
 

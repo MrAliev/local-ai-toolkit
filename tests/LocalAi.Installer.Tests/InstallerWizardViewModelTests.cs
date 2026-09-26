@@ -383,7 +383,7 @@ public sealed class InstallerWizardViewModelTests
 
         Assert.Contains("Warning", review, StringComparison.Ordinal);
         Assert.Contains("will not be installed", review, StringComparison.Ordinal);
-        Assert.Contains("left unconfigured", review, StringComparison.Ordinal);
+        Assert.Contains("no models, client applications or PATH entry", review, StringComparison.Ordinal);
     }
 
     /// <summary>
