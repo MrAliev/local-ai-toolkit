@@ -297,12 +297,20 @@ public sealed class InstallerWizardViewModel : ObservableObject
         };
 
         // The folder the installer was started from, when someone has already put a release
-        // beside it. AppContext.BaseDirectory rather than the current directory: a wizard is
-        // usually launched from Explorer, whose current directory is not where the file is.
-        package.OfferLocalFolder(AppContext.BaseDirectory);
+        // beside it. Not the current directory: a wizard is usually launched from Explorer,
+        // whose current directory is not where the file is.
+        package.OfferLocalFolder(StartedFrom(Environment.ProcessPath, AppContext.BaseDirectory));
         visited.Add(CurrentPage);
         RebuildSteps();
     }
+
+    /// <summary>
+    /// The directory holding the executable that was started. The installer is published as one
+    /// file that unpacks everything it carries, and the runtime's base directory is then that
+    /// unpacked copy under the temporary folder.
+    /// </summary>
+    internal static string? StartedFrom(string? processPath, string baseDirectory) =>
+        Path.GetDirectoryName(processPath) ?? baseDirectory;
 
     public event EventHandler? CloseRequested;
 
