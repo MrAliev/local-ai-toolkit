@@ -56,6 +56,30 @@ public sealed class NoUiThreadOutlivesItsTestTests
     }
 
     [Fact]
+    public void The_walk_over_message_only_windows_goes_on_past_a_window_destroyed_under_it()
+    {
+        nint[] pair = [UiThreadWindows.CreateMessageOnlyWindow(), UiThreadWindows.CreateMessageOnlyWindow()];
+        nint destroyed = 0;
+        var visited = new List<nint>();
+        try
+        {
+            UiThreadWindows.VisitMessageOnlyWindows(window =>
+            {
+                visited.Add(window);
+                if (destroyed != 0 || !pair.Contains(window)) return;
+                destroyed = window;
+                UiThreadWindows.DestroyWindow(window);
+            });
+            Assert.Contains(destroyed, pair);
+            Assert.Contains(pair.Single(window => window != destroyed), visited);
+        }
+        finally
+        {
+            foreach (var window in pair.Where(window => window != destroyed)) UiThreadWindows.DestroyWindow(window);
+        }
+    }
+
+    [Fact]
     public void The_guard_fails_a_test_that_leaves_a_dispatcher_running_and_names_its_thread()
     {
         var guard = new NoUiThreadOutlivesItsTestAttribute();
