@@ -120,26 +120,29 @@
                             </Style>
                         </StackPanel.Style>
 
-                        <TextBlock Text="{vm:Label StartFrom}" FontWeight="SemiBold" Margin="0,0,0,6" />
-                        <ItemsControl ItemsSource="{Binding Presets}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <RadioButton GroupName="Preset" Margin="0,0,0,8"
-                                                 AutomationProperties.Name="{Binding Title}"
-                                                 AutomationProperties.HelpText="{Binding Description}"
-                                                 Tag="{Binding Preset}"
-                                                 IsChecked="{Binding IsSelected, Mode=OneWay}"
-                                                 Checked="OnPresetChecked">
-                                        <StackPanel>
-                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold"
-                                                       TextWrapping="Wrap" />
-                                            <TextBlock Text="{Binding Description}"
-                                                       Style="{StaticResource Muted}" TextWrapping="Wrap" />
-                                        </StackPanel>
-                                    </RadioButton>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                        <TextBlock x:Name="StartFromLabel" Text="{vm:Label StartFrom}" FontWeight="SemiBold" Margin="0,0,0,6" />
+                        <GroupBox Style="{StaticResource NamedGroup}"
+                                  AutomationProperties.LabeledBy="{x:Reference StartFromLabel}">
+                            <ItemsControl ItemsSource="{Binding Presets}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <RadioButton GroupName="Preset" Margin="0,0,0,8"
+                                                     AutomationProperties.Name="{Binding Title}"
+                                                     AutomationProperties.HelpText="{Binding Description}"
+                                                     Tag="{Binding Preset}"
+                                                     IsChecked="{Binding IsSelected, Mode=OneWay}"
+                                                     Checked="OnPresetChecked">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold"
+                                                           TextWrapping="Wrap" />
+                                                <TextBlock Text="{Binding Description}"
+                                                           Style="{StaticResource Muted}" TextWrapping="Wrap" />
+                                            </StackPanel>
+                                        </RadioButton>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </GroupBox>
 
                         <TextBlock Text="{vm:Label WhatGoes}" FontWeight="SemiBold" Margin="0,10,0,6" />
                         <ItemsControl ItemsSource="{Binding Rows}">
