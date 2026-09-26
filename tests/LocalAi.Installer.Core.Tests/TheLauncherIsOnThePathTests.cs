@@ -43,6 +43,21 @@ public sealed class TheLauncherIsOnThePathTests
         Assert.Equal(before, LauncherPathRegistration.Add(before, Directory));
     }
 
+    /// <summary>
+    /// Windows writes the account's PATH with a separator at the end. Appended after it, ours
+    /// turned it into an empty entry; it goes in front of it, and removal gives the value back.
+    /// </summary>
+    [Theory]
+    [InlineData(@"%USERPROFILE%\AppData\Local\Microsoft\WindowsApps;")]
+    [InlineData(@"C:\A;;C:\B;")]
+    public void A_path_ending_in_a_separator_gains_no_empty_entry(string before)
+    {
+        var after = LauncherPathRegistration.Add(before, Directory);
+
+        Assert.Equal(before + Directory + ";", after);
+        Assert.Equal(before, LauncherPathRegistration.Remove(after, Directory));
+    }
+
     [Fact]
     public void An_empty_path_gets_the_directory_and_no_separator()
     {

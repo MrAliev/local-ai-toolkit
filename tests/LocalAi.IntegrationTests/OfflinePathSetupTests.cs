@@ -48,6 +48,17 @@ public sealed class OfflinePathSetupTests
     }
 
     [Fact]
+    public async Task Preview_puts_new_directories_in_front_of_a_trailing_separator()
+    {
+        using var fixture = new Fixture(); var built = await fixture.Materials.Build();
+        var nodeDirectory = Path.GetDirectoryName(fixture.Materials.Node)!;
+        var store = new PathStore("C:\\already-first;");
+        var plan = await new OfflineBundleApplication(fixture.Materials.Materials.Verifier, new Runner(), store)
+            .PlanExecutionAsync(fixture.Bundle, built.ManifestSha256, fixture.Request, fixture.Run, fixture.Catalog, fixture.Layout, Token);
+        Assert.Equal("C:\\already-first;" + nodeDirectory + ";" + fixture.Bin + ";", plan.UserPath!.After);
+    }
+
+    [Fact]
     public async Task Apply_publishes_npm_first_then_flushes_path_intent_before_writing_and_reads_back()
     {
         Assert.SkipWhen(!OperatingSystem.IsWindows(), "Protected Windows staging is required.");
