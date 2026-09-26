@@ -51,7 +51,9 @@ public sealed class TheFinishPageSaysWhatHappenedTests
 
     /// <summary>
     /// Without a package the clients are left alone on purpose. "The run stopped before client
-    /// setup" described a run that did not stop.
+    /// setup" described a run that did not stop, and "a launcher that is not there" and
+    /// "LocalAi was not installed" named reasons nothing checked: on a repair both launcher and
+    /// installation are there. What decides it is that this run did not install the package.
     /// </summary>
     [Fact]
     public async Task Clients_left_alone_without_a_package_are_reported_as_skipped()
@@ -84,9 +86,19 @@ public sealed class TheFinishPageSaysWhatHappenedTests
         Assert.Equal(3, rows.Length);
         Assert.All(rows, row =>
         {
-            Assert.Equal("skipped: LocalAi was not installed", row.Detail);
+            Assert.Equal("skipped: this run did not install the LocalAi package", row.Detail);
             Assert.Equal(RunMark.None, row.Mark);
         });
+        Assert.Contains(
+            "Client applications: skipped, because this run did not install the LocalAi package.",
+            wizard.Finish.Progress,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("not there", wizard.Finish.Progress, StringComparison.Ordinal);
+
+        InstallerCulture.Current = InstallerLanguage.Russian;
+        Assert.Equal(
+            "пропущено: этот запуск не установил пакет LocalAi",
+            RunResults.Client(new ClientRunOutcome("Codex", ClientRunState.Skipped)).Detail);
     }
 
     /// <summary>

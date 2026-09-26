@@ -1521,12 +1521,14 @@ public sealed class InstallerWizardViewModel : ObservableObject
             return;
         }
 
+        // Named by the check that decides it. "A launcher that is not there" was never checked,
+        // and on a repair the launcher is there.
         if (packageOutcome is null || !packageInstalled)
         {
             AppendLog(
                 report,
-                "Client applications: skipped, because the LocalAi package was not installed " +
-                "and the registration would point at a launcher that is not there.");
+                "Client applications: skipped, because this run did not install the LocalAi " +
+                "package.");
             for (var index = 0; index < clientOutcomes.Count; index++)
             {
                 clientOutcomes[index] = clientOutcomes[index] with { State = ClientRunState.Skipped };

@@ -272,8 +272,8 @@ public static class RunResults
                 "Настройка прервана; итоговое состояние неизвестно. Проверьте конфигурацию клиента перед повторной настройкой."),
             // Marked None: the package row already carries the failure.
             ClientRunState.Skipped => InstallerCulture.Pick(
-                "skipped: LocalAi was not installed",
-                "пропущено: LocalAi не установлен"),
+                "skipped: this run did not install the LocalAi package",
+                "пропущено: этот запуск не установил пакет LocalAi"),
             _ => InstallerCulture.Pick(
                 "not attempted; the run stopped before client setup",
                 "не выполнялось; запуск остановился до настройки клиента"),
