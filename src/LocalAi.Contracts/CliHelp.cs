@@ -41,8 +41,8 @@ public static class CliHelp
             + string.Join(Environment.NewLine, Selected(binary, command).Select(entry => "  " + entry.Syntax))
             + Environment.NewLine + Environment.NewLine
             + OutputCulture.Pick(
-                $"Help: {binary} --help | {binary} <command> --help | {binary} help <command>\nOptional arguments are in brackets. Commands run only when help is not requested.",
-                $"Справка: {binary} --help | {binary} <команда> --help | {binary} help <команда>\nНеобязательные аргументы указаны в скобках. Запрос справки не запускает команду.");
+                $"Help: {binary} --help | {binary} <command> --help | {binary} help <command>\nOptional arguments are in square brackets. Commands run only when help is not requested.",
+                $"Справка: {binary} --help | {binary} <команда> --help | {binary} help <команда>\nНеобязательные аргументы указаны в квадратных скобках. Запрос справки не запускает команду.");
 
     public static bool IsRequest(string binary, IReadOnlyList<string> arguments) => Resolve(binary, arguments) is not null;
 

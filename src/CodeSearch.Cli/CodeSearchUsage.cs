@@ -15,8 +15,8 @@ public static class CodeSearchUsage
 
         For a repository connected to LocalAi both are built and published by `localai sync` -
         the same sync the Git hooks run - and both live under the LocalAi runtime directory.
-        Their real paths, whether either has drifted, and whether this repository is connected
-        at all are what `codesearch status` prints.
+        Where the base index really lives, whether either has drifted, and whether this
+        repository is connected at all are what `codesearch status` prints.
 
         `index` and `overlay` are the builders underneath. On a connected repository neither is
         the way to refresh anything: run `localai sync`. Use them with explicit `--index` and
@@ -26,7 +26,7 @@ public static class CodeSearchUsage
         ветки и удалённые файлы. Поиск объединяет базовый индекс и оверлей.
 
         Для подключённого репозитория обновляйте оба через localai sync. Команда codesearch status
-        показывает подключение, пути индексов и их актуальность.
+        показывает подключение, путь базового индекса и актуальность обоих индексов.
 
         index и overlay — низкоуровневые сборщики. Используйте их с явными путями --index и
         --overlay либо для репозиториев, которыми LocalAi не управляет.

@@ -94,8 +94,8 @@ async Task<int> RunGuardedAsync(TextWriter output, TextWriter error)
 // goes to stdout, because a caller that asked for JSON should never have to read stderr to find
 // out what happened.
 /// <summary>
-/// The interrupt handling `model` already installs, for the two commands that can wait minutes
-/// on a queue and a model.
+/// Cancels the work on Ctrl+C or process exit - the handling the `model` branch installs
+/// inline - for commands that can wait minutes on a queue or a model.
 /// </summary>
 static async Task<int> Interruptible(Func<CancellationToken, Task<int>> work)
 {
@@ -681,8 +681,6 @@ static async Task<int> RunAsync(string[] args, bool machineReadable, CommandStre
 
     if (args is ["repo", "prune", .. var pruneArguments])
     {
-        // Before `repo status` below, which matches ["repo", ..]: a longer pattern first, or
-        // this never runs.
         return RepoPruneCommand.Execute(
             pruneArguments,
             streams,
