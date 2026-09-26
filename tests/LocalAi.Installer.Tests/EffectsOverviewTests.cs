@@ -102,7 +102,7 @@ public sealed class EffectsOverviewTests : IDisposable
         presentation.ChooseTheme(InstallerTheme.Dark);
         Assert.True(wizard.IsConfirmed);
         Assert.Contains("  удалить " + jobs, string.Join('\n', wizard.ReviewGroups.SelectMany(group => group.Lines)), StringComparison.Ordinal);
-        Assert.Contains("перепишет все три", wizard.KeepNotice, StringComparison.Ordinal);
+        Assert.Contains("снова заработают, когда следующая установка вернёт его на место", wizard.KeepNotice, StringComparison.Ordinal);
         Assert.True(wizard.MovePrevious());
         Assert.Empty(wizard.ReviewGroups);
         Assert.False(wizard.IsConfirmed);
