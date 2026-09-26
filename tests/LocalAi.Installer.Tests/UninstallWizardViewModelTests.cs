@@ -1,4 +1,5 @@
 using LocalAi.Installer.Core.Abstractions;
+using LocalAi.Installer.Core.Agents;
 using LocalAi.Installer.Core.Removal;
 using LocalAi.Installer.Core.Transactions;
 using LocalAi.Installer.ViewModels;
@@ -605,6 +606,36 @@ public sealed class UninstallWizardViewModelTests : IDisposable
         Assert.False(await wizard.MoveNextAsync(TestContext.Current.CancellationToken));
         Assert.Contains(inside, wizard.BlockingNotice, StringComparison.Ordinal);
         Assert.Contains(machine.Layout.Root, wizard.BlockingNotice, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The review page promises that what it does not name is not touched, and a removal parks
+    /// the previous version of every client file beside it — the skill it deletes included. So
+    /// every file the run leaves in the home directory is named on the review page before it and
+    /// in the report after it (#614).
+    /// </summary>
+    [Fact]
+    public async Task Every_file_the_run_leaves_in_the_home_directory_was_named_before_and_after()
+    {
+        var skill = Path.Combine(machine.Home, ManagedInstructionBlock.ClaudeSkillRelativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(skill)!);
+        File.WriteAllText(skill, ManagedInstructionBlock.SkillFile());
+        var wizard = await Wizard(preset: RemovalPreset.DisconnectClients);
+        await wizard.MoveNextAsync(TestContext.Current.CancellationToken);
+        wizard.IsConfirmed = true;
+        var review = string.Join("\n", wizard.ReviewGroups.SelectMany(group => group.Lines));
+        var before = RemovalFixture.Snapshot(machine.Home);
+
+        Assert.True(await wizard.RunAsync(TestContext.Current.CancellationToken));
+
+        var left = RemovalFixture.Snapshot(machine.Home).Keys.Except(before.Keys).ToArray();
+        Assert.Contains(left, path => path.StartsWith(skill + ".", StringComparison.Ordinal));
+        Assert.All(left, path =>
+        {
+            Assert.Contains(path, review, StringComparison.Ordinal);
+            Assert.Contains(path, wizard.Report, StringComparison.Ordinal);
+            Assert.Contains(wizard.Results, row => row.Title == path);
+        });
     }
 
     private static RemovalRow Row(UninstallWizardViewModel wizard, RemovalItem item) =>
