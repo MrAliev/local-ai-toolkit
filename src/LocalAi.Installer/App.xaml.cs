@@ -1,7 +1,11 @@
 using LocalAi.Installer.ViewModels;
 using System.Globalization;
+using System.IO;
 using System.Windows;
 using LocalAi.Installer.Core;
+using LocalAi.Installer.Core.Abstractions;
+using LocalAi.Installer.Core.Activation;
+using LocalAi.Installer.Core.Removal;
 
 namespace LocalAi.Installer;
 
@@ -45,6 +49,14 @@ public partial class App : Application
     /// </summary>
     private void OnStartup(object sender, StartupEventArgs e)
     {
+        // Before anything else: the copy Apps & features starts lives inside the tree removal
+        // deletes, so it hands over to a copy outside it and exits.
+        if (IsUninstallRequested(e.Args) && RelaunchedOutsideInstallation(e.Args))
+        {
+            Shutdown();
+            return;
+        }
+
         // Before any window is built, and on both paths. The uninstall path arrives from Apps
         // and features, never sees the start screen, and would otherwise inherit nothing —
         // somebody who chose Russian to install would be removed from in English.
@@ -65,6 +77,32 @@ public partial class App : Application
             : new StartWindow(presentation);
         MainWindow = window;
         window.Show();
+    }
+
+    /// <summary>
+    /// Whether a copy of this executable outside the installation has taken over the run. A copy
+    /// inside the installation that could not hand over opens the removal wizard here, which
+    /// refuses and says why.
+    /// </summary>
+    private static bool RelaunchedOutsideInstallation(string[] arguments)
+    {
+        if (Environment.ProcessPath is not { } executable)
+        {
+            return false;
+        }
+
+        try
+        {
+            return new UninstallerRelaunch(
+                    InstallationLayout.CreateDefault(),
+                    Path.GetTempPath(),
+                    new SystemProcessFactory())
+                .Relaunch(executable, arguments) == UninstallerRelaunchOutcome.Relaunched;
+        }
+        catch (InstallationLayoutException)
+        {
+            return false;
+        }
     }
 
     /// <summary>
