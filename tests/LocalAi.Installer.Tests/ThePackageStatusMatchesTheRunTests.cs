@@ -1,4 +1,6 @@
 using LocalAi.Contracts;
+using LocalAi.Installer.Core;
+using LocalAi.Installer.Core.Activation;
 using LocalAi.Installer.Core.Diagnosis;
 using LocalAi.Installer.Core.Releases;
 using LocalAi.Installer.ViewModels;
@@ -33,6 +35,233 @@ public sealed class ThePackageStatusMatchesTheRunTests
         page.SelectResolvedRelease(Release("0.1.51"), "0.1.51");
 
         Assert.Equal("Release 0.1.51 verified, 200 MB to download.", page.StatusText);
+    }
+
+    /// <summary>
+    /// A run over the release already installed puts back what differs from it, and stops what
+    /// runs from that version only when it does. "Nothing will change" was a promise the run no
+    /// longer makes, and "leave the LocalAi version untouched" one it no longer keeps. Activation
+    /// stops everything the version owns — its tools, the broker, a sync under way — so "servers"
+    /// named too little.
+    /// </summary>
+    [Fact]
+    public void An_installed_release_says_what_a_repair_puts_back()
+    {
+        var page = new PackagePageViewModel
+        {
+            InstalledVersionDirectory = "0123456789ab",
+            ReleaseVersion = "0.1.51",
+            ActionText = "Update",
+        };
+
+        page.SelectResolvedRelease(Release("0.1.51"), "0.1.51");
+
+        Assert.Equal(
+            "Release 0.1.51 is already installed. Continuing re-runs the other steps and puts " +
+            "back any of its files that are missing or differ from the release.",
+            page.StatusText);
+        Assert.Equal(
+            "LocalAi package: 0.1.51 is already installed — files that are missing or differ " +
+            "from the release are put back; if any are, LocalAi's running tools and broker are " +
+            "stopped",
+            page.ReviewText);
+
+        page.ReleaseVersion = PackagePageViewModel.LatestTag;
+        page.SelectResolvedRelease(Release("0.1.51"), "0.1.51");
+
+        Assert.Equal(
+            "LocalAi package: 0.1.51 is already installed — unless a newer one is published " +
+            "before you press Update, files that are missing or differ from the release are put " +
+            "back; if any are, LocalAi's running tools and broker are stopped",
+            page.ReviewText);
+    }
+
+    [Fact]
+    public void An_installed_release_says_what_a_repair_puts_back_in_russian()
+    {
+        InstallerCulture.Current = InstallerLanguage.Russian;
+        var page = new PackagePageViewModel
+        {
+            InstalledVersionDirectory = "0123456789ab",
+            ReleaseVersion = "0.1.51",
+            ActionText = "Обновить",
+        };
+
+        page.SelectResolvedRelease(Release("0.1.51"), "0.1.51");
+
+        Assert.Equal(
+            "Релиз 0.1.51 уже установлен. Продолжение повторит остальные шаги и вернёт на " +
+            "место те его файлы, которых нет или которые отличаются от релиза.",
+            page.StatusText);
+        Assert.Equal(
+            "Пакет LocalAi: 0.1.51 уже установлен — файлы, которых нет или которые отличаются " +
+            "от релиза, возвращаются на место; если такие нашлись, запущенные инструменты и " +
+            "брокер LocalAi останавливаются",
+            page.ReviewText);
+
+        page.ReleaseVersion = PackagePageViewModel.LatestTag;
+        page.SelectResolvedRelease(Release("0.1.51"), "0.1.51");
+
+        Assert.Equal(
+            "Пакет LocalAi: 0.1.51 уже установлен — если до нажатия «Обновить» не выйдет более " +
+            "новый, файлы, которых нет или которые отличаются от релиза, возвращаются на место; " +
+            "если такие нашлись, запущенные инструменты и брокер LocalAi останавливаются",
+            page.ReviewText);
+    }
+
+    /// <summary>
+    /// What a repair put back, on the finish page and in the log. The package installer reports
+    /// it; without these the run that repaired an installation read exactly like one that found
+    /// nothing wrong.
+    /// </summary>
+    [Fact]
+    public void The_finish_row_and_the_log_name_what_a_repair_put_back()
+    {
+        var result = new ReleaseInstallResult(
+            LocalAiPackageInstallStatus.AlreadyInstalled,
+            "0123456789ab",
+            "0123456789ab",
+            @"C:\v\0123456789ab",
+            null,
+            RestoredFiles: ["codesearch.exe", "pdfium.dll"]);
+        var outcome = PackageOutcome.FromResult(result);
+
+        Assert.Equal(
+            "already installed, version 0123456789ab; put back from the release: " +
+            "codesearch.exe, pdfium.dll",
+            RunResults.PackageDetail(outcome, installed: true));
+        Assert.Equal(
+            @"LocalAi package: AlreadyInstalled, version 0123456789ab at C:\v\0123456789ab. " +
+            "Put back from the release: codesearch.exe, pdfium.dll.",
+            InstallerWizardViewModel.PackageLogLine(result));
+
+        InstallerCulture.Current = InstallerLanguage.Russian;
+        Assert.Equal(
+            "уже был установлен, версия 0123456789ab; из релиза возвращены: " +
+            "codesearch.exe, pdfium.dll",
+            RunResults.PackageDetail(outcome, installed: true));
+    }
+
+    [Fact]
+    public void A_repair_that_put_nothing_back_says_nothing_about_it()
+    {
+        var result = new ReleaseInstallResult(
+            LocalAiPackageInstallStatus.AlreadyInstalled,
+            "0123456789ab",
+            "0123456789ab",
+            @"C:\v\0123456789ab",
+            null,
+            RestoredFiles: []);
+
+        Assert.Equal(
+            "already installed, version 0123456789ab",
+            RunResults.PackageDetail(PackageOutcome.FromResult(result), installed: true));
+        Assert.Equal(
+            @"LocalAi package: AlreadyInstalled, version 0123456789ab at C:\v\0123456789ab.",
+            InstallerWizardViewModel.PackageLogLine(result));
+    }
+
+    /// <summary>
+    /// A repair whose activation then fails keeps the files it put back: they hold the release's
+    /// own content. The result carried them and nothing said so — the row and the log line of a
+    /// package that did not install named only the failure.
+    /// </summary>
+    [Fact]
+    public void A_failed_repair_names_the_files_it_put_back_and_kept()
+    {
+        var result = new ReleaseInstallResult(
+            LocalAiPackageInstallStatus.RolledBack,
+            "0123456789ab",
+            "0123456789ab",
+            @"C:\v\0123456789ab",
+            "Activation failed and the prior version remained selected.",
+            RestoredFiles: ["codesearch.exe", "pdfium.dll"]);
+        var outcome = PackageOutcome.FromResult(result);
+
+        Assert.Equal(
+            "rolled back — Activation failed and the prior version remained selected; " +
+            "put back from the release and kept: codesearch.exe, pdfium.dll",
+            RunResults.PackageDetail(outcome, installed: false));
+        Assert.Equal(
+            "LocalAi package: RolledBack. Activation failed and the prior version remained " +
+            "selected. Put back from the release and kept: codesearch.exe, pdfium.dll.",
+            InstallerWizardViewModel.PackageLogLine(result));
+
+        InstallerCulture.Current = InstallerLanguage.Russian;
+        Assert.Equal(
+            "откачено — Activation failed and the prior version remained selected; " +
+            "из релиза возвращены и оставлены: codesearch.exe, pdfium.dll",
+            RunResults.PackageDetail(outcome, installed: false));
+    }
+
+    /// <summary>
+    /// The installer also refuses to repair the version already active when its folder holds
+    /// something the release does not ship. That version stays installed and selected, so "not
+    /// installed" said the opposite of what happened. An inactive version keeps its own words.
+    /// </summary>
+    [Fact]
+    public void A_refused_repair_of_the_active_version_says_it_was_left_as_it_was()
+    {
+        const string Reason = "The immutable target version already exists with different content.";
+        var active = PackageOutcome.FromResult(new ReleaseInstallResult(
+            LocalAiPackageInstallStatus.ImmutableConflict,
+            "0123456789ab",
+            "0123456789ab",
+            @"C:\v\0123456789ab",
+            Reason));
+        var inactive = PackageOutcome.FromResult(new ReleaseInstallResult(
+            LocalAiPackageInstallStatus.ImmutableConflict,
+            "0123456789ab",
+            "ba9876543210",
+            @"C:\v\0123456789ab",
+            Reason));
+
+        Assert.Equal(
+            "left as it was: its version folder holds files or folders that are not part of " +
+            "the release, so it was not repaired — " + Reason,
+            RunResults.PackageDetail(active, installed: false));
+        Assert.Equal(
+            "not installed: that version directory already holds different files — " + Reason,
+            RunResults.PackageDetail(inactive, installed: false));
+
+        InstallerCulture.Current = InstallerLanguage.Russian;
+        Assert.Equal(
+            "оставлен как был: в каталоге этой версии есть файлы или папки не из релиза, " +
+            "поэтому он не восстановлен — " + Reason,
+            RunResults.PackageDetail(active, installed: false));
+        Assert.Equal(
+            "не установлен: в каталоге этой версии уже лежат другие файлы — " + Reason,
+            RunResults.PackageDetail(inactive, installed: false));
+    }
+
+    /// <summary>
+    /// A package step that installs or repairs deletes the launcher copies beyond the machine's
+    /// retention bound, and the review is meant to list everything the run does. A run without a
+    /// package reaches no such step and says nothing about it.
+    /// </summary>
+    [Fact]
+    public void The_review_says_which_launcher_copies_the_package_step_deletes()
+    {
+        using var root = new TemporaryDirectory("LocalAi-review-backups");
+        new RuntimeRetentionPolicyStore(root.Path).Write(
+            RuntimeRetentionPolicy.Default with { LauncherBackups = 5 });
+        var wizard = new InstallerWizardViewModel(StartChoice.UpdateOrRepair, () => null)
+        {
+            RuntimeRoot = root.Path,
+        };
+
+        Assert.DoesNotContain("copies of localai-launcher.exe", wizard.ReviewText, StringComparison.Ordinal);
+
+        wizard.Package.SelectResolvedRelease(Release("0.1.51"), "0.1.51");
+
+        Assert.Contains(
+            "Earlier copies of localai-launcher.exe: all but the newest 5 are deleted",
+            wizard.ReviewGroups[0].Lines);
+
+        InstallerCulture.Current = InstallerLanguage.Russian;
+        Assert.Contains(
+            "Прежние копии localai-launcher.exe: все, кроме 5 самых новых, удаляются",
+            wizard.ReviewGroups[0].Lines);
     }
 
     /// <summary>

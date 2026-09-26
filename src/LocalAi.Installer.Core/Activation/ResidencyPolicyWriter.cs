@@ -10,6 +10,9 @@ public enum ResidencyPolicyOutcome
     /// Nothing was written, because there is no installation to write it into.
     /// </summary>
     SkippedWithoutInstallation,
+
+    /// <summary>Nothing was written, because the stored setting already is the choice.</summary>
+    Unchanged,
 }
 
 /// <summary>
@@ -47,8 +50,36 @@ public static class ResidencyPolicyWriter
             return ResidencyPolicyOutcome.SkippedWithoutInstallation;
         }
 
+        if (Holds(runtimeRoot, residency))
+        {
+            return ResidencyPolicyOutcome.Unchanged;
+        }
+
         var store = new ModelResidencyPolicyStore(runtimeRoot);
         store.Write(store.Read() with { ModelResidency = residency });
         return ResidencyPolicyOutcome.Applied;
+    }
+
+    /// <summary>
+    /// Whether the policy file the runtime reads already holds this choice, in the place a write
+    /// would put it. A value found only at the legacy path still has to be written to move it.
+    /// </summary>
+    public static bool Holds(string runtimeRoot, ModelResidencyPolicy residency)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(runtimeRoot);
+        if (!Directory.Exists(runtimeRoot))
+        {
+            return false;
+        }
+
+        var read = new ModelResidencyPolicyStore(runtimeRoot).ReadWithSource();
+        return read.FileUsed &&
+            read.Policy.ModelResidency == residency &&
+            string.Equals(
+                Path.GetFullPath(read.Path),
+                Path.GetFullPath(RuntimeDirectories.SettingsFileForWriting(
+                    runtimeRoot,
+                    BrokerPolicy.FileName)),
+                StringComparison.OrdinalIgnoreCase);
     }
 }

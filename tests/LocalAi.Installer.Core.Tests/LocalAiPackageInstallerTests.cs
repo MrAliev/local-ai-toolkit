@@ -108,7 +108,9 @@ public sealed class LocalAiPackageInstallerTests : IDisposable
     public async Task Concurrent_installers_serialize_before_reinspection_and_launcher_handoff()
     {
         using var packageA = Package("v1");
-        using var packageB = Package("v1");
+        // Another release: a repeat of the one the first installer just put in place has
+        // nothing to activate, and the second hand-off is what this test orders.
+        using var packageB = Package("v2");
         var layout = InstallationLayout.FromLocalAppData(localAppData);
         var events = new System.Collections.Concurrent.ConcurrentQueue<string>();
         var firstStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -148,7 +150,8 @@ public sealed class LocalAiPackageInstallerTests : IDisposable
         var results = await Task.WhenAll(firstTask, secondTask);
 
         Assert.Equal(LocalAiPackageInstallStatus.Installed, results[0].Status);
-        Assert.Equal(LocalAiPackageInstallStatus.AlreadyInstalled, results[1].Status);
+        Assert.Equal(LocalAiPackageInstallStatus.Installed, results[1].Status);
+        Assert.Equal("v1", results[1].PriorVersion);
         Assert.Equal(1, secondInspector.CallCount);
         Assert.Equal(
             ["A-inspect", "A-start", "A-end", "B-inspect", "B-start"],
@@ -783,6 +786,311 @@ public sealed class LocalAiPackageInstallerTests : IDisposable
         Assert.DoesNotContain(
             Directory.EnumerateDirectories(layout.VersionsRoot),
             path => Path.GetFileName(path).StartsWith(".install-", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// A repair of an installation that matches the release has nothing to change, so it has
+    /// nothing to activate either: activation carries --stop-running, and running it here stopped
+    /// every MCP server a client had open for a pointer it rewrote with the same bytes.
+    /// </summary>
+    [Fact]
+    public async Task Repairing_an_intact_installation_starts_no_process()
+    {
+        CreateExisting("v1", Content(LocalAiPackageLayout.StableLauncherFile), packageContent: true);
+        using var package = Package("v1");
+        var layout = InstallationLayout.FromLocalAppData(localAppData);
+        var priorPointer = File.ReadAllBytes(layout.CurrentPointerPath);
+        var runner = new RecordingRunner((_, arguments, _, _) =>
+        {
+            WritePointer(arguments[1]);
+            return Task.FromResult(new ProcessResult(0, "", "", false, false));
+        });
+
+        var result = await Installer(runner).InstallAsync(package, layout, TestContext.Current.CancellationToken);
+
+        Assert.Equal(LocalAiPackageInstallStatus.AlreadyInstalled, result.Status);
+        Assert.Empty(runner.Calls);
+        Assert.Equal(priorPointer, File.ReadAllBytes(layout.CurrentPointerPath));
+    }
+
+    /// <summary>
+    /// A copy is kept so a failed run can put the old launcher back. When the installed launcher
+    /// already is the release's, there is nothing to put back and nothing to replace — and every
+    /// repair used to leave another 76 MB copy of the same bytes behind.
+    /// </summary>
+    [Fact]
+    public async Task A_launcher_identical_to_the_release_is_neither_backed_up_nor_replaced()
+    {
+        CreateExisting("v1", Content(LocalAiPackageLayout.StableLauncherFile), packageContent: true);
+        using var package = Package("v1");
+        var layout = InstallationLayout.FromLocalAppData(localAppData);
+        var launcherBefore = new FileInfo(layout.LauncherPath).LastWriteTimeUtc;
+        var runner = new RecordingRunner((_, arguments, _, _) =>
+        {
+            WritePointer(arguments[1]);
+            return Task.FromResult(new ProcessResult(0, "", "", false, false));
+        });
+
+        var result = await Installer(runner).InstallAsync(package, layout, TestContext.Current.CancellationToken);
+
+        Assert.Equal(LocalAiPackageInstallStatus.AlreadyInstalled, result.Status);
+        Assert.Null(result.LauncherBackup);
+        Assert.Empty(Directory.EnumerateFileSystemEntries(layout.InstallerBackupsRoot));
+        Assert.Equal(launcherBefore, new FileInfo(layout.LauncherPath).LastWriteTimeUtc);
+    }
+
+    /// <summary>
+    /// "Update or repair" on the release that is already installed. A file of that version that
+    /// no longer matches the release is what a repair is for; refusing it as an immutable
+    /// conflict left the installation exactly as broken as it was found.
+    /// </summary>
+    [Fact]
+    public async Task A_repair_puts_back_a_file_of_the_active_version_that_differs_from_the_release()
+    {
+        CreateExisting("v1", Content(LocalAiPackageLayout.StableLauncherFile), packageContent: true);
+        using var package = Package("v1");
+        var layout = InstallationLayout.FromLocalAppData(localAppData);
+        var file = LocalAiPackageLayout.VersionRequiredFiles[1];
+        var tampered = Path.Combine(layout.VersionsRoot, "v1", file);
+        File.AppendAllText(tampered, "tampered");
+        var runner = new RecordingRunner((_, arguments, _, _) =>
+        {
+            WritePointer(arguments[1]);
+            return Task.FromResult(new ProcessResult(0, "", "", false, false));
+        });
+
+        var result = await Installer(runner).InstallAsync(package, layout, TestContext.Current.CancellationToken);
+
+        Assert.Equal(LocalAiPackageInstallStatus.AlreadyInstalled, result.Status);
+        Assert.Equal(Content(file), File.ReadAllBytes(tampered));
+        Assert.Equal([file], result.RestoredFiles);
+        Assert.DoesNotContain(
+            Directory.EnumerateDirectories(layout.VersionsRoot),
+            path => Path.GetFileName(path).StartsWith(".install-", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// The same repair for a file that is gone rather than changed. The version directory then
+    /// has a shape no release ever shipped, which the layout check refused before the repair
+    /// could look at it.
+    /// </summary>
+    [Fact]
+    public async Task A_repair_puts_back_a_file_missing_from_the_active_version()
+    {
+        var pdf = LocalAiPackageLayout.PdfRuntimeFiles;
+        CreateExisting(
+            "v1",
+            Content(LocalAiPackageLayout.StableLauncherFile),
+            packageContent: true,
+            extraFiles: pdf);
+        using var package = Package("v1", extraFiles: pdf);
+        var layout = InstallationLayout.FromLocalAppData(localAppData);
+        var missing = Path.Combine(layout.VersionsRoot, "v1", pdf[2]);
+        File.Delete(missing);
+        var runner = new RecordingRunner((_, arguments, _, _) =>
+        {
+            WritePointer(arguments[1]);
+            return Task.FromResult(new ProcessResult(0, "", "", false, false));
+        });
+
+        var result = await Installer(runner).InstallAsync(package, layout, TestContext.Current.CancellationToken);
+
+        Assert.Equal(LocalAiPackageInstallStatus.AlreadyInstalled, result.Status);
+        Assert.Equal(Content(pdf[2]), File.ReadAllBytes(missing));
+        Assert.Equal([pdf[2]], result.RestoredFiles);
+    }
+
+    /// <summary>
+    /// A repair puts back what the release ships and nothing else. An entry the release does not
+    /// ship for that version is not the installer's to overwrite or delete, so the directory is
+    /// refused as before and nothing in it changes.
+    /// </summary>
+    [Fact]
+    public async Task A_repair_leaves_a_directory_holding_an_entry_the_release_does_not_ship_untouched()
+    {
+        CreateExisting("v1", Content(LocalAiPackageLayout.StableLauncherFile), packageContent: true);
+        using var package = Package("v1");
+        var layout = InstallationLayout.FromLocalAppData(localAppData);
+        var versionPath = Path.Combine(layout.VersionsRoot, "v1");
+        var tampered = Path.Combine(versionPath, LocalAiPackageLayout.VersionRequiredFiles[1]);
+        File.AppendAllText(tampered, "tampered");
+        var packaged = Path.Combine(versionPath, LocalAiPackageLayout.StableLauncherFile);
+        File.WriteAllText(packaged, "versioned-launcher");
+        var before = File.ReadAllBytes(tampered);
+        var runner = new RecordingRunner((_, _, _, _) => throw new InvalidOperationException());
+
+        var result = await Installer(runner).InstallAsync(package, layout, TestContext.Current.CancellationToken);
+
+        Assert.Equal(LocalAiPackageInstallStatus.ImmutableConflict, result.Status);
+        // What the finish page tells apart from an inactive version it refuses.
+        Assert.Equal(result.Version, result.PriorVersion);
+        Assert.Empty(runner.Calls);
+        Assert.Equal(before, File.ReadAllBytes(tampered));
+        Assert.Equal("versioned-launcher", File.ReadAllText(packaged));
+    }
+
+    /// <summary>
+    /// A repair whose activation fails keeps the version files it put back, which hold the
+    /// release's own content, and puts the prior launcher back. The launcher is then not among
+    /// what the release put back, and naming it would say the opposite of what is on disk.
+    /// </summary>
+    [Fact]
+    public async Task A_failed_repair_names_only_the_files_it_left_put_back()
+    {
+        CreateExisting("v1", System.Text.Encoding.UTF8.GetBytes("prior-launcher"), packageContent: true);
+        using var package = Package("v1");
+        var layout = InstallationLayout.FromLocalAppData(localAppData);
+        var file = LocalAiPackageLayout.VersionRequiredFiles[1];
+        var tampered = Path.Combine(layout.VersionsRoot, "v1", file);
+        File.AppendAllText(tampered, "tampered");
+        var runner = new RecordingRunner((_, _, _, _) =>
+            Task.FromResult(new ProcessResult(1, "", "activation failed", false, false)));
+
+        var result = await Installer(runner).InstallAsync(package, layout, TestContext.Current.CancellationToken);
+
+        Assert.Equal(LocalAiPackageInstallStatus.RolledBack, result.Status);
+        Assert.Equal("prior-launcher", File.ReadAllText(layout.LauncherPath));
+        Assert.Equal(Content(file), File.ReadAllBytes(tampered));
+        Assert.Equal([file], result.RestoredFiles);
+    }
+
+    /// <summary>
+    /// A file a running tool holds cannot be replaced, the way the launcher cannot. The tools
+    /// are stopped only then, and by a verified copy of the release's launcher, as for the
+    /// launcher itself.
+    /// </summary>
+    [Fact]
+    public async Task A_file_held_by_a_running_tool_is_put_back_after_the_tools_are_stopped()
+    {
+        CreateExisting("v1", Content(LocalAiPackageLayout.StableLauncherFile), packageContent: true);
+        using var package = Package("v1");
+        var layout = InstallationLayout.FromLocalAppData(localAppData);
+        var file = LocalAiPackageLayout.VersionRequiredFiles[2];
+        var tampered = Path.Combine(layout.VersionsRoot, "v1", file);
+        File.AppendAllText(tampered, "tampered");
+        var runningTool = new FileStream(tampered, FileMode.Open, FileAccess.Read, FileShare.Read);
+        string? stoppedBy = null;
+        var runner = new RecordingRunner((executable, arguments, _, _) =>
+        {
+            if (arguments is ["stop"])
+            {
+                stoppedBy = executable;
+                Assert.Equal(Content(LocalAiPackageLayout.StableLauncherFile), File.ReadAllBytes(executable));
+                runningTool.Dispose();
+            }
+            else
+            {
+                WritePointer(arguments[1]);
+            }
+
+            return Task.FromResult(new ProcessResult(0, "", "", false, false));
+        });
+
+        try
+        {
+            var result = await Installer(runner).InstallAsync(
+                package,
+                layout,
+                TestContext.Current.CancellationToken);
+
+            Assert.Equal(LocalAiPackageInstallStatus.AlreadyInstalled, result.Status);
+            Assert.Equal(["stop"], runner.Calls[0].Arguments);
+            Assert.NotEqual(layout.LauncherPath, stoppedBy);
+            Assert.Equal(Content(file), File.ReadAllBytes(tampered));
+            Assert.Equal(
+                [LocalAiPackageLayout.StableLauncherFile],
+                Directory.EnumerateFileSystemEntries(layout.LauncherDirectory)
+                    .Select(path => Path.GetFileName(path)!)
+                    .ToArray());
+        }
+        finally
+        {
+            runningTool.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// The runtime's retention rule keeps a bounded number of launcher backups, and only
+    /// <c>localai prune</c> ever applied it, so every update added one more for good. The
+    /// installer applies the same bound once its run has succeeded, oldest first, and never to
+    /// the copy this run made.
+    /// </summary>
+    [Fact]
+    public async Task Launcher_backups_beyond_the_retention_bound_are_removed_after_a_successful_installation()
+    {
+        CreateExisting("v1", System.Text.Encoding.UTF8.GetBytes("prior-launcher"));
+        var layout = InstallationLayout.FromLocalAppData(localAppData);
+        var seeded = new List<string>();
+        using (var lease = InstallationLayoutLease.Acquire(layout))
+        {
+            for (var index = 0; index < RuntimeRetentionPolicy.Default.LauncherBackups; index++)
+            {
+                File.WriteAllBytes(
+                    layout.LauncherPath,
+                    System.Text.Encoding.UTF8.GetBytes("older-launcher-" + index));
+                using var backup = lease.CreateLauncherBackup();
+                seeded.Add(Path.GetDirectoryName(backup.CanonicalPath)!);
+            }
+
+            File.WriteAllBytes(layout.LauncherPath, System.Text.Encoding.UTF8.GetBytes("prior-launcher"));
+            lease.CommitScaffold();
+        }
+
+        // Oldest first, spaced apart so the order does not depend on how fast the loop ran.
+        for (var index = 0; index < seeded.Count; index++)
+        {
+            Directory.SetLastWriteTimeUtc(
+                seeded[index],
+                DateTime.UtcNow.AddHours(index - seeded.Count));
+        }
+
+        using var package = Package("v2");
+        var runner = new RecordingRunner((_, arguments, _, _) =>
+        {
+            WritePointer(arguments[1]);
+            return Task.FromResult(new ProcessResult(0, "", "", false, false));
+        });
+
+        var result = await Installer(runner).InstallAsync(package, layout, TestContext.Current.CancellationToken);
+
+        Assert.Equal(LocalAiPackageInstallStatus.Installed, result.Status);
+        Assert.Equal(
+            [.. seeded.Skip(1), Path.GetDirectoryName(result.LauncherBackupPath)!],
+            Directory.EnumerateDirectories(layout.InstallerBackupsRoot)
+                .OrderBy(Directory.GetLastWriteTimeUtc)
+                .ToArray());
+    }
+
+    /// <summary>
+    /// Removing a backup takes two steps, the file and then its directory, and a removal that
+    /// stops between them leaves an empty directory. It restores nothing and endangers nothing,
+    /// and refusing the layout for it would stop every later installation on that machine.
+    /// </summary>
+    [Fact]
+    public void A_backup_directory_left_empty_does_not_refuse_the_layout()
+    {
+        var layout = InstallationLayout.FromLocalAppData(localAppData);
+        string backupDirectory;
+        using (var lease = InstallationLayoutLease.Acquire(layout))
+        {
+            File.WriteAllBytes(layout.LauncherPath, System.Text.Encoding.UTF8.GetBytes("prior-launcher"));
+            using (var backup = lease.CreateLauncherBackup())
+            {
+                backupDirectory = Path.GetDirectoryName(backup.CanonicalPath)!;
+            }
+
+            lease.CommitScaffold();
+        }
+
+        File.Delete(Path.Combine(backupDirectory, LocalAiPackageLayout.StableLauncherFile));
+
+        var error = Record.Exception(() =>
+        {
+            using var lease = InstallationLayoutLease.Acquire(layout);
+            lease.Revalidate();
+        });
+
+        Assert.Null(error);
     }
 
     [Fact]
@@ -1510,12 +1818,16 @@ public sealed class LocalAiPackageInstallerTests : IDisposable
         new ExistingLocalAiInspector(new SystemFileSystemProbe()),
         TimeSpan.FromSeconds(5));
 
-    private void CreateExisting(string version, byte[] launcher, bool packageContent = false)
+    private void CreateExisting(
+        string version,
+        byte[] launcher,
+        bool packageContent = false,
+        IReadOnlyList<string>? extraFiles = null)
     {
         var layout = InstallationLayout.FromLocalAppData(localAppData);
         using var lease = InstallationLayoutLease.Acquire(layout);
         using var temporary = lease.CreateVersionTemporary();
-        foreach (var file in LocalAiPackageLayout.VersionRequiredFiles)
+        foreach (var file in LocalAiPackageLayout.VersionRequiredFiles.Concat(extraFiles ?? []))
         {
             File.WriteAllBytes(
                 Path.Combine(temporary.CanonicalPath, file),

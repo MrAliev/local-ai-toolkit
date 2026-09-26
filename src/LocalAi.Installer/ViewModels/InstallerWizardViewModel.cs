@@ -199,6 +199,12 @@ public sealed class InstallerWizardViewModel : ObservableObject
     private RegistrationOutcome? registrationOutcome;
     private string? reportSaveFailure;
 
+    /// <summary>
+    /// The memory rule this run could not store and why, or null when nothing failed. The rule,
+    /// not its name: the row is worded again when the language changes.
+    /// </summary>
+    private (ModelResidencyPolicy Policy, string Reason)? residencyNotStored;
+
     private RunMark pathMark = RunMark.None;
 
     private PathOutcome? pathOutcome;
@@ -940,6 +946,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             ? new("Claude Code", ClientRunState.NotAttempted)
             : null;
         reportSaveFailure = null;
+        residencyNotStored = null;
         packageOutcome = null;
         packageInstalled = false;
         modelStepFailure = null;
@@ -1517,12 +1524,14 @@ public sealed class InstallerWizardViewModel : ObservableObject
             return;
         }
 
+        // Named by the check that decides it. "A launcher that is not there" was never checked,
+        // and on a repair the launcher is there.
         if (packageOutcome is null || !packageInstalled)
         {
             AppendLog(
                 report,
-                "Client applications: skipped, because the LocalAi package was not installed " +
-                "and the registration would point at a launcher that is not there.");
+                "Client applications: skipped, because this run did not install the LocalAi " +
+                "package.");
             for (var index = 0; index < clientOutcomes.Count; index++)
             {
                 clientOutcomes[index] = clientOutcomes[index] with { State = ClientRunState.Skipped };
@@ -1683,9 +1692,11 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 runtimeRoot,
                 BrokerPolicy.FileName);
             // Captured before the write, journalled only when the writer will actually
-            // write: mirroring its own installation check keeps the journal free of steps
-            // for effects that never happened.
-            var priorPolicy = Directory.Exists(runtimeRoot)
+            // write: mirroring its own checks — an installation to write into, a value that
+            // differs from the stored one — keeps the journal free of steps for effects that
+            // never happened.
+            var priorPolicy = Directory.Exists(runtimeRoot) &&
+                !ResidencyPolicyWriter.Holds(runtimeRoot, residency.Policy)
                 ? CaptureFileState(policyPath)
                 : null;
             if (priorPolicy is not null)
@@ -1708,13 +1719,17 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 return;
             }
 
-            JournalComplete(
-                residencyStep,
-                $"Wrote {policyPath}.",
-                isReversible: true,
-                priorPolicy is { } captured
-                    ? new InstallerRunUndoData(Files: [BuildFileUndo(policyPath, captured)])
-                    : null);
+            if (outcome != ResidencyPolicyOutcome.Unchanged)
+            {
+                JournalComplete(
+                    residencyStep,
+                    $"Wrote {policyPath}.",
+                    isReversible: true,
+                    priorPolicy is { } captured
+                        ? new InstallerRunUndoData(Files: [BuildFileUndo(policyPath, captured)])
+                        : null);
+            }
+
             AppendLog(report, $"Model residency policy: {residency.Policy}.");
             if (residency.Policy != ModelResidencyPolicy.RequireFullVram)
             {
@@ -1729,6 +1744,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         {
             JournalFail(residencyStep, exception.Message);
             AppendLog(report, $"Could not store the residency policy: {exception.Message}");
+            residencyNotStored = (residency.Policy, exception.Message);
             hasRunError = true;
         }
     }
@@ -1753,7 +1769,10 @@ public sealed class InstallerWizardViewModel : ObservableObject
             var policyPath = RuntimeDirectories.SettingsFileForWriting(
                 runtimeRoot,
                 UpdateCheckPolicy.FileName);
-            var prior = Directory.Exists(runtimeRoot) ? CaptureFileState(policyPath) : null;
+            var prior = Directory.Exists(runtimeRoot) &&
+                !UpdateCheckPolicyWriter.Holds(runtimeRoot, review.EnableUpdateCheck)
+                ? CaptureFileState(policyPath)
+                : null;
             if (prior is not null)
             {
                 step = JournalBegin(
@@ -1772,13 +1791,17 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 return;
             }
 
-            JournalComplete(
-                step,
-                $"Wrote {policyPath}.",
-                isReversible: true,
-                prior is { } captured
-                    ? new InstallerRunUndoData(Files: [BuildFileUndo(policyPath, captured)])
-                    : null);
+            if (outcome != ResidencyPolicyOutcome.Unchanged)
+            {
+                JournalComplete(
+                    step,
+                    $"Wrote {policyPath}.",
+                    isReversible: true,
+                    prior is { } captured
+                        ? new InstallerRunUndoData(Files: [BuildFileUndo(policyPath, captured)])
+                        : null);
+            }
+
             AppendLog(
                 report,
                 review.EnableUpdateCheck
@@ -1875,6 +1898,19 @@ public sealed class InstallerWizardViewModel : ObservableObject
             : InstallerCulture.Pick("off", "выключена");
     }
 
+    /// <summary>
+    /// A package step that succeeds ends by deleting the launcher copies beyond the runtime's
+    /// retention bound, read from the root the package goes into.
+    /// </summary>
+    private string LauncherBackupsReviewLine() =>
+        package.HasPackage
+            ? string.Format(
+                InstallerCulture.Pick(
+                    "Earlier copies of localai-launcher.exe: all but the newest {0} are deleted",
+                    "Прежние копии localai-launcher.exe: все, кроме {0} самых новых, удаляются"),
+                new RuntimeRetentionPolicyStore(RuntimeRoot).Read().LauncherBackups)
+            : string.Empty;
+
     private string BuildReview() => string.Join(Environment.NewLine, ReviewGroups.SelectMany(group => group.Lines)).Trim();
 
     private IReadOnlyList<ReviewGroup> BuildReviewGroups()
@@ -1882,7 +1918,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         package.ActionText = ActionText;
         var groups = new List<ReviewGroup>
         {
-            new(PageLabels.ReviewRelease, ReviewGroup.SplitLines(package.ReviewText)),
+            new(PageLabels.ReviewRelease, ReviewGroup.SplitLines(package.ReviewText, LauncherBackupsReviewLine())),
             new(PageLabels.ReviewComponents, ReviewGroup.SplitLines(dependencies.ReviewText)),
             new(PageLabels.ReviewModels, ReviewGroup.SplitLines(models.ReviewText, residency.ReviewText + StoredResidencyNote())),
             new(PageLabels.ReviewClients, ReviewGroup.SplitLines(agents.ReviewText, agents.GateReviewText,
@@ -2054,6 +2090,11 @@ public sealed class InstallerWizardViewModel : ObservableObject
         foreach (var model in ModelRuns)
         {
             finish.Results.Add(new RunResultRow(model.Mark, model.Tag, model.Detail));
+        }
+
+        if (residencyNotStored is { } notStored)
+        {
+            finish.Results.Add(RunResults.ResidencyNotStored(notStored.Policy, notStored.Reason));
         }
 
         if (clientOutcomes.Count == 0)
@@ -2791,11 +2832,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         // result.Status is an enum name. It used to be printed straight into the summary a
         // person reads — "ImmutableConflict" — which is the same defect the review page fixed
         // for the residency policy, one page further on.
-        AppendLog(
-            report,
-            result.Installed
-                ? $"LocalAi package: {result.Status}, version {result.Version} at {result.VersionPath}."
-                : $"LocalAi package: {result.Status}. {result.Reason}".Trim());
+        AppendLog(report, PackageLogLine(result));
         if (!result.Installed)
         {
             hasRunError = true;
@@ -2860,6 +2897,18 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 : $"Model setup stopped early ({failure.Detail}).") + " " + downloaded);
     }
 
+    /// <summary>The package step's line in the run log.</summary>
+    internal static string PackageLogLine(ReleaseInstallResult result) =>
+        result.Installed
+            ? $"LocalAi package: {result.Status}, version {result.Version} at {result.VersionPath}." +
+                (result.RestoredFiles is { Count: > 0 } restored
+                    ? " Put back from the release: " + string.Join(", ", restored) + "."
+                    : string.Empty)
+            : $"LocalAi package: {result.Status}. {result.Reason}".Trim() +
+                (result.RestoredFiles is { Count: > 0 } kept
+                    ? " Put back from the release and kept: " + string.Join(", ", kept) + "."
+                    : string.Empty);
+
     /// <summary>
     /// Retain activation before model provisioning can fail or be cancelled.
     /// </summary>
@@ -2867,7 +2916,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
     {
         ArgumentNullException.ThrowIfNull(result);
         packageInstalled = result.Installed;
-        packageOutcome = new(PackageOutcomeKind.Result, result.Status, result.Version, result.Reason);
+        packageOutcome = PackageOutcome.FromResult(result);
     }
 
     /// <summary>
