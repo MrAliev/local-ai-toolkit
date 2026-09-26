@@ -95,6 +95,42 @@ public sealed class NoUiThreadOutlivesItsTestTests
         guard.After(methodUnderTest: null!, test: null!);
     }
 
+    [Fact]
+    public void The_guard_reports_the_windows_it_saw_appear_and_no_cause_it_did_not_check()
+    {
+        var guard = new NoUiThreadOutlivesItsTestAttribute();
+        guard.Before(methodUnderTest: null!, test: null!);
+        uint threadId = 0;
+        using var created = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        var worker = new Thread(() =>
+        {
+            threadId = UiThreadWindows.CurrentThreadId();
+            var neverRun = Dispatcher.CurrentDispatcher;
+            created.Set();
+            release.Wait();
+            neverRun.InvokeShutdown();
+        }) { IsBackground = true };
+        worker.Start();
+        created.Wait(TestContext.Current.CancellationToken);
+        try
+        {
+            var failure = Assert.Throws<FailException>(() => guard.After(methodUnderTest: null!, test: null!));
+            var window = Assert.Single(UiThreadWindows.Snapshot(), window => window.Thread == threadId);
+            Assert.Equal(
+                $"Windows that appeared during this test are still open: {window.Class} on thread {threadId}. " +
+                "Run WPF work through WpfTestThread.Run.",
+                failure.Message);
+        }
+        finally
+        {
+            release.Set();
+            worker.Join();
+        }
+
+        guard.After(methodUnderTest: null!, test: null!);
+    }
+
     private sealed record RunningDispatcher(Dispatcher Dispatcher, Thread Worker, uint ThreadId)
     {
         public static RunningDispatcher Start()
