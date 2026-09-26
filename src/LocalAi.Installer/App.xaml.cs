@@ -5,6 +5,7 @@ using System.Windows;
 using LocalAi.Installer.Core;
 using LocalAi.Installer.Core.Abstractions;
 using LocalAi.Installer.Core.Activation;
+using LocalAi.Installer.Core.Releases;
 using LocalAi.Installer.Core.Removal;
 
 namespace LocalAi.Installer;
@@ -71,6 +72,11 @@ public partial class App : Application
         // One for the process, handed from window to window, so a choice made in any of them is
         // the one every other shows.
         var presentation = new InstallerPresentation(preferences, themes.Choose);
+
+        // What a run ended mid-download left in %TEMP%, on both paths. Off the UI thread: an
+        // update's download and staging copy come to about 800 MB.
+        _ = Task.Run(() => InstallerScratchDirectory.RemoveLeftovers(
+            InstallerWizardViewModel.DefaultScratchRoot));
 
         Window window = IsUninstallRequested(e.Args)
             ? new UninstallWindow(presentation)

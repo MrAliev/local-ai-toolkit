@@ -358,6 +358,22 @@ public sealed class InstallerWizardViewModel : ObservableObject
     /// </summary>
     internal string RuntimeRoot { get; init; } = ModelResidencyPolicyStore.DefaultRuntimeRoot;
 
+    /// <summary>
+    /// Scratch space for downloaded release assets; each installation downloads and unpacks
+    /// into a directory of its own below it.
+    ///
+    /// Deliberately outside the installation layout. It first lived in
+    /// %LOCALAPPDATA%\LocalAi\installer\downloads, which looked tidy and broke every
+    /// install: that directory belongs to the installer and must contain exactly "backups"
+    /// and "transaction.lock", so an extra folder made the layout unrecognisable to the
+    /// installer's own validation — after the package had already been downloaded.
+    /// </summary>
+    internal string ScratchRoot { get; init; } = DefaultScratchRoot;
+
+    public static string DefaultScratchRoot => Path.Combine(
+        Path.GetTempPath(),
+        "LocalAi-installer");
+
     public RelayCommand BackCommand { get; }
 
     public RelayCommand NextCommand { get; }
@@ -1781,24 +1797,13 @@ public sealed class InstallerWizardViewModel : ObservableObject
             ? new(true, File.ReadAllBytes(path))
             : new(false, []);
 
-    /// <summary>
-    /// Pairs the captured pre-effect content with what is on disk now. Small files travel
-    /// inline in the journal; anything above the cap keeps only its hash, which rollback
-    /// reports as unrecoverable instead of guessing.
-    /// </summary>
-    private static InstallerRunFileUndo BuildFileUndo(string path, CapturedFileState before)
-    {
-        var after = File.Exists(path) ? File.ReadAllBytes(path) : [];
-        return new(
+    /// <summary>Pairs the captured pre-effect content with what is on disk now.</summary>
+    private static InstallerRunFileUndo BuildFileUndo(string path, CapturedFileState before) =>
+        InstallerRunFileUndo.Between(
             path,
             before.Existed,
-            InstallerRunJournal.Sha256Hex(before.Bytes),
-            before.Existed && before.Bytes.Length <= InstallerRunJournal.MaximumInlineContentBytes
-                ? Convert.ToBase64String(before.Bytes)
-                : null,
-            null,
-            InstallerRunJournal.Sha256Hex(after));
-    }
+            before.Bytes,
+            File.Exists(path) ? File.ReadAllBytes(path) : []);
 
     private int StepIndex(InstallerPage page)
     {
@@ -2239,19 +2244,6 @@ public sealed class InstallerWizardViewModel : ObservableObject
         };
 
     /// <summary>
-    /// Scratch space for downloaded release assets.
-    ///
-    /// Deliberately outside the installation layout. It first lived in
-    /// %LOCALAPPDATA%\LocalAi\installer\downloads, which looked tidy and broke every
-    /// install: that directory belongs to the installer and must contain exactly "backups"
-    /// and "transaction.lock", so an extra folder made the layout unrecognisable to the
-    /// installer's own validation — after the package had already been downloaded.
-    /// </summary>
-    private static string WorkingDirectory => Path.Combine(
-        Path.GetTempPath(),
-        "LocalAi-installer");
-
-    /// <summary>
     /// Resolves and verifies the requested release. Failures are shown on the package page
     /// rather than thrown: an unresolved package does not stop the rest of the installation.
     /// </summary>
@@ -2273,7 +2265,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             // "latest" is not a tag GitHub knows; resolve it to the newest published one so
             // the field can keep its convenient default.
             var tag = await feed.ResolveTagAsync(package.ReleaseVersion, cancellationToken);
-            var release = await feed.ResolveAsync(tag, WorkingDirectory, cancellationToken);
+            var release = await feed.ResolveAsync(tag, ScratchRoot, cancellationToken);
             if (mine != resolveGeneration ||
                 asked != (package.ReleaseVersion, package.SourceFolder))
             {
@@ -2398,7 +2390,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             // Resolved first, then recorded: assigning the tag before this await left the
             // wizard pointing at a release whose manifest had failed to verify, so the run
             // downloaded that asset and checked it against the previous manifest's hash.
-            var release = await feed.ResolveAsync(newest, WorkingDirectory, cancellationToken);
+            var release = await feed.ResolveAsync(newest, ScratchRoot, cancellationToken);
             resolvedTag = newest;
             package.SelectResolvedRelease(release, newest);
         }
@@ -2682,6 +2674,10 @@ public sealed class InstallerWizardViewModel : ObservableObject
             }
         });
         var selection = models.BuildProvisioningSelection();
+        var namesBefore = ReadReleaseNamesBeforeRun();
+        // Gone when this method returns or throws; a process that ends first leaves it for the
+        // next start to remove.
+        using var scratch = InstallerScratchDirectory.Claim(ScratchRoot);
         // The intent covers the download too, but the download only touches the temp
         // directory; the effect the journal exists for is the activation. The callback
         // below closes this step at the exact moment activation finishes, so a process
@@ -2696,7 +2692,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         {
             result = await service.InstallAsync(
                 resolved,
-                WorkingDirectory,
+                scratch.Path,
                 resolvedTag ?? resolved.Manifest.ReleaseVersion,
                 downloadProgress,
                 selection,
@@ -2705,7 +2701,11 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 activation =>
                 {
                     ApplyPackageResult(activation);
-                    JournalPackageActivation(packageStep, activation);
+                    JournalPackageActivation(
+                        packageStep,
+                        activation,
+                        namesBefore,
+                        resolved.Manifest.ReleaseVersion);
                     if (activation.Installed && selection.Mode != ModelProvisioningMode.None)
                     {
                         modelsStep = JournalBegin(
@@ -2820,7 +2820,11 @@ public sealed class InstallerWizardViewModel : ObservableObject
     /// indexes included — the moment the broker runs, so "undo" would mean deleting things
     /// this run did not create.
     /// </summary>
-    private void JournalPackageActivation(string? packageStep, ReleaseInstallResult activation)
+    private void JournalPackageActivation(
+        string? packageStep,
+        ReleaseInstallResult activation,
+        ReleaseNamesBeforeRun? namesBefore,
+        string release)
     {
         if (!activation.Installed)
         {
@@ -2846,8 +2850,27 @@ public sealed class InstallerWizardViewModel : ObservableObject
                     : $"Version {activation.Version} was already active.",
             isReversible: isUpgrade,
             isUpgrade
-                ? new InstallerRunUndoData(activation.Version, activation.PriorVersion)
+                ? namesBefore?.UndoFor(activation.Version, activation.PriorVersion!, release) ??
+                    new InstallerRunUndoData(activation.Version, activation.PriorVersion)
                 : null);
+    }
+
+    /// <summary>
+    /// Read before activation. An installation whose names cannot be read is still updated;
+    /// its rollback returns the pointer alone.
+    /// </summary>
+    private static ReleaseNamesBeforeRun? ReadReleaseNamesBeforeRun()
+    {
+        try
+        {
+            return ReleaseNamesBeforeRun.Read(InstallationLayout.CreateDefault());
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException or
+                System.Security.SecurityException or InstallationLayoutException)
+        {
+            return null;
+        }
     }
 
     /// <summary>
