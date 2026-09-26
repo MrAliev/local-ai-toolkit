@@ -96,11 +96,40 @@ public sealed class UsageRegistryTests
     [Theory]
     [InlineData("localai", "ask question --model --help")]
     [InlineData("localai", "translate --in --help")]
-    [InlineData("codesearch", "search --query --help")]
+    [InlineData("localai", "documents search --index docs --query --help")]
+    [InlineData("localai", "triage --question -h")]
+    [InlineData("codesearch", "search --query -h")]
     [InlineData("codesearch", "search --query help")]
     public void Help_words_in_option_values_are_not_help_requests(string binary, string arguments)
     {
         Assert.Null(CliHelp.Resolve(binary, arguments.Split(' ')));
+    }
+
+    // codesearch's option parser never takes a value that starts with "--": `--query --help` would
+    // search for "true", so there the flag is help.
+    [Theory]
+    [InlineData("localai", "sync --base-only --help", "sync")]
+    [InlineData("localai", "sync --help --base-only", "sync")]
+    [InlineData("localai", "sync --root . --base-only -h", "sync")]
+    [InlineData("localai", "bootstrap --dry-run --help", "bootstrap")]
+    [InlineData("localai", "hook post-commit --root . --help", "hook post-commit")]
+    [InlineData("localai", "hooks install --root . --help", "hooks install")]
+    [InlineData("localai", "agent worktree remove elsewhere --help", "agent worktree remove")]
+    [InlineData("localai", "policy set --language en --help", "policy set")]
+    [InlineData("localai", "ask question --help", "ask")]
+    [InlineData("localai", "repo status --follow --help", "repo status")]
+    [InlineData("localai", "semantic impact --explain --help", "semantic impact")]
+    [InlineData("codesearch", "index --force --help", "index")]
+    [InlineData("codesearch", "index --force -h", "index")]
+    [InlineData("codesearch", "search --query auth --top 3 --help", "search")]
+    [InlineData("codesearch", "search --query --help", "search")]
+    public void A_help_flag_after_options_asks_for_that_commands_help(string binary, string arguments, string command)
+    {
+        var help = CliHelp.Resolve(binary, arguments.Split(' '));
+
+        Assert.NotNull(help);
+        Assert.True(help.Success);
+        Assert.Equal(CliHelp.Render(binary, command), help.Text);
     }
 
     private static void Add(HashSet<string> routes, string prefix, IEnumerable<string> operations)
