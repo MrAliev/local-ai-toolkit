@@ -389,7 +389,7 @@
                             </Style>
                         </StackPanel.Style>
 
-                        <TextBlock Text="{vm:Label VideoMemory}" FontWeight="SemiBold" Margin="0,0,0,6" />
+                        <TextBlock x:Name="VideoMemoryLabel" Text="{vm:Label VideoMemory}" FontWeight="SemiBold" Margin="0,0,0,6" />
                         <TextBlock Text="{Binding Residency.AdapterFound}"
                                    Style="{StaticResource Muted}" FontSize="11" Margin="0,0,0,8"
                                    Visibility="{Binding Residency.HasAdapterFound, Converter={StaticResource BoolToVisibility}}" />
@@ -401,39 +401,44 @@
                              be compared without clicking all three — and each click moved the
                              page under the pointer. Inside, it is also aligned by the control's
                              own template rather than by a margin measured against it. -->
-                        <RadioButton GroupName="Residency" Margin="0,0,0,10"
-                                     IsChecked="{Binding Residency.IsRequireFullVram, Mode=TwoWay}"
-                                     AutomationProperties.Name="{vm:Label RequireFullVram}"
-                                     AutomationProperties.HelpText="{vm:Label RequireFullVramHint}">
+                        <GroupBox Style="{StaticResource NamedGroup}"
+                                  AutomationProperties.LabeledBy="{x:Reference VideoMemoryLabel}">
                             <StackPanel>
-                                <TextBlock Text="{vm:Label RequireFullVram}" TextWrapping="Wrap" />
-                                <TextBlock Text="{vm:Label RequireFullVramHint}"
-                                           Style="{StaticResource Muted}" FontSize="11"
-                                           TextWrapping="Wrap" Margin="0,2,0,0" />
+                                <RadioButton GroupName="Residency" Margin="0,0,0,10"
+                                             IsChecked="{Binding Residency.IsRequireFullVram, Mode=TwoWay}"
+                                             AutomationProperties.Name="{vm:Label RequireFullVram}"
+                                             AutomationProperties.HelpText="{vm:Label RequireFullVramHint}">
+                                    <StackPanel>
+                                        <TextBlock Text="{vm:Label RequireFullVram}" TextWrapping="Wrap" />
+                                        <TextBlock Text="{vm:Label RequireFullVramHint}"
+                                                   Style="{StaticResource Muted}" FontSize="11"
+                                                   TextWrapping="Wrap" Margin="0,2,0,0" />
+                                    </StackPanel>
+                                </RadioButton>
+                                <RadioButton GroupName="Residency" Margin="0,0,0,10"
+                                             IsChecked="{Binding Residency.IsAllowPartialOffload, Mode=TwoWay}"
+                                             AutomationProperties.Name="{vm:Label AllowPartialOffload}"
+                                             AutomationProperties.HelpText="{vm:Label AllowPartialOffloadHint}">
+                                    <StackPanel>
+                                        <TextBlock Text="{vm:Label AllowPartialOffload}" TextWrapping="Wrap" />
+                                        <TextBlock Text="{vm:Label AllowPartialOffloadHint}"
+                                                   Style="{StaticResource Muted}" FontSize="11"
+                                                   TextWrapping="Wrap" Margin="0,2,0,0" />
+                                    </StackPanel>
+                                </RadioButton>
+                                <RadioButton GroupName="Residency" Margin="0,0,0,10"
+                                             IsChecked="{Binding Residency.IsAllowCpu, Mode=TwoWay}"
+                                             AutomationProperties.Name="{vm:Label AllowCpu}"
+                                             AutomationProperties.HelpText="{vm:Label AllowCpuHint}">
+                                    <StackPanel>
+                                        <TextBlock Text="{vm:Label AllowCpu}" TextWrapping="Wrap" />
+                                        <TextBlock Text="{vm:Label AllowCpuHint}"
+                                                   Style="{StaticResource Muted}" FontSize="11"
+                                                   TextWrapping="Wrap" Margin="0,2,0,0" />
+                                    </StackPanel>
+                                </RadioButton>
                             </StackPanel>
-                        </RadioButton>
-                        <RadioButton GroupName="Residency" Margin="0,0,0,10"
-                                     IsChecked="{Binding Residency.IsAllowPartialOffload, Mode=TwoWay}"
-                                     AutomationProperties.Name="{vm:Label AllowPartialOffload}"
-                                     AutomationProperties.HelpText="{vm:Label AllowPartialOffloadHint}">
-                            <StackPanel>
-                                <TextBlock Text="{vm:Label AllowPartialOffload}" TextWrapping="Wrap" />
-                                <TextBlock Text="{vm:Label AllowPartialOffloadHint}"
-                                           Style="{StaticResource Muted}" FontSize="11"
-                                           TextWrapping="Wrap" Margin="0,2,0,0" />
-                            </StackPanel>
-                        </RadioButton>
-                        <RadioButton GroupName="Residency" Margin="0,0,0,10"
-                                     IsChecked="{Binding Residency.IsAllowCpu, Mode=TwoWay}"
-                                     AutomationProperties.Name="{vm:Label AllowCpu}"
-                                     AutomationProperties.HelpText="{vm:Label AllowCpuHint}">
-                            <StackPanel>
-                                <TextBlock Text="{vm:Label AllowCpu}" TextWrapping="Wrap" />
-                                <TextBlock Text="{vm:Label AllowCpuHint}"
-                                           Style="{StaticResource Muted}" FontSize="11"
-                                           TextWrapping="Wrap" Margin="0,2,0,0" />
-                            </StackPanel>
-                        </RadioButton>
+                        </GroupBox>
                         <!-- The only thing on this page that appears, and the only one that
                              should: it says the chosen rule can degrade an answer. -->
                         <Border Background="{DynamicResource WarnFill}" BorderBrush="{DynamicResource WarnLine}"
@@ -443,66 +448,73 @@
                                        Style="{StaticResource WarningText}" TextWrapping="Wrap" />
                         </Border>
 
-                        <TextBlock Text="{vm:Label LocalModels}" FontWeight="SemiBold" Margin="0,16,0,6" />
+                        <TextBlock x:Name="LocalModelsLabel" Text="{vm:Label LocalModels}" FontWeight="SemiBold" Margin="0,16,0,6" />
                         <!-- The anchor: it restates the rule inside the group the rule governs,
                              so the dependency stays legible once the radios have scrolled away,
                              and its count moves the moment the rule does. -->
                         <TextBlock Text="{Binding Models.RuleSummary}"
                                    Style="{StaticResource Muted}" FontSize="11" Margin="0,0,0,8" />
-                        <RadioButton GroupName="ModelMode" Content="{vm:Label ChooseAutomatically}"
-                                     IsChecked="{Binding Models.IsAutomatic, Mode=TwoWay}" Margin="0,0,0,4" />
-                        <StackPanel Margin="23,0,0,10"
-                                    Visibility="{Binding Models.IsAutomatic, Converter={StaticResource BoolToVisibility}}">
-                            <TextBlock Text="{Binding Models.AutomaticSummary}"
-                                       Style="{StaticResource Muted}" FontSize="11" Margin="0,0,0,6" />
-                            <ItemsControl ItemsSource="{Binding Models.AutomaticSelection}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,3" />
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
-                        <RadioButton GroupName="ModelMode" Content="{vm:Label ChooseExactly}"
-                                     IsChecked="{Binding Models.IsChooseExact, Mode=TwoWay}" Margin="0,0,0,4" />
-                        <StackPanel Margin="23,0,0,10"
-                                    Visibility="{Binding Models.IsChooseExact, Converter={StaticResource BoolToVisibility}}">
-                            <TextBlock x:Name="ModelLabel" Text="{vm:Label ModelToInstall}" />
-                            <!-- ItemTemplate, not DisplayMemberPath. The closed box draws
-                                 SelectionBoxItemTemplate, which ComboBox computes from
-                                 ItemTemplate and never from DisplayMemberPath: with the path
-                                 alone the ContentPresenter fell back to ToString(), and
-                                 ModelCatalogEntry is a positional record, so the box showed
-                                 `ModelCatalogEntry { Tag = …, … }`. A tag is an identifier,
-                                 hence Consolas, as the rail already sets for the version. -->
-                            <ComboBox AutomationProperties.Name="{Binding Text, ElementName=ModelLabel}"
-                                      AutomationProperties.LabeledBy="{Binding ElementName=ModelLabel}"
-                                      ItemsSource="{Binding Models.CatalogModels}"
-                                      SelectedItem="{Binding Models.SelectedModel, Mode=TwoWay}"
-                                      MinWidth="240" HorizontalAlignment="Left" MinHeight="32"
-                                      Margin="0,4,0,8">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding Tag}" FontFamily="Consolas"
-                                                   TextWrapping="NoWrap" />
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-                            <TextBlock x:Name="ModelContextLabel" Text="{vm:Label ModelContextSize}" />
-                            <ComboBox AutomationProperties.Name="{Binding Text, ElementName=ModelContextLabel}"
-                                      AutomationProperties.LabeledBy="{Binding ElementName=ModelContextLabel}"
-                                      AutomationProperties.HelpText="{vm:Label ContextSizeHint}"
-                                      ItemsSource="{Binding Models.AvailableContexts}"
-                                      SelectedItem="{Binding Models.SelectedContext, Mode=TwoWay}"
-                                      HorizontalAlignment="Left" MinHeight="32" Margin="0,4,0,6" />
-                            <TextBlock Text="{vm:Label ContextSizeHint}"
-                                       Style="{StaticResource Muted}" FontSize="11" />
-                        </StackPanel>
-                        <RadioButton GroupName="ModelMode" Content="{vm:Label SkipModelSetup}"
-                                     IsChecked="{Binding Models.IsSkip, Mode=TwoWay}" Margin="0,0,0,4" />
-                        <TextBlock Text="{vm:Label SkipModelSetupHint}"
-                                   Style="{StaticResource Muted}" TextWrapping="Wrap" FontSize="11" Margin="23,0,0,0"
-                                   Visibility="{Binding Models.IsSkip, Converter={StaticResource BoolToVisibility}}" />
+                        <GroupBox Style="{StaticResource NamedGroup}"
+                                  AutomationProperties.LabeledBy="{x:Reference LocalModelsLabel}">
+                            <StackPanel>
+                                <RadioButton GroupName="ModelMode" Content="{vm:Label ChooseAutomatically}"
+                                             AutomationProperties.HelpText="{Binding Models.AutomaticSummary}"
+                                             IsChecked="{Binding Models.IsAutomatic, Mode=TwoWay}" Margin="0,0,0,4" />
+                                <StackPanel Margin="23,0,0,10"
+                                            Visibility="{Binding Models.IsAutomatic, Converter={StaticResource BoolToVisibility}}">
+                                    <TextBlock Text="{Binding Models.AutomaticSummary}"
+                                               Style="{StaticResource Muted}" FontSize="11" Margin="0,0,0,6" />
+                                    <ItemsControl ItemsSource="{Binding Models.AutomaticSelection}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,3" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                                <RadioButton GroupName="ModelMode" Content="{vm:Label ChooseExactly}"
+                                             IsChecked="{Binding Models.IsChooseExact, Mode=TwoWay}" Margin="0,0,0,4" />
+                                <StackPanel Margin="23,0,0,10"
+                                            Visibility="{Binding Models.IsChooseExact, Converter={StaticResource BoolToVisibility}}">
+                                    <TextBlock x:Name="ModelLabel" Text="{vm:Label ModelToInstall}" />
+                                    <!-- ItemTemplate, not DisplayMemberPath. The closed box draws
+                                         SelectionBoxItemTemplate, which ComboBox computes from
+                                         ItemTemplate and never from DisplayMemberPath: with the path
+                                         alone the ContentPresenter fell back to ToString(), and
+                                         ModelCatalogEntry is a positional record, so the box showed
+                                         `ModelCatalogEntry { Tag = …, … }`. A tag is an identifier,
+                                         hence Consolas, as the rail already sets for the version. -->
+                                    <ComboBox AutomationProperties.Name="{Binding Text, ElementName=ModelLabel}"
+                                              AutomationProperties.LabeledBy="{Binding ElementName=ModelLabel}"
+                                              ItemsSource="{Binding Models.CatalogModels}"
+                                              SelectedItem="{Binding Models.SelectedModel, Mode=TwoWay}"
+                                              MinWidth="240" HorizontalAlignment="Left" MinHeight="32"
+                                              Margin="0,4,0,8">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Tag}" FontFamily="Consolas"
+                                                           TextWrapping="NoWrap" />
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                    <TextBlock x:Name="ModelContextLabel" Text="{vm:Label ModelContextSize}" />
+                                    <ComboBox AutomationProperties.Name="{Binding Text, ElementName=ModelContextLabel}"
+                                              AutomationProperties.LabeledBy="{Binding ElementName=ModelContextLabel}"
+                                              AutomationProperties.HelpText="{vm:Label ContextSizeHint}"
+                                              ItemsSource="{Binding Models.AvailableContexts}"
+                                              SelectedItem="{Binding Models.SelectedContext, Mode=TwoWay}"
+                                              HorizontalAlignment="Left" MinHeight="32" Margin="0,4,0,6" />
+                                    <TextBlock Text="{vm:Label ContextSizeHint}"
+                                               Style="{StaticResource Muted}" FontSize="11" />
+                                </StackPanel>
+                                <RadioButton GroupName="ModelMode" Content="{vm:Label SkipModelSetup}"
+                                             AutomationProperties.HelpText="{vm:Label SkipModelSetupHint}"
+                                             IsChecked="{Binding Models.IsSkip, Mode=TwoWay}" Margin="0,0,0,4" />
+                                <TextBlock Text="{vm:Label SkipModelSetupHint}"
+                                           Style="{StaticResource Muted}" TextWrapping="Wrap" FontSize="11" Margin="23,0,0,0"
+                                           Visibility="{Binding Models.IsSkip, Converter={StaticResource BoolToVisibility}}" />
+                            </StackPanel>
+                        </GroupBox>
                     </StackPanel>
 
 
@@ -545,6 +557,17 @@
                                                   SelectedValuePath="Choice"
                                                   SelectedValue="{Binding Choice, Mode=OneWay}"
                                                   SelectionChanged="OnAgentChoiceChanged">
+                                            <!-- Help only while the sentence below is shown:
+                                                 hidden, it describes an effect that is not coming. -->
+                                            <ComboBox.Style>
+                                                <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Visibility, ElementName=WorktreeHint}" Value="Visible">
+                                                            <Setter Property="AutomationProperties.HelpText" Value="{Binding Text, ElementName=WorktreeHint}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </ComboBox.Style>
                                             <ComboBox.ItemTemplate>
                                                 <DataTemplate>
                                                     <TextBlock Text="{Binding Title}"
@@ -560,7 +583,8 @@
                                              git config localai.worktreeRoot. Hidden on a row set
                                              to leave the client alone, where it would describe an
                                              effect that is not coming. -->
-                                        <TextBlock Text="{Binding DataContext.Agents.WorktreePlacementHint, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
+                                        <TextBlock x:Name="WorktreeHint"
+                                                   Text="{Binding DataContext.Agents.WorktreePlacementHint, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
                                                    Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,8,0,0"
                                                    Visibility="{Binding DataContext.Agents.ShowsWorktreePlacement, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay, Converter={StaticResource BoolToVisibility}}" />
                                         <!-- The gate sits under the combo it depends on, and only
@@ -572,6 +596,7 @@
                                         <StackPanel Margin="0,8,0,0"
                                                     Visibility="{Binding HasTextSearchGate, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
                                             <CheckBox AutomationProperties.Name="{vm:Label RefuseTextSearch}"
+                                                      AutomationProperties.HelpText="{Binding DataContext.Agents.TextSearchHint, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
                                                       IsChecked="{Binding DataContext.Agents.RefusesTextSearch, RelativeSource={RelativeSource AncestorType=Window}, Mode=TwoWay}"
                                                       IsEnabled="{Binding DataContext.Agents.CanRefuseTextSearch, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}">
                                                 <TextBlock Text="{vm:Label RefuseTextSearch}" TextWrapping="Wrap" />
@@ -624,6 +649,13 @@
                                            Margin="0,0,0,6" />
                                 <CheckBox AutomationProperties.Name="{vm:Label EnableUpdateCheck}"
                                           IsChecked="{Binding Review.EnableUpdateCheck, Mode=TwoWay}">
+                                    <!-- Both sentences shown below, in their order. -->
+                                    <AutomationProperties.HelpText>
+                                        <MultiBinding StringFormat="{}{0} {1}">
+                                            <Binding Source="{x:Static vm:LiveLabels.Current}" Path="[UpdateCheckHint]" Mode="OneWay" />
+                                            <Binding Path="Review.UpdateCheckDisclosure" Mode="OneWay" />
+                                        </MultiBinding>
+                                    </AutomationProperties.HelpText>
                                     <TextBlock Text="{vm:Label EnableUpdateCheck}" TextWrapping="Wrap" />
                                 </CheckBox>
                                 <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,6,0,0"
