@@ -455,9 +455,9 @@ extraction directory, a PATH containing only System32, and an unavailable global
 
 Usage output and MCP initialization/tool descriptions matched across variants; these entry
 points started without a global SDK/runtime. The OS file cache was **not** cleared, so these
-are process/extraction-cache cold starts, not a clean-boot measurement. Installer UI startup,
-LocalLm MCP background model synchronization and a clean-machine offline installation remain
-part of final acceptance (#618); the opt-in pilot does not replace it. Both ZIPs passed the
+are process/extraction-cache cold starts, not a clean-boot measurement. Installer UI startup
+and a clean-machine offline installation remain part of final acceptance (#618); the opt-in
+pilot does not replace it. Both ZIPs passed the
 production package verifier with an ephemeral test trust key, without modifying the installed
 runtime or using the release signing key. Measurements and artifact hashes are retained in
 [results.json](scripts/quality/standalone-size/results.json); reproduce the comparison with

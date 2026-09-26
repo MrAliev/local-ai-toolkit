@@ -7,7 +7,7 @@ namespace LocalLm.Core;
 /// <summary>
 /// How much of a synchronisation happened. Neither "succeeded" nor "failed" is true of a run
 /// that installed four models out of five, and the three words lead to three different next
-/// actions: nothing to do, look at this machine, or wait for the next sync to pick up the rest.
+/// actions: nothing to do, look at this machine, or run the sync again for the rest.
 /// </summary>
 [JsonConverter(typeof(JsonStringEnumConverter<LocalModelSyncOutcome>))]
 public enum LocalModelSyncOutcome
