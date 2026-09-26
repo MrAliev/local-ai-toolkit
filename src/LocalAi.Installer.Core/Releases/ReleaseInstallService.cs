@@ -27,7 +27,8 @@ public sealed record ReleaseInstallResult(
     string? PriorVersion,
     string VersionPath,
     string? Reason,
-    ReleaseModelInstallReport? Models = null)
+    ReleaseModelInstallReport? Models = null,
+    IReadOnlyList<string>? RestoredFiles = null)
 {
     public bool Installed =>
         Status is LocalAiPackageInstallStatus.Installed
@@ -136,7 +137,8 @@ public sealed class ReleaseInstallService(
                 result.Version,
                 result.PriorVersion,
                 result.VersionPath,
-                result.Reason));
+                result.Reason,
+                RestoredFiles: result.RestoredFiles));
 
             if (installed &&
                 models is { Mode: not ModelProvisioningMode.None } &&
@@ -159,7 +161,8 @@ public sealed class ReleaseInstallService(
                 result.PriorVersion,
                 result.VersionPath,
                 result.Reason,
-                modelReport);
+                modelReport,
+                result.RestoredFiles);
         }
         finally
         {

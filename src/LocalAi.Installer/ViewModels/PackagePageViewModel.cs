@@ -123,10 +123,10 @@ public sealed class PackagePageViewModel : ObservableObject
         StatusWording.Resolving => InstallerCulture.Pick("Checking the release…", "Проверяю релиз…"),
         StatusWording.AlreadyInstalled => string.Format(
             InstallerCulture.Pick(
-                "Release {0} is already installed. Continuing will re-run the other steps " +
-                "and leave the LocalAi version untouched.",
-                "Релиз {0} уже установлен. Продолжение повторит остальные шаги " +
-                "и не тронет версию LocalAi."),
+                "Release {0} is already installed. Continuing re-runs the other steps and puts " +
+                "back any of its files that are missing or differ from the release.",
+                "Релиз {0} уже установлен. Продолжение повторит остальные шаги и вернёт на " +
+                "место те его файлы, которых нет или которые отличаются от релиза."),
             statusTag),
         StatusWording.Verified => string.Format(
             InstallerCulture.Pick(
@@ -217,19 +217,26 @@ public sealed class PackagePageViewModel : ObservableObject
 
     public string ReviewText => State switch
     {
+        // The package installer puts back the files of the installed version that are missing
+        // or differ from the release, and activates — stopping the running servers — only then.
         PackageSourceState.Selected when IsAlreadyInstalled && WantsLatest => string.Format(
             InstallerCulture.Pick(
-                "LocalAi package: {0} is already installed{1} — nothing will change unless a " +
-                "newer one is published before you press {2}",
-                "Пакет LocalAi: {0} уже установлен{1} — ничего не изменится, если до " +
-                "нажатия «{2}» не выйдет более новый"),
+                "LocalAi package: {0} is already installed{1} — unless a newer one is published " +
+                "before you press {2}, files that are missing or differ from the release are put " +
+                "back; if any are, LocalAi's running servers are stopped",
+                "Пакет LocalAi: {0} уже установлен{1} — если до нажатия «{2}» не выйдет более " +
+                "новый, файлы, которых нет или которые отличаются от релиза, возвращаются на место; " +
+                "если такие нашлись, запущенные серверы LocalAi останавливаются"),
             ResolvedTag ?? ReleaseVersion,
             Source,
             ActionText),
         PackageSourceState.Selected when IsAlreadyInstalled => string.Format(
             InstallerCulture.Pick(
-                "LocalAi package: {0} is already installed{1} — nothing will change",
-                "Пакет LocalAi: {0} уже установлен{1} — ничего не изменится"),
+                "LocalAi package: {0} is already installed{1} — files that are missing or differ " +
+                "from the release are put back; if any are, LocalAi's running servers are stopped",
+                "Пакет LocalAi: {0} уже установлен{1} — файлы, которых нет или которые отличаются " +
+                "от релиза, возвращаются на место; если такие нашлись, запущенные серверы LocalAi " +
+                "останавливаются"),
             ResolvedTag ?? ReleaseVersion,
             Source),
         PackageSourceState.Selected when WantsLatest => string.Format(

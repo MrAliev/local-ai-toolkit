@@ -27,8 +27,21 @@ public sealed record PackageOutcome(
     PackageOutcomeKind Kind,
     LocalAiPackageInstallStatus Status = default,
     string? Version = null,
-    string? Reason = null)
+    string? Reason = null,
+    IReadOnlyList<string>? Restored = null)
 {
+    /// <summary>What the package installer's answer amounts to.</summary>
+    public static PackageOutcome FromResult(ReleaseInstallResult result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        return new(
+            PackageOutcomeKind.Result,
+            result.Status,
+            result.Version,
+            result.Reason,
+            result.RestoredFiles);
+    }
+
     /// <summary>What an installation exception from the package installer amounts to.</summary>
     public static PackageOutcome FromInstallationFailure(string message) =>
         new(
@@ -291,6 +304,13 @@ public static class RunResults
                     "not installed: the installation stopped with an error. Technical details: {0}",
                     "не установлен: установка остановилась с ошибкой. Технические сведения: {0}"),
                 outcome.Reason),
+            _ when installed && outcome.Restored is { Count: > 0 } restored => string.Format(
+                InstallerCulture.Pick(
+                    "{0}, version {1}; put back from the release: {2}",
+                    "{0}, версия {1}; из релиза возвращены: {2}"),
+                PackageStatusName(outcome.Status),
+                outcome.Version,
+                string.Join(", ", restored)),
             _ when installed => string.Format(
                 InstallerCulture.Pick("{0}, version {1}", "{0}, версия {1}"),
                 PackageStatusName(outcome.Status),
