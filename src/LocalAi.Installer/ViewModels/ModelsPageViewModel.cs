@@ -143,6 +143,27 @@ public sealed class ModelsPageViewModel : ObservableObject
                     "Ни одна модель каталога не помещается в обнаруженную видеопамять, поэтому " +
                     "ни одна не будет установлена.");
 
+    private bool isOffline;
+
+    /// <summary>From the system check. Setup downloads models through Ollama.</summary>
+    public bool IsOffline
+    {
+        get => isOffline;
+        set
+        {
+            SetProperty(ref isOffline, value);
+            OnPropertyChanged(nameof(NetworkNote));
+        }
+    }
+
+    public string NetworkNote => isOffline
+        ? InstallerCulture.Pick(
+            "No network connection: models that are not on this computer yet cannot be " +
+            "downloaded now.",
+            "Подключения к сети нет: модели, которых ещё нет на этом компьютере, сейчас " +
+            "скачать не получится.")
+        : string.Empty;
+
     /// <summary>
     /// Applies a computed recommendation.
     ///
