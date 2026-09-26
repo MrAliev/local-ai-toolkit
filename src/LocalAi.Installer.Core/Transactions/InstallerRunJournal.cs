@@ -83,12 +83,36 @@ public sealed record InstallerRunFileUndo(
     string BeforeSha256,
     string? BeforeContentBase64,
     string? BackupPath,
-    string AfterSha256);
+    string AfterSha256)
+{
+    /// <summary>
+    /// Small files travel inline; anything above the cap keeps only its hash, which rollback
+    /// reports as unrecoverable instead of guessing.
+    /// </summary>
+    public static InstallerRunFileUndo Between(
+        string path,
+        bool existedBefore,
+        byte[] before,
+        byte[] after) =>
+        new(
+            path,
+            existedBefore,
+            InstallerRunJournal.Sha256Hex(before),
+            existedBefore && before.Length <= InstallerRunJournal.MaximumInlineContentBytes
+                ? Convert.ToBase64String(before)
+                : null,
+            null,
+            InstallerRunJournal.Sha256Hex(after));
+}
+
+/// <summary>A value that lives outside any file, as it was before the run and as the run wrote it.</summary>
+public sealed record InstallerRunValueUndo(string Before, string After);
 
 public sealed record InstallerRunUndoData(
     string? ActivatedVersion = null,
     string? PriorVersion = null,
-    IReadOnlyList<InstallerRunFileUndo>? Files = null);
+    IReadOnlyList<InstallerRunFileUndo>? Files = null,
+    InstallerRunValueUndo? UninstallEntryVersion = null);
 
 public sealed record InstallerRunStep(
     string StepId,
