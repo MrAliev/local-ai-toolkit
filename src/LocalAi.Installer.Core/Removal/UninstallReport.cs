@@ -36,6 +36,15 @@ public static class UninstallReport
         {
             Add(string.Join(", ", configuration.Files.Select(file => file.Path)),
                 RemovalReportKind.Configuration, UninstallJournalDescriptions.Configuration(configuration));
+            // Read from disk: a step that failed part-way rolled back from the backups it had
+            // made, and those stay, while the files it never reached have none.
+            entries.AddRange(configuration.Files
+                .Where(file => File.Exists(file.BackupPath))
+                .Select(file => new RemovalReportEntry(
+                    file.BackupPath,
+                    RemovalReportKind.Configuration,
+                    RemovalReportState.Retained,
+                    InstallerCulture.Pick("the previous version of ", "прежняя версия ") + file.Path)));
         }
 
         foreach (var hook in plan.Hooks)
