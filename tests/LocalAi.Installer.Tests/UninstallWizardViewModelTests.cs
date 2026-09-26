@@ -356,6 +356,8 @@ public sealed class UninstallWizardViewModelTests : IDisposable
 
         Assert.True(wizard.IsBlocked);
         Assert.Contains("no LocalAi installation", wizard.BlockingNotice!, StringComparison.Ordinal);
+        // The documentation that listed the leftovers was deleted; the notice cannot send anyone there.
+        Assert.DoesNotContain("documentation", wizard.BlockingNotice!, StringComparison.Ordinal);
         Assert.False(wizard.CanMoveNext);
     }
 
