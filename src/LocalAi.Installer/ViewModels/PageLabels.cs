@@ -398,6 +398,10 @@ public static class PageLabels
     public static string ResultModelsWorking => InstallerCulture.Pick(
         "{0} checks in progress", "проверяются: {0}");
 
+    public static string ResultModelsNoneRequested => InstallerCulture.Pick(
+        "none set up: no model was requested. The log below says why.",
+        "не настроено: ни одна модель не запрошена. Причина указана в журнале ниже.");
+
     public static string WhatToDoNext => InstallerCulture.Pick(
         "What to do next",
         "Что делать дальше");

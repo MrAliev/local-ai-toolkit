@@ -216,6 +216,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
     private string? resolvedTag;
     private PackageOutcome? packageOutcome;
     private bool packageInstalled;
+    private ModelStepFailure? modelStepFailure;
     private InstallerRunJournal? runJournal;
     private InstallerRunJournal? interruptedJournal;
 
@@ -941,6 +942,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         reportSaveFailure = null;
         packageOutcome = null;
         packageInstalled = false;
+        modelStepFailure = null;
         finish.ReportPath = null;
         finish.RollbackReport = null;
         ModelRuns.Clear();
@@ -2048,7 +2050,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             packageOutcome is { } outcome ? RunResults.PackageDetail(outcome, packageInstalled) : null,
             packageInstalled));
         finish.Results.Add(RunResults.Prerequisites(requested, installed, failed));
-        finish.Results.Add(RunResults.Models(ModelRuns));
+        finish.Results.Add(RunResults.Models(ModelRuns, modelStepFailure));
         foreach (var model in ModelRuns)
         {
             finish.Results.Add(new RunResultRow(model.Mark, model.Tag, model.Detail));
@@ -2695,6 +2697,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             InstallerRunEffectKind.PackageActivation,
             $"LocalAi package {resolved.Manifest.ReleaseVersion}");
         string? modelsStep = null;
+        var modelSetupStarted = false;
         ReleaseInstallResult result;
         try
         {
@@ -2716,9 +2719,8 @@ public sealed class InstallerWizardViewModel : ObservableObject
                         resolved.Manifest.ReleaseVersion);
                     if (activation.Installed && selection.Mode != ModelProvisioningMode.None)
                     {
-                        modelsStep = JournalBegin(
-                            InstallerRunEffectKind.ModelInstall,
-                            "Local models through the broker");
+                        modelSetupStarted = true;
+                        modelsStep = BeginModelStep();
                     }
                 },
                 cancellationToken);
@@ -2726,6 +2728,11 @@ public sealed class InstallerWizardViewModel : ObservableObject
         catch (OperationCanceledException)
         {
             JournalFail(modelsStep ?? packageStep, "Cancelled before it could finish.");
+            if (modelSetupStarted)
+            {
+                modelStepFailure = new(ModelStepFailureKind.Cancelled, "cancelled");
+            }
+
             throw;
         }
         catch (LocalAiPackageInstallationException exception) when (packageInstalled)
@@ -2733,6 +2740,11 @@ public sealed class InstallerWizardViewModel : ObservableObject
             // Activation had already reported the package installed, so this came from the model
             // step: the package keeps its row and gets what an installed package gets.
             JournalFail(modelsStep, exception.Message);
+            if (modelSetupStarted)
+            {
+                modelStepFailure = new(ModelStepFailureKind.Stopped, exception.Message);
+            }
+
             AppendLog(report, $"Local models: {exception.Message}");
             hasRunError = true;
             RegisterUninstallEntry(report, resolved.Manifest.ReleaseVersion);
@@ -2797,18 +2809,55 @@ public sealed class InstallerWizardViewModel : ObservableObject
             await RegisterLauncherPathAsync(report);
         }
 
-        ReportModelOutcome(report, result.Models, selection);
-        if (modelsStep is not null)
+        // Only a run that reached the models has anything to say about them. A package that was
+        // not installed never asked, and its log used to read "none were installed. The
+        // installer produced no model request." as though the planner had been consulted.
+        if (modelSetupStarted)
         {
-            var pulled = result.Models?.Batch?.Models
-                .Count(model => model.PullCompleted) ?? 0;
-            JournalComplete(
-                modelsStep,
-                $"Models newly downloaded: {pulled}. Pulled models live in Ollama's own " +
-                "store, shared with everything else that uses it, and are not removed by " +
-                "this installer.",
-                isReversible: false);
+            FinishModelSetup(report, result.Models, selection, modelsStep);
         }
+    }
+
+    /// <summary>The model step's intent, written before the first model is asked for.</summary>
+    internal string? BeginModelStep() =>
+        JournalBegin(InstallerRunEffectKind.ModelInstall, "Local models through the broker");
+
+    /// <summary>What model setup ended in, told to the log, the journal and the finish page.</summary>
+    internal void FinishModelSetup(
+        StringBuilder report,
+        ReleaseModelInstallReport? models,
+        ModelProvisioningSelection selection,
+        string? step)
+    {
+        ReportModelOutcome(report, models, selection);
+        CloseModelStep(
+            step,
+            ModelStepFailure.Of(models),
+            models?.Batch?.Models.Count(model => model.PullCompleted) ?? 0);
+    }
+
+    /// <summary>
+    /// Closes the model step's journal entry as it ended, and keeps that for the finish page. It
+    /// was recorded Completed whatever happened, so a broker that failed before the first model
+    /// left a journal saying the models were done.
+    /// </summary>
+    internal void CloseModelStep(string? step, ModelStepFailure? failure, int pulled)
+    {
+        modelStepFailure = failure;
+        var downloaded = $"Models newly downloaded: {pulled}. Pulled models live in Ollama's own " +
+            "store, shared with everything else that uses it, and are not removed by " +
+            "this installer.";
+        if (failure is null)
+        {
+            JournalComplete(step, downloaded, isReversible: false);
+            return;
+        }
+
+        JournalFail(
+            step,
+            (failure.Kind == ModelStepFailureKind.NothingRequested
+                ? "No model was requested: " + failure.Detail
+                : $"Model setup stopped early ({failure.Detail}).") + " " + downloaded);
     }
 
     /// <summary>
