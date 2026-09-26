@@ -74,6 +74,20 @@ public sealed class UninstallPlannerTests : IDisposable
         Assert.Empty(withoutKeys.RetainedPaths);
     }
 
+    /// <summary>A directory that is not there is not said to stay.</summary>
+    [Fact]
+    public async Task Keys_that_are_not_there_are_not_said_to_stay()
+    {
+        var keys = Path.Combine(machine.Runtime, RemovalMatrix.SigningKeyDirectoryName);
+        Directory.Delete(keys, recursive: true);
+
+        var plan = await Plan(RemovalSelection.FromPreset(RemovalPreset.FullUninstall));
+
+        Assert.DoesNotContain(
+            plan.Retained,
+            notice => notice.Detail.Contains(keys, StringComparison.Ordinal));
+    }
+
     [Fact]
     public async Task A_reinstall_friendly_run_leaves_the_indexes_and_settings_alone()
     {
@@ -130,6 +144,25 @@ public sealed class UninstallPlannerTests : IDisposable
         Assert.Empty(plan.Paths);
         Assert.Empty(plan.Hooks);
         Assert.Contains("would change nothing", plan.PreviewText, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Rows are ticked and nothing of theirs is on disk: the reason the run changes nothing is
+    /// that nothing was found, not that nothing was chosen.
+    /// </summary>
+    [Fact]
+    public async Task A_selection_whose_items_are_absent_says_nothing_was_found()
+    {
+        Directory.Delete(Path.Combine(machine.Home, ".codex"), recursive: true);
+
+        var plan = await Plan(RemovalSelection.Nothing().With(RemovalItem.CodexIntegration, true));
+
+        Assert.False(plan.HasWork);
+        Assert.Contains(
+            "None of the selected items was found: this run would change nothing.",
+            plan.PreviewText,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("Nothing selected", plan.PreviewText, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -300,6 +333,85 @@ public sealed class UninstallPlannerTests : IDisposable
             notice => notice.Detail.Contains(
                 "launcher that is no longer there",
                 StringComparison.Ordinal));
+        Assert.True(plan.LeavesDispatchersWithoutLauncher);
+    }
+
+    /// <summary>
+    /// With no connected repository there is no dispatcher to fail, so there is nothing to warn
+    /// about.
+    /// </summary>
+    [Fact]
+    public async Task No_dispatcher_on_the_machine_means_no_warning_about_them()
+    {
+        Directory.Delete(Path.Combine(machine.Runtime, "repositories"), recursive: true);
+
+        var plan = await Plan(RemovalSelection
+            .FromPreset(RemovalPreset.FullUninstall)
+            .With(RemovalItem.GitHooks, false));
+
+        Assert.False(plan.LeavesDispatchersWithoutLauncher);
+        Assert.DoesNotContain(
+            plan.Retained,
+            notice => notice.Title == RemovalMatrix.Title(RemovalItem.GitHooks));
+    }
+
+    /// <summary>
+    /// The hooks row ticked with one repository left out still leaves that repository's
+    /// dispatchers calling a launcher this run removes.
+    /// </summary>
+    [Fact]
+    public async Task A_repository_left_out_of_the_hook_removal_is_warned_about()
+    {
+        var plan = await Plan(RemovalSelection
+            .FromPreset(RemovalPreset.FullUninstall)
+            .WithRepositories(["husky"]));
+
+        Assert.True(plan.LeavesDispatchersWithoutLauncher);
+        Assert.Contains(
+            plan.Retained,
+            notice => notice.Detail.Contains(
+                "launcher that is no longer there",
+                StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task A_run_that_takes_every_dispatcher_warns_about_none()
+    {
+        var plan = await Plan(RemovalSelection.FromPreset(RemovalPreset.FullUninstall));
+
+        Assert.False(plan.LeavesDispatchersWithoutLauncher);
+    }
+
+    [Fact]
+    public async Task A_run_that_keeps_the_launcher_warns_about_no_dispatcher()
+    {
+        var plan = await Plan(RemovalSelection
+            .FromPreset(RemovalPreset.DisconnectClients)
+            .With(RemovalItem.GitHooks, false));
+
+        Assert.False(plan.LeavesDispatchersWithoutLauncher);
+    }
+
+    /// <summary>
+    /// The indexers are npm packages, and `winget uninstall` does not reach them. Named from the
+    /// catalogue that installs them, so the command cannot drift from what was installed.
+    /// </summary>
+    [Fact]
+    public async Task The_indexers_are_named_with_the_command_that_removes_them()
+    {
+        var plan = await Plan(RemovalSelection.FromPreset(RemovalPreset.FullUninstall));
+
+        Assert.Contains(
+            plan.Retained,
+            notice => notice.Detail.Contains(
+                "`npm uninstall --global " +
+                LocalAi.Installer.Core.Dependencies.DependencyCatalog.ScipTypeScript.PackageId + " " +
+                LocalAi.Installer.Core.Dependencies.DependencyCatalog.ScipPython.PackageId + "`",
+                StringComparison.Ordinal));
+        Assert.DoesNotContain(
+            plan.Retained,
+            notice => notice.Detail.Contains("winget", StringComparison.Ordinal) &&
+                notice.Detail.Contains("indexers", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -578,6 +690,50 @@ public sealed class UninstallPlannerTests : IDisposable
         Assert.Contains(
             plan.Retained,
             entry => entry.Title.Contains("PreToolUse", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// The worktree pair is ours and points at the launcher too, so it goes with the gate. It
+    /// used to be taken out and written back, at a launcher path that never exists.
+    /// </summary>
+    [Theory]
+    [InlineData(RemovalPreset.FullUninstall)]
+    [InlineData(RemovalPreset.ReinstallFriendly)]
+    public async Task The_worktree_hooks_go_with_the_gate(RemovalPreset preset)
+    {
+        var settings = Path.Combine(machine.Home, ".claude", "settings.json");
+        await WriteSettingsAsync("{}");
+        var ours = await File.ReadAllTextAsync(settings, TestContext.Current.CancellationToken);
+        foreach (var (hook, verb) in new[]
+                 {
+                     (ClaudeHook.WorktreeCreate, "create"),
+                     (ClaudeHook.WorktreeRemove, "remove"),
+                 })
+        {
+            ours = ClaudeHookRegistration.Add(
+                ours,
+                hook,
+                "\"C:\\Anywhere\\localai-launcher.exe\" run localai agent worktree " + verb);
+        }
+
+        await File.WriteAllTextAsync(
+            settings,
+            ours,
+            new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
+            TestContext.Current.CancellationToken);
+
+        var plan = await Plan(RemovalSelection.FromPreset(preset));
+
+        var after = plan.AgentConfigurations
+            .SelectMany(configuration => configuration.Files)
+            .Single(file => file.Path == settings)
+            .AfterText;
+        Assert.False(ClaudeHookRegistration.IsRegistered(after, ClaudeHook.WorktreeCreate));
+        Assert.False(ClaudeHookRegistration.IsRegistered(after, ClaudeHook.WorktreeRemove));
+        Assert.Contains(
+            "remove worktree placement from " + settings,
+            plan.PreviewText,
+            StringComparison.Ordinal);
     }
 
     /// <summary>

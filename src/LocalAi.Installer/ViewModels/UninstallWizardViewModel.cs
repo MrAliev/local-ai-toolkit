@@ -308,11 +308,11 @@ public sealed class UninstallWizardViewModel : ObservableObject
     /// What this run deliberately leaves alone, said before the list rather than inside it.
     ///
     /// The reinstall-friendly preset pins the client registrations and the hook dispatchers to
-    /// kept, because the installation that follows rewrites all three and asking twice invites
-    /// two different answers. Read from the confirmed plan rather than from the preset: the
-    /// rows stay tickable after a preset fills them in, so somebody who arrived here by
-    /// choosing a clean reinstall can still tick one, and this sentence must not then be a
-    /// lie. Empty when it does not apply.
+    /// kept, because all three call the launcher the installation that follows puts back, and
+    /// asking twice invites two different answers. Read from the confirmed plan rather than
+    /// from the preset: the rows stay tickable after a preset fills them in, so somebody who
+    /// arrived here by choosing a clean reinstall can still tick one, and this sentence must
+    /// not then be a lie. Empty when it does not apply.
     /// </summary>
     public string KeepNotice => confirmedPlan is { } plan
         ? BuildKeepNotice(plan.Selection)
@@ -404,16 +404,21 @@ public sealed class UninstallWizardViewModel : ObservableObject
                 "Check the outcome below before retrying. Removal does not restore deleted data.",
                 "Перед повторной попыткой проверьте результат ниже. Удаление не восстанавливает удалённые данные.")
             : OffersInstallAfterwards
-                // Not "or close: either way". With the hook dispatchers now kept, stopping
-                // here leaves every connected repository failing its hooks until a launcher
-                // is back. Close is still on screen; this line stops calling it equivalent.
+                // Not "or close: either way" when the plan left dispatchers calling a launcher
+                // this run removed: stopping here leaves those repositories failing their hooks.
                 ? InstallerCulture.Pick(
-                    "Everything selected was removed. Continue to install to put LocalAi " +
-                    "back: the indexes and settings you kept are waiting, and the Git hooks " +
-                    "in your repositories will not work again until the launcher is back.",
-                    "Всё выбранное удалено. Нажмите «Перейти к установке», чтобы " +
-                    "вернуть LocalAi: сохранённые индексы и настройки на месте, а хуки " +
-                    "Git в ваших репозиториях не заработают, пока launcher не вернётся.")
+                    "Everything selected was removed. Continue to the installation to finish " +
+                    "the reinstall.",
+                    "Всё выбранное удалено. Перейдите к установке, чтобы завершить " +
+                    "переустановку.") +
+                  (confirmedPlan is { LeavesDispatchersWithoutLauncher: true }
+                      ? InstallerCulture.Pick(
+                          " Until it finishes, the Git hooks in your connected repositories " +
+                          "fail: they call the launcher this run removed.",
+                          " Пока она не завершена, хуки Git в подключённых репозиториях " +
+                          "завершаются с ошибкой: они вызывают launcher, который удалил этот " +
+                          "запуск.")
+                      : string.Empty)
                 : InstallerCulture.Pick(
                     "Everything selected was removed.",
                     "Всё выбранное удалено."),
@@ -576,9 +581,10 @@ public sealed class UninstallWizardViewModel : ObservableObject
         outcome = null;
         var acceptingProgress = true;
         CurrentPage = UninstallPage.Progress;
+        // Neutral: whether LocalAi is asked to stop is the runner's call, and it says so itself.
         SetProgress(
             0,
-            InstallerCulture.Pick("Asking LocalAi to stop…", "Прошу LocalAi остановиться…"));
+            InstallerCulture.Pick("Starting the removal…", "Начинаю удаление…"));
 
         InstallerRunJournal? journal = null;
         try
@@ -756,13 +762,12 @@ public sealed class UninstallWizardViewModel : ObservableObject
         var keepsClaude = !selection.Includes(RemovalItem.ClaudeIntegration);
         var keepsCodex = !selection.Includes(RemovalItem.CodexIntegration);
         var keepsHooks = !selection.Includes(RemovalItem.GitHooks);
+        var removesLauncher = selection.Includes(RemovalItem.Binaries);
 
-        // The one thing on this page that is kept by the Claude row and taken by another. The
-        // gate is a command line pointing at the launcher, so the row that deletes the binaries
-        // takes it whatever the Claude row says — and without this clause the notice tells the
-        // reader their Claude setup is untouched while the run edits a file in their home
-        // directory. The preview box names the file; this names the reason.
-        var gateGoesAnyway = keepsClaude && selection.Includes(RemovalItem.Binaries);
+        // Kept by the Claude row and taken by another: our hooks in settings.json are command
+        // lines pointing at the launcher, so the row that deletes the binaries takes them
+        // whatever the Claude row says.
+        var claudeHooksGoAnyway = keepsClaude && removesLauncher;
 
         if (OffersInstallAfterwards)
         {
@@ -771,21 +776,26 @@ public sealed class UninstallWizardViewModel : ObservableObject
             return keepsClaude && keepsCodex && keepsHooks
                 ? InstallerCulture.Pick(
                     "The Claude and Codex registrations and the Git hook dispatchers are " +
-                    "left exactly as they are — the installation that follows this removal " +
-                    "rewrites all three.",
+                    "left exactly as they are.",
                     "Регистрации Claude и Codex и диспетчеры хуков Git остаются ровно " +
-                    "как есть — установка, которая пойдёт следом, перепишет все три.") +
-                  (gateGoesAnyway
-                      // "asks about it again" rather than "puts it back": the installation
-                      // seeds that checkbox by reading the machine, and by then the entry is
-                      // gone — so a promise to restore it would be one this run cannot keep.
+                    "как есть.") +
+                  (removesLauncher
                       ? InstallerCulture.Pick(
-                          " The hook that refuses text searches is not one of them: it points " +
-                          "at the launcher, and the installation that follows asks about it " +
-                          "again.",
-                          " Хук, который отклоняет текстовый поиск, — не из их числа: он " +
-                          "указывает на launcher, и установка, которая пойдёт следом, спросит " +
-                          "о нём заново.")
+                          " All three call the launcher this run removes, and work again once " +
+                          "the installation that follows puts it back.",
+                          " Все три вызывают launcher, который удаляет этот запуск, и снова " +
+                          "заработают, когда следующая установка вернёт его на место.")
+                      : string.Empty) +
+                  (claudeHooksGoAnyway
+                      // Not "puts them back": the installation writes what is chosen on its
+                      // own page, seeded from a machine where the entries are gone by then.
+                      ? InstallerCulture.Pick(
+                          " The hooks LocalAi wrote into Claude Code's settings.json are not " +
+                          "among them: they go with the launcher, and the installation that " +
+                          "follows writes them again from what you choose there.",
+                          " Хуки, которые LocalAi записал в settings.json Claude Code, — не из " +
+                          "их числа: они уходят вместе с launcher, а установка, которая пойдёт " +
+                          "следом, запишет их заново по тому, что вы в ней выберете.")
                       : string.Empty)
                 : string.Empty;
         }
@@ -793,19 +803,17 @@ public sealed class UninstallWizardViewModel : ObservableObject
         return keepsClaude && keepsCodex
             ? InstallerCulture.Pick(
                 "The Claude and Codex registrations are left exactly as they are: this " +
-                "preset disconnects no clients. To remove them as well, go back and tick " +
+                "removal disconnects no clients. To remove them as well, go back and tick " +
                 "their rows.",
-                "Регистрации Claude и Codex остаются ровно как есть: этот набор не " +
+                "Регистрации Claude и Codex остаются ровно как есть: это удаление не " +
                 "отключает ни одного клиента. Чтобы удалить и их, вернитесь назад " +
                 "и отметьте их строки.") +
-              (gateGoesAnyway
-                  // Nothing follows this run, so the sentence states the fact and promises
-                  // nothing about what comes after it.
+              (claudeHooksGoAnyway
                   ? InstallerCulture.Pick(
-                      " The hook that refuses text searches still goes: it points at the " +
-                      "launcher, which this run removes.",
-                      " Хук, который отклоняет текстовый поиск, всё равно уходит: он " +
-                      "указывает на launcher, который этот запуск удаляет.")
+                      " The hooks LocalAi wrote into Claude Code's settings.json still go: they " +
+                      "point at the launcher, which this run removes.",
+                      " Хуки, которые LocalAi записал в settings.json Claude Code, всё равно " +
+                      "уходят: они указывают на launcher, который этот запуск удаляет.")
                   : string.Empty)
             : string.Empty;
     }
@@ -814,19 +822,20 @@ public sealed class UninstallWizardViewModel : ObservableObject
 
     private string BuildSummary(UninstallOutcome outcome)
     {
+        var summary = new StringBuilder();
         if (!outcome.Succeeded)
         {
             // "1 thing(s)" was never good English either; counting after the label works
             // in both languages and drops the plural hack.
-            return string.Format(
+            summary.Append(string.Format(
                 InstallerCulture.Pick(
-                    "Could not be removed: {0}; removed: {1}. Nothing else was touched.",
-                    "Не удалось удалить: {0}; удалено: {1}. Больше ничего не тронуто."),
+                    "Could not be removed: {0}; removed: {1}.",
+                    "Не удалось удалить: {0}; удалено: {1}."),
                 outcome.Failures.Count,
-                outcome.RemovedPaths.Count);
+                outcome.RemovedPaths.Count));
+            return AppendClientAndHookCounts(summary, outcome);
         }
 
-        var summary = new StringBuilder();
         summary.Append(outcome.RuntimeRootRemoved
             ? InstallerCulture.Pick(
                 "LocalAi was removed from this computer.",
@@ -837,6 +846,14 @@ public sealed class UninstallWizardViewModel : ObservableObject
                     "Удалено путей из {1}: {0}."),
                 outcome.RemovedPaths.Count,
                 layout.Root));
+        return AppendClientAndHookCounts(summary, outcome);
+    }
+
+    /// <summary>
+    /// Both outcomes: a run that failed on a path has usually rewritten these already.
+    /// </summary>
+    private static string AppendClientAndHookCounts(StringBuilder summary, UninstallOutcome outcome)
+    {
         if (outcome.RewrittenConfigurations.Count > 0)
         {
             summary.Append(' ').Append(string.Format(
