@@ -118,20 +118,22 @@ public sealed class StartScreenChoosesBeforeItActsTests : IDisposable
     }
 
     /// <summary>
-    /// The reason an errand is out of reach names a sibling row, and on an unrecognised
-    /// installation that row is called "Repair this installation" rather than "Update or
-    /// repair" — so the sentence sent the reader to a label that was not on the screen.
+    /// The reason Install is out of reach on an unrecognised installation names the row that
+    /// gets past it. Update or repair does not: the package installer refuses to install over
+    /// this state, and only a clean reinstall removes the binaries first.
     /// </summary>
     [Fact]
-    public void The_reason_names_the_row_that_is_actually_there()
+    public void The_reason_names_the_row_that_gets_past_it()
     {
         InstallerCulture.Current = InstallerLanguage.English;
         var start = Unrecognised();
 
-        var repair = start.Option(StartChoice.UpdateOrRepair).Title;
-
-        Assert.Equal("Repair this installation", repair);
-        Assert.Contains(repair, start.Option(StartChoice.Install).UnavailableReason, StringComparison.Ordinal);
+        Assert.True(start.Option(StartChoice.CleanReinstall).IsAvailable);
+        Assert.False(start.Option(StartChoice.UpdateOrRepair).IsAvailable);
+        Assert.Equal(
+            "There is already a LocalAi directory here — choose “Clean reinstall”, which " +
+            "removes its binaries first.",
+            start.Option(StartChoice.Install).UnavailableReason);
     }
 
     private InstallerStartViewModel Installed() =>
