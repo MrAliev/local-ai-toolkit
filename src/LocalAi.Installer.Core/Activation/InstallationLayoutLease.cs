@@ -385,7 +385,9 @@ public sealed class InstallationLayoutLease : IDisposable
                 }
 
                 ValidateExactNames(entry, [LocalAiPackageLayout.StableLauncherFile]);
-                ValidateRequiredFile(Path.Combine(entry, LocalAiPackageLayout.StableLauncherFile));
+                // Optional: a removal that stops between the file and its directory leaves the
+                // directory empty, and an empty one restores nothing and endangers nothing.
+                ValidateOptionalFile(Path.Combine(entry, LocalAiPackageLayout.StableLauncherFile));
                 var backupHandle = NativeDirectory.OpenExisting(backups.Handle, name, entry);
                 directories.Add(Evidence(backupHandle, entry));
             }
@@ -499,7 +501,7 @@ public sealed class InstallationLayoutLease : IDisposable
                      IsBelow(directory.CanonicalPath, Layout.InstallerBackupsRoot)))
         {
             ValidateExactNames(directory.CanonicalPath, [LocalAiPackageLayout.StableLauncherFile]);
-            ValidateRequiredFile(Path.Combine(
+            ValidateOptionalFile(Path.Combine(
                 directory.CanonicalPath,
                 LocalAiPackageLayout.StableLauncherFile));
         }
@@ -652,6 +654,10 @@ public sealed class InstallationLayoutLease : IDisposable
         }
     }
 
+    private static readonly HashSet<string> KnownVersionEntries = new(
+        LocalAiPackageLayout.CurrentPackageArtifactFiles,
+        StringComparer.Ordinal);
+
     private static void ValidateExistingVersionDirectory(string directory)
     {
         ValidateDirectoryPath(directory);
@@ -660,11 +666,12 @@ public sealed class InstallationLayoutLease : IDisposable
             .Select(Path.GetFileName)
             .ToHashSet(StringComparer.Ordinal);
 
-        // Older repair and pre-release builds sometimes published the verified stable
-        // launcher beside the runtime executables. The versioned launcher is never executed;
-        // the trusted copy under bin\launcher remains the only activation entry point. Accept
-        // that one known expanded package shape, while continuing to reject every other extra.
-        if (!LocalAiPackageLayout.IsKnownVersionFiles(names!) && !LocalAiPackageLayout.IsKnownPackageArtifacts(names!))
+        // Every name must be one a release ships. Older repair and pre-release builds sometimes
+        // published the verified stable launcher beside the runtime executables; the versioned
+        // launcher is never executed, the trusted copy under bin\launcher remains the only
+        // activation entry point. A directory missing some of those files is accepted too: a
+        // missing file endangers nothing, and putting it back is what a repair is for.
+        if (!names.All(name => KnownVersionEntries.Contains(name!)))
         {
             throw Failure();
         }
