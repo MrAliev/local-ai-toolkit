@@ -2334,16 +2334,22 @@ public sealed class InstallerWizardViewModel : ObservableObject
     {
         try
         {
-            var snapshot = new ExistingLocalAiInspector(new SystemFileSystemProbe())
+            return ActiveVersionDirectory(new ExistingLocalAiInspector(new SystemFileSystemProbe())
                 .Inspect(Environment.GetFolderPath(
-                    Environment.SpecialFolder.LocalApplicationData));
-            return snapshot.Version;
+                    Environment.SpecialFolder.LocalApplicationData)));
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
             return null;
         }
     }
+
+    /// <summary>
+    /// Only a recognised installation: the package installer refuses an unrecognised one
+    /// whatever version it carries.
+    /// </summary>
+    internal static string? ActiveVersionDirectory(ExistingLocalAiSnapshot snapshot) =>
+        snapshot.State == ExistingLocalAiState.Compatible ? snapshot.Version : null;
 
     /// <summary>
     /// Re-resolves a request left at "latest" immediately before installing it.
@@ -2593,6 +2599,8 @@ public sealed class InstallerWizardViewModel : ObservableObject
         // 208 MB" for the whole of a two-minute preflight, which reads as a hung installer with
         // nothing to press but Cancel.
         var downloadFinished = false;
+        // The same test CreateFeed makes: a folder feed copies the package from disk.
+        var fromFolder = !string.IsNullOrWhiteSpace(package.SourceFolder);
         var downloadProgress = new Progress<long>(bytes =>
         {
             if (downloadFinished)
@@ -2603,13 +2611,25 @@ public sealed class InstallerWizardViewModel : ObservableObject
             SetProgress(
                 40 + (int)(50 * Math.Clamp(bytes, 0, total) / Math.Max(total, 1)),
                 string.Format(
-                    InstallerCulture.Pick(
-                        "Downloading the LocalAi package: {0:N0} of {1:N0} MB",
-                        "Скачиваю пакет LocalAi: {0:N0} из {1:N0} МБ"),
+                    fromFolder
+                        ? InstallerCulture.Pick(
+                            "Copying the LocalAi package from the folder: {0:N0} of {1:N0} MB",
+                            "Копирую пакет LocalAi из папки: {0:N0} из {1:N0} МБ")
+                        : InstallerCulture.Pick(
+                            "Downloading the LocalAi package: {0:N0} of {1:N0} MB",
+                            "Скачиваю пакет LocalAi: {0:N0} из {1:N0} МБ"),
                     bytes / (1024d * 1024),
                     total / (1024d * 1024)));
         });
-        SetProgress(40, InstallerCulture.Pick("Downloading the LocalAi package...", "Скачиваю пакет LocalAi…"));
+        SetProgress(
+            40,
+            fromFolder
+                ? InstallerCulture.Pick(
+                    "Copying the LocalAi package from the folder...",
+                    "Копирую пакет LocalAi из папки…")
+                : InstallerCulture.Pick(
+                    "Downloading the LocalAi package...",
+                    "Скачиваю пакет LocalAi…"));
 
         var service = new ReleaseInstallService(
             CreateFeed(),
