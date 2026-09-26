@@ -2682,9 +2682,14 @@ public sealed class InstallerWizardViewModel : ObservableObject
             return;
         }
 
+        // The same test CreateFeed makes: a folder feed copies the package from disk.
+        var fromFolder = !string.IsNullOrWhiteSpace(package.SourceFolder);
         AppendLog(
             report,
-            $"LocalAi package {resolved.Manifest.ReleaseVersion}: downloading and verifying...");
+            fromFolder
+                ? $"LocalAi package {resolved.Manifest.ReleaseVersion}: copying from " +
+                    $"{package.SourceFolder} and verifying..."
+                : $"LocalAi package {resolved.Manifest.ReleaseVersion}: downloading and verifying...");
 
         // Real byte progress: the expected size comes from the verified manifest, and the
         // downloaded bytes are observed as the file grows.
@@ -2694,8 +2699,6 @@ public sealed class InstallerWizardViewModel : ObservableObject
         // 208 MB" for the whole of a two-minute preflight, which reads as a hung installer with
         // nothing to press but Cancel.
         var downloadFinished = false;
-        // The same test CreateFeed makes: a folder feed copies the package from disk.
-        var fromFolder = !string.IsNullOrWhiteSpace(package.SourceFolder);
         var downloadProgress = new Progress<long>(bytes =>
         {
             if (downloadFinished)
