@@ -901,6 +901,33 @@ public sealed class LocalAiPackageInstallerTests : IDisposable
     }
 
     /// <summary>
+    /// A repair puts back what the release ships and nothing else. An entry the release does not
+    /// ship for that version is not the installer's to overwrite or delete, so the directory is
+    /// refused as before and nothing in it changes.
+    /// </summary>
+    [Fact]
+    public async Task A_repair_leaves_a_directory_holding_an_entry_the_release_does_not_ship_untouched()
+    {
+        CreateExisting("v1", Content(LocalAiPackageLayout.StableLauncherFile), packageContent: true);
+        using var package = Package("v1");
+        var layout = InstallationLayout.FromLocalAppData(localAppData);
+        var versionPath = Path.Combine(layout.VersionsRoot, "v1");
+        var tampered = Path.Combine(versionPath, LocalAiPackageLayout.VersionRequiredFiles[1]);
+        File.AppendAllText(tampered, "tampered");
+        var packaged = Path.Combine(versionPath, LocalAiPackageLayout.StableLauncherFile);
+        File.WriteAllText(packaged, "versioned-launcher");
+        var before = File.ReadAllBytes(tampered);
+        var runner = new RecordingRunner((_, _, _, _) => throw new InvalidOperationException());
+
+        var result = await Installer(runner).InstallAsync(package, layout, TestContext.Current.CancellationToken);
+
+        Assert.Equal(LocalAiPackageInstallStatus.ImmutableConflict, result.Status);
+        Assert.Empty(runner.Calls);
+        Assert.Equal(before, File.ReadAllBytes(tampered));
+        Assert.Equal("versioned-launcher", File.ReadAllText(packaged));
+    }
+
+    /// <summary>
     /// A file a running tool holds cannot be replaced, the way the launcher cannot. The tools
     /// are stopped only then, and by a verified copy of the release's launcher, as for the
     /// launcher itself.
