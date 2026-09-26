@@ -115,6 +115,7 @@ public sealed class OfflineSizesComeFromTheReleaseTests
         await wizard.InitializeAsync(TestContext.Current.CancellationToken);
 
         Assert.True(wizard.Models.IsOffline);
+        Assert.True(wizard.Models.HasNetworkNote);
         Assert.Equal(
             "No network connection: models that are not on this computer yet cannot be " +
             "downloaded now.",
@@ -140,6 +141,7 @@ public sealed class OfflineSizesComeFromTheReleaseTests
         await wizard.InitializeAsync(TestContext.Current.CancellationToken);
 
         Assert.False(wizard.Models.IsOffline);
+        Assert.False(wizard.Models.HasNetworkNote);
         Assert.Empty(wizard.Models.NetworkNote);
     }
 
