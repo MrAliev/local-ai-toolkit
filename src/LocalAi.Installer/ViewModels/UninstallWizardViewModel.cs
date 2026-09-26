@@ -51,7 +51,11 @@ public sealed class UninstallWizardViewModel : ObservableObject
     {
         AnotherRun,
         NothingInstalled,
+        InsideInstallation,
     }
+
+    /// <summary>The executable this wizard runs from.</summary>
+    private readonly string? executablePath;
 
     private Blocked? blocked;
     private Exception? unexpected;
@@ -98,12 +102,14 @@ public sealed class UninstallWizardViewModel : ObservableObject
         IProcessRunner? processRunner = null,
         Func<string, CancellationToken, Task<string?>>? readHooksPath = null,
         bool canReturnToStart = false,
-        InstallerPresentation? presentation = null)
+        InstallerPresentation? presentation = null,
+        string? executablePath = null)
     {
         Presentation = presentation ?? new InstallerPresentation();
         Presentation.LanguageChanged += OnLanguageChanged;
         OffersInstallAfterwards = offersInstallAfterwards;
         this.canReturnToStart = canReturnToStart;
+        this.executablePath = executablePath ?? Environment.ProcessPath;
         this.layout = layout ?? InstallationLayout.CreateDefault();
         this.homeDirectory = homeDirectory ??
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
@@ -284,6 +290,16 @@ public sealed class UninstallWizardViewModel : ObservableObject
                 "не проверялось: регистрации клиентов и хуки Git, если что-то осталось, " +
                 "остаются как есть."),
             layout.Root),
+        Blocked.InsideInstallation => string.Format(
+            InstallerCulture.Pick(
+                "This installer is running from inside {0}, which removal deletes, so it " +
+                "cannot remove LocalAi from there. Copy {1} to a folder outside {0} and run " +
+                "the copy.",
+                "Этот установщик запущен изнутри {0}, а удаление стирает эту папку, поэтому " +
+                "удалить LocalAi отсюда нельзя. Скопируйте {1} в папку вне {0} и запустите " +
+                "копию."),
+            layout.Root,
+            executablePath),
         _ => null,
     };
 
@@ -470,6 +486,16 @@ public sealed class UninstallWizardViewModel : ObservableObject
         }
 
         hasLoaded = true;
+        // Windows deletes neither a running executable nor its directory, so a removal from
+        // here would fail on bin and leave it behind. App hands over to a temporary copy before
+        // this wizard exists; reaching this means that did not happen.
+        if (executablePath is not null && IsInside(layout.Root, executablePath))
+        {
+            blocked = Blocked.InsideInstallation;
+            RefreshAll();
+            return;
+        }
+
         if (InstallerRunJournal.IsRunActive(LogDirectory))
         {
             // The two must not meet in the middle: one wizard writing the runtime while
@@ -737,6 +763,14 @@ public sealed class UninstallWizardViewModel : ObservableObject
                     "Choose a report folder without directory links.", "Выберите папку отчётов без ссылок на каталоги."));
             }
         }
+    }
+
+    private static bool IsInside(string directory, string path)
+    {
+        var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(directory));
+        var full = Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
+        return full.Equals(root, StringComparison.OrdinalIgnoreCase) ||
+            full.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
     }
 
     private sealed class ObservedProgress(
