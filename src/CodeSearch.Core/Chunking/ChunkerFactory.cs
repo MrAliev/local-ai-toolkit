@@ -15,8 +15,8 @@ public static class ChunkerFactory
     /// </summary>
     private static readonly HashSet<string> GenericExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
-        ".ts", ".tsx", ".js", ".jsx", ".vue", ".svelte",
-        ".py", ".go", ".java", ".kt", ".rs", ".rb", ".php",
+        ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".vue", ".svelte",
+        ".py", ".pyi", ".go", ".java", ".kt", ".rs", ".rb", ".php",
         ".c", ".h", ".cpp", ".hpp", ".cc", ".ino",
         ".sql", ".graphql", ".proto",
         ".xaml", ".xml", ".razor", ".cshtml", ".html", ".htm", ".css", ".scss", ".less",
@@ -30,7 +30,8 @@ public static class ChunkerFactory
 
     private static readonly string[] ExcludedFileMarkers =
     {
-        "package-lock.json", "yarn.lock", "pnpm-lock.yaml", ".min.js", ".min.css",
+        "package-lock.json", "yarn.lock", "pnpm-lock.yaml",
+        ".min.js", ".min.mjs", ".min.cjs", ".min.css",
         ".designer.cs", ".g.cs", ".g.i.cs", "assemblyinfo.cs", ".generated.cs",
     };
 
