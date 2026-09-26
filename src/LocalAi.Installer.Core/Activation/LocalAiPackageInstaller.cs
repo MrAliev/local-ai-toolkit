@@ -33,7 +33,8 @@ public sealed record LocalAiPackageInstallResult(
     string VersionPath,
     LauncherBackupMetadata? LauncherBackup,
     string? Reason,
-    bool InactivePublishedVersionRetained = false)
+    bool InactivePublishedVersionRetained = false,
+    IReadOnlyList<string>? RestoredFiles = null)
 {
     public string? LauncherBackupPath => LauncherBackup?.Path;
     public string NewVersionPath => VersionPath;
@@ -127,12 +128,19 @@ public sealed class LocalAiPackageInstaller
 
             using (transaction)
             {
-                return await InstallCoreAsync(
+                var result = await InstallCoreAsync(
                         package,
                         layout,
                         transaction,
                         cancellationToken)
                     .ConfigureAwait(false);
+                if (result.Status is LocalAiPackageInstallStatus.Installed or
+                    LocalAiPackageInstallStatus.AlreadyInstalled)
+                {
+                    PruneLauncherBackups(layout, result.LauncherBackupPath);
+                }
+
+                return result;
             }
         }
         catch (LocalAiPackageInstallationException)
@@ -298,7 +306,11 @@ public sealed class LocalAiPackageInstaller
     {
         var priorVersion = priorPointer.Version;
         var targetExisted = Directory.Exists(versionPath);
-        if (targetExisted && !ValidateExactVersion(package, versionPath))
+        // A repair: the release already installed and selected. Its version directory is put
+        // back to the release's content; any other version directory that differs is left alone.
+        var repairsActiveVersion = targetExisted && IsActive(priorPointer, version);
+        var needsRestore = targetExisted && !ValidateExactVersion(package, versionPath);
+        if (needsRestore && (!repairsActiveVersion || !HoldsOnlyVersionFiles(package, versionPath)))
         {
             return new(
                 LocalAiPackageInstallStatus.ImmutableConflict,
@@ -312,10 +324,23 @@ public sealed class LocalAiPackageInstaller
         string? launcherTemporary = null;
         var publishedVersion = false;
         var launcherReplaced = false;
+        var launcherUnchanged = false;
+        var restoredFiles = new List<string>();
         InstallationLayoutLease.RetainedInstalledVersion? retainedVersion = null;
         InstallationLayoutLease.RetainedLauncherBackup? launcherBackup = null;
         try
         {
+            if (needsRestore)
+            {
+                restoredFiles.AddRange(await RestoreVersionFilesAsync(
+                        package,
+                        layout,
+                        layoutLease,
+                        versionPath,
+                        cancellationToken)
+                    .ConfigureAwait(false));
+            }
+
             if (!targetExisted)
             {
                 using var temporaryVersion = layoutLease.CreateVersionTemporary();
@@ -378,37 +403,63 @@ public sealed class LocalAiPackageInstaller
             package.Revalidate();
 
             var launcherExisted = File.Exists(layout.LauncherPath);
-            if (launcherExisted)
+            // The launcher the release ships is already in place: no copy to keep, nothing to
+            // replace, and no running tool to stop for it.
+            launcherUnchanged = launcherExisted && MatchesVerified(
+                layout.LauncherPath,
+                FileMetadata(package, LocalAiPackageLayout.StableLauncherFile));
+            if (!launcherUnchanged)
             {
-                launcherBackup = layoutLease.CreateLauncherBackup();
-            }
-            else
-            {
-                Directory.CreateDirectory(layout.LauncherDirectory);
-                ValidateDirectory(layout.LauncherDirectory);
+                if (launcherExisted)
+                {
+                    launcherBackup = layoutLease.CreateLauncherBackup();
+                }
+                else
+                {
+                    Directory.CreateDirectory(layout.LauncherDirectory);
+                    ValidateDirectory(layout.LauncherDirectory);
+                }
+
+                launcherTemporary = Path.Combine(
+                    layout.LauncherDirectory,
+                    ".launcher-" + Guid.NewGuid().ToString("N") + ".tmp");
+                await CopyVerifiedAsync(
+                        package,
+                        LocalAiPackageLayout.StableLauncherFile,
+                        launcherTemporary,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                package.Revalidate();
+                await MoveLauncherIntoPlaceAsync(
+                        package,
+                        launcherTemporary,
+                        layout.LauncherPath,
+                        launcherExisted,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                launcherTemporary = null;
+                launcherReplaced = true;
+                VerifyFile(layout.LauncherPath, FileMetadata(package, LocalAiPackageLayout.StableLauncherFile));
+                package.Revalidate();
+                if (repairsActiveVersion)
+                {
+                    restoredFiles.Add(LocalAiPackageLayout.StableLauncherFile);
+                }
             }
 
-            launcherTemporary = Path.Combine(
-                layout.LauncherDirectory,
-                ".launcher-" + Guid.NewGuid().ToString("N") + ".tmp");
-            await CopyVerifiedAsync(
-                    package,
-                    LocalAiPackageLayout.StableLauncherFile,
-                    launcherTemporary,
-                    cancellationToken)
-                .ConfigureAwait(false);
-            package.Revalidate();
-            await MoveLauncherIntoPlaceAsync(
-                    package,
-                    launcherTemporary,
-                    layout.LauncherPath,
-                    launcherExisted,
-                    cancellationToken)
-                .ConfigureAwait(false);
-            launcherTemporary = null;
-            launcherReplaced = true;
-            VerifyFile(layout.LauncherPath, FileMetadata(package, LocalAiPackageLayout.StableLauncherFile));
-            package.Revalidate();
+            // Activation would rewrite the pointer with the bytes it already holds and stop every
+            // tool of this version on the way. With no file changed there is nothing to activate.
+            if (repairsActiveVersion && launcherUnchanged && restoredFiles.Count == 0)
+            {
+                return new(
+                    LocalAiPackageInstallStatus.AlreadyInstalled,
+                    version,
+                    priorVersion,
+                    versionPath,
+                    null,
+                    null);
+            }
+
             ProcessResult? result = null;
             Exception? activationException = null;
             if (cancellationToken.IsCancellationRequested)
@@ -449,7 +500,8 @@ public sealed class LocalAiPackageInstaller
                 result.ExitCode != 0 || result.TimedOut || result.Cancelled ||
                 !IsCanonicalPointer(ReadPointerLockedOrNull(layout), version))
             {
-                return await RecoverActivationFailureAsync(
+                // Files put back stay put back: they hold the release's own content.
+                return (await RecoverActivationFailureAsync(
                         package,
                         layout,
                         layoutLease,
@@ -458,9 +510,10 @@ public sealed class LocalAiPackageInstaller
                         priorPointer,
                         versionPath,
                         launcherBackup,
+                        launcherUnchanged,
                         publishedVersion,
                         targetExisted)
-                    .ConfigureAwait(false);
+                    .ConfigureAwait(false)) with { RestoredFiles = restoredFiles };
             }
 
             return new(
@@ -471,7 +524,8 @@ public sealed class LocalAiPackageInstaller
                 priorVersion,
                 versionPath,
                 launcherBackup?.Metadata,
-                null);
+                null,
+                RestoredFiles: restoredFiles);
         }
         catch
         {
@@ -482,7 +536,7 @@ public sealed class LocalAiPackageInstaller
 
             if (launcherReplaced)
             {
-                return await RecoverActivationFailureAsync(
+                return (await RecoverActivationFailureAsync(
                         package,
                         layout,
                         layoutLease,
@@ -491,9 +545,10 @@ public sealed class LocalAiPackageInstaller
                         priorPointer,
                         versionPath,
                         launcherBackup,
+                        launcherUnchanged,
                         publishedVersion,
                         targetExisted)
-                    .ConfigureAwait(false);
+                    .ConfigureAwait(false)) with { RestoredFiles = restoredFiles };
             }
 
             throw;
@@ -526,6 +581,7 @@ public sealed class LocalAiPackageInstaller
         CurrentPointerSnapshot priorPointer,
         string versionPath,
         InstallationLayoutLease.RetainedLauncherBackup? launcherBackup,
+        bool launcherUnchanged,
         bool publishedVersion,
         bool targetExisted)
     {
@@ -543,7 +599,8 @@ public sealed class LocalAiPackageInstaller
 
         var actualPointer = ReadPointerLockedOrNull(layout);
 
-        if (launcherBackup is null)
+        // A launcher this run never touched needs no copy to be put back.
+        if (launcherBackup is null && !launcherUnchanged)
         {
             return new(
                 LocalAiPackageInstallStatus.RollbackFailed,
@@ -578,7 +635,7 @@ public sealed class LocalAiPackageInstaller
                 version,
                 priorVersion,
                 versionPath,
-                launcherBackup.Metadata,
+                launcherBackup?.Metadata,
                 "The current-version pointer changed to an unrelated state; no recovery mutation was attempted.",
                 publishedVersion && !targetExisted);
         }
@@ -655,7 +712,7 @@ public sealed class LocalAiPackageInstaller
                 version,
                 priorVersion,
                 versionPath,
-                launcherBackup.Metadata,
+                launcherBackup?.Metadata,
                 "Rollback failed and the current-version pointer is indeterminate; no launcher mutation was attempted.",
                 publishedVersion && !targetExisted);
         }
@@ -665,7 +722,7 @@ public sealed class LocalAiPackageInstaller
             version,
             priorVersion,
             versionPath,
-            launcherBackup.Metadata,
+            launcherBackup?.Metadata,
             "Activation and rollback both failed; manual recovery is required.");
     }
 
@@ -727,7 +784,7 @@ public sealed class LocalAiPackageInstaller
         string priorVersion,
         CurrentPointerSnapshot expectedPointer,
         string versionPath,
-        InstallationLayoutLease.RetainedLauncherBackup launcherBackup,
+        InstallationLayoutLease.RetainedLauncherBackup? launcherBackup,
         bool publishedVersion,
         bool targetExisted,
         string reason)
@@ -745,7 +802,7 @@ public sealed class LocalAiPackageInstaller
                     version,
                     priorVersion,
                     versionPath,
-                    launcherBackup.Metadata,
+                    launcherBackup?.Metadata,
                     "The current-version pointer changed before launcher recovery; no launcher mutation was attempted.",
                     publishedVersion && !targetExisted);
             }
@@ -769,7 +826,7 @@ public sealed class LocalAiPackageInstaller
                 version,
                 priorVersion,
                 versionPath,
-                launcherBackup.Metadata,
+                launcherBackup?.Metadata,
                 "The current-version pointer could not be locked for launcher recovery; no launcher mutation was attempted.",
                 publishedVersion && !targetExisted);
         }
@@ -781,20 +838,24 @@ public sealed class LocalAiPackageInstaller
         string version,
         string priorVersion,
         string versionPath,
-        InstallationLayoutLease.RetainedLauncherBackup launcherBackup,
+        InstallationLayoutLease.RetainedLauncherBackup? launcherBackup,
         bool publishedVersion,
         bool targetExisted,
         string reason)
     {
         try
         {
-            RestoreLauncher(layout.LauncherPath, launcherBackup);
+            if (launcherBackup is not null)
+            {
+                RestoreLauncher(layout.LauncherPath, launcherBackup);
+            }
+
             return new(
                 LocalAiPackageInstallStatus.RolledBack,
                 version,
                 priorVersion,
                 versionPath,
-                launcherBackup.Metadata,
+                launcherBackup?.Metadata,
                 reason,
                 publishedVersion && !targetExisted);
         }
@@ -806,7 +867,7 @@ public sealed class LocalAiPackageInstaller
                 version,
                 priorVersion,
                 versionPath,
-                launcherBackup.Metadata,
+                launcherBackup?.Metadata,
                 "The prior stable launcher could not be restored.");
         }
     }
@@ -870,6 +931,237 @@ public sealed class LocalAiPackageInstaller
         .Where(file => file != LocalAiPackageLayout.StableLauncherFile &&
                        file != ReleasePackageVerifier.PackageMetadataFileName)
         .ToArray();
+
+    private static bool IsActive(CurrentPointerSnapshot pointer, string version) =>
+        pointer is { Exists: true, IsCanonical: true } &&
+        string.Equals(pointer.Version, version, StringComparison.Ordinal);
+
+    /// <summary>
+    /// Whether every entry is a plain file this release ships for the version. Only then is
+    /// putting the release's files back a repair: an entry no release put there is not this
+    /// installer's to overwrite or delete.
+    /// </summary>
+    private static bool HoldsOnlyVersionFiles(VerifiedPackage package, string versionPath)
+    {
+        var expected = VersionFiles(package).ToHashSet(StringComparer.Ordinal);
+        try
+        {
+            foreach (var entry in Directory.EnumerateFileSystemEntries(versionPath))
+            {
+                if (!expected.Contains(Path.GetFileName(entry)))
+                {
+                    return false;
+                }
+
+                ValidateFile(entry);
+            }
+
+            return true;
+        }
+        catch (LocalAiPackageInstallationException)
+        {
+            return false;
+        }
+    }
+
+    private static bool MatchesVerified(string path, VerifiedPackageFile metadata)
+    {
+        if (!File.Exists(path))
+        {
+            return false;
+        }
+
+        try
+        {
+            VerifyFile(path, metadata);
+            return true;
+        }
+        catch (LocalAiPackageInstallationException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Puts back every file of the version that is missing or differs from the release, and
+    /// names them. Each is copied from the verified package into a temporary directory the
+    /// layout lease knows about, then moved over the damaged one.
+    /// </summary>
+    [SupportedOSPlatform("windows")]
+    private async Task<IReadOnlyList<string>> RestoreVersionFilesAsync(
+        VerifiedPackage package,
+        InstallationLayout layout,
+        InstallationLayoutLease layoutLease,
+        string versionPath,
+        CancellationToken cancellationToken)
+    {
+        var damaged = VersionFiles(package)
+            .Where(file => !MatchesVerified(
+                Path.Combine(versionPath, file),
+                FileMetadata(package, file)))
+            .ToArray();
+        using (var staging = layoutLease.CreateVersionTemporary())
+        {
+            foreach (var file in damaged)
+            {
+                await CopyVerifiedAsync(
+                        package,
+                        file,
+                        Path.Combine(staging.CanonicalPath, file),
+                        cancellationToken)
+                    .ConfigureAwait(false);
+            }
+
+            package.Revalidate();
+            await MoveRestoredFilesAsync(
+                    package,
+                    layout,
+                    damaged
+                        .Select(file => (
+                            Path.Combine(staging.CanonicalPath, file),
+                            Path.Combine(versionPath, file)))
+                        .ToArray(),
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        if (!ValidateExactVersion(package, versionPath))
+        {
+            throw new LocalAiPackageInstallationException(
+                "The repaired version failed read-back verification.");
+        }
+
+        return damaged;
+    }
+
+    /// <summary>
+    /// The moves of a repair, stopping the running tools only when one of them holds a file in
+    /// the way — the same reactive stop the launcher replacement makes, for the same reason.
+    /// </summary>
+    private async Task MoveRestoredFilesAsync(
+        VerifiedPackage package,
+        InstallationLayout layout,
+        IReadOnlyList<(string Source, string Destination)> moves,
+        CancellationToken cancellationToken)
+    {
+        var stopped = false;
+        for (var attempt = 0; ; attempt++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                foreach (var (source, destination) in moves)
+                {
+                    if (File.Exists(source))
+                    {
+                        File.Move(source, destination, overwrite: true);
+                    }
+                }
+
+                return;
+            }
+            catch (Exception exception) when (
+                !stopped && exception is IOException or UnauthorizedAccessException)
+            {
+                stopped = true;
+                await StopWithVerifiedLauncherCopyAsync(package, layout, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception exception) when (
+                stopped && attempt < 6 &&
+                exception is IOException or UnauthorizedAccessException)
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(250), cancellationToken)
+                    .ConfigureAwait(false);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Stops the running tools through the release's own launcher, copied and verified beside
+    /// the installed one, which a repair may be about to replace or may already match.
+    /// </summary>
+    private async Task StopWithVerifiedLauncherCopyAsync(
+        VerifiedPackage package,
+        InstallationLayout layout,
+        CancellationToken cancellationToken)
+    {
+        var copy = Path.Combine(
+            layout.LauncherDirectory,
+            ".launcher-" + Guid.NewGuid().ToString("N") + ".tmp");
+        try
+        {
+            await CopyVerifiedAsync(
+                    package,
+                    LocalAiPackageLayout.StableLauncherFile,
+                    copy,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            VerifyFile(copy, FileMetadata(package, LocalAiPackageLayout.StableLauncherFile));
+            await StopRunningToolsAsync(copy, cancellationToken).ConfigureAwait(false);
+            package.Revalidate();
+        }
+        finally
+        {
+            try
+            {
+                if (File.Exists(copy))
+                {
+                    File.Delete(copy);
+                }
+            }
+            catch (Exception exception) when (
+                exception is IOException or UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
+    /// <summary>
+    /// Applies the runtime's retention bound to launcher backups, which only
+    /// <c>localai prune</c> used to apply, so every update left one more copy for good. A backup
+    /// is read only by the run that made it, to put the launcher back if that run fails; the
+    /// newest are kept as the bound says, and this run's copy is always among them. A copy that
+    /// cannot be removed now is left for the next run or for prune.
+    /// </summary>
+    private static void PruneLauncherBackups(InstallationLayout layout, string? retainedBackupPath)
+    {
+        try
+        {
+            if (!Directory.Exists(layout.InstallerBackupsRoot))
+            {
+                return;
+            }
+
+            var keep = new RuntimeRetentionPolicyStore(layout.Root).Read().LauncherBackups;
+            var retained = retainedBackupPath is null
+                ? null
+                : Path.GetDirectoryName(Path.GetFullPath(retainedBackupPath));
+            var surplus = Directory.EnumerateDirectories(layout.InstallerBackupsRoot)
+                .OrderByDescending(directory => string.Equals(
+                    Path.GetFullPath(directory),
+                    retained,
+                    StringComparison.OrdinalIgnoreCase))
+                .ThenByDescending(Directory.GetLastWriteTimeUtc)
+                .Skip(keep)
+                .ToArray();
+            foreach (var directory in surplus)
+            {
+                try
+                {
+                    Directory.Delete(directory, recursive: true);
+                }
+                catch (Exception exception) when (
+                    exception is IOException or UnauthorizedAccessException)
+                {
+                }
+            }
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException)
+        {
+        }
+    }
 
     private static bool ValidateExactVersion(VerifiedPackage package, string versionPath)
     {
