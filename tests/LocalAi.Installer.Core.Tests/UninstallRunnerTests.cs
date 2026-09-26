@@ -169,6 +169,93 @@ public sealed class UninstallRunnerTests : IDisposable
         Assert.False(Directory.Exists(Path.Combine(machine.Runtime, "bin")));
     }
 
+    /// <summary>
+    /// A pointer the launcher cannot read stops it before it looks at a single process, so its
+    /// refusal says nothing about what is running. Each version directory is asked by name.
+    /// </summary>
+    [Fact]
+    public async Task A_broken_pointer_is_stopped_version_by_version_instead_of_refusing()
+    {
+        File.WriteAllText(Path.Combine(machine.Runtime, "bin", "current.json"), "{ not json");
+        var runner = new RecordingProcessRunner
+        {
+            Answer = arguments => arguments is ["stop"]
+                ? Exit(1, "current_pointer_invalid: LocalAi current-version pointer is invalid.")
+                : Exit(0),
+        };
+        using var journal = InstallerRunJournal.Start(journalDirectory);
+        var plan = await Plan(RemovalSelection.FromPreset(RemovalPreset.FullUninstall));
+
+        var outcome = await Runner(runner).ApplyAsync(
+            plan,
+            journal,
+            TestContext.Current.CancellationToken);
+
+        Assert.True(outcome.Succeeded);
+        Assert.Contains(
+            runner.Calls,
+            call => call.Arguments.SequenceEqual(["stop", "--version", RemovalFixture.InstalledVersion]));
+        Assert.False(Directory.Exists(Path.Combine(machine.Runtime, "bin")));
+        Assert.Equal(InstallerRunStepStatus.Completed, journal.Snapshot.Steps[0].Status);
+    }
+
+    [Fact]
+    public async Task A_pointer_to_a_version_that_is_gone_does_not_block_the_removal()
+    {
+        Directory.Delete(
+            Path.Combine(machine.Runtime, "bin", "versions", RemovalFixture.InstalledVersion),
+            recursive: true);
+        var runner = new RecordingProcessRunner
+        {
+            Answer = _ => Exit(1, "version_incomplete: LocalAi version '0.1.50' does not exist."),
+        };
+
+        var outcome = await Apply(
+            await Plan(RemovalSelection.FromPreset(RemovalPreset.FullUninstall)),
+            runner);
+
+        Assert.True(outcome.Succeeded);
+        Assert.Single(runner.Calls);
+        Assert.False(Directory.Exists(Path.Combine(machine.Runtime, "bin")));
+    }
+
+    /// <summary>
+    /// A version directory missing a file is one the launcher cannot stop, and something may be
+    /// running out of it: the refusal stands.
+    /// </summary>
+    [Fact]
+    public async Task A_version_the_launcher_cannot_validate_is_still_refused()
+    {
+        var before = RemovalFixture.Snapshot(machine.Runtime);
+        var runner = new RecordingProcessRunner
+        {
+            Answer = _ => Exit(1, "version_incomplete: LocalAi version '0.1.50' is missing 'x.exe'."),
+        };
+        using var journal = InstallerRunJournal.Start(journalDirectory);
+        var plan = await Plan(RemovalSelection.FromPreset(RemovalPreset.FullUninstall));
+
+        var refusal = await Assert.ThrowsAsync<UninstallRefusedException>(() =>
+            Runner(runner).ApplyAsync(plan, journal, TestContext.Current.CancellationToken));
+
+        Assert.Contains("nothing was removed", refusal.Message, StringComparison.Ordinal);
+        Assert.Contains("version_incomplete", refusal.Message, StringComparison.Ordinal);
+        Assert.Equal(before, RemovalFixture.Snapshot(machine.Runtime));
+    }
+
+    /// <summary>A run that asks nothing of the launcher does not say it is asking.</summary>
+    [Fact]
+    public async Task A_run_that_stops_nothing_does_not_say_it_is_stopping()
+    {
+        var seen = new RecordedProgress();
+
+        await Apply(
+            await Plan(RemovalSelection.FromPreset(RemovalPreset.DisconnectClients)),
+            progress: seen);
+
+        Assert.NotEmpty(seen.Texts);
+        Assert.DoesNotContain(seen.Texts, text => text.Contains("stop", StringComparison.Ordinal));
+    }
+
     [Fact]
     public async Task The_runtime_root_itself_goes_once_the_run_has_emptied_it()
     {
@@ -549,6 +636,9 @@ public sealed class UninstallRunnerTests : IDisposable
         public ProcessResult Result { get; set; } =
             new(0, string.Empty, string.Empty, false, false);
 
+        /// <summary>An answer per command line, for a launcher asked more than one thing.</summary>
+        public Func<IReadOnlyList<string>, ProcessResult>? Answer { get; set; }
+
         public Task<ProcessResult> RunAsync(
             string executable,
             IReadOnlyList<string> arguments,
@@ -557,7 +647,18 @@ public sealed class UninstallRunnerTests : IDisposable
         {
             onCall?.Invoke();
             Calls.Add((executable, arguments));
-            return Task.FromResult(Result);
+            return Task.FromResult(Answer?.Invoke(arguments) ?? Result);
         }
+    }
+
+    private static ProcessResult Exit(int code, string error = "") =>
+        new(code, string.Empty, error, false, false);
+
+    /// <summary>Synchronous, so what was reported is all there when the run returns.</summary>
+    private sealed class RecordedProgress : IProgress<UninstallProgress>
+    {
+        public List<string> Texts { get; } = [];
+
+        public void Report(UninstallProgress value) => Texts.Add(value.Text);
     }
 }

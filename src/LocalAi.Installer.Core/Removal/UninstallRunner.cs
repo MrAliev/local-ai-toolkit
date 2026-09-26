@@ -87,10 +87,7 @@ public sealed class UninstallRunner(
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(journal);
 
-        progress?.Report(new(0, InstallerCulture.Pick(
-            "Asking LocalAi to stop…",
-            "Прошу LocalAi остановиться…")));
-        var stopped = await StopRunningToolsAsync(plan, journal, cancellationToken);
+        var stopped = await StopRunningToolsAsync(plan, journal, cancellationToken, progress);
         var failures = new List<UninstallFailure>();
         progress?.Report(new(25, InstallerCulture.Pick(
             "Updating client configurations…",
@@ -214,17 +211,24 @@ public sealed class UninstallRunner(
     /// the runtime alone, and stopping a broker somebody is using to answer a question would be
     /// a gratuitous interruption. Skipped too when the launcher is not there: there is nothing
     /// to ask, and refusing would block the very run that clears up a broken installation.
+    ///
+    /// For the same reason a pointer the launcher cannot resolve is not a refusal: it fails
+    /// before looking at any process, so each version directory is asked by name instead.
     /// </summary>
     private async Task<bool> StopRunningToolsAsync(
         UninstallPlan plan,
         InstallerRunJournal journal,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IProgress<UninstallProgress>? progress)
     {
         if (plan.Paths.Count == 0 || !File.Exists(layout.LauncherPath))
         {
             return false;
         }
 
+        progress?.Report(new(0, InstallerCulture.Pick(
+            "Asking LocalAi to stop…",
+            "Прошу LocalAi остановиться…")));
         var step = journal.BeginStep(
             InstallerRunEffectKind.ProcessStop,
             "Ask LocalAi to finish and exit: " + layout.LauncherPath + " stop");
@@ -235,6 +239,11 @@ public sealed class UninstallRunner(
                 ["stop"],
                 stopTimeout,
                 cancellationToken);
+            if (result.ExitCode != 0 && IsUnresolvedInstallation(result))
+            {
+                result = await StopEachVersionAsync(cancellationToken);
+            }
+
             if (result.ExitCode != 0)
             {
                 var detail = Detail(result);
@@ -243,10 +252,8 @@ public sealed class UninstallRunner(
                 // it is prose rather than machine text. The detail after it is the launcher's.
                 throw new UninstallRefusedException(
                     InstallerCulture.Pick(
-                        "LocalAi is still running and would not stop, so nothing was " +
-                        "removed. ",
-                        "LocalAi всё ещё работает и не остановился, поэтому ничего не " +
-                        "удалено. ") +
+                        "Stopping LocalAi failed, so nothing was removed. ",
+                        "Остановить LocalAi не удалось, поэтому ничего не удалено. ") +
                     detail);
             }
 
@@ -265,6 +272,40 @@ public sealed class UninstallRunner(
                 exception.Message,
                 exception);
         }
+    }
+
+    private static bool IsUnresolvedInstallation(ProcessResult result)
+    {
+        var error = result.StandardError.TrimStart();
+        return error.StartsWith("current_pointer_invalid:", StringComparison.Ordinal) ||
+            error.StartsWith("version_incomplete:", StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// `stop --version` for every directory under the versions root, stopping at the first that
+    /// fails. No directory at all is nothing to stop.
+    /// </summary>
+    private async Task<ProcessResult> StopEachVersionAsync(CancellationToken cancellationToken)
+    {
+        var versions = Directory.Exists(layout.VersionsRoot)
+            ? Directory.GetDirectories(layout.VersionsRoot)
+                .Order(StringComparer.OrdinalIgnoreCase)
+                .ToArray()
+            : [];
+        foreach (var version in versions)
+        {
+            var result = await processRunner.RunAsync(
+                layout.LauncherPath,
+                ["stop", "--version", Path.GetFileName(version)],
+                stopTimeout,
+                cancellationToken);
+            if (result.ExitCode != 0)
+            {
+                return result;
+            }
+        }
+
+        return new ProcessResult(0, string.Empty, string.Empty, false, false);
     }
 
     private async Task<IReadOnlyList<string>> RewriteClientConfigurationsAsync(
