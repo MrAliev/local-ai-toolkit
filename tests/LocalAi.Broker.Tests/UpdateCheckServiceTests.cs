@@ -133,6 +133,39 @@ public sealed class UpdateCheckServiceTests : IDisposable
         Assert.Equal("unexpected", State().FailureReason);
     }
 
+    /// <summary>
+    /// A state file that cannot be written held the throttle on disk only, so a broker that could
+    /// not record its check asked again every pass — every fifteen minutes, where the consent
+    /// says about once per interval. The attempt is remembered in the process too.
+    /// </summary>
+    [Fact]
+    public async Task A_check_that_could_not_be_recorded_is_not_repeated_within_the_interval()
+    {
+        Enable();
+        Directory.CreateDirectory(Path.Combine(root, UpdateCheckState.FileName));
+        var clock = new MovingTime(Noon);
+        var calls = 0;
+        var service = new UpdateCheckService(
+            root,
+            (now, _) =>
+            {
+                calls++;
+                return Task.FromResult(Verified("0.1.51")(now));
+            },
+            clock);
+        Assert.True(await service.RunOnceAsync(TestContext.Current.CancellationToken));
+
+        clock.Now = Noon + UpdateCheckService.PassInterval;
+        var again = await service.RunOnceAsync(TestContext.Current.CancellationToken);
+
+        Assert.False(again);
+        Assert.Equal(1, calls);
+
+        clock.Now = Noon.AddHours(27);
+        Assert.True(await service.RunOnceAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(2, calls);
+    }
+
     [Fact]
     public async Task Cancelling_the_broker_cancels_the_check()
     {
@@ -209,5 +242,12 @@ public sealed class UpdateCheckServiceTests : IDisposable
     private sealed class FixedTime(DateTimeOffset now) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => now;
+    }
+
+    private sealed class MovingTime(DateTimeOffset now) : TimeProvider
+    {
+        public DateTimeOffset Now { get; set; } = now;
+
+        public override DateTimeOffset GetUtcNow() => Now;
     }
 }
