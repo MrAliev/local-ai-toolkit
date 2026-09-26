@@ -2,6 +2,7 @@ using System.Text;
 using LocalAi.Installer.Core.Abstractions;
 using LocalAi.Installer.Core.Activation;
 using LocalAi.Installer.Core.Agents;
+using LocalAi.Installer.Core.Releases;
 using LocalAi.Installer.Core.Transactions;
 using LocalAi.Repository;
 
@@ -49,7 +50,8 @@ public sealed class UninstallRunner(
     IProcessRunner processRunner,
     TimeSpan? stopTimeout = null,
     Func<string, byte[]>? readBackOverride = null,
-    string? registrySubKey = null)
+    string? registrySubKey = null,
+    IUserPathStore? userPath = null)
 {
     private readonly TimeSpan stopTimeout = stopTimeout ?? TimeSpan.FromMinutes(2);
 
@@ -91,7 +93,7 @@ public sealed class UninstallRunner(
             "Завершаю удаление…")));
         cancellationToken.ThrowIfCancellationRequested();
         // After the files: the PATH entry names a directory the binaries have already left.
-        RemoveLauncherPath(plan, journal, failures);
+        await RemoveLauncherPathAsync(plan, journal, failures);
         return new UninstallOutcome(
             removed,
             rewritten,
@@ -108,7 +110,7 @@ public sealed class UninstallRunner(
     /// runs after the files, and an entry naming a directory that is gone is untidy rather than
     /// harmful.
     /// </summary>
-    private void RemoveLauncherPath(
+    private async Task RemoveLauncherPathAsync(
         UninstallPlan plan,
         InstallerRunJournal journal,
         List<UninstallFailure> failures)
@@ -124,7 +126,7 @@ public sealed class UninstallRunner(
             UninstallJournalDescriptions.LauncherPath(directory));
         try
         {
-            LauncherPathRegistration.Unregister(directory);
+            await LauncherPathRegistration.UnregisterAsync(directory, userPath);
             journal.CompleteStep(step, "Removed from the user PATH.", isReversible: false);
         }
         catch (Exception exception) when (

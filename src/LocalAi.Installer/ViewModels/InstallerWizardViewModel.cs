@@ -2520,7 +2520,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
     /// half of the toolkit those commands reach is the documented way through a dead MCP server,
     /// so it was the fallback that did not work.
     /// </summary>
-    private void RegisterLauncherPath(StringBuilder report)
+    private async Task RegisterLauncherPathAsync(StringBuilder report)
     {
         if (!OperatingSystem.IsWindows())
         {
@@ -2533,7 +2533,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         var step = JournalBegin(InstallerRunEffectKind.LauncherPath, "PATH entry for " + directory);
         try
         {
-            var added = LauncherPathRegistration.Register(directory);
+            var added = await LauncherPathRegistration.RegisterAsync(directory);
             pathMark = RunMark.Done;
             pathOutcome = added ? PathOutcome.Added : PathOutcome.AlreadyThere;
             AppendLog(
@@ -2728,7 +2728,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             AppendLog(report, $"Local models: {exception.Message}");
             hasRunError = true;
             RegisterUninstallEntry(report, resolved.Manifest.ReleaseVersion);
-            RegisterLauncherPath(report);
+            await RegisterLauncherPathAsync(report);
             return;
         }
         catch (LocalAiPackageInstallationException exception)
@@ -2786,7 +2786,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             // The release version, not the version directory: Apps & features shows this
             // to a person, and "467ed5f0f9bf" is a commit id rather than a version (#255).
             RegisterUninstallEntry(report, resolved.Manifest.ReleaseVersion);
-            RegisterLauncherPath(report);
+            await RegisterLauncherPathAsync(report);
         }
 
         ReportModelOutcome(report, result.Models, selection);
