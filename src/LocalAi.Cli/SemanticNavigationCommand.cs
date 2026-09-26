@@ -402,9 +402,9 @@ internal static class SemanticNavigationCommand
     {
         streams.Error.WriteLine(
             "Usage: localai semantic status [--root <path>]\n" +
-            "       localai semantic config show|path|init\n" +
-            "       localai semantic lsp-config show|path|init\n" +
-            "       localai semantic fallback-config show|path|init\n" +
+            "       localai semantic config [show|path|init]\n" +
+            "       localai semantic lsp-config [show|path|init]\n" +
+            "       localai semantic fallback-config [show|path|init]\n" +
             "       localai semantic evaluate --cases <json> [--iterations <n>] [--root <path>]\n" +
             "       localai semantic definition --path <relative> --line <1-based> " +
             "--column <1-based utf16> [--root <path>]\n" +

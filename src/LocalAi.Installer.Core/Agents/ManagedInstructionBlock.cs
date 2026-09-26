@@ -245,8 +245,10 @@ public static class ManagedInstructionBlock
 
         The tree also moves under you — a merge or a checkout made in an IDE — so read
         freshness rather than assume it. A `STALE` marking is not a refusal: it says the
-        indexed commit is not HEAD, so those hits stand. Refresh, and until that is done
-        report the index as behind HEAD rather than treating the marking as a wrong answer.
+        mainline branch has moved since the index was built. Hits still match this worktree as
+        it is — a search that cannot match it refuses instead — so those hits stand. Refresh,
+        and until that is done report the index as behind the mainline rather than treating
+        the marking as a wrong answer.
 
         ### When a local tool refuses, never go quiet
 
@@ -350,12 +352,14 @@ public static class ManagedInstructionBlock
 
         ### What the index holds
 
-        C# is always chunked by symbol; so is any file the semantic index found definitions
-        in, which in practice means TypeScript, JavaScript and Python where their indexers
-        ran. A hit there names the type, member or definition it came from. Everything else is
-        chunked by a sliding window over lines — files no indexer covered, and any region no
-        definition covers, such as imports or the gap between two functions — where a hit
-        names the file and its line range instead.
+        C# is chunked by type and member; any other file the semantic index found definitions
+        in — in practice TypeScript, JavaScript and Python where their indexers ran — is
+        chunked by definition. A hit there names the type, member or definition it came from.
+        Everything else is chunked by a sliding window over lines — files no indexer covered,
+        and any region of an indexed file no definition covers, such as imports or the gap
+        between two functions — where a hit names the file and its line range instead. C#
+        outside every type, such as usings or top-level statements, is indexed only in a file
+        that declares no type.
 
         A repository is identified by its normalised Git common directory, so every worktree,
         client and CLI share a single identity for it. Nothing here is tied to one repository
@@ -368,10 +372,11 @@ public static class ManagedInstructionBlock
         branch switch, a rebase or an amend, edits you saved — with `index_refresh`, passing
         the worktree as its root: left to itself it resolves from the directory the MCP server
         was started in, which is not always the tree in front of you. It runs `localai sync`
-        and blocks until that sync is done, so what it takes on is bounded — a job too large to
-        run inline, which a cold build or a branch switch across most of the tree will be, is
-        refused before anything is embedded, and the refusal hands back the command to run in
-        the background instead. Relay that and start it; calling again changes nothing.
+        and blocks until that sync is done, so what it takes on is bounded — a job with more
+        than 200 files to re-read, which a cold build of all but a small repository or a branch
+        switch across most of the tree will be, is refused before anything is embedded, and the
+        refusal hands back the command to run in the background instead. Relay that and start
+        it; calling again changes nothing.
 
         Edits still in the working tree need a dirty overlay, and the same call builds it. By
         hand it is
@@ -506,7 +511,7 @@ public static class ManagedInstructionBlock
         | Tool | What it is for |
         | --- | --- |
         | `read_image` | an image on disk: png, jpg, jpeg, bmp, gif, webp — anything else is refused |
-        | `triage_log` | machine output of any length, as a file or direct text; it probes real VRAM capacity and processes bounded fragments sequentially |
+        | `triage_log` | machine output of any length, as a file or direct text; it takes the largest context the broker will load — fully in VRAM unless the residency policy was relaxed — and processes bounded fragments sequentially |
         | `ask_local` | mechanical work over known files: list, summarise, extract TODOs, check a convention |
         | `translate_local` | translating text, with the model named in what it returns |
 

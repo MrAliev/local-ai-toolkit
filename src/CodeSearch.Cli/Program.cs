@@ -75,7 +75,7 @@ async Task<int> RunAsync(TextWriter stdout, TextWriter stderr)
         stdout.WriteLine(MachineEnvelope.Refusal(
             command,
             "json_not_supported",
-            "--json is not available here. The usage marks the commands that take it with [--json]."));
+            "--json is not available here. The usage shows --json on every command that takes it."));
         return 1;
     }
 
@@ -447,7 +447,7 @@ async Task<int> RunAsync(TextWriter stdout, TextWriter stderr)
         stdout.WriteLine($"Base:         {status.FileCount} files, {status.ChunkCount} chunks, " +
                           $"{status.SizeBytes / 1024.0 / 1024.0:F1} MB, commit {Short(status.IndexedCommit)}");
         stdout.WriteLine(status.CommitDrifted
-            ? "Base status:  STALE - the indexed commit is not HEAD; refresh with `localai sync`"
+            ? "Base status:  STALE - the mainline branch has moved since the base was built; refresh with `localai sync`"
             : "Base status:  current");
 
         if (!status.RequiresOverlay)
@@ -459,9 +459,8 @@ async Task<int> RunAsync(TextWriter stdout, TextWriter stderr)
         if (!status.Overlay.Exists)
         {
             stdout.WriteLine($"Overlay:      NOT BUILT ({status.Overlay.Path})");
-            stdout.WriteLine("              searches here answer from the base only, so this branch's");
-            stdout.WriteLine("              own changes are invisible. Build it with " +
-                              "`localai sync --root <this worktree>`.");
+            stdout.WriteLine("              searches here are refused until it is built. Build it with");
+            stdout.WriteLine("              `localai sync --root <this worktree>`.");
             return 0;
         }
 

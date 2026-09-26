@@ -215,7 +215,7 @@ Check the broker, then search again: localai doctor</value>
     <comment>2 is either the model or the LEXICAL ONLY token. Noun-first in Russian: ResourceManager has no plural support, and genitive plural is correct for every count.</comment>
   </data>
   <data name="SearchIndexHeaderStale" xml:space="preserve">
-    <value> (STALE: built at {0}, HEAD is {1})</value>
+    <value> (STALE: built at {0}, the mainline branch is {1})</value>
   </data>
   <data name="SearchIndexModel" xml:space="preserve">
     <value>model {0}</value>
@@ -231,7 +231,7 @@ Check the broker, then search again: localai doctor</value>
     <value>NOT REFRESHED - {0} files to re-read, over the inline limit of {1}</value>
   </data>
   <data name="StatusStale" xml:space="preserve">
-    <value>STALE - built at {0}, HEAD is now {1}</value>
+    <value>STALE - built at {0}, the mainline branch is now {1}</value>
     <comment>The token and the ASCII separator are a contract; only the clause after it moves.</comment>
   </data>
   <data name="SyncDidNotFinish" xml:space="preserve">
