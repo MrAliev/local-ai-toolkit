@@ -160,13 +160,13 @@ public sealed class OfflineSizesComeFromTheReleaseTests
         Assert.True(wizard.Models.HasNetworkNote);
         Assert.Equal(
             "No network connection: models that are not on this computer yet cannot be " +
-            "downloaded now.",
+            "downloaded now, so they cannot be set up.",
             wizard.Models.NetworkNote);
 
         InstallerCulture.Current = InstallerLanguage.Russian;
         Assert.Equal(
             "Подключения к сети нет: модели, которых ещё нет на этом компьютере, сейчас " +
-            "скачать не получится.",
+            "скачать не получится, и настроить их не удастся.",
             wizard.Models.NetworkNote);
     }
 
@@ -187,7 +187,7 @@ public sealed class OfflineSizesComeFromTheReleaseTests
         Assert.Empty(wizard.Models.NetworkNote);
     }
 
-    private static string[] CatalogueTags()
+    internal static string[] CatalogueTags()
     {
         var tags = new ModelsPageViewModel().CatalogModels
             .Select(model => model.Tag)
@@ -201,7 +201,7 @@ public sealed class OfflineSizesComeFromTheReleaseTests
     /// Every tag given, as a signed release lists the catalogue. Each fits a 16 GB adapter at
     /// both contexts except the second, which fits at neither.
     /// </summary>
-    private static ResolvedRelease Release(IReadOnlyList<string> tags) =>
+    internal static ResolvedRelease Release(IReadOnlyList<string> tags) =>
         new(
             new ReleaseManifest(
                 schemaVersion: 1,
@@ -245,13 +245,13 @@ public sealed class OfflineSizesComeFromTheReleaseTests
             ScratchRoot = temp.Combine("scratch"),
         };
 
-    private sealed class FixedRegistry(long? size, string? unsizedTag) : IModelSizeSource
+    internal sealed class FixedRegistry(long? size, string? unsizedTag = null) : IModelSizeSource
     {
         public Task<long?> GetDownloadSizeBytesAsync(string tag, CancellationToken cancellationToken) =>
             Task.FromResult(tag == unsizedTag ? null : size);
     }
 
-    private sealed class ReleaseFeed(ResolvedRelease release) : IReleaseFeed
+    internal sealed class ReleaseFeed(ResolvedRelease release) : IReleaseFeed
     {
         public Task<string> ResolveTagAsync(string requestedTag, CancellationToken ct) =>
             Task.FromResult(release.Manifest.ReleaseVersion);

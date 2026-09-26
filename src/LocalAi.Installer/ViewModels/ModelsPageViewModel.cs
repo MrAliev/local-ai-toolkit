@@ -9,6 +9,7 @@ namespace LocalAi.Installer.ViewModels;
 public sealed class ModelsPageViewModel : ObservableObject
 {
     private ModelSelectionMode mode = ModelSelectionMode.Automatic;
+    private bool modeChosen;
     private ModelCatalogEntry? selectedModel;
     private int selectedContext;
     private CatalogRecommendation recommendation = CatalogRecommendation.Empty;
@@ -37,18 +38,28 @@ public sealed class ModelsPageViewModel : ObservableObject
 
     public ObservableCollection<int> AvailableContexts { get; } = [];
 
+    /// <summary>The person's choice; until there is one, the mode follows the network.</summary>
     public ModelSelectionMode Mode
     {
         get => mode;
         set
         {
-            SetProperty(ref mode, value);
-            OnPropertyChanged(nameof(IsAutomatic));
-            OnPropertyChanged(nameof(IsChooseExact));
-            OnPropertyChanged(nameof(IsSkip));
-            OnPropertyChanged(nameof(CanContinue));
-            OnPropertyChanged(nameof(ReviewText));
+            modeChosen = true;
+            ApplyMode(value);
         }
+    }
+
+    /// <summary>The run does what the review named, so a check during it leaves the mode alone.</summary>
+    internal void KeepMode() => modeChosen = true;
+
+    private void ApplyMode(ModelSelectionMode value)
+    {
+        SetProperty(ref mode, value, nameof(Mode));
+        OnPropertyChanged(nameof(IsAutomatic));
+        OnPropertyChanged(nameof(IsChooseExact));
+        OnPropertyChanged(nameof(IsSkip));
+        OnPropertyChanged(nameof(CanContinue));
+        OnPropertyChanged(nameof(ReviewText));
     }
 
     public bool IsAutomatic
@@ -145,7 +156,10 @@ public sealed class ModelsPageViewModel : ObservableObject
 
     private bool isOffline;
 
-    /// <summary>From the system check. Setup downloads models through Ollama.</summary>
+    /// <summary>
+    /// From the system check. Setup downloads models through Ollama, so offline the mode starts
+    /// on Skip.
+    /// </summary>
     public bool IsOffline
     {
         get => isOffline;
@@ -154,6 +168,11 @@ public sealed class ModelsPageViewModel : ObservableObject
             SetProperty(ref isOffline, value);
             OnPropertyChanged(nameof(NetworkNote));
             OnPropertyChanged(nameof(HasNetworkNote));
+            OnPropertyChanged(nameof(ReviewText));
+            if (!modeChosen)
+            {
+                ApplyMode(value ? ModelSelectionMode.Skip : ModelSelectionMode.Automatic);
+            }
         }
     }
 
@@ -162,9 +181,9 @@ public sealed class ModelsPageViewModel : ObservableObject
     public string NetworkNote => isOffline
         ? InstallerCulture.Pick(
             "No network connection: models that are not on this computer yet cannot be " +
-            "downloaded now.",
+            "downloaded now, so they cannot be set up.",
             "Подключения к сети нет: модели, которых ещё нет на этом компьютере, сейчас " +
-            "скачать не получится.")
+            "скачать не получится, и настроить их не удастся.")
         : string.Empty;
 
     /// <summary>
@@ -337,7 +356,14 @@ public sealed class ModelsPageViewModel : ObservableObject
                 unsized);
     }
 
-    public string ReviewText => Mode switch
+    public string ReviewText => Mode == ModelSelectionMode.Skip || !isOffline
+        ? ChoiceReviewText
+        : ChoiceReviewText + " " + InstallerCulture.Pick(
+            "— no network connection, so only models already on this computer can be set up",
+            "— подключения к сети нет, поэтому настроить можно только модели, которые уже есть " +
+            "на этом компьютере");
+
+    private string ChoiceReviewText => Mode switch
     {
         ModelSelectionMode.Skip => InstallerCulture.Pick(
             "Models: skipped, nothing will be downloaded",
