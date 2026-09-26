@@ -1,4 +1,5 @@
 using LocalAi.Installer.Core;
+using LocalAi.Installer.Core.Diagnosis;
 using LocalAi.Installer.ViewModels;
 
 namespace LocalAi.Installer.Tests;
@@ -103,6 +104,52 @@ public sealed class PagesSpeakRussianTests : IDisposable
         var option = new AgentOption("claude", AgentChoice.McpAndInstructions) { IsDetected = true };
 
         Assert.Equal("Claude Code (обнаружено)", option.Heading);
+    }
+
+    /// <summary>
+    /// The probe handed the page a finished English sentence, so a Russian check table read
+    /// «Сеть | Внимание | No active network interface was reported.» The probe runs once and the
+    /// language can change after it, so the row is worded when it is shown.
+    /// </summary>
+    [Fact]
+    public async Task A_computer_with_no_network_is_told_so_in_the_language_on_screen()
+    {
+        var network = await new SystemNetworkProbe(() => false)
+            .ObserveAsync(TestContext.Current.CancellationToken);
+        var page = new DiagnosePageViewModel();
+        page.Load(HermeticDiagnosis.Supported(network: network));
+
+        InstallerCulture.Current = InstallerLanguage.Russian;
+        page.Relabel();
+
+        var row = page.Checks.Single(check => check.Name == "Сеть");
+        Assert.Equal(CheckStatus.Warning, row.Status);
+        RussianText.AssertRussian(row.Detail, "network row");
+    }
+
+    /// <summary>
+    /// "No network connection" is what an unavailable network is, whatever the probe said about
+    /// it. A check that failed never found that out, so it keeps its own reason, and without one
+    /// the state is unknown rather than disconnected.
+    /// </summary>
+    [Theory]
+    [InlineData(ObservationState.Unavailable, "No active network interface was reported.", "подключения к сети нет")]
+    [InlineData(ObservationState.Failed, "Сетевая подсистема не ответила.", "Сетевая подсистема не ответила.")]
+    [InlineData(ObservationState.Failed, null, "неизвестно")]
+    public void Only_an_unavailable_network_is_called_disconnected(
+        ObservationState state,
+        string? reason,
+        string expected)
+    {
+        var page = new DiagnosePageViewModel();
+        page.Load(HermeticDiagnosis.Supported(network: new NetworkSnapshot(state, reason)));
+
+        InstallerCulture.Current = InstallerLanguage.Russian;
+        page.Relabel();
+
+        var row = page.Checks.Single(check => check.Name == "Сеть");
+        Assert.Equal(CheckStatus.Warning, row.Status);
+        Assert.Equal(expected, row.Detail);
     }
 
     [Fact]

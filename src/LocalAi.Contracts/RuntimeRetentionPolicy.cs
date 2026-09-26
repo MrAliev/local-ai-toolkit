@@ -39,6 +39,9 @@ public sealed record RuntimeRetentionPolicy(
 {
     public const string FileName = "retention.json";
 
+    /// <summary>When the broker last swept its archive: a throttle, rebuilt by the next sweep.</summary>
+    public const string SweepMarkerFileName = "archive-sweep.json";
+
     /// <summary>
     /// The bounds a machine gets when it has never been configured.
     ///

@@ -1,3 +1,4 @@
+using LocalAi.Installer.Core.Releases;
 using LocalAi.Installer.ViewModels;
 using LocalAi.Tests.Shared;
 
@@ -39,6 +40,30 @@ public sealed class AnUpdateCanInstallFromAFolderTests
         {
             Assert.Contains(asset, PageLabels.BrowseForFolderTitle, StringComparison.Ordinal);
         }
+    }
+
+    /// <summary>
+    /// The installer is one file that unpacks itself before it runs, so the runtime's base
+    /// directory is the unpacked copy, not the folder somebody started it from. Offering that
+    /// directory offered nothing: every run from a release folder said "No release resolved"
+    /// until the path was typed in.
+    /// </summary>
+    [Fact]
+    public void The_folder_offered_is_the_one_the_installer_was_started_from()
+    {
+        using var release = new TemporaryDirectory("LocalAi-started-from");
+        using var unpacked = new TemporaryDirectory("LocalAi-unpacked");
+        foreach (var name in DirectoryReleaseFeed.RequiredFiles)
+        {
+            File.WriteAllText(release.Combine(name), string.Empty);
+        }
+
+        var page = new PackagePageViewModel();
+        page.OfferLocalFolder(InstallerWizardViewModel.StartedFrom(
+            release.Combine("LocalAi.Installer.exe"),
+            unpacked.Path + Path.DirectorySeparatorChar));
+
+        Assert.Equal(release.Path, page.SourceFolder);
     }
 
     /// <summary>

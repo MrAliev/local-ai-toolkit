@@ -334,6 +334,7 @@ public static class RemovalMatrix
         "host.json",
         "broker.lock",
         "sequence.json",
+        RuntimeRetentionPolicy.SweepMarkerFileName,
         "shutdown.request",
         // What the broker last failed at. Bounded, rebuilt by the next failure, and worth nothing
         // without the installation that produced it.

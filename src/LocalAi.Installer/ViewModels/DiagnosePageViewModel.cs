@@ -182,12 +182,15 @@ public sealed class DiagnosePageViewModel : ObservableObject
             diagnosis.Network.State == ObservationState.Available
                 ? CheckStatus.Ok
                 : CheckStatus.Warning,
-            diagnosis.Network.State == ObservationState.Available
-                ? InstallerCulture.Pick(
+            diagnosis.Network.State switch
+            {
+                ObservationState.Available => InstallerCulture.Pick(
                     "connected to a network (internet access is not tested here)",
-                    "подключение к сети есть (доступ в интернет здесь не проверяется)")
-                : diagnosis.Network.Reason ??
-                    InstallerCulture.Pick("no network connection", "подключения к сети нет")));
+                    "подключение к сети есть (доступ в интернет здесь не проверяется)"),
+                ObservationState.Unavailable => InstallerCulture.Pick(
+                    "no network connection", "подключения к сети нет"),
+                _ => diagnosis.Network.Reason ?? InstallerCulture.Pick("unknown", "неизвестно"),
+            }));
 
         rows.Add(new EnvironmentCheck(
             InstallerCulture.Pick("Existing LocalAi", "Установленный LocalAi"),

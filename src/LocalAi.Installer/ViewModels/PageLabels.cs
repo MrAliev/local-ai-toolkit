@@ -398,6 +398,14 @@ public static class PageLabels
     public static string ResultModelsWorking => InstallerCulture.Pick(
         "{0} checks in progress", "проверяются: {0}");
 
+    public static string ResultModelsNoneRequested => InstallerCulture.Pick(
+        "none set up: the installer found no model it could set up. The log below says why.",
+        "ни одна не настроена: установщик не нашёл модели, которую мог бы настроить. Почему — сказано в журнале ниже.");
+
+    public static string ResultModelsCancelledBeforeFirst => InstallerCulture.Pick(
+        "cancelled before the first model",
+        "отменено до первой модели");
+
     public static string WhatToDoNext => InstallerCulture.Pick(
         "What to do next",
         "Что делать дальше");
