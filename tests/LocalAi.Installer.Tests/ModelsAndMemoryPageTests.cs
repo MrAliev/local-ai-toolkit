@@ -7,10 +7,9 @@ namespace LocalAi.Installer.Tests;
 /// <summary>
 /// The page that used to be two.
 ///
-/// The model recommendation depends on the video-memory rule: relaxing it re-computes which
-/// models are offered. On separate pages that recompute landed on a page the reader had
-/// already left — they answered "which models" under a filter the next page then silently
-/// changed. Merged, the rule sits above its consequence, and the consequence moves in view.
+/// The video-memory rule and the model list were separate pages, so a rule change landed on a
+/// page the reader had already left. Merged, the rule sits above the list, and the line naming
+/// the rule moves in view.
 /// </summary>
 public sealed class ModelsAndMemoryPageTests
 {
@@ -27,7 +26,7 @@ public sealed class ModelsAndMemoryPageTests
     }
 
     [Fact]
-    public void The_page_states_the_rule_decides_the_list()
+    public void The_page_says_what_decides_the_list_and_what_the_rule_decides()
     {
         // Both gates a real run passes on the way: the system check, and the required
         // prerequisites being present.
@@ -41,10 +40,9 @@ public sealed class ModelsAndMemoryPageTests
         }
 
         Assert.Equal("How models run on this computer", wizard.StepTitle);
-        Assert.Contains(
-            "Video memory decides which models fit",
-            wizard.StepDescription,
-            StringComparison.Ordinal);
+        Assert.Equal(
+            "Video memory decides which models are set up. The rule decides how they may run.",
+            wizard.StepDescription);
     }
 
     /// <summary>
@@ -71,22 +69,6 @@ public sealed class ModelsAndMemoryPageTests
 
         Assert.NotEqual(strict, page.RuleSummary);
         Assert.Contains("Relaxed video memory rule", page.RuleSummary, StringComparison.Ordinal);
-    }
-
-    /// <summary>
-    /// "Relax the setting on the previous page" named a route that the merge removes. The
-    /// rule is now above this text on the same page.
-    /// </summary>
-    [Fact]
-    public void Nothing_fitting_points_upward_rather_than_backward()
-    {
-        var page = new ModelsPageViewModel();
-        page.ApplyRecommendation(
-            new CatalogRecommendation([], "irrelevant", SizesKnown: true),
-            residencyRequiresVideoMemory: true);
-
-        Assert.Contains("Pick a relaxed rule above", page.AutomaticSummary, StringComparison.Ordinal);
-        Assert.DoesNotContain("previous page", page.AutomaticSummary, StringComparison.Ordinal);
     }
 
     /// <summary>
