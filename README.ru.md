@@ -68,11 +68,11 @@
 | `read_image` | прочитать изображения с диска или один PDF постранично |
 | `index_documents` / `search_documents` | индексировать сканированные PDF и искать фразы OCR со ссылками на версию файла и страницу |
 | `translate_local` | перевести, сохранив структуру |
-| `index_status` | есть ли индекс, чем собран, отстал ли от HEAD |
+| `index_status` | есть ли индекс, чем собран, ушла ли с тех пор вперёд основная ветка |
 | `index_refresh` | обновить индекс после коммита |
 | `index_unload` | освободить память под загруженным индексом |
 | `local_models_status` | что установлено, что загружено, чего не хватает |
-| `local_model_preflight` | доказать, что модель влезает в видеопамять целиком |
+| `local_model_preflight` | доказать, где загружается модель: при политике по умолчанию — целиком в видеопамяти |
 | `local_models_sync` | доставить недостающие рекомендованные модели |
 | `local_model_experiment_report` | статистика по паре «задача — модель» |
 | `local_model_feedback` | решить судьбу модели: продвинуть, оставить запасной, отключить |
@@ -996,7 +996,7 @@ lai localai translate --in manual.md --from English --to Russian --markdown --ch
 
 ```powershell
 lai localai repo status --root C:\work\myapp   # подключён ли репозиторий
-lai codesearch status --root C:\work\myapp     # где индекс, отстал ли от HEAD
+lai codesearch status --root C:\work\myapp     # где индекс, ушла ли основная ветка дальше него
 lai localai model status                       # какие модели стоят и загружены
 lai localai policy show                        # политика размещения и обновлений
 lai localai telemetry                          # сводка по локальным заданиям
