@@ -35,6 +35,48 @@ public sealed class OfflineSizesComeFromTheReleaseTests
             line => line.StartsWith(tags[1] + " ", StringComparison.Ordinal));
     }
 
+    /// <summary>
+    /// Setup plans only the release's models, so a catalogue model the release does not list is
+    /// never set up; "size unknown; set up only if it fits" said it might be.
+    /// </summary>
+    [Fact]
+    public async Task A_catalogue_model_the_release_leaves_out_is_said_not_to_be_set_up()
+    {
+        using var temp = new TemporaryDirectory("LocalAi-offline-sizes");
+        var tags = CatalogueTags();
+        var wizard = Wizard(temp, Release(tags[..^1]), registrySize: null);
+
+        await wizard.InitializeAsync(TestContext.Current.CancellationToken);
+
+        Assert.Contains($"{tags[^1]} — not in this release, so not set up", wizard.Models.AutomaticSelection);
+        Assert.Equal(
+            $"Whole model in video memory — {tags.Length - 2} of {tags.Length} catalogue models fit; " +
+            "not in this release: 1",
+            wizard.Models.RuleSummary);
+
+        InstallerCulture.Current = InstallerLanguage.Russian;
+        wizard.Models.Relabel();
+        Assert.Contains($"{tags[^1]} — нет в этом релизе, поэтому не ставится", wizard.Models.AutomaticSelection);
+        Assert.Equal(
+            $"Вся модель в видеопамяти — подходящих моделей: {tags.Length - 2} из {tags.Length}; " +
+            "нет в этом релизе: 1",
+            wizard.Models.RuleSummary);
+    }
+
+    /// <summary>Only the release's own gap is worded by the release.</summary>
+    [Fact]
+    public async Task A_model_the_registry_did_not_size_still_reads_as_unknown()
+    {
+        using var temp = new TemporaryDirectory("LocalAi-offline-sizes");
+        var tags = CatalogueTags();
+        var wizard = Wizard(temp, Release(tags), registrySize: Gigabyte, unsizedTag: tags[^1]);
+
+        await wizard.InitializeAsync(TestContext.Current.CancellationToken);
+
+        Assert.Contains($"{tags[^1]} — size unknown; set up only if it fits", wizard.Models.AutomaticSelection);
+        Assert.EndsWith("; size unknown: 1", wizard.Models.RuleSummary, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task A_release_no_longer_selected_no_longer_sizes_them()
     {
@@ -184,7 +226,8 @@ public sealed class OfflineSizesComeFromTheReleaseTests
         ResolvedRelease release,
         long? registrySize,
         GpuSnapshot? gpu = null,
-        NetworkSnapshot? network = null) =>
+        NetworkSnapshot? network = null,
+        string? unsizedTag = null) =>
         new(
             StartChoice.Install,
             () => null,
@@ -196,16 +239,16 @@ public sealed class OfflineSizesComeFromTheReleaseTests
                     [new GpuAdapterSnapshot("adapter-1", "Test Adapter", 16UL * 1024 * 1024 * 1024, false)],
                     null))))
         {
-            ModelSizeSource = new FixedRegistry(registrySize),
+            ModelSizeSource = new FixedRegistry(registrySize, unsizedTag),
             LogDirectory = temp.Combine("logs"),
             RuntimeRoot = temp.Combine("no-runtime-root"),
             ScratchRoot = temp.Combine("scratch"),
         };
 
-    private sealed class FixedRegistry(long? size) : IModelSizeSource
+    private sealed class FixedRegistry(long? size, string? unsizedTag) : IModelSizeSource
     {
         public Task<long?> GetDownloadSizeBytesAsync(string tag, CancellationToken cancellationToken) =>
-            Task.FromResult(size);
+            Task.FromResult(tag == unsizedTag ? null : size);
     }
 
     private sealed class ReleaseFeed(ResolvedRelease release) : IReleaseFeed

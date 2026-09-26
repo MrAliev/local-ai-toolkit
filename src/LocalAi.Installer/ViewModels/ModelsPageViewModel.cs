@@ -215,13 +215,18 @@ public sealed class ModelsPageViewModel : ObservableObject
                 fit.ContextTokens));
         }
 
-        // Nothing sized these here; setup decides them against the signed manifest.
+        // Setup plans only the signed manifest's models: a release that sized the rest leaves
+        // these out of setup, while the registry leaves them for setup to weigh.
         foreach (var tag in UnsizedTags())
         {
             AutomaticSelection.Add(string.Format(
-                InstallerCulture.Pick(
-                    "{0} — size unknown; set up only if it fits",
-                    "{0} — размер неизвестен; ставится, только если помещается"),
+                recommendation.SizedByRelease
+                    ? InstallerCulture.Pick(
+                        "{0} — not in this release, so not set up",
+                        "{0} — нет в этом релизе, поэтому не ставится")
+                    : InstallerCulture.Pick(
+                        "{0} — size unknown; set up only if it fits",
+                        "{0} — размер неизвестен; ставится, только если помещается"),
                 tag));
         }
 
@@ -319,9 +324,13 @@ public sealed class ModelsPageViewModel : ObservableObject
                 fitting,
                 CatalogModels.Count)
             : string.Format(
-                InstallerCulture.Pick(
-                    "{0} — {1} of {2} catalogue models fit; size unknown: {3}",
-                    "{0} — подходящих моделей: {1} из {2}; без размера: {3}"),
+                recommendation.SizedByRelease
+                    ? InstallerCulture.Pick(
+                        "{0} — {1} of {2} catalogue models fit; not in this release: {3}",
+                        "{0} — подходящих моделей: {1} из {2}; нет в этом релизе: {3}")
+                    : InstallerCulture.Pick(
+                        "{0} — {1} of {2} catalogue models fit; size unknown: {3}",
+                        "{0} — подходящих моделей: {1} из {2}; без размера: {3}"),
                 rule,
                 fitting,
                 CatalogModels.Count,
