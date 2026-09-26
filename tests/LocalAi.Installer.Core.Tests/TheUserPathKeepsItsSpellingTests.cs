@@ -152,6 +152,31 @@ public sealed class TheUserPathKeepsItsSpellingTests : IDisposable
         Assert.NotEqual(window.ThreadId, store.WriterThread);
     }
 
+    /// <summary>The value a clean Windows account has: one variable entry and a separator at the end.</summary>
+    [Fact]
+    public async Task A_value_ending_in_a_separator_gains_no_empty_entry_and_comes_back_whole()
+    {
+        const string windowsDefault = @"%USERPROFILE%\AppData\Local\Microsoft\WindowsApps;";
+        using var machine = new RemovalFixture();
+        var launcher = Path.Combine(machine.Layout.BinRoot, "launcher");
+        Seed(windowsDefault, RegistryValueKind.ExpandString);
+        var store = Store();
+
+        Assert.True(LauncherPathRegistration.Register(launcher, store));
+        Assert.Equal(windowsDefault + launcher + ";", Raw());
+
+        var plan = await machine.PlanAsync(
+            RemovalSelection.FromPreset(RemovalPreset.FullUninstall),
+            Token,
+            readUserPath: store.Read);
+        Assert.True(plan.RemovesLauncherFromPath);
+        var outcome = await Apply(machine, plan, store);
+
+        Assert.True(outcome.Succeeded);
+        Assert.Equal(windowsDefault, Raw());
+        Assert.Equal(RegistryValueKind.ExpandString, Kind());
+    }
+
     [Fact]
     public async Task A_full_uninstall_gives_back_the_path_installation_found()
     {
