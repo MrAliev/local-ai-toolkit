@@ -27,10 +27,12 @@ public sealed class OfflineSizesComeFromTheReleaseTests
 
         Assert.True(wizard.Package.HasPackage);
         Assert.Equal(
-            $"Whole model in video memory — 1 of {tags.Length} catalogue models fit; size " +
-            $"unknown: {tags.Length - 2}",
+            $"Whole model in video memory — {tags.Length - 1} of {tags.Length} catalogue models fit",
             wizard.Models.RuleSummary);
-        Assert.Equal($"{tags[0]} — 2.0 GB, context 8192", wizard.Models.AutomaticSelection[0]);
+        Assert.Contains($"{tags[0]} — 2.0 GB, context 8192", wizard.Models.AutomaticSelection);
+        Assert.DoesNotContain(
+            wizard.Models.AutomaticSelection,
+            line => line.StartsWith(tags[1] + " ", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -40,7 +42,7 @@ public sealed class OfflineSizesComeFromTheReleaseTests
         var tags = CatalogueTags();
         var wizard = Wizard(temp, Release(tags), registrySize: null);
         await wizard.InitializeAsync(TestContext.Current.CancellationToken);
-        Assert.Equal($"{tags[0]} — 2.0 GB, context 8192", wizard.Models.AutomaticSelection[0]);
+        Assert.Contains($"{tags[0]} — 2.0 GB, context 8192", wizard.Models.AutomaticSelection);
 
         wizard.Package.ReleaseVersion = "0.1.52";
 
@@ -151,7 +153,10 @@ public sealed class OfflineSizesComeFromTheReleaseTests
         return tags;
     }
 
-    /// <summary>The first tag fits a 16 GB adapter at both contexts, the second does not fit.</summary>
+    /// <summary>
+    /// Every tag given, as a signed release lists the catalogue. Each fits a 16 GB adapter at
+    /// both contexts except the second, which fits at neither.
+    /// </summary>
     private static ResolvedRelease Release(IReadOnlyList<string> tags) =>
         new(
             new ReleaseManifest(
@@ -165,13 +170,10 @@ public sealed class OfflineSizesComeFromTheReleaseTests
                 packageSize: 1024,
                 packageSha256: new string('a', 64),
                 requiresAuthenticode: false,
-                models: tags.Count == 0
-                    ? []
-                    : [
-                        new ManifestModel(tags[0], 2048, 2 * Gigabyte, 2 * Gigabyte),
-                        new ManifestModel(tags[0], 8192, 2 * Gigabyte, 2 * Gigabyte),
-                        new ManifestModel(tags[1], 2048, 40 * Gigabyte, 40 * Gigabyte),
-                    ]),
+                models: [.. tags.SelectMany((tag, index) =>
+                    new[] { 2048, 8192 }.Select(context => index == 1
+                        ? new ManifestModel(tag, context, 40 * Gigabyte, 40 * Gigabyte)
+                        : new ManifestModel(tag, context, 2 * Gigabyte, 2 * Gigabyte)))]),
             [1],
             [2]);
 
