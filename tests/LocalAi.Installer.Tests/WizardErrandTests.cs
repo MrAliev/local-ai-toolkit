@@ -438,14 +438,12 @@ public sealed class WizardErrandTests
 
     /// <summary>
     /// The consent is worded for the run it consents to. "I have reviewed these settings" was
-    /// the same sentence on all three errands, and on a reinstall it was the wrong one: what
-    /// the person is agreeing to there is a removal followed by an installation, not a set of
-    /// settings.
+    /// the same sentence on all three errands.
     /// </summary>
     [Theory]
     [InlineData(StartChoice.Install, "installed")]
     [InlineData(StartChoice.UpdateOrRepair, "change")]
-    [InlineData(StartChoice.CleanReinstall, "removed")]
+    [InlineData(StartChoice.CleanReinstall, "change")]
     public void The_consent_names_what_this_run_does(StartChoice mode, string expected)
     {
         Assert.Contains(
@@ -455,15 +453,15 @@ public sealed class WizardErrandTests
     }
 
     /// <summary>
-    /// One tick over one list. Two boxes on one page teach people to tick boxes, so the
-    /// reinstall consent covers both halves in a single sentence rather than asking twice.
+    /// The install half of a reinstall opens after its removal has run and been consented to in
+    /// the removal wizard; the list on this page holds no removal, so the consent names none.
     /// </summary>
     [Fact]
-    public void A_reinstall_consents_to_both_halves_at_once()
+    public void A_reinstall_consents_to_what_this_page_lists()
     {
         var consent = new InstallerWizardViewModel(StartChoice.CleanReinstall).ConsentText;
 
-        Assert.Contains("removed", consent, StringComparison.Ordinal);
-        Assert.Contains("installed", consent, StringComparison.Ordinal);
+        Assert.DoesNotContain("removed", consent, StringComparison.Ordinal);
+        Assert.Equal(new InstallerWizardViewModel(StartChoice.UpdateOrRepair).ConsentText, consent);
     }
 }

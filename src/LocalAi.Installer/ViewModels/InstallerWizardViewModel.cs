@@ -402,18 +402,14 @@ public sealed class InstallerWizardViewModel : ObservableObject
 
     /// <summary>
     /// The consent, in the words of the run it consents to. One tick over one list: two boxes
-    /// on one page train people to tick boxes.
+    /// on one page train people to tick boxes. A clean reinstall reaches this page after its
+    /// removal has run, so the list holds no removal to consent to.
     /// </summary>
     public string ConsentText => Mode switch
     {
-        StartChoice.UpdateOrRepair => InstallerCulture.Pick(
+        StartChoice.UpdateOrRepair or StartChoice.CleanReinstall => InstallerCulture.Pick(
             "I have read what will change and want to continue.",
             "Я понимаю, что изменится, и хочу продолжить."),
-        StartChoice.CleanReinstall => InstallerCulture.Pick(
-            "I have read what will be removed and what will be installed, and want to " +
-            "continue.",
-            "Я понимаю, что будет удалено и что установлено, и хочу " +
-            "продолжить."),
         _ => InstallerCulture.Pick(
             "I have read what will be installed and want to continue.",
             "Я понимаю, что будет установлено, и хочу продолжить."),
@@ -1063,7 +1059,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 : InstallerRunOutcome.Completed);
             AppendRollbackAvailability(report);
             finish.Progress = report.ToString().Trim();
-            SetRunLog(report.ToString(), false);
+            SetRunLog(report.ToString());
             CurrentPage = InstallerPage.Finish;
             return !hasRunError;
         }
@@ -1101,7 +1097,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 failedActions));
             BuildFinishResults(requested, successfulActions, failedActions);
             finish.Progress = report.ToString().Trim();
-            SetRunLog(report.ToString(), false);
+            SetRunLog(report.ToString());
             CurrentPage = InstallerPage.Finish;
             return false;
         }
@@ -1338,10 +1334,9 @@ public sealed class InstallerWizardViewModel : ObservableObject
         OnPropertyChanged(nameof(ProgressText));
     }
 
-    public void SetRunLog(string message, bool requiresRestart)
+    public void SetRunLog(string message)
     {
         runLogMessage = message;
-        finish.RequiresRestart = requiresRestart;
         finish.RunLog = message;
         OnPropertyChanged(nameof(RunLog));
     }
@@ -2932,8 +2927,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         {
             SetRunLog(
                 $"WinGet is unavailable; install {displayName} manually from " +
-                $"{dependency.OfficialInstallerUri}.",
-                false);
+                $"{dependency.OfficialInstallerUri}.");
             return false;
         }
 
@@ -2945,8 +2939,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         {
             SetRunLog(
                 $"{displayName} was not installed. {winget.Message} You can install it " +
-                $"yourself from {dependency.OfficialInstallerUri}.",
-                false);
+                $"yourself from {dependency.OfficialInstallerUri}.");
             return false;
         }
 
@@ -2978,8 +2971,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         if (result.ExitCode is not 0)
         {
             SetRunLog(
-                $"{displayName} installation failed with exit code {result.ExitCode}.",
-                false);
+                $"{displayName} installation failed with exit code {result.ExitCode}.");
             return false;
         }
 
@@ -2993,7 +2985,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
     {
         if (dependency.PackageVersion is not { Length: > 0 } packageVersion)
         {
-            SetRunLog($"{displayName} has no pinned package version.", false);
+            SetRunLog($"{displayName} has no pinned package version.");
             return false;
         }
 
@@ -3001,8 +2993,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             { State: DependencyState.Detected, ExecutablePath: { } npmPath })
         {
             SetRunLog(
-                $"npm is unavailable; install Node.js 20 before {displayName}.",
-                false);
+                $"npm is unavailable; install Node.js 20 before {displayName}.");
             return false;
         }
 
@@ -3014,8 +3005,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         if (result.ExitCode is not 0)
         {
             SetRunLog(
-                $"{displayName} installation failed with exit code {result.ExitCode}.",
-                false);
+                $"{displayName} installation failed with exit code {result.ExitCode}.");
             return false;
         }
 
@@ -3037,8 +3027,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             {
                 SetRunLog(
                     "SCIP Python was installed, but npm did not return a valid global " +
-                    "package directory.",
-                    false);
+                    "package directory.");
                 return false;
             }
 
@@ -3053,8 +3042,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 InvalidOperationException or JsonException)
             {
                 SetRunLog(
-                    $"SCIP Python Windows compatibility patch failed: {exception.Message}",
-                    false);
+                    $"SCIP Python Windows compatibility patch failed: {exception.Message}");
                 return false;
             }
 
@@ -3065,8 +3053,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             if (scipPythonPath is null || !File.Exists(scipPythonPath))
             {
                 SetRunLog(
-                    "SCIP Python was patched, but its npm command shim was not found.",
-                    false);
+                    "SCIP Python was patched, but its npm command shim was not found.");
                 return false;
             }
 
@@ -3080,8 +3067,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 !versionOutput.Contains(packageVersion, StringComparison.Ordinal))
             {
                 SetRunLog(
-                    "SCIP Python was patched, but its executable verification failed.",
-                    false);
+                    "SCIP Python was patched, but its executable verification failed.");
                 return false;
             }
         }

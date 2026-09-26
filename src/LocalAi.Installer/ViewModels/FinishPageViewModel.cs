@@ -1,11 +1,10 @@
 using System.Collections.ObjectModel;
-using LocalAi.Installer.Core;
+
 namespace LocalAi.Installer.ViewModels;
 
 public sealed class FinishPageViewModel : ObservableObject
 {
     private bool success;
-    private bool requiresRestart;
     private string? runLog;
     private string? progress;
     private string? rollbackReport;
@@ -59,16 +58,6 @@ public sealed class FinishPageViewModel : ObservableObject
         }
     }
 
-    public bool RequiresRestart
-    {
-        get => requiresRestart;
-        set
-        {
-            SetProperty(ref requiresRestart, value);
-            OnPropertyChanged(nameof(RestartNotice));
-        }
-    }
-
     /// <summary>
     /// What the run did, line by line. It was called RollbackNotes, which promised an
     /// installation that could be undone; there has never been one, and the value has
@@ -109,8 +98,4 @@ public sealed class FinishPageViewModel : ObservableObject
     }
 
     public bool HasRollbackReport => !string.IsNullOrWhiteSpace(rollbackReport);
-
-    public string RestartNotice => RequiresRestart
-        ? InstallerCulture.Pick("Restart required.", "Требуется перезагрузка.")
-        : InstallerCulture.Pick("No restart needed.", "Перезагрузка не нужна.");
 }
