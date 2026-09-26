@@ -1,6 +1,8 @@
 using LocalAi.Broker.Client;
 using LocalAi.Cli;
+using LocalAi.Cli.Resources;
 using LocalAi.Contracts;
+using LocalAi.Tests.Shared;
 using LocalLm.Core;
 
 namespace LocalLm.Tests;
@@ -396,6 +398,164 @@ public sealed class ModelCommandTests
         Assert.DoesNotContain("secret", output.ToString(), StringComparison.Ordinal);
     }
 
+    private const string OllamaEndpoint = "http://127.0.0.1:11434/";
+
+    private static BrokerJobFailedException RefusedConnection() =>
+        new(
+            Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+            "HttpRequestException",
+            "No connection could be made because the target machine actively refused it. (127.0.0.1:11434)");
+
+    /// <summary>
+    /// After an offline install the answer was <c>broker_failure</c> and nothing else, while the
+    /// cause sat in the broker's diagnostics log (#612). The code stays; the reader is told.
+    /// </summary>
+    [Fact]
+    public async Task An_Ollama_that_does_not_answer_is_named_on_standard_error()
+    {
+        using var root = new TemporaryDirectory("localai-model-silent");
+        string? askedRoot = null;
+
+        var (exit, output, error) = await FailAsync(
+            ["status", "--runtime-root", root.Path],
+            RefusedConnection(),
+            runtimeRoot =>
+            {
+                askedRoot = runtimeRoot;
+                return OllamaEndpoint;
+            });
+
+        Assert.Equal(ModelCommand.FailureExitCode, exit);
+        Assert.Equal(
+            "{\"schemaVersion\":1,\"operation\":\"status\",\"accepted\":false," +
+            "\"code\":\"broker_failure\"}" + Environment.NewLine,
+            output);
+        Assert.Equal(
+            "localai: " + CliText.ModelOllamaNotAnswering(OllamaEndpoint) + Environment.NewLine,
+            error);
+        Assert.Contains(OllamaEndpoint, error, StringComparison.Ordinal);
+        Assert.Equal(root.Path, askedRoot);
+    }
+
+    /// <summary>
+    /// An HTTP failure is also every status an answering server can send, so it is not called
+    /// silence unless nothing answers; the broker's own account of the job is quoted instead.
+    /// </summary>
+    [Fact]
+    public async Task A_failed_request_to_an_Ollama_that_answers_quotes_the_broker()
+    {
+        var failure = RefusedConnection();
+
+        var (exit, _, error) = await FailAsync(["status"], failure, _ => null);
+
+        Assert.Equal(ModelCommand.FailureExitCode, exit);
+        Assert.Equal("localai: " + failure.Message + Environment.NewLine, error);
+        Assert.DoesNotContain(
+            CliText.ModelOllamaNotAnswering(OllamaEndpoint), error, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_wait_that_ran_out_on_a_silent_Ollama_names_it()
+    {
+        var (_, _, error) = await FailAsync(
+            ["status"],
+            new BrokerBackendUnreachableException(OllamaEndpoint),
+            _ => throw new InvalidOperationException("The broker already said."));
+
+        Assert.Equal(
+            "localai: " + CliText.ModelOllamaNotAnswering(OllamaEndpoint) + Environment.NewLine,
+            error);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task A_broker_that_could_not_start_is_named_as_the_broker(bool whileCreating)
+    {
+        var failure = new BrokerBootstrapException(
+            "broker_start_timeout",
+            "LocalAi broker did not become ready within 00:00:15; phase: startup observation.");
+
+        var (exit, output, error) = await FailAsync(
+            ["status"],
+            failure,
+            _ => throw new InvalidOperationException("Ollama was never reached."),
+            whileCreating);
+
+        Assert.Equal(ModelCommand.FailureExitCode, exit);
+        Assert.Contains("\"code\":\"broker_failure\"", output, StringComparison.Ordinal);
+        Assert.Equal(
+            "localai: " + CliText.ModelBrokerNotStarted(failure.Message) + Environment.NewLine,
+            error);
+    }
+
+    [Fact]
+    public async Task Any_other_failure_is_named_by_its_type()
+    {
+        var (_, _, error) = await FailAsync(
+            ["status"],
+            new BrokerProtocolException("Broker job returned an invalid response."),
+            _ => throw new InvalidOperationException("Not an Ollama failure."));
+
+        Assert.Equal(
+            "localai: BrokerProtocolException: Broker job returned an invalid response." +
+            Environment.NewLine,
+            error);
+    }
+
+    /// <summary>
+    /// <c>--progress-json</c> promises a program nothing but objects on standard error.
+    /// </summary>
+    [Fact]
+    public async Task A_pull_that_reports_in_json_adds_no_sentence()
+    {
+        var (exit, output, error) = await FailAsync(
+            ["pull", "--model", "qwen3.5:9b", "--catalog-version", "signed-7", "--progress-json"],
+            RefusedConnection(),
+            _ => OllamaEndpoint);
+
+        Assert.Equal(ModelCommand.FailureExitCode, exit);
+        Assert.Contains("\"code\":\"broker_failure\"", output, StringComparison.Ordinal);
+        Assert.Equal(string.Empty, error);
+    }
+
+    [Fact]
+    public async Task The_sentence_follows_the_readers_language()
+    {
+        string english;
+        using (TestCulture.Reading("en"))
+        {
+            english = (await FailAsync(["status"], RefusedConnection(), _ => OllamaEndpoint)).Error;
+        }
+
+        using var russian = TestCulture.Reading("ru");
+        var error = (await FailAsync(["status"], RefusedConnection(), _ => OllamaEndpoint)).Error;
+
+        Assert.NotEqual(english, error);
+        Assert.Equal(
+            "localai: " + CliText.ModelOllamaNotAnswering(OllamaEndpoint) + Environment.NewLine,
+            error);
+    }
+
+    private static async Task<(int Exit, string Output, string Error)> FailAsync(
+        string[] arguments,
+        Exception failure,
+        Func<string, string?> silentBackend,
+        bool whileCreating = false)
+    {
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+        var client = new RecordingClient { Failure = failure };
+        var exit = await ModelCommand.ExecuteProductionAsync(
+            arguments,
+            (_, _, _, _) => whileCreating ? throw failure : client,
+            output,
+            TestContext.Current.CancellationToken,
+            error,
+            silentBackend);
+        return (exit, output.ToString(), error.ToString());
+    }
+
     [Fact]
     public async Task Cancellation_has_a_distinct_sanitized_response_and_exit_code()
     {
@@ -420,12 +580,14 @@ public sealed class ModelCommandTests
     public async Task Production_initialization_failure_emits_one_sanitized_json_response()
     {
         using var output = new StringWriter();
+        using var error = new StringWriter();
 
         var exitCode = await ModelCommand.ExecuteProductionAsync(
             ["status"],
             (_, _, _) => throw new InvalidOperationException("secret ACL path and runtime detail"),
             output,
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken,
+            error);
 
         Assert.Equal(ModelCommand.FailureExitCode, exitCode);
         Assert.Equal(
