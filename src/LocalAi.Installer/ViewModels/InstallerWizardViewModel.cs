@@ -1781,24 +1781,13 @@ public sealed class InstallerWizardViewModel : ObservableObject
             ? new(true, File.ReadAllBytes(path))
             : new(false, []);
 
-    /// <summary>
-    /// Pairs the captured pre-effect content with what is on disk now. Small files travel
-    /// inline in the journal; anything above the cap keeps only its hash, which rollback
-    /// reports as unrecoverable instead of guessing.
-    /// </summary>
-    private static InstallerRunFileUndo BuildFileUndo(string path, CapturedFileState before)
-    {
-        var after = File.Exists(path) ? File.ReadAllBytes(path) : [];
-        return new(
+    /// <summary>Pairs the captured pre-effect content with what is on disk now.</summary>
+    private static InstallerRunFileUndo BuildFileUndo(string path, CapturedFileState before) =>
+        InstallerRunFileUndo.Between(
             path,
             before.Existed,
-            InstallerRunJournal.Sha256Hex(before.Bytes),
-            before.Existed && before.Bytes.Length <= InstallerRunJournal.MaximumInlineContentBytes
-                ? Convert.ToBase64String(before.Bytes)
-                : null,
-            null,
-            InstallerRunJournal.Sha256Hex(after));
-    }
+            before.Bytes,
+            File.Exists(path) ? File.ReadAllBytes(path) : []);
 
     private int StepIndex(InstallerPage page)
     {
@@ -2682,6 +2671,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             }
         });
         var selection = models.BuildProvisioningSelection();
+        var namesBefore = ReadReleaseNamesBeforeRun();
         // The intent covers the download too, but the download only touches the temp
         // directory; the effect the journal exists for is the activation. The callback
         // below closes this step at the exact moment activation finishes, so a process
@@ -2705,7 +2695,11 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 activation =>
                 {
                     ApplyPackageResult(activation);
-                    JournalPackageActivation(packageStep, activation);
+                    JournalPackageActivation(
+                        packageStep,
+                        activation,
+                        namesBefore,
+                        resolved.Manifest.ReleaseVersion);
                     if (activation.Installed && selection.Mode != ModelProvisioningMode.None)
                     {
                         modelsStep = JournalBegin(
@@ -2820,7 +2814,11 @@ public sealed class InstallerWizardViewModel : ObservableObject
     /// indexes included — the moment the broker runs, so "undo" would mean deleting things
     /// this run did not create.
     /// </summary>
-    private void JournalPackageActivation(string? packageStep, ReleaseInstallResult activation)
+    private void JournalPackageActivation(
+        string? packageStep,
+        ReleaseInstallResult activation,
+        ReleaseNamesBeforeRun? namesBefore,
+        string release)
     {
         if (!activation.Installed)
         {
@@ -2846,8 +2844,27 @@ public sealed class InstallerWizardViewModel : ObservableObject
                     : $"Version {activation.Version} was already active.",
             isReversible: isUpgrade,
             isUpgrade
-                ? new InstallerRunUndoData(activation.Version, activation.PriorVersion)
+                ? namesBefore?.UndoFor(activation.Version, activation.PriorVersion!, release) ??
+                    new InstallerRunUndoData(activation.Version, activation.PriorVersion)
                 : null);
+    }
+
+    /// <summary>
+    /// Read before activation. An installation whose names cannot be read is still updated;
+    /// its rollback returns the pointer alone.
+    /// </summary>
+    private static ReleaseNamesBeforeRun? ReadReleaseNamesBeforeRun()
+    {
+        try
+        {
+            return ReleaseNamesBeforeRun.Read(InstallationLayout.CreateDefault());
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException or
+                System.Security.SecurityException or InstallationLayoutException)
+        {
+            return null;
+        }
     }
 
     /// <summary>

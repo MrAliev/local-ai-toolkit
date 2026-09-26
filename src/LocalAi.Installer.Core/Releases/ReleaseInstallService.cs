@@ -114,6 +114,19 @@ public sealed class ReleaseInstallService(
                 .InstallAsync(verified, InstallationLayout.CreateDefault(), cancellationToken)
                 .ConfigureAwait(false);
 
+            var modelReport = ReleaseModelInstallReport.NotRequested;
+            var installed = result.Status is LocalAiPackageInstallStatus.Installed
+                or LocalAiPackageInstallStatus.AlreadyInstalled;
+            if (installed)
+            {
+                // Before the caller hears of the activation, so a run journal records the
+                // release record as this run left it and rolling back can put the earlier one back.
+                RecordInstalledRelease(
+                    result.VersionPath,
+                    result.Version,
+                    release.Manifest.ReleaseVersion);
+            }
+
             // Told to the caller here, between activation and the model pulls, so a run journal
             // can record the activation as done the moment it is. Journalling it only after the
             // models meant a process killed mid-pull left the activation - the one reversible
@@ -124,17 +137,6 @@ public sealed class ReleaseInstallService(
                 result.PriorVersion,
                 result.VersionPath,
                 result.Reason));
-
-            var modelReport = ReleaseModelInstallReport.NotRequested;
-            var installed = result.Status is LocalAiPackageInstallStatus.Installed
-                or LocalAiPackageInstallStatus.AlreadyInstalled;
-            if (installed)
-            {
-                RecordInstalledRelease(
-                    result.VersionPath,
-                    result.Version,
-                    release.Manifest.ReleaseVersion);
-            }
 
             if (installed &&
                 models is { Mode: not ModelProvisioningMode.None } &&

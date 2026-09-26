@@ -123,6 +123,35 @@ public sealed class UninstallRegistration(
     public UninstallEntry? ReadOwn() =>
         Read() is { } entry && SamePath(entry.InstallLocation, layout.Root) ? entry : null;
 
+    /// <summary>
+    /// Shows <paramref name="replacement"/> instead of <paramref name="expected"/>, and only in
+    /// place of it. Returns the version the entry for this installation shows afterwards, or
+    /// null when there is no such entry.
+    /// </summary>
+    public string? ReplaceDisplayVersion(string expected, string replacement)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(expected);
+        ArgumentException.ThrowIfNullOrWhiteSpace(replacement);
+        if (ReadOwn() is not { } entry)
+        {
+            return null;
+        }
+
+        if (!string.Equals(entry.DisplayVersion, expected, StringComparison.Ordinal))
+        {
+            return entry.DisplayVersion;
+        }
+
+        using var key = Registry.CurrentUser.OpenSubKey(subKey, writable: true);
+        if (key is null)
+        {
+            return null;
+        }
+
+        key.SetValue("DisplayVersion", replacement, RegistryValueKind.String);
+        return replacement;
+    }
+
     private static bool SamePath(string recorded, string root)
     {
         try
