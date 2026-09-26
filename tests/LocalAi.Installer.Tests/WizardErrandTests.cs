@@ -258,6 +258,32 @@ public sealed class WizardErrandTests
     }
 
     /// <summary>
+    /// The re-check replaces a verified release with a newer one; it does not turn a review that
+    /// said "LocalAi will not be installed" into an installation. Every line on that page — no
+    /// models, no clients, no PATH — was written for a run without a package.
+    /// </summary>
+    [Fact]
+    public async Task A_run_that_was_shown_no_release_does_not_resolve_one()
+    {
+        var feed = new ScriptedFeed { Release = Release("0.1.51"), Throw = true };
+        var wizard = new InstallerWizardViewModel(StartChoice.Install, () => null, feed)
+        {
+            LogDirectory = TempLog(),
+        };
+        await wizard.ResolvePackageAsync(TestContext.Current.CancellationToken);
+        Assert.False(wizard.Package.HasPackage);
+
+        // The feed answers by the time the button is pressed.
+        feed.Throw = false;
+        await wizard.RefreshLatestBeforeInstallAsync(
+            new StringBuilder(),
+            TestContext.Current.CancellationToken);
+
+        Assert.Null(wizard.Package.Resolved);
+        Assert.False(wizard.Package.HasPackage);
+    }
+
+    /// <summary>
     /// A hung connection is not a cancellation. HttpClient times out on its own and throws
     /// TaskCanceledException, which is an OperationCanceledException — so filtering by type
     /// let it escape, abandon the run as "cancelled by the user", and leave the rail saying
@@ -438,14 +464,12 @@ public sealed class WizardErrandTests
 
     /// <summary>
     /// The consent is worded for the run it consents to. "I have reviewed these settings" was
-    /// the same sentence on all three errands, and on a reinstall it was the wrong one: what
-    /// the person is agreeing to there is a removal followed by an installation, not a set of
-    /// settings.
+    /// the same sentence on all three errands.
     /// </summary>
     [Theory]
     [InlineData(StartChoice.Install, "installed")]
     [InlineData(StartChoice.UpdateOrRepair, "change")]
-    [InlineData(StartChoice.CleanReinstall, "removed")]
+    [InlineData(StartChoice.CleanReinstall, "change")]
     public void The_consent_names_what_this_run_does(StartChoice mode, string expected)
     {
         Assert.Contains(
@@ -455,15 +479,15 @@ public sealed class WizardErrandTests
     }
 
     /// <summary>
-    /// One tick over one list. Two boxes on one page teach people to tick boxes, so the
-    /// reinstall consent covers both halves in a single sentence rather than asking twice.
+    /// The install half of a reinstall opens after its removal has run and been consented to in
+    /// the removal wizard; the list on this page holds no removal, so the consent names none.
     /// </summary>
     [Fact]
-    public void A_reinstall_consents_to_both_halves_at_once()
+    public void A_reinstall_consents_to_what_this_page_lists()
     {
         var consent = new InstallerWizardViewModel(StartChoice.CleanReinstall).ConsentText;
 
-        Assert.Contains("removed", consent, StringComparison.Ordinal);
-        Assert.Contains("installed", consent, StringComparison.Ordinal);
+        Assert.DoesNotContain("removed", consent, StringComparison.Ordinal);
+        Assert.Equal(new InstallerWizardViewModel(StartChoice.UpdateOrRepair).ConsentText, consent);
     }
 }

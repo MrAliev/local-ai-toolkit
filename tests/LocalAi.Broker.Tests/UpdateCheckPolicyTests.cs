@@ -110,4 +110,20 @@ public sealed class UpdateCheckPolicyTests : IDisposable
     [InlineData("без вашего запроса")]
     public void The_Russian_disclosure_makes_the_same_promises(string claim) =>
         Assert.Contains(claim, UpdateCheckPolicy.DisclosureRussian, StringComparison.Ordinal);
+
+    /// <summary>
+    /// A broker restarted over a state file it cannot write checks again sooner than the
+    /// interval, so the consent may not promise a ceiling.
+    /// </summary>
+    [Fact]
+    public void The_disclosure_promises_no_ceiling()
+    {
+        Assert.Contains("about once per interval", UpdateCheckPolicy.Disclosure, StringComparison.Ordinal);
+        Assert.DoesNotContain("at most", UpdateCheckPolicy.Disclosure, StringComparison.Ordinal);
+        Assert.Contains(
+            "примерно раз за заданный интервал",
+            UpdateCheckPolicy.DisclosureRussian,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("не чаще", UpdateCheckPolicy.DisclosureRussian, StringComparison.Ordinal);
+    }
 }

@@ -374,9 +374,8 @@
                         <TextBlock Text="{Binding Package.StatusText}" Style="{StaticResource Muted}" Margin="0,10,0,0" />
                     </StackPanel>
 
-                    <!-- Models and memory: the rule that decides what fits, above the list
-                         that follows from it. These were two pages, and the recompute the rule
-                         triggers landed on a page the reader had already left (#257). -->
+                    <!-- Models and memory: the rule for how models may run, above the list of
+                         models setup installs. These were two pages (#257). -->
                     <StackPanel>
                         <StackPanel.Style>
                             <Style TargetType="StackPanel">
@@ -580,13 +579,13 @@
                                              machine-wide question: the client has no setting for
                                              it, so the hook is the only way to move it, and which
                                              folder they land in is answered per repository by
-                                             git config localai.worktreeRoot. Hidden on a row set
-                                             to leave the client alone, where it would describe an
-                                             effect that is not coming. -->
+                                             git config localai.worktreeRoot. Shown only under a
+                                             Claude Code row that configures the client: anywhere
+                                             else it would describe an effect that is not coming. -->
                                         <TextBlock x:Name="WorktreeHint"
                                                    Text="{Binding DataContext.Agents.WorktreePlacementHint, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
                                                    Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,8,0,0"
-                                                   Visibility="{Binding DataContext.Agents.ShowsWorktreePlacement, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay, Converter={StaticResource BoolToVisibility}}" />
+                                                   Visibility="{Binding ShowsWorktreePlacement, Mode=OneWay, Converter={StaticResource BoolToVisibility}}" />
                                         <!-- The gate sits under the combo it depends on, and only
                                              in the Claude Code row: it is a PreToolUse hook in
                                              that client's own settings, and Codex has no such
@@ -786,11 +785,10 @@
                                     Padding="12,4" Margin="8,0,0,0" Click="OnOpenReportFolder" />
                         </Grid>
 
-                        <!-- A run that went wrong opens its log; a run that went right folds it.
-                             Nothing that failed is hidden either way, because every failure is
-                             also a row above. -->
+                        <!-- A run where something did not complete opens its log; a run that went
+                             right folds it. -->
                         <Expander Header="{vm:Label Log}" Margin="0,14,0,0"
-                                  IsExpanded="{Binding HasRunError, Mode=OneWay}">
+                                  IsExpanded="{Binding OpensTheLog, Mode=OneWay}">
                             <local:LogView LogText="{Binding Finish.Progress, Mode=OneWay}" Height="220" Margin="0,6,0,0" />
                         </Expander>
                         <!-- Only after a failed or cancelled run with reversible effects:

@@ -32,8 +32,8 @@ public sealed class DiagnosePageViewModel : ObservableObject
     public ObservableCollection<EnvironmentCheck> Checks { get; } = [];
 
     /// <summary>
-    /// True while the environment is being probed. Detection launches winget, git and ollama
-    /// and takes several seconds; without this the first page sat empty and looked frozen.
+    /// True while the environment is being probed; without this the first page sat empty and
+    /// looked frozen.
     /// </summary>
     public bool IsChecking
     {
@@ -183,9 +183,11 @@ public sealed class DiagnosePageViewModel : ObservableObject
                 ? CheckStatus.Ok
                 : CheckStatus.Warning,
             diagnosis.Network.State == ObservationState.Available
-                ? InstallerCulture.Pick("reachable", "доступна")
+                ? InstallerCulture.Pick(
+                    "connected to a network (internet access is not tested here)",
+                    "подключение к сети есть (доступ в интернет здесь не проверяется)")
                 : diagnosis.Network.Reason ??
-                    InstallerCulture.Pick("not reachable", "недоступна")));
+                    InstallerCulture.Pick("no network connection", "подключения к сети нет")));
 
         rows.Add(new EnvironmentCheck(
             InstallerCulture.Pick("Existing LocalAi", "Установленный LocalAi"),
@@ -239,16 +241,35 @@ public sealed class DiagnosePageViewModel : ObservableObject
     private static string Describe(GpuAdapterSnapshot adapter) =>
         GpuAdapterDisplay.Describe(adapter);
 
+    /// <summary>
+    /// Failed is a command found on disk whose version probe did not answer; the detector always
+    /// gives its path. It blocks nothing, so it is a warning rather than "not found".
+    /// </summary>
     private static EnvironmentCheck Describe(DependencySnapshot snapshot, string purpose) =>
-        new(
-            snapshot.Name,
-            snapshot.State == DependencyState.Detected ? CheckStatus.Ok : CheckStatus.Missing,
-            snapshot.State == DependencyState.Detected
-                ? string.Join(
+        snapshot.State switch
+        {
+            DependencyState.Detected => new(
+                snapshot.Name,
+                CheckStatus.Ok,
+                string.Join(
                     " — ",
                     new[] { snapshot.Version, snapshot.ExecutablePath }
-                        .Where(part => !string.IsNullOrWhiteSpace(part)))
-                : snapshot.Reason is { Length: > 0 } reason
+                        .Where(part => !string.IsNullOrWhiteSpace(part)))),
+            DependencyState.Failed => new(
+                snapshot.Name,
+                CheckStatus.Warning,
+                string.Format(
+                    InstallerCulture.Pick(
+                        "Found at {0}, but it did not report a version ({1}). {2}",
+                        "Найден в {0}, но не сообщил версию ({1}). {2}"),
+                    snapshot.ExecutablePath,
+                    snapshot.Reason,
+                    purpose)),
+            _ => new(
+                snapshot.Name,
+                CheckStatus.Missing,
+                snapshot.Reason is { Length: > 0 } reason
                     ? $"{purpose} ({reason})"
-                    : purpose);
+                    : purpose),
+        };
 }

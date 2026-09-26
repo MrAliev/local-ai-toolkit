@@ -44,7 +44,7 @@ public sealed record UpdateCheckPolicy(
     /// </summary>
     public const string Disclosure =
         "Fetches the latest release manifest and its signature from GitHub over anonymous " +
-        "HTTPS, at most once per interval, and verifies the signature before believing the " +
+        "HTTPS, about once per interval, and verifies the signature before believing the " +
         "version. Nothing about this machine is sent: no identifier, no account, no usage. " +
         "Nothing is ever downloaded or installed without you asking for it.";
 
@@ -59,7 +59,7 @@ public sealed record UpdateCheckPolicy(
     /// </summary>
     public const string DisclosureRussian =
         "Получает от GitHub последний манифест релиза и его подпись анонимным " +
-        "запросом по HTTPS, не чаще одного раза за заданный интервал, и " +
+        "запросом по HTTPS, примерно раз за заданный интервал, и " +
         "проверяет подпись, прежде чем принять указанную в манифесте " +
         "версию. Об этом компьютере ничего не отправляется: ни " +
         "идентификатора, ни учётной записи, ни данных об использовании. " +

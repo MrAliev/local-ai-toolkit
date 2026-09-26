@@ -38,6 +38,12 @@ public sealed class UpdateCheckService(
     private readonly TimeProvider timeProvider = timeProvider ?? TimeProvider.System;
 
     /// <summary>
+    /// When this process last ran a check. The throttle is on disk, and a state file that cannot
+    /// be written or read would otherwise let every pass check again.
+    /// </summary>
+    private DateTimeOffset? lastAttemptUtc;
+
+    /// <summary>
     /// One pass: read the consent, decide whether a check is due, and record what it found.
     /// Returns whether a check actually ran, which is what the tests assert on and what makes
     /// "did this talk to the network" a question with an answer.
@@ -47,6 +53,12 @@ public sealed class UpdateCheckService(
         var policy = new UpdateCheckPolicyStore(runtimeRoot).Read();
         var stateStore = new UpdateCheckStateStore(runtimeRoot);
         var state = stateStore.Read();
+        if (lastAttemptUtc is { } attempted &&
+            (state.CheckedAtUtc is not { } recorded || recorded < attempted))
+        {
+            state = state with { CheckedAtUtc = attempted };
+        }
+
         var now = timeProvider.GetUtcNow();
         // The seed is the runtime root: stable for this installation, different between
         // machines, and nothing anybody would call an identifier — it never leaves the disk.
@@ -75,6 +87,7 @@ public sealed class UpdateCheckService(
             };
         }
 
+        lastAttemptUtc = now;
         try
         {
             stateStore.Write(result);
@@ -82,9 +95,8 @@ public sealed class UpdateCheckService(
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException)
         {
-            // An unwritable state file costs this pass its record, and the next pass will find
-            // the check due again — which is the right outcome for a disk that is full or a
-            // directory somebody is holding.
+            // An unwritable state file costs this pass its record; the attempt above still
+            // holds this process to the interval.
             return true;
         }
 

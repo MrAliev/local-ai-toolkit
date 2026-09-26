@@ -485,6 +485,12 @@ public sealed class AgentOption(string Agent, AgentChoice Choice) : ObservableOb
     /// </summary>
     public bool HasTextSearchGate =>
         string.Equals(Agent, "claude", StringComparison.Ordinal);
+
+    /// <summary>
+    /// Whether the worktree sentence belongs under this row: only Claude Code's settings get the
+    /// worktree hooks, and only a row that configures the client writes them.
+    /// </summary>
+    public bool ShowsWorktreePlacement => HasTextSearchGate && Choice is not AgentChoice.NoChange;
 }
 
 /// <summary>

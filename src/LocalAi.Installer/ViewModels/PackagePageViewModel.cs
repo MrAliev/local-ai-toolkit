@@ -33,6 +33,7 @@ public sealed class PackagePageViewModel : ObservableObject
         Resolving,
         AlreadyInstalled,
         Verified,
+        VerifiedInFolder,
         Incompatible,
         Unavailable,
     }
@@ -131,6 +132,12 @@ public sealed class PackagePageViewModel : ObservableObject
             InstallerCulture.Pick(
                 "Release {0} verified, {1:N0} MB to download.",
                 "Релиз {0} проверен, скачать {1:N0} МБ."),
+            statusTag,
+            statusMegabytes),
+        StatusWording.VerifiedInFolder => string.Format(
+            InstallerCulture.Pick(
+                "Release {0} verified, {1:N0} MB to copy from the folder.",
+                "Релиз {0} проверен, из папки будет скопировано {1:N0} МБ."),
             statusTag,
             statusMegabytes),
         StatusWording.Incompatible => statusReason,
@@ -339,7 +346,11 @@ public sealed class PackagePageViewModel : ObservableObject
         }
         else
         {
-            SetStatus(StatusWording.Verified, tag, megabytes: release.Manifest.PackageSize / (1024d * 1024));
+            // A folder feed copies the package from disk; the same test as Source.
+            SetStatus(
+                SourceFolder.Length > 0 ? StatusWording.VerifiedInFolder : StatusWording.Verified,
+                tag,
+                megabytes: release.Manifest.PackageSize / (1024d * 1024));
         }
 
         State = PackageSourceState.Selected;

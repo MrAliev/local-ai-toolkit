@@ -186,6 +186,12 @@ public sealed class InstallerWizardViewModel : ObservableObject
     private bool isComplete;
     private bool hasRunError;
 
+    /// <summary>
+    /// A choice from the confirm page the run could not apply — the update check or the PATH
+    /// entry — without failing the installation.
+    /// </summary>
+    private bool choiceNotApplied;
+
     /// <summary>The clients this run actually wrote to, which is what has to be restarted.</summary>
     private readonly List<string> configuredAgents = [];
     private readonly List<ClientRunOutcome> clientOutcomes = [];
@@ -281,8 +287,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             () => HasInterruptedRun && !isRunning,
             ReportUnexpectedError);
 
-        // Relaxing the residency policy immediately widens what the models page can offer,
-        // so the two pages stay consistent instead of contradicting each other.
+        // The models group names the rule it sits under, so a rule change reaches it at once.
         residency.PropertyChanged += (_, args) =>
         {
             if (args.PropertyName == nameof(ResidencyPageViewModel.Policy))
@@ -347,6 +352,12 @@ public sealed class InstallerWizardViewModel : ObservableObject
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "LocalAi-installer-logs");
 
+    /// <summary>
+    /// The runtime root the stored settings are read from and written into, and whose existence
+    /// the review asks about. One value, so the review and the writes cannot disagree.
+    /// </summary>
+    internal string RuntimeRoot { get; init; } = ModelResidencyPolicyStore.DefaultRuntimeRoot;
+
     public RelayCommand BackCommand { get; }
 
     public RelayCommand NextCommand { get; }
@@ -402,18 +413,14 @@ public sealed class InstallerWizardViewModel : ObservableObject
 
     /// <summary>
     /// The consent, in the words of the run it consents to. One tick over one list: two boxes
-    /// on one page train people to tick boxes.
+    /// on one page train people to tick boxes. A clean reinstall reaches this page after its
+    /// removal has run, so the list holds no removal to consent to.
     /// </summary>
     public string ConsentText => Mode switch
     {
-        StartChoice.UpdateOrRepair => InstallerCulture.Pick(
+        StartChoice.UpdateOrRepair or StartChoice.CleanReinstall => InstallerCulture.Pick(
             "I have read what will change and want to continue.",
             "Я понимаю, что изменится, и хочу продолжить."),
-        StartChoice.CleanReinstall => InstallerCulture.Pick(
-            "I have read what will be removed and what will be installed, and want to " +
-            "continue.",
-            "Я понимаю, что будет удалено и что установлено, и хочу " +
-            "продолжить."),
         _ => InstallerCulture.Pick(
             "I have read what will be installed and want to continue.",
             "Я понимаю, что будет установлено, и хочу продолжить."),
@@ -501,8 +508,10 @@ public sealed class InstallerWizardViewModel : ObservableObject
             CurrentPage,
             IsUpdate,
             ActionText,
-            hasRunError,
-            isChecking: diagnose.IsChecking);
+            hasRunError || choiceNotApplied,
+            isChecking: diagnose.IsChecking,
+            isReleaseFolded: IsReleaseFolded,
+            areSettingsFolded: AreSettingsFolded);
 
     public string StepStatus => string.Format(
         InstallerCulture.Pick("Step {0} of {1}", "Шаг {0} из {1}"),
@@ -518,6 +527,9 @@ public sealed class InstallerWizardViewModel : ObservableObject
     public bool IsComplete => isComplete;
 
     public bool HasRunError => hasRunError;
+
+    /// <summary>Whether the finish page opens its log.</summary>
+    public bool OpensTheLog => hasRunError || choiceNotApplied;
 
     public bool IsCanceled => wasCancelled;
 
@@ -662,7 +674,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
     {
         try
         {
-            var runtimeRoot = ModelResidencyPolicyStore.DefaultRuntimeRoot;
+            var runtimeRoot = RuntimeRoot;
             if (!Directory.Exists(runtimeRoot))
             {
                 return;
@@ -886,6 +898,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         isRunning = true;
         isComplete = false;
         hasRunError = false;
+        choiceNotApplied = false;
         wasCancelled = false;
         // A second attempt after a failure reports on itself, not on the one before it.
         configuredAgents.Clear();
@@ -1063,7 +1076,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 : InstallerRunOutcome.Completed);
             AppendRollbackAvailability(report);
             finish.Progress = report.ToString().Trim();
-            SetRunLog(report.ToString(), false);
+            SetRunLog(report.ToString());
             CurrentPage = InstallerPage.Finish;
             return !hasRunError;
         }
@@ -1101,7 +1114,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 failedActions));
             BuildFinishResults(requested, successfulActions, failedActions);
             finish.Progress = report.ToString().Trim();
-            SetRunLog(report.ToString(), false);
+            SetRunLog(report.ToString());
             CurrentPage = InstallerPage.Finish;
             return false;
         }
@@ -1338,10 +1351,9 @@ public sealed class InstallerWizardViewModel : ObservableObject
         OnPropertyChanged(nameof(ProgressText));
     }
 
-    public void SetRunLog(string message, bool requiresRestart)
+    public void SetRunLog(string message)
     {
         runLogMessage = message;
-        finish.RequiresRestart = requiresRestart;
         finish.RunLog = message;
         OnPropertyChanged(nameof(RunLog));
     }
@@ -1393,6 +1405,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 report,
                 "Claude Code hooks: skipped, because the LocalAi package was not installed " +
                 "and this run did not get far enough to change it.");
+            hooksOutcome = new("Claude Code", ClientRunState.Skipped);
             hasRunError = true;
             return;
         }
@@ -1484,6 +1497,11 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 report,
                 "Client applications: skipped, because the LocalAi package was not installed " +
                 "and the registration would point at a launcher that is not there.");
+            for (var index = 0; index < clientOutcomes.Count; index++)
+            {
+                clientOutcomes[index] = clientOutcomes[index] with { State = ClientRunState.Skipped };
+            }
+
             hasRunError = true;
             return;
         }
@@ -1604,13 +1622,13 @@ public sealed class InstallerWizardViewModel : ObservableObject
             }
 
             var recordPath = Path.Combine(
-                ModelResidencyPolicyStore.DefaultRuntimeRoot,
+                RuntimeRoot,
                 OllamaLaunchRecord.FileName);
             var priorRecord = CaptureFileState(recordPath);
             recordStep = JournalBegin(
                 InstallerRunEffectKind.OllamaLaunchRecord,
                 "Ollama start-on-demand record");
-            new OllamaLaunchRecordStore(ModelResidencyPolicyStore.DefaultRuntimeRoot)
+            new OllamaLaunchRecordStore(RuntimeRoot)
                 .Save(path, installed.DetectedVersion);
             JournalComplete(
                 recordStep,
@@ -1634,7 +1652,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         string? residencyStep = null;
         try
         {
-            var runtimeRoot = ModelResidencyPolicyStore.DefaultRuntimeRoot;
+            var runtimeRoot = RuntimeRoot;
             var policyPath = RuntimeDirectories.SettingsFileForWriting(
                 runtimeRoot,
                 BrokerPolicy.FileName);
@@ -1696,13 +1714,16 @@ public sealed class InstallerWizardViewModel : ObservableObject
     /// A failure here never fails the run. Not knowing whether a newer release exists is a
     /// smaller problem than an installation reported as failed, and the setting can be changed
     /// afterwards with one command — which the log names.
+    ///
+    /// Internal so a test can make the write fail: no test can reach it through a run that
+    /// installed a package.
     /// </summary>
-    private void ApplyUpdateCheckPolicy(StringBuilder report)
+    internal void ApplyUpdateCheckPolicy(StringBuilder report)
     {
         string? step = null;
         try
         {
-            var runtimeRoot = ModelResidencyPolicyStore.DefaultRuntimeRoot;
+            var runtimeRoot = RuntimeRoot;
             var policyPath = RuntimeDirectories.SettingsFileForWriting(
                 runtimeRoot,
                 UpdateCheckPolicy.FileName);
@@ -1743,6 +1764,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
             JournalFail(step, exception.Message);
+            choiceNotApplied = true;
             AppendLog(
                 report,
                 $"Could not store the update check setting: {exception.Message}. The " +
@@ -1867,30 +1889,50 @@ public sealed class InstallerWizardViewModel : ObservableObject
         if (!package.HasPackage)
         {
             builder.AppendLine();
-            // What the run will actually do, which on an update is usually nothing at all:
-            // prerequisites are already installed and nothing is ticked, so the shipped
-            // "only the prerequisites above will be applied" told the reader about work that
-            // was not going to happen, on the page whose whole purpose is to say what is
-            // (#264).
-            var remaining = dependencies.Dependencies
-                .Any(dependency => dependency.IsConsented && dependency.IsInstallable)
-                ? InstallerCulture.Pick(
+            // What the run will still do (#264). The settings are written whenever the runtime
+            // root exists, by the same Directory.Exists the two writers ask.
+            var prerequisites = dependencies.Dependencies
+                .Any(dependency => dependency.IsConsented && dependency.IsInstallable);
+            var remaining = (prerequisites, Directory.Exists(RuntimeRoot)) switch
+            {
+                (true, true) => InstallerCulture.Pick(
+                    "The prerequisites above will still be installed, and the video memory and " +
+                    "update check settings stored.",
+                    "Компоненты, перечисленные выше, всё равно будут установлены, а настройки " +
+                    "видеопамяти и проверки обновлений — сохранены."),
+                (true, false) => InstallerCulture.Pick(
                     "Only the prerequisites above will be applied.",
-                    "Будут применены только компоненты, перечисленные выше.")
-                : InstallerCulture.Pick(
+                    "Будут применены только компоненты, перечисленные выше."),
+                (false, true) => InstallerCulture.Pick(
+                    "The video memory and update check settings will still be stored.",
+                    "Настройки видеопамяти и проверки обновлений всё равно будут сохранены."),
+                (false, false) => InstallerCulture.Pick(
                     "Nothing will be applied.",
-                    "Ничего применено не будет.");
+                    "Ничего применено не будет."),
+            };
+            // The button under the list exists only while the release step is folded; anywhere
+            // else that step is in the rail before this one.
+            var route = IsReleaseFolded
+                ? InstallerCulture.Pick(
+                    "Choose a release below, or point the installer at a folder holding one, " +
+                    "and verify it before continuing.",
+                    "Выберите релиз ниже или укажите папку с релизом и проверьте его, прежде " +
+                    "чем продолжать.")
+                : string.Format(
+                    InstallerCulture.Pick(
+                        "Go back to the {0} step to choose a release or a folder holding one.",
+                        "Вернитесь к шагу «{0}», чтобы выбрать релиз или папку с ним."),
+                    WizardText.Steps().First(step => step.Page == InstallerPage.Package).Title);
             builder.AppendLine(string.Format(
                 InstallerCulture.Pick(
                     "Warning: no release has been verified, so LocalAi itself will not be " +
-                    "installed and the client applications will be left unconfigured. {0} " +
-                    "Choose a release below, or point the installer at a folder holding one, " +
-                    "and verify it before continuing.",
-                    "Внимание: ни один релиз не проверен, поэтому сам LocalAi " +
-                    "установлен не будет, а клиентские приложения останутся " +
-                    "ненастроенными. {0} Выберите релиз ниже или укажите папку с релизом " +
-                    "и проверьте его, прежде чем продолжать."),
-                remaining));
+                    "installed, and no models, client applications or PATH entry will be set " +
+                    "up. {0} {1}",
+                    "Внимание: ни один релиз не проверен, поэтому сам LocalAi установлен не " +
+                    "будет, а модели, клиентские приложения и запись в PATH настроены не " +
+                    "будут. {0} {1}"),
+                remaining,
+                route));
         }
 
         if (builder.Length > 0)
@@ -1946,6 +1988,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         OnPropertyChanged(nameof(IsRunning));
         OnPropertyChanged(nameof(IsComplete));
         OnPropertyChanged(nameof(HasRunError));
+        OnPropertyChanged(nameof(OpensTheLog));
         OnPropertyChanged(nameof(ReviewText));
         OnPropertyChanged(nameof(ReviewGroups));
         OnPropertyChanged(nameof(CanRollback));
@@ -2032,7 +2075,8 @@ public sealed class InstallerWizardViewModel : ObservableObject
         finish.NextSteps = InstallerRunMessages.NextSteps(new InstallerRunMessageFacts(
             WasCancelled: wasCancelled,
             HasRunError: hasRunError,
-            NoValidatedModels: ModelRuns.Count > 0 &&
+            // A cancelled run's rows are cancelled or not reached, not refused.
+            NoValidatedModels: !wasCancelled && ModelRuns.Count > 0 &&
                 !ModelRuns.Any(model => model.State is ModelRunState.Ready or ModelRunState.ReadyWithLimitations),
             HasRollbackReport: finish.HasRollbackReport,
             CanRollback: CanRollback,
@@ -2125,8 +2169,8 @@ public sealed class InstallerWizardViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Re-applies the last recommendation under the current residency choice, so relaxing
-    /// the policy immediately widens what the models page offers.
+    /// Re-applies the last recommendation under the current residency choice, so the models
+    /// group names the rule now chosen.
     /// </summary>
     public void OnResidencyChanged()
     {
@@ -2290,10 +2334,9 @@ public sealed class InstallerWizardViewModel : ObservableObject
     {
         try
         {
-            var snapshot = new ExistingLocalAiInspector(new SystemFileSystemProbe())
+            return ActiveVersionDirectory(new ExistingLocalAiInspector(new SystemFileSystemProbe())
                 .Inspect(Environment.GetFolderPath(
-                    Environment.SpecialFolder.LocalApplicationData));
-            return snapshot.Version;
+                    Environment.SpecialFolder.LocalApplicationData)));
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -2302,13 +2345,21 @@ public sealed class InstallerWizardViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Only a recognised installation: the package installer refuses an unrecognised one
+    /// whatever version it carries.
+    /// </summary>
+    internal static string? ActiveVersionDirectory(ExistingLocalAiSnapshot snapshot) =>
+        snapshot.State == ExistingLocalAiState.Compatible ? snapshot.Version : null;
+
+    /// <summary>
     /// Re-resolves a request left at "latest" immediately before installing it.
     ///
     /// The package page checks the release when it is opened, and a wizard can sit on the
     /// confirmation step for a long time — long enough for a release to be published in
     /// between. Installing what was newest when the window opened, under a field that still
     /// says "latest", is the one outcome that word rules out. A specific tag is left alone: it
-    /// was asked for by name.
+    /// was asked for by name. So is a run with no verified release: its review said LocalAi will
+    /// not be installed, and a re-check must not turn that into an installation.
     /// </summary>
     /// <summary>
     /// Internal rather than private so a test can drive it: reaching it through RunAsync means
@@ -2319,7 +2370,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         StringBuilder report,
         CancellationToken cancellationToken)
     {
-        if (!package.WantsLatest)
+        if (!package.WantsLatest || !package.HasPackage)
         {
             return;
         }
@@ -2436,6 +2487,14 @@ public sealed class InstallerWizardViewModel : ObservableObject
             return string.Empty;
         }
 
+        // The entry is added only after the package installs.
+        if (!package.HasPackage)
+        {
+            return InstallerCulture.Pick(
+                "PATH: unchanged, because LocalAi will not be installed.",
+                "PATH: не меняется, потому что LocalAi не будет установлен.");
+        }
+
         var directory = Path.Combine(InstallationLayout.CreateDefault().BinRoot, "launcher");
         return LauncherPathRegistration.Contains(LauncherPathRegistration.Current(), directory)
             ? string.Format(
@@ -2483,16 +2542,20 @@ public sealed class InstallerWizardViewModel : ObservableObject
                     ? $"PATH: {directory} added for this account. A console already open keeps " +
                         "the path it started with; a new one finds localai-launcher.exe."
                     : $"PATH: {directory} was already there, nothing changed.");
+            // Not reversible, and no rollback procedure exists for it: the launcher directory is
+            // shared by every version, so after an undone update the entry still leads to a
+            // working launcher.
             JournalComplete(
                 step,
                 added ? "Added to the user PATH." : "Already present; nothing written.",
-                isReversible: true);
+                isReversible: false);
         }
         catch (Exception exception) when (
             exception is System.Security.SecurityException or InvalidOperationException or
                 InstallationLayoutException)
         {
             JournalFail(step, exception.Message);
+            choiceNotApplied = true;
             pathMark = RunMark.Failed;
             pathOutcome = PathOutcome.Failed;
             AppendLog(
@@ -2536,6 +2599,8 @@ public sealed class InstallerWizardViewModel : ObservableObject
         // 208 MB" for the whole of a two-minute preflight, which reads as a hung installer with
         // nothing to press but Cancel.
         var downloadFinished = false;
+        // The same test CreateFeed makes: a folder feed copies the package from disk.
+        var fromFolder = !string.IsNullOrWhiteSpace(package.SourceFolder);
         var downloadProgress = new Progress<long>(bytes =>
         {
             if (downloadFinished)
@@ -2546,13 +2611,25 @@ public sealed class InstallerWizardViewModel : ObservableObject
             SetProgress(
                 40 + (int)(50 * Math.Clamp(bytes, 0, total) / Math.Max(total, 1)),
                 string.Format(
-                    InstallerCulture.Pick(
-                        "Downloading the LocalAi package: {0:N0} of {1:N0} MB",
-                        "Скачиваю пакет LocalAi: {0:N0} из {1:N0} МБ"),
+                    fromFolder
+                        ? InstallerCulture.Pick(
+                            "Copying the LocalAi package from the folder: {0:N0} of {1:N0} MB",
+                            "Копирую пакет LocalAi из папки: {0:N0} из {1:N0} МБ")
+                        : InstallerCulture.Pick(
+                            "Downloading the LocalAi package: {0:N0} of {1:N0} MB",
+                            "Скачиваю пакет LocalAi: {0:N0} из {1:N0} МБ"),
                     bytes / (1024d * 1024),
                     total / (1024d * 1024)));
         });
-        SetProgress(40, InstallerCulture.Pick("Downloading the LocalAi package...", "Скачиваю пакет LocalAi…"));
+        SetProgress(
+            40,
+            fromFolder
+                ? InstallerCulture.Pick(
+                    "Copying the LocalAi package from the folder...",
+                    "Копирую пакет LocalAi из папки…")
+                : InstallerCulture.Pick(
+                    "Downloading the LocalAi package...",
+                    "Скачиваю пакет LocalAi…"));
 
         var service = new ReleaseInstallService(
             CreateFeed(),
@@ -2643,6 +2720,17 @@ public sealed class InstallerWizardViewModel : ObservableObject
             JournalFail(modelsStep ?? packageStep, "Cancelled before it could finish.");
             throw;
         }
+        catch (LocalAiPackageInstallationException exception) when (packageInstalled)
+        {
+            // Activation had already reported the package installed, so this came from the model
+            // step: the package keeps its row and gets what an installed package gets.
+            JournalFail(modelsStep, exception.Message);
+            AppendLog(report, $"Local models: {exception.Message}");
+            hasRunError = true;
+            RegisterUninstallEntry(report, resolved.Manifest.ReleaseVersion);
+            RegisterLauncherPath(report);
+            return;
+        }
         catch (LocalAiPackageInstallationException exception)
         {
             JournalFail(packageStep, exception.Message);
@@ -2653,7 +2741,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             // defect. It is caught here so the advice can name the directory and say what is
             // in it, and so the run still finishes its own reporting instead of aborting.
             packageInstalled = false;
-            packageOutcome = new(PackageOutcomeKind.Refused, Reason: exception.Message);
+            packageOutcome = PackageOutcome.FromInstallationFailure(exception.Message);
             AppendLog(report, $"LocalAi package: {exception.Message}");
             var layout = InstallationLayout.CreateDefault();
             var advice = InstallationFailureAdvice.ForLayoutFailure(
@@ -2932,8 +3020,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         {
             SetRunLog(
                 $"WinGet is unavailable; install {displayName} manually from " +
-                $"{dependency.OfficialInstallerUri}.",
-                false);
+                $"{dependency.OfficialInstallerUri}.");
             return false;
         }
 
@@ -2945,8 +3032,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         {
             SetRunLog(
                 $"{displayName} was not installed. {winget.Message} You can install it " +
-                $"yourself from {dependency.OfficialInstallerUri}.",
-                false);
+                $"yourself from {dependency.OfficialInstallerUri}.");
             return false;
         }
 
@@ -2978,8 +3064,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         if (result.ExitCode is not 0)
         {
             SetRunLog(
-                $"{displayName} installation failed with exit code {result.ExitCode}.",
-                false);
+                $"{displayName} installation failed with exit code {result.ExitCode}.");
             return false;
         }
 
@@ -2993,7 +3078,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
     {
         if (dependency.PackageVersion is not { Length: > 0 } packageVersion)
         {
-            SetRunLog($"{displayName} has no pinned package version.", false);
+            SetRunLog($"{displayName} has no pinned package version.");
             return false;
         }
 
@@ -3001,8 +3086,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             { State: DependencyState.Detected, ExecutablePath: { } npmPath })
         {
             SetRunLog(
-                $"npm is unavailable; install Node.js 20 before {displayName}.",
-                false);
+                $"npm is unavailable; install Node.js 20 before {displayName}.");
             return false;
         }
 
@@ -3014,8 +3098,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         if (result.ExitCode is not 0)
         {
             SetRunLog(
-                $"{displayName} installation failed with exit code {result.ExitCode}.",
-                false);
+                $"{displayName} installation failed with exit code {result.ExitCode}.");
             return false;
         }
 
@@ -3037,8 +3120,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             {
                 SetRunLog(
                     "SCIP Python was installed, but npm did not return a valid global " +
-                    "package directory.",
-                    false);
+                    "package directory.");
                 return false;
             }
 
@@ -3053,8 +3135,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 InvalidOperationException or JsonException)
             {
                 SetRunLog(
-                    $"SCIP Python Windows compatibility patch failed: {exception.Message}",
-                    false);
+                    $"SCIP Python Windows compatibility patch failed: {exception.Message}");
                 return false;
             }
 
@@ -3065,8 +3146,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             if (scipPythonPath is null || !File.Exists(scipPythonPath))
             {
                 SetRunLog(
-                    "SCIP Python was patched, but its npm command shim was not found.",
-                    false);
+                    "SCIP Python was patched, but its npm command shim was not found.");
                 return false;
             }
 
@@ -3080,8 +3160,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 !versionOutput.Contains(packageVersion, StringComparison.Ordinal))
             {
                 SetRunLog(
-                    "SCIP Python was patched, but its executable verification failed.",
-                    false);
+                    "SCIP Python was patched, but its executable verification failed.");
                 return false;
             }
         }

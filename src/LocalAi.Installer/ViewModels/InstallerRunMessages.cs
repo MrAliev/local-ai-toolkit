@@ -51,8 +51,8 @@ internal static class InstallerRunMessages
         if (outcome.NoValidatedModels)
         {
             next.Add(InstallerCulture.Pick(
-                "No selected model passed validation. For a memory refusal, choose a smaller model or context on the next run; for a technical failure, check its details before retrying. The memory policy has not been relaxed.",
-                "Ни одна выбранная модель не прошла проверку. При нехватке памяти в следующем запуске выберите меньшую модель или контекст; при технической ошибке изучите её сведения перед повторной попыткой. Политика памяти не ослаблялась."));
+                "No selected model passed validation. If a model was refused for lack of memory, choose a smaller model or context on the next run; if its check failed, read its details above before retrying.",
+                "Ни одна выбранная модель не прошла проверку. Если модели отказано из-за нехватки памяти, в следующем запуске выберите меньшую модель или контекст; если проверка завершилась ошибкой, прочитайте её сведения выше перед повторной попыткой."));
         }
 
         if (outcome.HasRollbackReport)
