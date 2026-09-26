@@ -20,9 +20,8 @@ namespace LocalAi.ReleaseSigner;
 /// tag is what other people's installers resolve, and taking one back is not a thing you do
 /// quietly.
 ///
-/// Signing stays here rather than moving to CI, which is a decision recorded in
-/// docs/release-signing-runbook.md and not a gap: the private key exists on one machine on
-/// purpose, and a secrets store would be a second place it can leak from.
+/// Signing stays here rather than moving to CI on purpose: the private key exists on one
+/// machine, and a secrets store would be a second place it can leak from.
 /// </summary>
 public sealed class ReleaseCommand
 {
