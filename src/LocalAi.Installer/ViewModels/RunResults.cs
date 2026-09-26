@@ -260,8 +260,8 @@ public static class RunResults
             "state could not be determined",
             "состояние определить не удалось"),
         LocalAiPackageInstallStatus.Busy => InstallerCulture.Pick(
-            "another install or uninstall was running",
-            "шла другая установка или деинсталляция"),
+            "not installed: another LocalAi installation or activation was under way",
+            "не установлен: шла другая установка или активация LocalAi"),
         _ => status.ToString(),
     };
 

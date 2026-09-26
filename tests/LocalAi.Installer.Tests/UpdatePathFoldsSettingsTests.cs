@@ -203,7 +203,7 @@ public sealed class UpdatePathFoldsSettingsTests
     public void The_install_lead_stops_describing_a_wait_once_there_is_a_table()
     {
         var wizard = new InstallerWizardViewModel(StartChoice.Install);
-        Assert.Contains("Starting winget", wizard.StepDescription, StringComparison.Ordinal);
+        Assert.Contains("Checking this computer", wizard.StepDescription, StringComparison.Ordinal);
 
         wizard.Diagnose.IsChecking = false;
 

@@ -78,10 +78,8 @@ public static class WizardText
             // The shipped line stopped being true the moment results appeared, so it says one
             // thing while the probe runs and another once there is a table to read.
             InstallerPage.Diagnose when isChecking => InstallerCulture.Pick(
-                "Checking this computer. Starting winget, git and ollama to see what is " +
-                "installed — this takes a few seconds.",
-                "Проверяю этот компьютер. Запускаю winget, git и ollama, чтобы увидеть, что " +
-                "установлено, — это займёт несколько секунд."),
+                "Checking this computer and the programs LocalAi uses.",
+                "Проверяю этот компьютер и программы, которые использует LocalAi."),
             InstallerPage.Diagnose => InstallerCulture.Pick(
                 "What was found on this computer. Items marked as a warning still allow " +
                 "installation.",

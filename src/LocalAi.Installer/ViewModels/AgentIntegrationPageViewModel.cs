@@ -151,10 +151,10 @@ public sealed class AgentIntegrationPageViewModel : ObservableObject
     /// deliberately, in both states it can be in.
     ///
     /// While the box is offered it is the person's answer. While it is not, it is whatever the
-    /// machine already has, so withdrawing the servers writes nothing to <c>settings.json</c>:
-    /// it neither quietly withdraws a refusal that is registered nor quietly installs one. That
-    /// is also why this is a fall-back rather than an assignment — flipping the combo away and
-    /// back leaves the person's answer where they left it.
+    /// machine already has, so withdrawing the servers neither quietly withdraws a refusal that
+    /// is registered nor quietly installs one. That is also why this is a fall-back rather than
+    /// an assignment — flipping the combo away and back leaves the person's answer where they
+    /// left it.
     /// </summary>
     public bool RefusesTextSearch
     {
@@ -206,20 +206,22 @@ public sealed class AgentIntegrationPageViewModel : ObservableObject
             (true, true) => InstallerCulture.Pick(
                 "Text search in Claude Code: refused. grep, rg, findstr, Select-String, Grep " +
                 "and Glob are turned down before they run, including the ones you type. " +
-                "Recorded in {0}.",
+                "Reading a whole log is refused too. Recorded in {0}.",
                 "Текстовый поиск в Claude Code: отклоняется. grep, rg, findstr, " +
                 "Select-String, Grep и Glob не доходят до запуска, включая набранные вами. " +
-                "Записано в {0}."),
+                "Чтение лога целиком тоже отклоняется. Записано в {0}."),
             (true, false) => InstallerCulture.Pick(
                 "Text search in Claude Code: refused (left alone now — this run changes it). " +
                 "grep, rg, findstr, Select-String, Grep and Glob are turned down before they " +
-                "run, including the ones you type. The line goes into {0}.",
+                "run, including the ones you type. Reading a whole log is refused too. The " +
+                "line goes into {0}.",
                 "Текстовый поиск в Claude Code: отклоняется (сейчас не трогается — этот " +
                 "запуск это меняет). grep, rg, findstr, Select-String, Grep и Glob не доходят " +
-                "до запуска, включая набранные вами. Строка добавляется в {0}."),
+                "до запуска, включая набранные вами. Чтение лога целиком тоже отклоняется. " +
+                "Строка добавляется в {0}."),
             (false, false) => InstallerCulture.Pick(
-                "Text search in Claude Code: left alone. Nothing is written to {0}.",
-                "Текстовый поиск в Claude Code: не трогается. В {0} ничего не записывается."),
+                "Text search in Claude Code: left alone. No refusal is added to {0}.",
+                "Текстовый поиск в Claude Code: не трогается. Отказ в {0} не добавляется."),
             (false, true) => InstallerCulture.Pick(
                 "Text search in Claude Code: left alone (refused now — this run changes it). " +
                 "LocalAi's line is taken out of {0}; anything else in that file stays.",

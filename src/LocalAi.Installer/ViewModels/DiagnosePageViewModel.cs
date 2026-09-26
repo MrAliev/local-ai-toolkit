@@ -32,8 +32,8 @@ public sealed class DiagnosePageViewModel : ObservableObject
     public ObservableCollection<EnvironmentCheck> Checks { get; } = [];
 
     /// <summary>
-    /// True while the environment is being probed. Detection launches winget, git and ollama
-    /// and takes several seconds; without this the first page sat empty and looked frozen.
+    /// True while the environment is being probed; without this the first page sat empty and
+    /// looked frozen.
     /// </summary>
     public bool IsChecking
     {
@@ -183,9 +183,11 @@ public sealed class DiagnosePageViewModel : ObservableObject
                 ? CheckStatus.Ok
                 : CheckStatus.Warning,
             diagnosis.Network.State == ObservationState.Available
-                ? InstallerCulture.Pick("reachable", "доступна")
+                ? InstallerCulture.Pick(
+                    "connected to a network (internet access is not tested here)",
+                    "подключение к сети есть (доступ в интернет здесь не проверяется)")
                 : diagnosis.Network.Reason ??
-                    InstallerCulture.Pick("not reachable", "недоступна")));
+                    InstallerCulture.Pick("no network connection", "подключения к сети нет")));
 
         rows.Add(new EnvironmentCheck(
             InstallerCulture.Pick("Existing LocalAi", "Установленный LocalAi"),
