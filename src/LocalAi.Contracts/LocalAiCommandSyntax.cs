@@ -85,8 +85,8 @@ public static class LocalAiCommandSyntax
     public const string AgentWorktreeRemove =
         "localai agent worktree remove [path]";
 
-    // The form the top-level listing carries. The two above are what the refusals carry, so a
-    // message can never name a form the dispatcher will not accept.
+    // What the refusals for a missing or unknown operation print. The listing carries the two
+    // forms above instead, one line per operation.
     public const string AgentWorktree =
         "localai agent worktree <create|remove> [branch|path] [--root dir]";
 

@@ -72,8 +72,8 @@ public static class CodeSearchText
     /// </summary>
     public static string SearchDegraded => Catalogue.Get(nameof(SearchDegraded));
 
-    public static string SearchIndexHeaderStale(string indexed, string head) =>
-        Catalogue.Format(nameof(SearchIndexHeaderStale), indexed, head);
+    public static string SearchIndexHeaderStale(string indexed, string mainline) =>
+        Catalogue.Format(nameof(SearchIndexHeaderStale), indexed, mainline);
 
     public static string Seconds(string seconds) => Catalogue.Format(nameof(Seconds), seconds);
 
@@ -84,8 +84,8 @@ public static class CodeSearchText
 
     public static string BuildItWith => Catalogue.Get(nameof(BuildItWith));
 
-    public static string StatusStale(string indexed, string head) =>
-        Catalogue.Format(nameof(StatusStale), indexed, head);
+    public static string StatusStale(string indexed, string mainline) =>
+        Catalogue.Format(nameof(StatusStale), indexed, mainline);
 
     public static string ModelWithDims(string model, int dimensions) =>
         Catalogue.Format(nameof(ModelWithDims), model, dimensions);

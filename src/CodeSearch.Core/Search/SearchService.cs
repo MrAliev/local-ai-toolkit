@@ -377,9 +377,9 @@ public sealed class SearchService : IDisposable
     }
 
     /// <summary>
-    /// Lays this worktree's overlay over the base, when there is one to lay. A worktree with no
-    /// overlay searches the base alone, which is correct only while it matches the base checkout -
-    /// hence the staleness reporting in <see cref="Status"/>.
+    /// Lays this worktree's overlay over the base. The base alone answers only a clean worktree
+    /// whose HEAD tree is the base's; anything else needs its exact overlay and is refused
+    /// without one.
     /// </summary>
     private ISearchableIndex Compose(
         CodeIndex baseIndex,

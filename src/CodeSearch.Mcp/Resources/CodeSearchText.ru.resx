@@ -215,7 +215,7 @@
     <comment>2 is either the model or the LEXICAL ONLY token. Noun-first in Russian: ResourceManager has no plural support, and genitive plural is correct for every count.</comment>
   </data>
   <data name="SearchIndexHeaderStale" xml:space="preserve">
-    <value> (STALE: собран на {0}, HEAD сейчас {1})</value>
+    <value> (STALE: собран на {0}, основная ветка сейчас {1})</value>
   </data>
   <data name="SearchIndexModel" xml:space="preserve">
     <value>модель {0}</value>
@@ -231,7 +231,7 @@
     <value>NOT REFRESHED - файлов на перечитывание {0}, это больше предела {1} для работы внутри вызова</value>
   </data>
   <data name="StatusStale" xml:space="preserve">
-    <value>STALE - собран на {0}, HEAD сейчас {1}</value>
+    <value>STALE - собран на {0}, основная ветка сейчас {1}</value>
     <comment>The token and the ASCII separator are a contract; only the clause after it moves.</comment>
   </data>
   <data name="SyncDidNotFinish" xml:space="preserve">

@@ -19,10 +19,6 @@ namespace CodeSearch.Mcp;
 public static class CodeSearchTools
 {
     /// <summary>
-    /// Above this many chunks, an inline refresh would run for minutes and blow the tool-call
-    /// budget. A post-commit incremental refresh is far below it; a cold build is far above.
-    /// </summary>
-    /// <summary>
     /// How much a pre-approved call may take on, counted in files because that is the only
     /// estimate available before the semantic phase — and the semantic phase, where Roslyn
     /// loads the whole solution, is the expensive thing a bounded caller must not start.
@@ -259,7 +255,8 @@ public static class CodeSearchTools
         This is not transitive reachability or proof of runtime breakage. Missing edges do not prove
         no impact. Unsaved buffers, other languages and heuristic graph results are excluded.
         By default no model runs. Optionally add heuristic review questions selected by a local model
-        from a fixed set for up to 16 supplied evidence items. The verified graph is unchanged.
+        from a fixed set, one per evidence item; that needs 16 or fewer returned items, and with more
+        the call is refused and returns no graph. The verified graph is unchanged.
         Questions are not confirmed issues; invalid or incomplete selections are rejected.
         Source-derived data is wrapped in nonce-bound untrusted-content markers.
         """)]
@@ -270,7 +267,7 @@ public static class CodeSearchTools
         [Description("UTF-16 column counted from 1.")] int column = 1,
         [Description("Maximum returned evidence items, 1..10000. Default 200; truncation is explicit.")] int limit = 200,
         [Description("Repository root. Defaults to the repository containing the working directory.")] string? root = null,
-        [Description("Add model-selected heuristic review questions for up to 16 returned evidence items. Default false.")] bool explain = false,
+        [Description("Add model-selected heuristic review questions, one per returned evidence item. Refused (impact_explanation_limit, no graph returned) when more than 16 items are returned, so pass limit 16 or less. Default false.")] bool explain = false,
         [Description("Optional local model override. Requires explain=true; residency policy is unchanged.")] string? model = null,
         CancellationToken cancellationToken = default)
     {
@@ -467,11 +464,13 @@ public static class CodeSearchTools
 
     [McpServerTool(Name = "search_code")]
     [Description("""
-        Semantic + literal search over a repository's code. C#, TypeScript and Python are
-        chunked by symbol - a hit is a type, a member or a definition, not a file. Every other
-        language, and any region no definition covers - imports, module-level statements, the
-        gap between two functions - is chunked by a sliding window over lines, and a hit there
-        names the file and its line range instead.
+        Semantic + literal search over a repository's code. C# is chunked by type and member, and
+        a file scip-typescript or scip-python reported definitions for is chunked by definition - a
+        hit there is a type, a member or a definition, not a file. Every other file, and any region
+        of such a file that no definition covers - imports, module-level statements, the gap
+        between two functions - is chunked by a sliding window over lines, and a hit there names
+        the file and its line range instead. C# outside every type - usings, top-level
+        statements - is indexed only in a file that declares no type.
         Line numbers are counted from 1, as an editor shows them, and a hit's start line is what
         the navigation tools take.
         Use this INSTEAD of grep/glob as the first step for any
@@ -488,7 +487,7 @@ public static class CodeSearchTools
         SyncNotice notice,
         [Description("What you're looking for. A natural-language description works best; exact symbol names also work.")]
         string query,
-        [Description("Repository root. Defaults to the git repository containing the working directory; a worktree resolves to its main repository.")]
+        [Description("Repository root. Defaults to the worktree containing the working directory. A linked worktree is searched as itself - its own overlay over the repository's shared base index - and refused while it needs an overlay that is not built.")]
         string? root = null,
         [Description("How many results to return. Default 10.")]
         int topK = 10,
@@ -720,8 +719,8 @@ public static class CodeSearchTools
     [McpServerTool(Name = "index_status")]
     [Description("""
         Reports whether a repository has a code-search index, how big it is, which embedding
-        model built it, and whether it has drifted behind the current git HEAD. Check this when
-        search results look wrong or suspiciously empty.
+        model built it, and whether the mainline branch has moved since it was built. Check this
+        when search results look wrong or suspiciously empty.
         """)]
     public static string IndexStatus(
         SearchService service,
@@ -1037,8 +1036,9 @@ public static class CodeSearchTools
     [Description("""
         Incrementally refreshes a repository's index: re-embeds only files whose content changed
         since the last build. Run it after committing, so search stops answering for code that no
-        longer looks like that. The size of the work is bounded and the bound is enforced: a cold
-        build, or a branch switch that changes most of the tree, is refused before anything is
+        longer looks like that. The size of the work is bounded and the bound is enforced: a
+        refresh with more than 200 files to re-read - a cold build of all but a small repository,
+        or a branch switch that changes most of the tree - is refused before anything is
         embedded, and the refusal carries the command to run in the background instead. While a
         build holds this repository's sync gate, any refresh is refused before a sync starts and
         the refusal names that build instead, because a second sync would exit 75 sync_busy.

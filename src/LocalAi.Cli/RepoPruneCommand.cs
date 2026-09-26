@@ -245,10 +245,9 @@ internal static class RepoPruneCommand
             return 0;
         }
 
-        // Nothing here deletes an overlay itself. Retention removes every overlay set absent
-        // from the live set, and the live set is built from the worktrees that exist now — so a
-        // worktree removed above is unreachable by construction. On the hook path the sync that
-        // follows in the same invocation does this and prints its own line.
+        // Nothing here deletes an overlay itself. The sweep below gives retention no live set, so
+        // overlays under a kept generation stay, a removed worktree's among them; the sync that
+        // follows on the hook path, or the next one run by hand, passes that set and drops them.
         if (!automatic)
         {
             Sweep(checkout, runtimeRoot, error);
@@ -375,9 +374,9 @@ internal static class RepoPruneCommand
     }
 
     /// <summary>
-    /// The retention sweep that already exists, over the worktrees that are left. Nothing here
-    /// deletes an overlay itself: retention removes every overlay set absent from the live set,
-    /// and a worktree removed above is absent by construction.
+    /// The retention sweep that already exists, run without a live set: generations past the
+    /// bound go with every overlay under them, and overlays under a kept generation stay until
+    /// the next sync, which knows which worktrees are left.
     /// </summary>
     private static void Sweep(string checkout, string? runtimeRoot, TextWriter error)
     {
