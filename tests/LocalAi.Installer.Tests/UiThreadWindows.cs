@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -13,6 +14,7 @@ internal readonly record struct UiThreadWindow(nint Handle, uint Thread, string 
 internal static class UiThreadWindows
 {
     private const nint MessageOnlyParent = -3;
+    private const uint AncestorParent = 1;
 
     public static IReadOnlySet<UiThreadWindow> Snapshot()
     {
@@ -30,12 +32,38 @@ internal static class UiThreadWindows
         }
 
         EnumWindows((handle, _) => { Consider(handle); return true; }, 0);
-        nint child = 0;
-        while ((child = FindWindowEx(MessageOnlyParent, child, null, null)) != 0) Consider(child);
+        VisitMessageOnlyWindows(Consider);
         return found;
     }
 
+    // Not a FindWindowEx walk: that one ends silently when the window it stands on is destroyed.
+    internal static void VisitMessageOnlyWindows(Action<nint> visit) =>
+        EnumChildWindows(MessageOnlyRoot, (handle, _) => { visit(handle); return true; }, 0);
+
+    private static readonly nint MessageOnlyRoot = FindMessageOnlyRoot();
+
+    private static nint FindMessageOnlyRoot()
+    {
+        var own = CreateMessageOnlyWindow();
+        try { return GetAncestor(own, AncestorParent); }
+        finally { DestroyWindow(own); }
+    }
+
     public static uint CurrentThreadId() => GetCurrentThreadId();
+
+    internal static nint CreateMessageOnlyWindow() =>
+        CreateWindowEx(0, "STATIC", null, 0, 0, 0, 0, 0, MessageOnlyParent, 0, 0, 0) is var window and not 0
+            ? window
+            : throw new Win32Exception();
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool DestroyWindow(nint handle);
+
+    [DllImport("user32.dll", EntryPoint = "CreateWindowExW", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern nint CreateWindowEx(
+        int extendedStyle, string windowClass, string? title, int style, int x, int y, int width, int height,
+        nint parent, nint menu, nint instance, nint parameter);
 
     private delegate bool EnumWindowsProc(nint handle, nint parameter);
 
@@ -43,8 +71,12 @@ internal static class UiThreadWindows
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool EnumWindows(EnumWindowsProc callback, nint parameter);
 
-    [DllImport("user32.dll", EntryPoint = "FindWindowExW", CharSet = CharSet.Unicode)]
-    private static extern nint FindWindowEx(nint parent, nint after, string? windowClass, string? title);
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool EnumChildWindows(nint parent, EnumWindowsProc callback, nint parameter);
+
+    [DllImport("user32.dll")]
+    private static extern nint GetAncestor(nint handle, uint flags);
 
     [DllImport("user32.dll")]
     private static extern uint GetWindowThreadProcessId(nint handle, out uint process);
