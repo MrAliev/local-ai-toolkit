@@ -102,12 +102,12 @@ public sealed class PackagePageViewModelTests : IDisposable
 
         page.SelectResolvedRelease(Release("0.1.30"), "0.1.30");
 
-        // The installer handles this correctly and reports AlreadyInstalled — afterwards, in a
-        // line of the finish log. A run that was never going to change anything then looks
-        // exactly like one that did until it is over.
+        // The installer reports AlreadyInstalled afterwards, in a line of the finish log. A run
+        // that only checks the installed release, and puts back what differs from it, then
+        // looks exactly like one that installs a new one until it is over.
         Assert.True(page.IsAlreadyInstalled);
         Assert.Contains("already installed", page.StatusText, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("nothing will change", page.ReviewText, StringComparison.Ordinal);
+        Assert.Contains("already installed", page.ReviewText, StringComparison.Ordinal);
     }
 
     [Fact]

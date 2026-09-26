@@ -2791,11 +2791,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         // result.Status is an enum name. It used to be printed straight into the summary a
         // person reads — "ImmutableConflict" — which is the same defect the review page fixed
         // for the residency policy, one page further on.
-        AppendLog(
-            report,
-            result.Installed
-                ? $"LocalAi package: {result.Status}, version {result.Version} at {result.VersionPath}."
-                : $"LocalAi package: {result.Status}. {result.Reason}".Trim());
+        AppendLog(report, PackageLogLine(result));
         if (!result.Installed)
         {
             hasRunError = true;
@@ -2860,6 +2856,15 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 : $"Model setup stopped early ({failure.Detail}).") + " " + downloaded);
     }
 
+    /// <summary>The package step's line in the run log.</summary>
+    internal static string PackageLogLine(ReleaseInstallResult result) =>
+        result.Installed
+            ? $"LocalAi package: {result.Status}, version {result.Version} at {result.VersionPath}." +
+                (result.RestoredFiles is { Count: > 0 } restored
+                    ? " Put back from the release: " + string.Join(", ", restored) + "."
+                    : string.Empty)
+            : $"LocalAi package: {result.Status}. {result.Reason}".Trim();
+
     /// <summary>
     /// Retain activation before model provisioning can fail or be cancelled.
     /// </summary>
@@ -2867,7 +2872,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
     {
         ArgumentNullException.ThrowIfNull(result);
         packageInstalled = result.Installed;
-        packageOutcome = new(PackageOutcomeKind.Result, result.Status, result.Version, result.Reason);
+        packageOutcome = PackageOutcome.FromResult(result);
     }
 
     /// <summary>
