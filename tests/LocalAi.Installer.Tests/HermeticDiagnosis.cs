@@ -14,7 +14,8 @@ internal static class HermeticDiagnosis
         NetworkSnapshot? network = null,
         DependencySnapshot? winGet = null,
         DependencySnapshot? gitHubCli = null,
-        GpuSnapshot? gpu = null)
+        GpuSnapshot? gpu = null,
+        ExistingLocalAiState existingLocalAi = ExistingLocalAiState.Absent)
     {
         static DependencySnapshot Found(string name) =>
             new(name, DependencyState.Detected, @"C:\absent\" + name + ".exe", "1.0", null);
@@ -40,7 +41,7 @@ internal static class HermeticDiagnosis
             Found("python"),
             Found("scip-python"),
             gpu ?? new GpuSnapshot(ObservationState.Unavailable, [], "none in this test"),
-            new ExistingLocalAiSnapshot(ExistingLocalAiState.Absent, null, null, null),
+            new ExistingLocalAiSnapshot(existingLocalAi, null, null, null),
             [],
             []);
     }
