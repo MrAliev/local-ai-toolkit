@@ -8,6 +8,8 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using LocalAi.Installer.Core.Abstractions;
+using LocalAi.Installer.Core.Diagnosis;
 using LocalAi.Installer.Core.Removal;
 using LocalAi.Installer.Core;
 using LocalAi.Installer.ViewModels;
@@ -303,6 +305,70 @@ public sealed class AccessibleControlsTests
         CheckStartKeyboard(presentation);
         CheckRemovalDefault(presentation, machine);
         CheckReinstallContinuation(presentation, machine);
+        CheckRemoveWhatIsLeft(presentation, machine);
+    }
+
+    /// <summary>
+    /// The way back after a removal that did not finish (#614): on the finish page only when the
+    /// run left something, named for what it does, and never the default button. The run is
+    /// refused at the stop, so nothing on the machine changes.
+    /// </summary>
+    private static void CheckRemoveWhatIsLeft(InstallerPresentation presentation, RemovalFixture machine)
+    {
+        var before = RemovalFixture.Snapshot(machine.Runtime);
+        var stopped = Removal(presentation, machine, new RefusingStop());
+        stopped.InitializeAsync().GetAwaiter().GetResult();
+        stopped.MoveNextAsync().GetAwaiter().GetResult();
+        stopped.IsConfirmed = true;
+        // Before the window is bound: the run finishes off this thread, and the rail it rebuilds
+        // may only change on the window's.
+        Assert.False(stopped.RunAsync().GetAwaiter().GetResult());
+        Assert.Equal(before, RemovalFixture.Snapshot(machine.Runtime));
+        var finished = Removal(presentation, machine, new RefusingStop());
+        typeof(UninstallWizardViewModel).GetProperty(nameof(finished.CurrentPage))!
+            .SetValue(finished, UninstallPage.Finish);
+        var opened = Removal(presentation, machine, new RefusingStop());
+        foreach (var (wizard, shown) in new[] { (stopped, true), (finished, false), (opened, false) })
+        {
+            var window = new UninstallWindow(presentation) { DataContext = wizard };
+            try
+            {
+                Layout(window);
+                var button = Descendants(window.Content).OfType<Button>()
+                    .Single(candidate => ReferenceEquals(candidate.Command, wizard.RemoveWhatIsLeftCommand));
+                foreach (var language in new[] { InstallerLanguage.English, InstallerLanguage.Russian })
+                {
+                    presentation.ChooseLanguage(language);
+                    Layout(window);
+                    Assert.Equal(shown ? Visibility.Visible : Visibility.Collapsed, button.Visibility);
+                    Assert.Equal(shown, button.IsEnabled);
+                    Assert.False(button.IsDefault);
+                    Assert.Equal(
+                        language == InstallerLanguage.Russian ? "Удалить оставшееся" : "Remove what is left",
+                        Peer(button).GetName());
+                }
+            }
+            finally { window.Close(); wizard.DetachPresentation(); }
+        }
+    }
+
+    private static UninstallWizardViewModel Removal(
+        InstallerPresentation presentation,
+        RemovalFixture machine,
+        IProcessRunner processRunner) =>
+        new(RemovalPreset.FullUninstall, false, machine.Layout, machine.Home, processRunner,
+            machine.HooksPathReader, presentation: presentation,
+            inspector: new ExistingLocalAiInspector(new SystemFileSystemProbe(), () => null))
+        {
+            LogDirectory = Path.Combine(machine.Root, "remove-what-is-left"),
+        };
+
+    /// <summary>The launcher's stop fails, so a run refuses before it touches anything.</summary>
+    private sealed class RefusingStop : IProcessRunner
+    {
+        public Task<ProcessResult> RunAsync(string executable, IReadOnlyList<string> arguments,
+            TimeSpan timeout, CancellationToken cancellationToken) =>
+            Task.FromResult(new ProcessResult(1, "", "stop refused", false, false));
     }
 
     private static void CheckReinstallContinuation(InstallerPresentation presentation, RemovalFixture machine)

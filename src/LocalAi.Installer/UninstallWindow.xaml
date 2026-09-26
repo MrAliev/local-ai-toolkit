@@ -315,6 +315,11 @@
                             IsDefault="{Binding CanContinueToInstall}"
                             Command="{Binding ContinueToInstallCommand}"
                             Visibility="{Binding CanContinueToInstall, Converter={StaticResource BoolToVisibility}}" />
+                    <!-- After a run that did not finish: back to the first page with the same
+                         choices. Not the default: it starts the way to another deletion. -->
+                    <Button Content="{vm:Label RemoveWhatIsLeft}" Style="{StaticResource NavButton}"
+                            Command="{Binding RemoveWhatIsLeftCommand}"
+                            Visibility="{Binding CanRemoveWhatIsLeft, Converter={StaticResource BoolToVisibility}}" />
                     <Button Content="{Binding CancelButtonText}" Style="{StaticResource NavButton}" IsCancel="True"
                             Command="{Binding CancelCommand}" />
                 </WrapPanel>
