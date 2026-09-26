@@ -143,6 +143,7 @@ public sealed record UninstallPlan(
                         ? InstallerCulture.Pick("remove", "удалить")
                         : InstallerCulture.Pick("rewrite", "переписать")) +
                     " " + file.Path);
+                AppendBackup(text, file);
             }
 
             foreach (var hook in hooks)
@@ -220,6 +221,8 @@ public sealed record UninstallPlan(
                             "remove worktree placement from ",
                             "убрать размещение worktree из ") + file.Path);
                 }
+
+                AppendBackup(text, file);
             }
         }
 
@@ -279,6 +282,16 @@ public sealed record UninstallPlan(
             return false;
         }
     }
+
+    /// <summary>
+    /// The apply parks what it displaces at the backup path, a deleted file included, and leaves
+    /// it there. Removal plans only files that have content, so every one of them gets one.
+    /// </summary>
+    private static void AppendBackup(StringBuilder text, AgentConfigurationFilePlan file) =>
+        text.AppendLine(
+            "    " + InstallerCulture.Pick(
+                "keep a copy of the previous version: ",
+                "оставить копию прежней версии: ") + file.BackupPath);
 
     private AgentConfigurationPlan[] AgentPlansFor(RemovalItem item)
     {
