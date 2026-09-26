@@ -580,13 +580,13 @@
                                              machine-wide question: the client has no setting for
                                              it, so the hook is the only way to move it, and which
                                              folder they land in is answered per repository by
-                                             git config localai.worktreeRoot. Hidden on a row set
-                                             to leave the client alone, where it would describe an
-                                             effect that is not coming. -->
+                                             git config localai.worktreeRoot. Shown only under a
+                                             Claude Code row that configures the client: anywhere
+                                             else it would describe an effect that is not coming. -->
                                         <TextBlock x:Name="WorktreeHint"
                                                    Text="{Binding DataContext.Agents.WorktreePlacementHint, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
                                                    Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,8,0,0"
-                                                   Visibility="{Binding DataContext.Agents.ShowsWorktreePlacement, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay, Converter={StaticResource BoolToVisibility}}" />
+                                                   Visibility="{Binding ShowsWorktreePlacement, Mode=OneWay, Converter={StaticResource BoolToVisibility}}" />
                                         <!-- The gate sits under the combo it depends on, and only
                                              in the Claude Code row: it is a PreToolUse hook in
                                              that client's own settings, and Codex has no such
