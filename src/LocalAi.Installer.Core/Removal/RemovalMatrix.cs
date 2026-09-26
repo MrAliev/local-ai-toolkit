@@ -137,9 +137,9 @@ public static class RemovalMatrix
                 RemovalItem.RepositoryIndexes or
                 RemovalItem.Settings or
                 RemovalItem.SigningKeys => RemovalDisposition.Keep,
-                // Kept rather than asked. On a reinstall the installation that follows
-                // rewrites all three, so asking whether to remove them is asking the same
-                // question twice and answering it differently each time.
+                // Kept rather than asked. All three call the launcher, which the installation
+                // that follows puts back at the same path, so asking whether to remove them is
+                // asking the same question twice and answering it differently each time.
                 RemovalItem.ClaudeIntegration or
                 RemovalItem.CodexIntegration or
                 RemovalItem.GitHooks => RemovalDisposition.Keep,
@@ -250,10 +250,12 @@ public static class RemovalMatrix
         preset switch
         {
             RemovalPreset.FullUninstall => InstallerCulture.Pick(
-                "Everything LocalAi installed goes, except the signing keys unless you " +
-                "confirm those separately.",
-                "Уходит всё, что установил LocalAi, кроме ключей подписи — " +
-                "их надо подтвердить отдельно."),
+                "Removes the runtime, the Claude and Codex integrations and the Git hook " +
+                "dispatchers. The signing keys go only with their own confirmation; the next " +
+                "page lists everything that stays.",
+                "Удаляет рантайм, интеграции с Claude и Codex и диспетчеры хуков Git. Ключи " +
+                "подписи — только с отдельным подтверждением; всё, что останется, перечислено " +
+                "на следующей странице."),
             RemovalPreset.DisconnectClients => InstallerCulture.Pick(
                 "The agents stop using LocalAi; the runtime stays exactly as it is.",
                 "Агенты перестают пользоваться LocalAi; рантайм остаётся ровно как есть."),
@@ -301,6 +303,13 @@ public static class RemovalMatrix
         }
 
         if (SettingsFileNames.Contains(name, StringComparer.OrdinalIgnoreCase))
+        {
+            return RemovalItem.Settings;
+        }
+
+        // Apart from the list, which is not to grow: it holds the models directory an offline
+        // package chose, and the next install carries that over only from this file.
+        if (string.Equals(name, OllamaLaunchRecord.FileName, StringComparison.OrdinalIgnoreCase))
         {
             return RemovalItem.Settings;
         }

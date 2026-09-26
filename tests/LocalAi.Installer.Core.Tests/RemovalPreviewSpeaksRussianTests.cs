@@ -35,10 +35,15 @@ public sealed class RemovalPreviewSpeaksRussianTests : IDisposable
         InstallerCulture.Current = InstallerLanguage.Russian;
 
         var empty = Plan() with { Paths = [], RemovesAppsAndFeaturesEntry = false };
+        var unselected = empty with { Selection = RemovalSelection.Nothing() };
 
         Assert.Contains(
-            "Ничего не выбрано: этот запуск ничего не изменит.",
+            "Ничего из выбранного не найдено: этот запуск ничего не изменит.",
             empty.PreviewText,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Ничего не выбрано: этот запуск ничего не изменит.",
+            unselected.PreviewText,
             StringComparison.Ordinal);
     }
 

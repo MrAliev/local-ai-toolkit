@@ -91,8 +91,9 @@ public sealed class ClaudeConfigurationAdapter(
     /// and that stray comma takes the MCP registration with it: the most expensive thing in the
     /// installation lost to the least important (#423).
     ///
-    /// Uninstalling is the same call with <paramref name="register"/> false, because "take it out"
-    /// and "do not put it in" are the same instruction to this file.
+    /// The worktree pair stays registered when both halves are there, rewritten at this
+    /// adapter's launcher path. Uninstalling does not come through here: it takes the pair out
+    /// too, through <see cref="PreviewSettings"/>.
     /// </summary>
     /// <param name="register">
     /// What the person chose. False with nothing of ours on disk plans nothing at all — an empty
