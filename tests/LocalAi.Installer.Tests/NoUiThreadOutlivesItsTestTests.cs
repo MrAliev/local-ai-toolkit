@@ -56,6 +56,30 @@ public sealed class NoUiThreadOutlivesItsTestTests
     }
 
     [Fact]
+    public void The_walk_over_message_only_windows_goes_on_past_a_window_destroyed_under_it()
+    {
+        nint[] pair = [UiThreadWindows.CreateMessageOnlyWindow(), UiThreadWindows.CreateMessageOnlyWindow()];
+        nint destroyed = 0;
+        var visited = new List<nint>();
+        try
+        {
+            UiThreadWindows.VisitMessageOnlyWindows(window =>
+            {
+                visited.Add(window);
+                if (destroyed != 0 || !pair.Contains(window)) return;
+                destroyed = window;
+                UiThreadWindows.DestroyWindow(window);
+            });
+            Assert.Contains(destroyed, pair);
+            Assert.Contains(pair.Single(window => window != destroyed), visited);
+        }
+        finally
+        {
+            foreach (var window in pair.Where(window => window != destroyed)) UiThreadWindows.DestroyWindow(window);
+        }
+    }
+
+    [Fact]
     public void The_guard_fails_a_test_that_leaves_a_dispatcher_running_and_names_its_thread()
     {
         var guard = new NoUiThreadOutlivesItsTestAttribute();
@@ -67,6 +91,42 @@ public sealed class NoUiThreadOutlivesItsTestTests
             Assert.Contains($"thread {running.ThreadId}", failure.Message, StringComparison.Ordinal);
         }
         finally { running.Stop(); }
+
+        guard.After(methodUnderTest: null!, test: null!);
+    }
+
+    [Fact]
+    public void The_guard_reports_the_windows_it_saw_appear_and_no_cause_it_did_not_check()
+    {
+        var guard = new NoUiThreadOutlivesItsTestAttribute();
+        guard.Before(methodUnderTest: null!, test: null!);
+        uint threadId = 0;
+        using var created = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        var worker = new Thread(() =>
+        {
+            threadId = UiThreadWindows.CurrentThreadId();
+            var neverRun = Dispatcher.CurrentDispatcher;
+            created.Set();
+            release.Wait();
+            neverRun.InvokeShutdown();
+        }) { IsBackground = true };
+        worker.Start();
+        created.Wait(TestContext.Current.CancellationToken);
+        try
+        {
+            var failure = Assert.Throws<FailException>(() => guard.After(methodUnderTest: null!, test: null!));
+            var window = Assert.Single(UiThreadWindows.Snapshot(), window => window.Thread == threadId);
+            Assert.Equal(
+                $"Windows that appeared during this test are still open: {window.Class} on thread {threadId}. " +
+                "Run WPF work through WpfTestThread.Run.",
+                failure.Message);
+        }
+        finally
+        {
+            release.Set();
+            worker.Join();
+        }
 
         guard.After(methodUnderTest: null!, test: null!);
     }
