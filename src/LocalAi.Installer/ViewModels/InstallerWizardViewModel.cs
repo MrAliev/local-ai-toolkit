@@ -2191,6 +2191,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             .OrderByDescending(adapter => adapter.DedicatedLocalBytes)
             .FirstOrDefault();
         agents.ApplyDetection(diagnosis.Agents);
+        models.IsOffline = diagnosis.Network.State == ObservationState.Unavailable;
         await RefreshRecommendationAsync(diagnosis, cancellationToken);
 
         // Detection records presence only; it must not grant consent on the user's behalf.

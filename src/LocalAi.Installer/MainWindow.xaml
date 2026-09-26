@@ -453,6 +453,9 @@
                              and its count moves the moment the rule does. -->
                         <TextBlock Text="{Binding Models.RuleSummary}"
                                    Style="{StaticResource Muted}" FontSize="11" Margin="0,0,0,8" />
+                        <TextBlock Text="{Binding Models.NetworkNote}"
+                                   Style="{StaticResource WarningText}" Margin="0,0,0,8"
+                                   Visibility="{Binding Models.IsOffline, Converter={StaticResource BoolToVisibility}}" />
                         <GroupBox Style="{StaticResource NamedGroup}"
                                   AutomationProperties.LabeledBy="{x:Reference LocalModelsLabel}">
                             <StackPanel>

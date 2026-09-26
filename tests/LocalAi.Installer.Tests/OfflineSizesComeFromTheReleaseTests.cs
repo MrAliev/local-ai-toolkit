@@ -1,4 +1,5 @@
 using LocalAi.Contracts;
+using LocalAi.Installer.Core;
 using LocalAi.Installer.Core.Diagnosis;
 using LocalAi.Installer.Core.Models;
 using LocalAi.Installer.Core.Releases;
@@ -99,6 +100,47 @@ public sealed class OfflineSizesComeFromTheReleaseTests
             wizard.Models.RuleSummary);
     }
 
+    /// <summary>
+    /// Models are downloaded through Ollama during setup, and the page never said so on a
+    /// machine that has no network to download them over.
+    /// </summary>
+    [Fact]
+    public async Task Without_a_network_the_page_says_models_cannot_be_downloaded()
+    {
+        using var temp = new TemporaryDirectory("LocalAi-offline-sizes");
+        var wizard = Wizard(temp, Release(CatalogueTags()), registrySize: null);
+
+        await wizard.InitializeAsync(TestContext.Current.CancellationToken);
+
+        Assert.True(wizard.Models.IsOffline);
+        Assert.Equal(
+            "No network connection: models that are not on this computer yet cannot be " +
+            "downloaded now.",
+            wizard.Models.NetworkNote);
+
+        InstallerCulture.Current = InstallerLanguage.Russian;
+        Assert.Equal(
+            "Подключения к сети нет: модели, которых ещё нет на этом компьютере, сейчас " +
+            "скачать не получится.",
+            wizard.Models.NetworkNote);
+    }
+
+    [Fact]
+    public async Task With_a_network_the_page_says_nothing_about_it()
+    {
+        using var temp = new TemporaryDirectory("LocalAi-offline-sizes");
+        var wizard = Wizard(
+            temp,
+            Release(CatalogueTags()),
+            registrySize: null,
+            network: new NetworkSnapshot(ObservationState.Available, null));
+
+        await wizard.InitializeAsync(TestContext.Current.CancellationToken);
+
+        Assert.False(wizard.Models.IsOffline);
+        Assert.Empty(wizard.Models.NetworkNote);
+    }
+
     private static string[] CatalogueTags()
     {
         var tags = new ModelsPageViewModel().CatalogModels
@@ -137,13 +179,14 @@ public sealed class OfflineSizesComeFromTheReleaseTests
         TemporaryDirectory temp,
         ResolvedRelease release,
         long? registrySize,
-        GpuSnapshot? gpu = null) =>
+        GpuSnapshot? gpu = null,
+        NetworkSnapshot? network = null) =>
         new(
             StartChoice.Install,
             () => null,
             new ReleaseFeed(release),
             detectEnvironment: _ => Task.FromResult(HermeticDiagnosis.Supported(
-                network: new NetworkSnapshot(ObservationState.Unavailable, null),
+                network: network ?? new NetworkSnapshot(ObservationState.Unavailable, null),
                 gpu: gpu ?? new GpuSnapshot(
                     ObservationState.Available,
                     [new GpuAdapterSnapshot("adapter-1", "Test Adapter", 16UL * 1024 * 1024 * 1024, false)],
