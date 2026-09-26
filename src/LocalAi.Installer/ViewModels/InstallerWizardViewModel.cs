@@ -1080,7 +1080,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 var dependencyStep = JournalBegin(
                     InstallerRunEffectKind.DependencyInstall,
                     $"Prerequisite {dependency.Title} ({definition.PackageId})");
-                var installed = definition.InstallerKind switch
+                var failure = definition.InstallerKind switch
                 {
                     DependencyInstallerKind.WinGet =>
                         await TryInstallDependencyWithWingetAsync(
@@ -1093,12 +1093,12 @@ public sealed class InstallerWizardViewModel : ObservableObject
                             definition,
                             dependency.Title,
                             token),
-                    _ => false,
+                    _ => "The install command did not succeed.",
                 };
-                AppendLog(report, installed
+                AppendLog(report, failure is null
                     ? $"{dependency.Title}: done."
                     : $"{dependency.Title}: failed.");
-                if (installed)
+                if (failure is null)
                 {
                     successfulActions++;
                     JournalComplete(
@@ -1109,9 +1109,10 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 }
                 else
                 {
+                    AppendLog(report, failure);
                     failedActions++;
                     hasRunError = true;
-                    JournalFail(dependencyStep, "The install command did not succeed.");
+                    JournalFail(dependencyStep, failure);
                 }
 
                 await RefreshEnvironmentDiagnosticsAsync(token);
@@ -3241,7 +3242,8 @@ public sealed class InstallerWizardViewModel : ObservableObject
         }
     }
 
-    private async Task<bool> TryInstallDependencyWithWingetAsync(
+    /// <summary>Null when installed; otherwise why not, for the log and the journal.</summary>
+    private async Task<string?> TryInstallDependencyWithWingetAsync(
         DependencyDefinition dependency,
         string displayName,
         bool reinstall,
@@ -3250,10 +3252,8 @@ public sealed class InstallerWizardViewModel : ObservableObject
         if (environmentDiagnosis?.WinGet is not
             { State: DependencyState.Detected, ExecutablePath: { } wingetPath })
         {
-            SetRunLog(
-                $"WinGet is unavailable; install {displayName} manually from " +
-                $"{dependency.OfficialInstallerUri}.");
-            return false;
+            return $"WinGet is unavailable; install {displayName} manually from " +
+                $"{dependency.OfficialInstallerUri}.";
         }
 
         // Checked here rather than at detection, and before every install rather than once: the
@@ -3262,10 +3262,8 @@ public sealed class InstallerWizardViewModel : ObservableObject
         var winget = wingetSource.Authorize(wingetPath);
         if (!winget.Allowed)
         {
-            SetRunLog(
-                $"{displayName} was not installed. {winget.Message} You can install it " +
-                $"yourself from {dependency.OfficialInstallerUri}.");
-            return false;
+            return $"{displayName} was not installed. {winget.Message} You can install it " +
+                $"yourself from {dependency.OfficialInstallerUri}.";
         }
 
         var arguments = new List<string>
@@ -3295,31 +3293,27 @@ public sealed class InstallerWizardViewModel : ObservableObject
             cancellationToken);
         if (result.ExitCode is not 0)
         {
-            SetRunLog(
-                $"{displayName} installation failed with exit code {result.ExitCode}.");
-            return false;
+            return $"{displayName} installation failed with exit code {result.ExitCode}.";
         }
 
-        return true;
+        return null;
     }
 
-    private async Task<bool> TryInstallDependencyWithNpmAsync(
+    /// <summary>Null when installed; otherwise why not, for the log and the journal.</summary>
+    private async Task<string?> TryInstallDependencyWithNpmAsync(
         DependencyDefinition dependency,
         string displayName,
         CancellationToken cancellationToken)
     {
         if (dependency.PackageVersion is not { Length: > 0 } packageVersion)
         {
-            SetRunLog($"{displayName} has no pinned package version.");
-            return false;
+            return $"{displayName} has no pinned package version.";
         }
 
         if (environmentDiagnosis?.Npm is not
             { State: DependencyState.Detected, ExecutablePath: { } npmPath })
         {
-            SetRunLog(
-                $"npm is unavailable; install Node.js 20 before {displayName}.");
-            return false;
+            return $"npm is unavailable; install Node.js 20 before {displayName}.";
         }
 
         var result = await processRunner.RunAsync(
@@ -3329,9 +3323,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             cancellationToken);
         if (result.ExitCode is not 0)
         {
-            SetRunLog(
-                $"{displayName} installation failed with exit code {result.ExitCode}.");
-            return false;
+            return $"{displayName} installation failed with exit code {result.ExitCode}.";
         }
 
         if (string.Equals(
@@ -3350,10 +3342,8 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 npmGlobalRoot.Contains('\n', StringComparison.Ordinal) ||
                 npmGlobalRoot.Contains('\r', StringComparison.Ordinal))
             {
-                SetRunLog(
-                    "SCIP Python was installed, but npm did not return a valid global " +
-                    "package directory.");
-                return false;
+                return "SCIP Python was installed, but npm did not return a valid global " +
+                    "package directory.";
             }
 
             try
@@ -3366,9 +3356,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 exception is IOException or UnauthorizedAccessException or
                 InvalidOperationException or JsonException)
             {
-                SetRunLog(
-                    $"SCIP Python Windows compatibility patch failed: {exception.Message}");
-                return false;
+                return $"SCIP Python Windows compatibility patch failed: {exception.Message}";
             }
 
             var globalPrefix = Directory.GetParent(npmGlobalRoot)?.FullName;
@@ -3377,9 +3365,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 : Path.Combine(globalPrefix, "scip-python.cmd");
             if (scipPythonPath is null || !File.Exists(scipPythonPath))
             {
-                SetRunLog(
-                    "SCIP Python was patched, but its npm command shim was not found.");
-                return false;
+                return "SCIP Python was patched, but its npm command shim was not found.";
             }
 
             var verification = await processRunner.RunAsync(
@@ -3391,12 +3377,10 @@ public sealed class InstallerWizardViewModel : ObservableObject
             if (verification.ExitCode is not 0 ||
                 !versionOutput.Contains(packageVersion, StringComparison.Ordinal))
             {
-                SetRunLog(
-                    "SCIP Python was patched, but its executable verification failed.");
-                return false;
+                return "SCIP Python was patched, but its executable verification failed.";
             }
         }
 
-        return true;
+        return null;
     }
 }
