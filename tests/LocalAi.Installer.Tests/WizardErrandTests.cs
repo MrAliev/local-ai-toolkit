@@ -258,6 +258,32 @@ public sealed class WizardErrandTests
     }
 
     /// <summary>
+    /// The re-check replaces a verified release with a newer one; it does not turn a review that
+    /// said "LocalAi will not be installed" into an installation. Every line on that page — no
+    /// models, no clients, no PATH — was written for a run without a package.
+    /// </summary>
+    [Fact]
+    public async Task A_run_that_was_shown_no_release_does_not_resolve_one()
+    {
+        var feed = new ScriptedFeed { Release = Release("0.1.51"), Throw = true };
+        var wizard = new InstallerWizardViewModel(StartChoice.Install, () => null, feed)
+        {
+            LogDirectory = TempLog(),
+        };
+        await wizard.ResolvePackageAsync(TestContext.Current.CancellationToken);
+        Assert.False(wizard.Package.HasPackage);
+
+        // The feed answers by the time the button is pressed.
+        feed.Throw = false;
+        await wizard.RefreshLatestBeforeInstallAsync(
+            new StringBuilder(),
+            TestContext.Current.CancellationToken);
+
+        Assert.Null(wizard.Package.Resolved);
+        Assert.False(wizard.Package.HasPackage);
+    }
+
+    /// <summary>
     /// A hung connection is not a cancellation. HttpClient times out on its own and throws
     /// TaskCanceledException, which is an OperationCanceledException — so filtering by type
     /// let it escape, abandon the run as "cancelled by the user", and leave the rail saying
