@@ -31,9 +31,8 @@ public sealed record HookRemovalEntry(
 
 /// <summary>
 /// Something an uninstall deliberately does not touch, said out loud rather than left for the
-/// person to discover. Prerequisites installed through winget are machine-wide and other
-/// software may use them; models may serve other tools; the installer's own journal is the
-/// record of what installs did.
+/// person to discover. Prerequisites and indexers may be used by other software; models may
+/// serve other tools; the installer's own journal is the record of what installs did.
 /// </summary>
 public sealed record RetainedNotice(string Title, string Detail);
 
@@ -44,6 +43,9 @@ public sealed record RetainedNotice(string Title, string Detail);
 /// confirmed, and what the plan names is exactly what apply performs. Client configurations
 /// ride along as ordinary <see cref="AgentConfigurationPlan"/>s, so removal inherits the
 /// backups, the read-back and the refusal on a concurrent edit that installation already has.
+///
+/// <see cref="LeavesDispatchersWithoutLauncher"/>: the launcher goes and a connected
+/// repository keeps a dispatcher that calls it.
 /// </summary>
 public sealed record UninstallPlan(
     string RuntimeRoot,
@@ -54,7 +56,8 @@ public sealed record UninstallPlan(
     IReadOnlyList<HookRemovalEntry> Hooks,
     IReadOnlyList<RetainedNotice> Retained,
     bool RemovesAppsAndFeaturesEntry = false,
-    bool RemovesLauncherFromPath = false)
+    bool RemovesLauncherFromPath = false,
+    bool LeavesDispatchersWithoutLauncher = false)
 {
     public bool HasWork =>
         Paths.Count > 0 ||
@@ -221,9 +224,13 @@ public sealed record UninstallPlan(
 
         if (!HasWork)
         {
-            text.AppendLine(InstallerCulture.Pick(
-                "Nothing selected: this run would change nothing.",
-                "Ничего не выбрано: этот запуск ничего не изменит."));
+            text.AppendLine(RemovalMatrix.Items.Any(Selection.Includes)
+                ? InstallerCulture.Pick(
+                    "None of the selected items was found: this run would change nothing.",
+                    "Ничего из выбранного не найдено: этот запуск ничего не изменит.")
+                : InstallerCulture.Pick(
+                    "Nothing selected: this run would change nothing.",
+                    "Ничего не выбрано: этот запуск ничего не изменит."));
         }
 
         var changes = text.ToString();

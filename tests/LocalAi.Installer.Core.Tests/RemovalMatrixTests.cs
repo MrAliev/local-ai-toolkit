@@ -140,6 +140,9 @@ public sealed class RemovalMatrixTests
     [InlineData("repositories", RemovalItem.RepositoryIndexes)]
     [InlineData("policy.json", RemovalItem.Settings)]
     [InlineData("semantic-indexing.json", RemovalItem.Settings)]
+    // The models directory an offline package set lives only here, and the next install carries
+    // it over only from this file.
+    [InlineData(OllamaLaunchRecord.FileName, RemovalItem.Settings)]
     [InlineData("jobs", RemovalItem.TransientState)]
     [InlineData("telemetry", RemovalItem.TransientState)]
     [InlineData("host.json", RemovalItem.TransientState)]
