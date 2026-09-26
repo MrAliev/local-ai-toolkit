@@ -195,16 +195,23 @@ public sealed class AccessibleControlsTests
                         Assert.NotNull(AutomationProperties.GetLabeledBy(client));
                     }
                     foreach (var claude in new[] { AgentChoice.NoChange, AgentChoice.McpAndInstructions })
+                    foreach (var codex in new[] { AgentChoice.NoChange, AgentChoice.McpAndInstructions })
                     {
                         wizard.Agents.SetChoice("claude", claude);
+                        wizard.Agents.SetChoice("codex", codex);
                         Layout(window);
-                        Assert.Equal(claude != AgentChoice.NoChange, wizard.Agents.ShowsWorktreePlacement);
                         // The worktree sentence is help only in a row that shows it: hidden, it
                         // describes an effect that is not coming.
                         foreach (var client in Descendants(window.Content).OfType<ComboBox>().Where(item => item.DataContext is AgentOption))
                         {
+                            var row = (AgentOption)client.DataContext;
                             var hint = Descendants(VisualTreeHelper.GetParent(client)).OfType<TextBlock>()
                                 .Single(text => text.Text == wizard.Agents.WorktreePlacementHint);
+                            // Only Claude Code's settings get the worktree hooks, and only from a
+                            // row that configures it.
+                            Assert.Equal(
+                                row.HasTextSearchGate && claude != AgentChoice.NoChange ? Visibility.Visible : Visibility.Collapsed,
+                                hint.Visibility);
                             Assert.Equal(hint.Visibility == Visibility.Visible ? hint.Text : string.Empty, Peer(client).GetHelpText());
                         }
                         var gate = Descendants(window.Content).OfType<CheckBox>()

@@ -232,7 +232,7 @@ public sealed class AgentIntegrationPageViewModel : ObservableObject
         SettingsPath);
 
     /// <summary>
-    /// Whether this run sets Claude Code to put worktrees beside the repository.
+    /// Whether Claude Code puts worktrees beside the repository once this run is over.
     ///
     /// Not a question the person is asked, and that is the decision. The client has no setting
     /// for where a worktree goes — a `WorktreeCreate` hook is the only way to change it — while
@@ -240,18 +240,13 @@ public sealed class AgentIntegrationPageViewModel : ObservableObject
     /// localai.worktreeRoot`. A checkbox here would ask a machine-wide question that has a
     /// better per-repository answer, so this rides on the client being configured at all.
     ///
-    /// Claude Code's row alone, like the gate: the entries live in that client's settings.
+    /// Claude Code's row alone, like the gate: the entries live in that client's settings. A row
+    /// left unchanged keeps whatever the machine has, as the refusal does.
     /// </summary>
     public bool RegistersWorktrees =>
         Agents.Any(agent =>
             string.Equals(agent.Agent, "claude", StringComparison.Ordinal) &&
-            agent.Choice is not AgentChoice.NoChange);
-
-    /// <summary>
-    /// The sentence under the combo, shown only while the run would actually do it. Left visible
-    /// on a row set to "leave unchanged", it would describe an effect that is not coming.
-    /// </summary>
-    public bool ShowsWorktreePlacement => RegistersWorktrees;
+            agent.Choice is not AgentChoice.NoChange) || worktreeOnDisk;
 
     public string WorktreePlacementHint => PageLabels.WorktreePlacementHint;
 
@@ -269,9 +264,9 @@ public sealed class AgentIntegrationPageViewModel : ObservableObject
     public bool SettingsChanges => GateChanges || WorktreeChanges;
 
     /// <summary>
-    /// What the review page says about worktree placement, in the four shapes
-    /// <see cref="GateReviewText"/> is in and for the same reason: naming an effect and naming a
-    /// reversal are not one sentence with an optional clause.
+    /// What the review page says about worktree placement: naming an effect and naming its
+    /// absence are not one sentence with an optional clause. A pair on disk is never taken out,
+    /// so there is no reversal to name.
     ///
     /// The last of them does not name where the client would put them instead. That path is the
     /// client's, it has already changed once, and an invented example is the kind of thing that
@@ -290,12 +285,7 @@ public sealed class AgentIntegrationPageViewModel : ObservableObject
                 "instead of inside it. The two lines go into {0}.",
                 "Worktree в Claude Code: создаются в папке worktrees рядом с репозиторием, а не " +
                 "внутри него. Две строки добавляются в {0}."),
-            (false, true) => InstallerCulture.Pick(
-                "Worktrees in Claude Code: created in a worktrees folder beside the repository, " +
-                "as {0} already says. Nothing is written to it.",
-                "Worktree в Claude Code: создаются в папке worktrees рядом с репозиторием — так " +
-                "уже записано в {0}. В него ничего не пишется."),
-            (false, false) => InstallerCulture.Pick(
+            _ => InstallerCulture.Pick(
                 "Worktrees in Claude Code: left where Claude Code puts them. Nothing is written " +
                 "to {0}.",
                 "Worktree в Claude Code: остаются там, куда их кладёт Claude Code. В {0} ничего " +
@@ -390,7 +380,6 @@ public sealed class AgentIntegrationPageViewModel : ObservableObject
         OnPropertyChanged(nameof(GateReviewText));
         OnPropertyChanged(nameof(TextSearchHint));
         OnPropertyChanged(nameof(RegistersWorktrees));
-        OnPropertyChanged(nameof(ShowsWorktreePlacement));
         OnPropertyChanged(nameof(WorktreeChanges));
         OnPropertyChanged(nameof(SettingsChanges));
         OnPropertyChanged(nameof(WorktreeReviewText));
