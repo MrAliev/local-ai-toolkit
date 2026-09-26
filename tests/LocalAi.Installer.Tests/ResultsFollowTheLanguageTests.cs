@@ -94,6 +94,7 @@ public sealed class ResultsFollowTheLanguageTests : IDisposable
 
         Assert.True(wizard.IsBlocked);
         Assert.Contains("нет установки LocalAi", wizard.BlockingNotice!, StringComparison.Ordinal);
+        Assert.DoesNotContain("документаци", wizard.BlockingNotice!, StringComparison.Ordinal);
         Assert.Equal("Готово", wizard.ProgressText);
     }
 

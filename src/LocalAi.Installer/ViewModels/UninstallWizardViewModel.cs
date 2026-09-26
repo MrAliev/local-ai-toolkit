@@ -277,10 +277,12 @@ public sealed class UninstallWizardViewModel : ObservableObject
             "LocalAi. Сначала завершите его, потом запустите этот заново."),
         Blocked.NothingInstalled => string.Format(
             InstallerCulture.Pick(
-                "There is no LocalAi installation at {0} to remove. Client registrations " +
-                "and Git hooks, if any are left, are listed by the documentation.",
-                "В {0} нет установки LocalAi, которую можно удалить. Регистрации " +
-                "клиентов и хуки Git, если что-то осталось, перечислены в документации."),
+                "There is no LocalAi installation at {0} to remove, so nothing else was " +
+                "looked for: client registrations and Git hooks left behind, if any, stay " +
+                "as they are.",
+                "В {0} нет установки LocalAi, которую можно удалить, поэтому больше ничего " +
+                "не проверялось: регистрации клиентов и хуки Git, если что-то осталось, " +
+                "остаются как есть."),
             layout.Root),
         _ => null,
     };
