@@ -17,11 +17,17 @@ public sealed class InstallationLayout
         BinRoot = Path.Combine(Root, "bin");
         VersionsRoot = Path.Combine(BinRoot, "versions");
         LauncherDirectory = Path.Combine(BinRoot, "launcher");
-        LauncherPath = Path.Combine(LauncherDirectory, LocalAi.Contracts.LocalAiPackageLayout.StableLauncherFile);
+        LauncherPath = LauncherPathUnder(Root);
         CurrentPointerPath = Path.Combine(BinRoot, "current.json");
         InstallerDirectory = Path.Combine(Root, "installer");
-        InstallerBackupsRoot = Path.Combine(InstallerDirectory, "backups");
+        InstallerBackupsRoot = InstallerBackupsUnder(Root);
     }
+
+    internal static string LauncherPathUnder(string root) =>
+        Path.Combine(root, "bin", "launcher", LocalAi.Contracts.LocalAiPackageLayout.StableLauncherFile);
+
+    internal static string InstallerBackupsUnder(string root) =>
+        Path.Combine(root, "installer", "backups");
 
     public string LocalAppData { get; }
     public string Root { get; }

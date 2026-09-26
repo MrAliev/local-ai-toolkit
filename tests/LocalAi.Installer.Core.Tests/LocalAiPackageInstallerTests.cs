@@ -1050,6 +1050,7 @@ public sealed class LocalAiPackageInstallerTests : IDisposable
             WritePointer(arguments[1]);
             return Task.FromResult(new ProcessResult(0, "", "", false, false));
         });
+        Assert.True(LocalAiPackageInstaller.DeletesLauncherBackups(layout.Root, replacesLauncher: true));
 
         var result = await Installer(runner).InstallAsync(package, layout, TestContext.Current.CancellationToken);
 
@@ -1059,6 +1060,65 @@ public sealed class LocalAiPackageInstallerTests : IDisposable
             Directory.EnumerateDirectories(layout.InstallerBackupsRoot)
                 .OrderBy(Directory.GetLastWriteTimeUtc)
                 .ToArray());
+    }
+
+    /// <summary>
+    /// The review names a deletion of launcher copies only when the run makes one. A fresh
+    /// installation has no copy to delete.
+    /// </summary>
+    [Fact]
+    public async Task A_fresh_installation_deletes_no_launcher_copy_and_is_not_said_to()
+    {
+        using var package = Package("v1");
+        var layout = InstallationLayout.FromLocalAppData(localAppData);
+        var runner = new RecordingRunner((_, arguments, _, _) =>
+        {
+            WritePointer(arguments[1]);
+            return Task.FromResult(new ProcessResult(0, "", "", false, false));
+        });
+        Assert.False(LocalAiPackageInstaller.DeletesLauncherBackups(layout.Root, replacesLauncher: true));
+
+        var result = await Installer(runner).InstallAsync(package, layout, TestContext.Current.CancellationToken);
+
+        Assert.Equal(LocalAiPackageInstallStatus.Installed, result.Status);
+        Assert.Empty(Directory.EnumerateFileSystemEntries(layout.InstallerBackupsRoot));
+    }
+
+    /// <summary>
+    /// A repair whose launcher already is the release's makes no copy of it, so copies at the
+    /// bound all stay, and the review does not say otherwise.
+    /// </summary>
+    [Fact]
+    public async Task A_repair_at_the_bound_deletes_no_launcher_copy_and_is_not_said_to()
+    {
+        CreateExisting("v1", Content(LocalAiPackageLayout.StableLauncherFile), packageContent: true);
+        var layout = InstallationLayout.FromLocalAppData(localAppData);
+        var seeded = new List<string>();
+        using (var lease = InstallationLayoutLease.Acquire(layout))
+        {
+            for (var index = 0; index < RuntimeRetentionPolicy.Default.LauncherBackups; index++)
+            {
+                using var backup = lease.CreateLauncherBackup();
+                seeded.Add(Path.GetDirectoryName(backup.CanonicalPath)!);
+            }
+
+            lease.CommitScaffold();
+        }
+
+        using var package = Package("v1");
+        var runner = new RecordingRunner((_, arguments, _, _) =>
+        {
+            WritePointer(arguments[1]);
+            return Task.FromResult(new ProcessResult(0, "", "", false, false));
+        });
+        Assert.False(LocalAiPackageInstaller.DeletesLauncherBackups(layout.Root, replacesLauncher: false));
+
+        var result = await Installer(runner).InstallAsync(package, layout, TestContext.Current.CancellationToken);
+
+        Assert.Equal(LocalAiPackageInstallStatus.AlreadyInstalled, result.Status);
+        Assert.Equal(
+            seeded.Order(StringComparer.OrdinalIgnoreCase),
+            Directory.EnumerateDirectories(layout.InstallerBackupsRoot).Order(StringComparer.OrdinalIgnoreCase));
     }
 
     /// <summary>
