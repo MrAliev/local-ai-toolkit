@@ -11,6 +11,9 @@ namespace LocalAi.Installer.Core.Releases;
 /// lock: the operating system releases it the moment the process dies, so a marker that opens
 /// unshared belongs to a run that has ended, and one that does not belongs to a window still
 /// working. Nothing without the marker is touched.
+///
+/// The removal's temporary copy of the installer claims its directory the same way, under a
+/// prefix of its own.
 /// </summary>
 public sealed class InstallerScratchDirectory : IDisposable
 {
