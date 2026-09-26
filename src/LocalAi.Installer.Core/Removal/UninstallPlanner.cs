@@ -76,7 +76,7 @@ public sealed class UninstallPlanner
             PlanAgentConfigurations(selection),
             hooks,
             Retained(selection, hooks, installationFollows, leavesDispatchers),
-            PlansAppsAndFeaturesRemoval(selection, installationFollows),
+            PlansAppsAndFeaturesRemoval(selection),
             PlansLauncherPathRemoval(selection, installationFollows),
             leavesDispatchers);
     }
@@ -101,22 +101,6 @@ public sealed class UninstallPlanner
     }
 
     /// <summary>
-    /// Whether there is an Apps &amp; features entry to take out. It goes with the binaries:
-    /// an entry offering to uninstall an installation whose binaries are gone is an entry
-    /// pointing at nothing, and one kept beside a runtime that stays is still true.
-    ///
-    /// Only the entry that describes this installation. The key is one per account, and one
-    /// pointing at another LocalAi is that installation's way out, not this run's to remove.
-    ///
-    /// Never when an installation follows. The entry would be unregistered and registered
-    /// again inside one run, which is churn on the best path and a hazard on the rest: the
-    /// uninstaller's own copy is what runs a removal launched from Apps &amp; features, so
-    /// deleting it falls to <see cref="UninstallRegistration.RemoveAfterExit"/>, which retries
-    /// for a minute after this process exits — long enough to delete the copy the installation
-    /// half has by then written, leaving an entry pointing at nothing and no way to uninstall.
-    /// The entry is also still true throughout: this run ends with LocalAi installed.
-    /// </summary>
-    /// <summary>
     /// Whether this account's PATH still names the launcher. It goes with the binaries, and not
     /// at all when an installation follows: taking it off only to put it back would leave a
     /// window where a console started in between finds nothing.
@@ -132,10 +116,19 @@ public sealed class UninstallPlanner
     /// <summary>Where the launcher lives, which is the entry this plan is about.</summary>
     public string LauncherDirectory => Path.Combine(layout.BinRoot, "launcher");
 
-    private bool PlansAppsAndFeaturesRemoval(
-        RemovalSelection selection,
-        bool installationFollows) =>
-        !installationFollows &&
+    /// <summary>
+    /// Whether there is an Apps &amp; features entry to take out. It goes with the binaries,
+    /// because the uninstaller copy it runs lives among them: an entry whose copy is gone
+    /// offers a removal that cannot start, and one kept beside a runtime that stays is still
+    /// true.
+    ///
+    /// Also when an installation follows. Kept there, the entry pointed at nothing until the
+    /// installation half wrote it again — and for good if the wizard was closed in between.
+    ///
+    /// Only the entry that describes this installation. The key is one per account, and one
+    /// pointing at another LocalAi is that installation's way out, not this run's to remove.
+    /// </summary>
+    private bool PlansAppsAndFeaturesRemoval(RemovalSelection selection) =>
         selection.Includes(RemovalItem.Binaries) &&
         OperatingSystem.IsWindows() &&
         new UninstallRegistration(layout, registrySubKey).ReadOwn() is not null;

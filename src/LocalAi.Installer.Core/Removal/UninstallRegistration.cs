@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Runtime.Versioning;
 using LocalAi.Installer.Core.Activation;
 using Microsoft.Win32;
@@ -30,15 +29,8 @@ public sealed record UninstallEntry(
 [SupportedOSPlatform("windows")]
 public sealed class UninstallRegistration(
     InstallationLayout layout,
-    string? registrySubKey = null,
-    Action<string>? removeAfterExit = null)
+    string? registrySubKey = null)
 {
-    /// <summary>
-    /// How a directory this process is running from gets deleted once it exits. Replaceable so
-    /// a test can observe that the deferral happened without spawning anything.
-    /// </summary>
-    private readonly Action<string> removeAfterExit = removeAfterExit ?? RemoveAfterExit;
-
     /// <summary>
     /// Where Windows looks. The leaf name is the product key, and it is stable across
     /// versions: an upgrade updates this entry rather than adding a second one.
@@ -149,99 +141,42 @@ public sealed class UninstallRegistration(
 
     /// <summary>
     /// Takes the entry out of Apps &amp; features. Absent is success: an uninstall run on a
-    /// machine whose entry was already removed by hand has nothing left to do here.
+    /// machine whose entry was already removed by hand has nothing left to do here, and the
+    /// result says which it was.
+    ///
+    /// A key that cannot be removed throws rather than answering "absent": the caller deletes
+    /// the uninstaller copy next, and must not while an entry still runs it.
     /// </summary>
     public bool Unregister()
     {
-        try
+        var parent = subKey[..subKey.LastIndexOf('\\')];
+        var leaf = subKey[(subKey.LastIndexOf('\\') + 1)..];
+        using var key = Registry.CurrentUser.OpenSubKey(parent, writable: true);
+        using (var existing = key?.OpenSubKey(leaf))
         {
-            var parent = subKey[..subKey.LastIndexOf('\\')];
-            var leaf = subKey[(subKey.LastIndexOf('\\') + 1)..];
-            using var key = Registry.CurrentUser.OpenSubKey(parent, writable: true);
-            if (key?.OpenSubKey(leaf) is null)
+            if (existing is null)
             {
                 return false;
             }
+        }
 
-            key.DeleteSubKeyTree(leaf);
-            return true;
-        }
-        catch (Exception exception) when (
-            exception is UnauthorizedAccessException or IOException or ArgumentException)
-        {
-            return false;
-        }
+        key!.DeleteSubKeyTree(leaf, throwOnMissingSubKey: false);
+        return true;
     }
 
     /// <summary>
-    /// Removes the uninstaller's own copy, last of all.
+    /// Removes the uninstaller's copy. Only once the entry is gone: an entry whose copy is
+    /// missing offers a removal that cannot start.
     ///
-    /// Windows will not delete a running executable, and this run is that executable whenever
-    /// it was started from Apps &amp; features. The ordinary delete is tried first — it
-    /// succeeds when the person is running an installer from somewhere else — and otherwise
-    /// the directory is handed to a small process that outlives this one.
-    ///
-    /// Not <c>MoveFileEx(…, MOVEFILE_DELAY_UNTIL_REBOOT)</c>, which is the textbook answer:
-    /// it works by writing PendingFileRenameOperations under HKLM and therefore needs
-    /// administrator rights. This installation is per-user by design and has none, so that
-    /// call would fail silently and leave the directory behind forever.
-    ///
-    /// Returns whether the directory is gone now; false means "in a moment, once this process
-    /// exits", which the finish page says out loud rather than leaving a folder to be found
-    /// later and wondered about.
+    /// A removal never runs from this copy — it hands over to a temporary one first — so a copy
+    /// that cannot be deleted is held by something else. That throws, and the caller reports
+    /// it; nothing is scheduled for later.
     /// </summary>
-    public bool RemoveUninstallerCopy()
+    public void RemoveUninstallerCopy()
     {
-        if (!Directory.Exists(UninstallerDirectory))
-        {
-            return true;
-        }
-
-        try
+        if (Directory.Exists(UninstallerDirectory))
         {
             Directory.Delete(UninstallerDirectory, recursive: true);
-            return true;
-        }
-        catch (Exception exception) when (
-            exception is IOException or UnauthorizedAccessException)
-        {
-            removeAfterExit(UninstallerDirectory);
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Deletes the directory once nothing is holding it, from a process that outlives this
-    /// one.
-    ///
-    /// It waits on the condition rather than on a duration: each attempt removes the directory
-    /// and stops the moment it is gone, so it finishes as soon as this process exits instead
-    /// of after a guessed-at delay. The attempts are bounded because a tail process that never
-    /// ends is worse than a directory that stays.
-    /// </summary>
-    private static void RemoveAfterExit(string directory)
-    {
-        var quoted = "\"" + directory + "\"";
-        var start = new ProcessStartInfo("cmd.exe")
-        {
-            UseShellExecute = false,
-            CreateNoWindow = true,
-        };
-        start.ArgumentList.Add("/c");
-        start.ArgumentList.Add(
-            "for /l %i in (1,1,60) do (" +
-            "rd /s /q " + quoted + " 2>nul & " +
-            "if not exist " + quoted + " exit /b 0 & " +
-            "timeout /t 1 /nobreak >nul)");
-        try
-        {
-            using var process = Process.Start(start);
-        }
-        catch (Exception exception) when (
-            exception is System.ComponentModel.Win32Exception or InvalidOperationException)
-        {
-            // Nothing further to try: the entry is already gone, so the directory is inert
-            // even if it stays. The caller reports that it was left behind.
         }
     }
 
