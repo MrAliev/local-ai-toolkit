@@ -237,6 +237,16 @@ public static class RunResults
                 : string.Join(", ", configured));
     }
 
+    /// <summary>The memory rule the run was asked to store and could not.</summary>
+    public static RunResultRow ResidencyNotStored(string reason) => new(
+        RunMark.Failed,
+        PageLabels.VideoMemory,
+        string.Format(
+            InstallerCulture.Pick(
+                "could not be stored. Technical details: {0}",
+                "не удалось сохранить. Технические сведения: {0}"),
+            reason));
+
     public static RunResultRow PathEntry(RunMark mark, string detail) =>
         new(mark, PageLabels.ResultPath, detail);
 

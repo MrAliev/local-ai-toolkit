@@ -199,6 +199,9 @@ public sealed class InstallerWizardViewModel : ObservableObject
     private RegistrationOutcome? registrationOutcome;
     private string? reportSaveFailure;
 
+    /// <summary>Why the memory rule could not be stored this run, or null when nothing failed.</summary>
+    private string? residencyNotStored;
+
     private RunMark pathMark = RunMark.None;
 
     private PathOutcome? pathOutcome;
@@ -940,6 +943,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             ? new("Claude Code", ClientRunState.NotAttempted)
             : null;
         reportSaveFailure = null;
+        residencyNotStored = null;
         packageOutcome = null;
         packageInstalled = false;
         modelStepFailure = null;
@@ -1683,9 +1687,11 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 runtimeRoot,
                 BrokerPolicy.FileName);
             // Captured before the write, journalled only when the writer will actually
-            // write: mirroring its own installation check keeps the journal free of steps
-            // for effects that never happened.
-            var priorPolicy = Directory.Exists(runtimeRoot)
+            // write: mirroring its own checks — an installation to write into, a value that
+            // differs from the stored one — keeps the journal free of steps for effects that
+            // never happened.
+            var priorPolicy = Directory.Exists(runtimeRoot) &&
+                !ResidencyPolicyWriter.Holds(runtimeRoot, residency.Policy)
                 ? CaptureFileState(policyPath)
                 : null;
             if (priorPolicy is not null)
@@ -1708,13 +1714,17 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 return;
             }
 
-            JournalComplete(
-                residencyStep,
-                $"Wrote {policyPath}.",
-                isReversible: true,
-                priorPolicy is { } captured
-                    ? new InstallerRunUndoData(Files: [BuildFileUndo(policyPath, captured)])
-                    : null);
+            if (outcome != ResidencyPolicyOutcome.Unchanged)
+            {
+                JournalComplete(
+                    residencyStep,
+                    $"Wrote {policyPath}.",
+                    isReversible: true,
+                    priorPolicy is { } captured
+                        ? new InstallerRunUndoData(Files: [BuildFileUndo(policyPath, captured)])
+                        : null);
+            }
+
             AppendLog(report, $"Model residency policy: {residency.Policy}.");
             if (residency.Policy != ModelResidencyPolicy.RequireFullVram)
             {
@@ -1729,6 +1739,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         {
             JournalFail(residencyStep, exception.Message);
             AppendLog(report, $"Could not store the residency policy: {exception.Message}");
+            residencyNotStored = exception.Message;
             hasRunError = true;
         }
     }
@@ -1753,7 +1764,10 @@ public sealed class InstallerWizardViewModel : ObservableObject
             var policyPath = RuntimeDirectories.SettingsFileForWriting(
                 runtimeRoot,
                 UpdateCheckPolicy.FileName);
-            var prior = Directory.Exists(runtimeRoot) ? CaptureFileState(policyPath) : null;
+            var prior = Directory.Exists(runtimeRoot) &&
+                !UpdateCheckPolicyWriter.Holds(runtimeRoot, review.EnableUpdateCheck)
+                ? CaptureFileState(policyPath)
+                : null;
             if (prior is not null)
             {
                 step = JournalBegin(
@@ -1772,13 +1786,17 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 return;
             }
 
-            JournalComplete(
-                step,
-                $"Wrote {policyPath}.",
-                isReversible: true,
-                prior is { } captured
-                    ? new InstallerRunUndoData(Files: [BuildFileUndo(policyPath, captured)])
-                    : null);
+            if (outcome != ResidencyPolicyOutcome.Unchanged)
+            {
+                JournalComplete(
+                    step,
+                    $"Wrote {policyPath}.",
+                    isReversible: true,
+                    prior is { } captured
+                        ? new InstallerRunUndoData(Files: [BuildFileUndo(policyPath, captured)])
+                        : null);
+            }
+
             AppendLog(
                 report,
                 review.EnableUpdateCheck
@@ -2054,6 +2072,11 @@ public sealed class InstallerWizardViewModel : ObservableObject
         foreach (var model in ModelRuns)
         {
             finish.Results.Add(new RunResultRow(model.Mark, model.Tag, model.Detail));
+        }
+
+        if (residencyNotStored is { } notStored)
+        {
+            finish.Results.Add(RunResults.ResidencyNotStored(notStored));
         }
 
         if (clientOutcomes.Count == 0)
