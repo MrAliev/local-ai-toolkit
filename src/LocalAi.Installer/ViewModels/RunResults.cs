@@ -15,6 +15,9 @@ public enum PackageOutcomeKind
 
     /// <summary>The package installer answered with a status.</summary>
     Result,
+
+    /// <summary>The package installer stopped with an error other than a layout refusal.</summary>
+    Failed,
 }
 
 /// <summary>What the package step ended in, kept as facts so its row can be worded in any language.</summary>
@@ -22,7 +25,16 @@ public sealed record PackageOutcome(
     PackageOutcomeKind Kind,
     LocalAiPackageInstallStatus Status = default,
     string? Version = null,
-    string? Reason = null);
+    string? Reason = null)
+{
+    /// <summary>What an installation exception from the package installer amounts to.</summary>
+    public static PackageOutcome FromInstallationFailure(string message) =>
+        new(
+            InstallationFailureAdvice.IsLayoutFailure(message)
+                ? PackageOutcomeKind.Refused
+                : PackageOutcomeKind.Failed,
+            Reason: message);
+}
 
 public enum PathOutcome
 {
@@ -38,6 +50,9 @@ public enum ClientRunState
     Applied,
     AlreadyConfigured,
     Failed,
+
+    /// <summary>Not attempted because the package was not installed.</summary>
+    Skipped,
 }
 
 public sealed record ClientRunOutcome(string Name, ClientRunState State, string? Reason = null);
@@ -181,6 +196,10 @@ public static class RunResults
             ClientRunState.Configuring => InstallerCulture.Pick(
                 "Setup was interrupted; the final state is unknown. Check the client configuration before retrying.",
                 "Настройка прервана; итоговое состояние неизвестно. Проверьте конфигурацию клиента перед повторной настройкой."),
+            // Marked None: the package row already carries the failure.
+            ClientRunState.Skipped => InstallerCulture.Pick(
+                "skipped: LocalAi was not installed",
+                "пропущено: LocalAi не установлен"),
             _ => InstallerCulture.Pick(
                 "not attempted; the run stopped before client setup",
                 "не выполнялось; запуск остановился до настройки клиента"),
@@ -209,10 +228,17 @@ public static class RunResults
             PackageOutcomeKind.NoRelease => InstallerCulture.Pick(
                 "not installed, no verified release was selected",
                 "не установлен, проверенный релиз не выбран"),
+            // The advice for a layout refusal is always in the log, and for a root without
+            // versions it is to delete the directory.
             PackageOutcomeKind.Refused => string.Format(
                 InstallerCulture.Pick(
-                    "not installed: the installation directory failed safety checks. Check its permissions and contents before retrying; do not delete existing data. Technical details: {0}",
-                    "не установлен: каталог установки не прошёл проверку безопасности. Перед повторной попыткой проверьте права и содержимое; не удаляйте существующие данные. Технические сведения: {0}"),
+                    "not installed: the installation directory failed safety checks. The log below says what to do with it. Technical details: {0}",
+                    "не установлен: каталог установки не прошёл проверку безопасности. Что с ним делать, сказано в журнале ниже. Технические сведения: {0}"),
+                outcome.Reason),
+            PackageOutcomeKind.Failed => string.Format(
+                InstallerCulture.Pick(
+                    "not installed: the installation stopped with an error. Technical details: {0}",
+                    "не установлен: установка остановилась с ошибкой. Технические сведения: {0}"),
                 outcome.Reason),
             _ when installed => string.Format(
                 InstallerCulture.Pick("{0}, version {1}", "{0}, версия {1}"),

@@ -282,8 +282,14 @@ public sealed class ResultsFollowTheLanguageTests : IDisposable
             "не установлен, проверенный релиз не выбран",
             RunResults.PackageDetail(new PackageOutcome(PackageOutcomeKind.NoRelease), installed: false));
         var refusal = RunResults.PackageDetail(new PackageOutcome(PackageOutcomeKind.Refused, Reason: "layout is unsafe"), installed: false);
-        Assert.Contains("проверьте права и содержимое", refusal, StringComparison.Ordinal);
+        Assert.Contains("Что с ним делать, сказано в журнале ниже.", refusal, StringComparison.Ordinal);
         Assert.EndsWith("layout is unsafe", refusal, StringComparison.Ordinal);
+        Assert.Equal(
+            "не установлен: установка остановилась с ошибкой. Технические сведения: failed",
+            RunResults.PackageDetail(new PackageOutcome(PackageOutcomeKind.Failed, Reason: "failed"), installed: false));
+        Assert.Equal(
+            "пропущено: LocalAi не установлен",
+            RunResults.Client(new("Codex", ClientRunState.Skipped)).Detail);
         Assert.Equal("добавлен для этой учётной записи", RunResults.PathDetail(PathOutcome.Added));
         Assert.Equal("уже был прописан", RunResults.PathDetail(PathOutcome.AlreadyThere));
         Assert.Contains("полный путь к localai-launcher.exe", RunResults.PathDetail(PathOutcome.Failed), StringComparison.Ordinal);
