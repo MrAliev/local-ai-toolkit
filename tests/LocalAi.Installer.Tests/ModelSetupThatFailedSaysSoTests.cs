@@ -1,4 +1,5 @@
 using System.Text;
+using LocalAi.Installer.Core;
 using LocalAi.Installer.Core.Activation;
 using LocalAi.Installer.Core.Diagnosis;
 using LocalAi.Installer.Core.Models;
@@ -38,7 +39,9 @@ public sealed class ModelSetupThatFailedSaysSoTests
                 "The release manifest lists no models, so none can be installed from it."));
 
         Assert.Equal(RunMark.Failed, row.Mark);
-        Assert.Equal("none set up: no model was requested. The log below says why.", row.Detail);
+        Assert.Equal(
+            "none set up: the installer found no model it could set up. The log below says why.",
+            row.Detail);
     }
 
     [Fact]
@@ -49,7 +52,24 @@ public sealed class ModelSetupThatFailedSaysSoTests
             new ModelStepFailure(ModelStepFailureKind.Cancelled, "cancelled"));
 
         Assert.Equal(RunMark.None, row.Mark);
-        Assert.Equal("validation cancelled", row.Detail);
+        Assert.Equal("cancelled before the first model", row.Detail);
+    }
+
+    [Theory]
+    [InlineData(ModelStepFailureKind.Stopped, "broker_failure", "не удалось (broker_failure)")]
+    [InlineData(
+        ModelStepFailureKind.NothingRequested,
+        "The release manifest lists no models, so none can be installed from it.",
+        "ни одна не настроена: установщик не нашёл модели, которую мог бы настроить. Почему — сказано в журнале ниже.")]
+    [InlineData(ModelStepFailureKind.Cancelled, "cancelled", "отменено до первой модели")]
+    public void A_step_that_reached_no_model_says_how_it_ended_in_russian(
+        ModelStepFailureKind kind,
+        string detail,
+        string expected)
+    {
+        InstallerCulture.Current = InstallerLanguage.Russian;
+
+        Assert.Equal(expected, RunResults.Models([], new ModelStepFailure(kind, detail)).Detail);
     }
 
     [Fact]
