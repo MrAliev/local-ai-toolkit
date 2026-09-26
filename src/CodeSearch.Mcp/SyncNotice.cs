@@ -120,6 +120,18 @@ public sealed class SyncNotice(Func<string?, SyncSighting?> look)
     }
 
     /// <summary>
+    /// The block naming a running build, from one look, or null when none is running. Nothing is
+    /// composed for null, so an end notice owed to the next answer is not spent here.
+    /// </summary>
+    public string? WhileRunning(string? root)
+    {
+        var sighting = look(root);
+        return sighting is { BuildIsRunning: true }
+            ? Compose(sighting, SyncNoticeAudience.Instruction, separated: false)
+            : null;
+    }
+
+    /// <summary>
     /// The lines to put above an answer, ending in a blank line, or nothing at all.
     /// </summary>
     public string Above(string? root, SyncNoticeAudience audience) =>
