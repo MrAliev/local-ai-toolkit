@@ -200,13 +200,14 @@ public sealed class DiagnosePageViewModel : ObservableObject
             InstallerCulture.Pick("Existing LocalAi", "Установленный LocalAi"),
             diagnosis.ExistingLocalAi.State switch
             {
-                ExistingLocalAiState.Absent => CheckStatus.Ok,
+                var state when state.NothingInstalled() => CheckStatus.Ok,
                 ExistingLocalAiState.Compatible => CheckStatus.Ok,
                 _ => CheckStatus.Warning,
             },
             diagnosis.ExistingLocalAi.State switch
             {
-                ExistingLocalAiState.Absent => InstallerCulture.Pick(
+                // What a stopped removal left is not an installation: this still is a first one.
+                var state when state.NothingInstalled() => InstallerCulture.Pick(
                     "none — this will be a first installation",
                     "нет — это будет первая установка"),
                 ExistingLocalAiState.Compatible => string.Format(

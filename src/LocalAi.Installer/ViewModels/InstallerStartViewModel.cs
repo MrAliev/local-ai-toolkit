@@ -145,6 +145,9 @@ public sealed class InstallerStartViewModel : ObservableObject
         ExistingLocalAiState.Unrecognized => InstallerCulture.Pick(
             "There is a LocalAi directory here, but it is not a working installation.",
             "Каталог LocalAi здесь есть, но рабочей установкой он не является."),
+        ExistingLocalAiState.Leftovers => InstallerCulture.Pick(
+            "LocalAi is not installed, but some of its files are still on this computer.",
+            "LocalAi не установлен, но часть его файлов ещё на этом компьютере."),
         _ => InstallerCulture.Pick(
             "LocalAi is not installed on this computer.",
             "LocalAi не установлен на этом компьютере."),
@@ -259,6 +262,18 @@ public sealed class InstallerStartViewModel : ObservableObject
                 : "Установку не удалось прочитать.") +
             "\nЧистая переустановка заменит бинарные файлы; удаление уберёт LocalAi с этого " +
             "компьютера."),
+        ExistingLocalAiState.Leftovers => InstallerCulture.Pick(
+            "You can install it again, or remove what is left. Nothing is changed until you " +
+            "confirm it on a review page.",
+            "Можно установить его заново или удалить то, что осталось. Ничего не изменится, " +
+            "пока вы это не подтвердите на итоговой странице."),
+        ExistingLocalAiState.SigningKeysOnly => InstallerCulture.Pick(
+            "Install it to give your assistants local code search and local models. The " +
+            "release signing keys from an earlier installation are still here; removing " +
+            "LocalAi can take them too.",
+            "Установите его, чтобы дать вашим ассистентам локальный поиск по коду и локальные " +
+            "модели. Ключи подписи релизов от прежней установки ещё здесь; удаление LocalAi " +
+            "может убрать и их."),
         _ => InstallerCulture.Pick(
             "Install it to give your assistants local code search and local models.",
             "Установите его, чтобы дать вашим ассистентам локальный поиск по коду и локальные " +
@@ -278,7 +293,9 @@ public sealed class InstallerStartViewModel : ObservableObject
 
     private IEnumerable<StartActionOption> BuildOptions()
     {
-        var installed = existing.State != ExistingLocalAiState.Absent;
+        var installed = !existing.State.NothingInstalled();
+        // What a stopped removal left: nothing to update or reinstall, but something to remove.
+        var removable = existing.State != ExistingLocalAiState.Absent;
         // The release, not the directory: the row says why Install is off, and "already
         // installed" is the answer — naming a build id there repeats the headline's old
         // mistake in smaller type.
@@ -347,7 +364,7 @@ public sealed class InstallerStartViewModel : ObservableObject
             InstallerCulture.Pick(
                 "Choose what goes and what stays, then take it off this computer.",
                 "Выберите, что удалить, а что оставить, и уберите его с этого компьютера."),
-            installed,
+            removable,
             InstallerCulture.Pick(
                 "Nothing is installed to remove.",
                 "Нечего удалять — ничего не установлено."));
