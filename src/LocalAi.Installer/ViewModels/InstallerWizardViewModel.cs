@@ -347,6 +347,12 @@ public sealed class InstallerWizardViewModel : ObservableObject
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "LocalAi-installer-logs");
 
+    /// <summary>
+    /// The runtime root the stored settings are read from and written into, and whose existence
+    /// the review asks about. One value, so the review and the writes cannot disagree.
+    /// </summary>
+    internal string RuntimeRoot { get; init; } = ModelResidencyPolicyStore.DefaultRuntimeRoot;
+
     public RelayCommand BackCommand { get; }
 
     public RelayCommand NextCommand { get; }
@@ -498,7 +504,9 @@ public sealed class InstallerWizardViewModel : ObservableObject
             IsUpdate,
             ActionText,
             hasRunError,
-            isChecking: diagnose.IsChecking);
+            isChecking: diagnose.IsChecking,
+            isReleaseFolded: IsReleaseFolded,
+            areSettingsFolded: AreSettingsFolded);
 
     public string StepStatus => string.Format(
         InstallerCulture.Pick("Step {0} of {1}", "Шаг {0} из {1}"),
@@ -658,7 +666,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
     {
         try
         {
-            var runtimeRoot = ModelResidencyPolicyStore.DefaultRuntimeRoot;
+            var runtimeRoot = RuntimeRoot;
             if (!Directory.Exists(runtimeRoot))
             {
                 return;
@@ -1599,13 +1607,13 @@ public sealed class InstallerWizardViewModel : ObservableObject
             }
 
             var recordPath = Path.Combine(
-                ModelResidencyPolicyStore.DefaultRuntimeRoot,
+                RuntimeRoot,
                 OllamaLaunchRecord.FileName);
             var priorRecord = CaptureFileState(recordPath);
             recordStep = JournalBegin(
                 InstallerRunEffectKind.OllamaLaunchRecord,
                 "Ollama start-on-demand record");
-            new OllamaLaunchRecordStore(ModelResidencyPolicyStore.DefaultRuntimeRoot)
+            new OllamaLaunchRecordStore(RuntimeRoot)
                 .Save(path, installed.DetectedVersion);
             JournalComplete(
                 recordStep,
@@ -1629,7 +1637,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         string? residencyStep = null;
         try
         {
-            var runtimeRoot = ModelResidencyPolicyStore.DefaultRuntimeRoot;
+            var runtimeRoot = RuntimeRoot;
             var policyPath = RuntimeDirectories.SettingsFileForWriting(
                 runtimeRoot,
                 BrokerPolicy.FileName);
@@ -1697,7 +1705,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         string? step = null;
         try
         {
-            var runtimeRoot = ModelResidencyPolicyStore.DefaultRuntimeRoot;
+            var runtimeRoot = RuntimeRoot;
             var policyPath = RuntimeDirectories.SettingsFileForWriting(
                 runtimeRoot,
                 UpdateCheckPolicy.FileName);
@@ -1862,30 +1870,50 @@ public sealed class InstallerWizardViewModel : ObservableObject
         if (!package.HasPackage)
         {
             builder.AppendLine();
-            // What the run will actually do, which on an update is usually nothing at all:
-            // prerequisites are already installed and nothing is ticked, so the shipped
-            // "only the prerequisites above will be applied" told the reader about work that
-            // was not going to happen, on the page whose whole purpose is to say what is
-            // (#264).
-            var remaining = dependencies.Dependencies
-                .Any(dependency => dependency.IsConsented && dependency.IsInstallable)
-                ? InstallerCulture.Pick(
+            // What the run will still do (#264). The settings are written whenever the runtime
+            // root exists, by the same Directory.Exists the two writers ask.
+            var prerequisites = dependencies.Dependencies
+                .Any(dependency => dependency.IsConsented && dependency.IsInstallable);
+            var remaining = (prerequisites, Directory.Exists(RuntimeRoot)) switch
+            {
+                (true, true) => InstallerCulture.Pick(
+                    "The prerequisites above will still be installed, and the video memory and " +
+                    "update check settings stored.",
+                    "Компоненты, перечисленные выше, всё равно будут установлены, а настройки " +
+                    "видеопамяти и проверки обновлений — сохранены."),
+                (true, false) => InstallerCulture.Pick(
                     "Only the prerequisites above will be applied.",
-                    "Будут применены только компоненты, перечисленные выше.")
-                : InstallerCulture.Pick(
+                    "Будут применены только компоненты, перечисленные выше."),
+                (false, true) => InstallerCulture.Pick(
+                    "The video memory and update check settings will still be stored.",
+                    "Настройки видеопамяти и проверки обновлений всё равно будут сохранены."),
+                (false, false) => InstallerCulture.Pick(
                     "Nothing will be applied.",
-                    "Ничего применено не будет.");
+                    "Ничего применено не будет."),
+            };
+            // The button under the list exists only while the release step is folded; anywhere
+            // else that step is in the rail before this one.
+            var route = IsReleaseFolded
+                ? InstallerCulture.Pick(
+                    "Choose a release below, or point the installer at a folder holding one, " +
+                    "and verify it before continuing.",
+                    "Выберите релиз ниже или укажите папку с релизом и проверьте его, прежде " +
+                    "чем продолжать.")
+                : string.Format(
+                    InstallerCulture.Pick(
+                        "Go back to the {0} step to choose a release or a folder holding one.",
+                        "Вернитесь к шагу «{0}», чтобы выбрать релиз или папку с ним."),
+                    WizardText.Steps().First(step => step.Page == InstallerPage.Package).Title);
             builder.AppendLine(string.Format(
                 InstallerCulture.Pick(
                     "Warning: no release has been verified, so LocalAi itself will not be " +
-                    "installed and the client applications will be left unconfigured. {0} " +
-                    "Choose a release below, or point the installer at a folder holding one, " +
-                    "and verify it before continuing.",
-                    "Внимание: ни один релиз не проверен, поэтому сам LocalAi " +
-                    "установлен не будет, а клиентские приложения останутся " +
-                    "ненастроенными. {0} Выберите релиз ниже или укажите папку с релизом " +
-                    "и проверьте его, прежде чем продолжать."),
-                remaining));
+                    "installed, and no models, client applications or PATH entry will be set " +
+                    "up. {0} {1}",
+                    "Внимание: ни один релиз не проверен, поэтому сам LocalAi установлен не " +
+                    "будет, а модели, клиентские приложения и запись в PATH настроены не " +
+                    "будут. {0} {1}"),
+                remaining,
+                route));
         }
 
         if (builder.Length > 0)
@@ -2303,7 +2331,8 @@ public sealed class InstallerWizardViewModel : ObservableObject
     /// confirmation step for a long time — long enough for a release to be published in
     /// between. Installing what was newest when the window opened, under a field that still
     /// says "latest", is the one outcome that word rules out. A specific tag is left alone: it
-    /// was asked for by name.
+    /// was asked for by name. So is a run with no verified release: its review said LocalAi will
+    /// not be installed, and a re-check must not turn that into an installation.
     /// </summary>
     /// <summary>
     /// Internal rather than private so a test can drive it: reaching it through RunAsync means
@@ -2314,7 +2343,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         StringBuilder report,
         CancellationToken cancellationToken)
     {
-        if (!package.WantsLatest)
+        if (!package.WantsLatest || !package.HasPackage)
         {
             return;
         }
@@ -2429,6 +2458,14 @@ public sealed class InstallerWizardViewModel : ObservableObject
         if (!OperatingSystem.IsWindows())
         {
             return string.Empty;
+        }
+
+        // The entry is added only after the package installs.
+        if (!package.HasPackage)
+        {
+            return InstallerCulture.Pick(
+                "PATH: unchanged, because LocalAi will not be installed.",
+                "PATH: не меняется, потому что LocalAi не будет установлен.");
         }
 
         var directory = Path.Combine(InstallationLayout.CreateDefault().BinRoot, "launcher");

@@ -148,35 +148,6 @@ public sealed class UpdatePathFoldsSettingsTests
     }
 
     /// <summary>
-    /// When nothing resolved, the warning has to name a route that exists. On this path the
-    /// package step is folded away, so telling somebody to "go back" to it would send them
-    /// looking for a page the rail does not show.
-    /// </summary>
-    /// <summary>
-    /// One wording for both paths, naming a direction rather than a control: a sentence that
-    /// names a button by its label breaks the moment the button is relabelled, and the old
-    /// one named a page an update no longer shows.
-    /// </summary>
-    [Theory]
-    [InlineData(StartChoice.Install)]
-    [InlineData(StartChoice.UpdateOrRepair)]
-    public void An_unresolved_release_says_the_same_thing_on_every_path(StartChoice mode)
-    {
-        var review = new InstallerWizardViewModel(mode).ReviewText;
-
-        // The folder is named beside the release now. Somebody reading this sentence has just
-        // learned that nothing will be installed, and on a machine that cannot reach GitHub the
-        // release half of it is the half that cannot help them.
-        Assert.Contains(
-            "Choose a release below, or point the installer at a folder holding one, " +
-            "and verify it before continuing.",
-            review,
-            StringComparison.Ordinal);
-        Assert.DoesNotContain("Go back to the LocalAi package step", review, StringComparison.Ordinal);
-        Assert.DoesNotContain("Change these settings", review, StringComparison.Ordinal);
-    }
-
-    /// <summary>
     /// The first page is called the same thing on both paths, because it is the same page: the
     /// probe runs unconditionally and the table renders as soon as it finishes. It was renamed
     /// to "Preparing" on the update path on the belief that the page there was one line and a
@@ -211,39 +182,61 @@ public sealed class UpdatePathFoldsSettingsTests
     }
 
     /// <summary>
-    /// The warning used to promise work that was not going to happen. On an update the
-    /// prerequisites are installed and nothing is ticked, so "only the prerequisites above
-    /// will be applied" described a run nobody was about to get — on the page whose whole
-    /// purpose is to say what will happen (#264).
+    /// Back from the review of an update lands on the system check, where nothing can be
+    /// changed; the folded pages come back through the buttons under the list.
     /// </summary>
     [Fact]
-    public void With_no_prerequisites_selected_the_warning_says_nothing_will_be_applied()
+    public void A_folded_review_names_the_buttons_rather_than_back()
     {
-        var review = new InstallerWizardViewModel(StartChoice.UpdateOrRepair).ReviewText;
+        var wizard = Checked(StartChoice.UpdateOrRepair);
+        wizard.MoveNext();
+        Assert.Equal(InstallerPage.Confirm, wizard.CurrentPage);
 
-        Assert.Contains("Nothing will be applied.", review, StringComparison.Ordinal);
-        Assert.DoesNotContain(
-            "Only the prerequisites above will be applied.",
-            review,
-            StringComparison.Ordinal);
+        Assert.Equal(
+            "Review what is about to happen. To change anything, use the buttons under the " +
+            "list; to apply it, click Update.",
+            wizard.StepDescription);
     }
 
     [Fact]
-    public void With_a_prerequisite_selected_the_warning_names_it_as_the_work()
+    public void An_unfolded_review_names_back()
     {
-        var wizard = new InstallerWizardViewModel(StartChoice.Install);
-        var installable = wizard.Dependencies.Dependencies
-            .FirstOrDefault(dependency => dependency.IsInstallable);
-        Assert.NotNull(installable);
-        wizard.Dependencies.SetConsent(installable!.Id, consent: true);
+        var wizard = Checked(StartChoice.Install);
+        MarkEverythingInstalled(wizard);
+        while (wizard.CurrentPage != InstallerPage.Confirm)
+        {
+            Assert.True(wizard.MoveNext());
+        }
 
-        var review = wizard.ReviewText;
+        Assert.Equal(
+            "Review what is about to happen. To change anything, go back; to apply it, click " +
+            "Install.",
+            wizard.StepDescription);
+    }
 
-        Assert.Contains(
-            "Only the prerequisites above will be applied.",
-            review,
-            StringComparison.Ordinal);
-        Assert.DoesNotContain("Nothing will be applied.", review, StringComparison.Ordinal);
+    [Fact]
+    public void A_review_with_one_group_folded_names_both_routes()
+    {
+        var wizard = Checked(StartChoice.UpdateOrRepair);
+        MarkEverythingInstalled(wizard);
+        wizard.RevealSettings();
+        while (wizard.CurrentPage != InstallerPage.Confirm)
+        {
+            Assert.True(wizard.MoveNext());
+        }
+
+        Assert.Equal(
+            "Review what is about to happen. To change anything, go back or use the button " +
+            "under the list; to apply it, click Update.",
+            wizard.StepDescription);
+    }
+
+    private static void MarkEverythingInstalled(InstallerWizardViewModel wizard)
+    {
+        foreach (var dependency in wizard.Dependencies.Dependencies)
+        {
+            wizard.Dependencies.SetInstalled(dependency.Id, true);
+        }
     }
 
     /// <summary>
