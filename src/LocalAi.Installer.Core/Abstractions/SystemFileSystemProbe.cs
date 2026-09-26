@@ -17,6 +17,8 @@ public sealed class SystemFileSystemProbe : IFileSystemProbe
     public bool DirectoryExists(string path) => Directory.Exists(path);
     public string ReadAllText(string path) => File.ReadAllText(path);
     public string GetFullPath(string path) => Path.GetFullPath(path);
+    public IEnumerable<string> EnumerateEntries(string directory) =>
+        Directory.EnumerateFileSystemEntries(directory);
 
     public string ResolvePhysicalPath(string path)
     {

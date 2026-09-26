@@ -4,6 +4,7 @@ using System.Text.Json.Serialization.Metadata;
 using System.Text.RegularExpressions;
 using LocalAi.Contracts;
 using LocalAi.Installer.Core.Abstractions;
+using LocalAi.Installer.Core.Removal;
 
 namespace LocalAi.Installer.Core.Diagnosis;
 
@@ -12,10 +13,19 @@ public interface IExistingLocalAiInspector
     ExistingLocalAiSnapshot Inspect(string localAppData);
 }
 
-public sealed partial class ExistingLocalAiInspector(IFileSystemProbe fileSystem)
+/// <param name="readUserPath">
+/// The account's stored PATH. Injected, as the removal planner's is, so a test never reads the
+/// machine's own.
+/// </param>
+public sealed partial class ExistingLocalAiInspector(
+    IFileSystemProbe fileSystem,
+    Func<string?>? readUserPath = null)
     : IExistingLocalAiInspector
 {
     private static readonly JsonSerializerOptions StrictJson = CreateJsonOptions();
+
+    private readonly Func<string?> readUserPath = readUserPath ?? LauncherPathRegistration.Current;
+
     public ExistingLocalAiSnapshot Inspect(string localAppData)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(localAppData);
@@ -24,7 +34,7 @@ public sealed partial class ExistingLocalAiInspector(IFileSystemProbe fileSystem
         if (!fileSystem.FileExists(currentPath))
         {
             return new ExistingLocalAiSnapshot(
-                ExistingLocalAiState.Absent,
+                WithoutPointer(Path.Combine(localAppData, "LocalAi"), binRoot),
                 null,
                 null,
                 null);
@@ -125,6 +135,55 @@ public sealed partial class ExistingLocalAiInspector(IFileSystemProbe fileSystem
                 exception.Message,
                 detectedVersion,
                 detectedVersionPath);
+        }
+    }
+
+    /// <summary>
+    /// Nothing is installed, but a removal that stopped leaves the rest of the root behind, and
+    /// the PATH step runs after the files. A root that cannot be listed is not known to hold
+    /// only the keys.
+    /// </summary>
+    private ExistingLocalAiState WithoutPointer(string root, string binRoot)
+    {
+        string[] names;
+        try
+        {
+            names = fileSystem.DirectoryExists(root)
+                ? fileSystem.EnumerateEntries(root).Select(Path.GetFileName).OfType<string>().ToArray()
+                : [];
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException or
+            System.Security.SecurityException)
+        {
+            return ExistingLocalAiState.Leftovers;
+        }
+
+        if (names.Any(name => !string.Equals(
+                name,
+                RemovalMatrix.SigningKeyDirectoryName,
+                StringComparison.OrdinalIgnoreCase)) ||
+            LauncherStillOnPath(Path.Combine(binRoot, "launcher")))
+        {
+            return ExistingLocalAiState.Leftovers;
+        }
+
+        return names.Length == 0
+            ? ExistingLocalAiState.Absent
+            : ExistingLocalAiState.SigningKeysOnly;
+    }
+
+    private bool LauncherStillOnPath(string launcherDirectory)
+    {
+        try
+        {
+            return LauncherPathRegistration.Contains(readUserPath(), launcherDirectory);
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException or
+            System.Security.SecurityException)
+        {
+            return false;
         }
     }
 

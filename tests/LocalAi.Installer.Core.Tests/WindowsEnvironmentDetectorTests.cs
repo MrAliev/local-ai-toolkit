@@ -484,6 +484,7 @@ public sealed class WindowsEnvironmentDetectorTests : IDisposable
         public string ResolvePhysicalPath(string path) => Path.GetFullPath(path);
         public FileMetadataSnapshot GetMetadata(string path) =>
             Metadata.GetValueOrDefault(path) ?? FileMetadataSnapshot.Absent(path);
+        public IEnumerable<string> EnumerateEntries(string directory) => [];
     }
 
     private sealed class RecordingProcessRunner : IProcessRunner
