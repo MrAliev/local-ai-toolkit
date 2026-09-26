@@ -291,7 +291,7 @@ public sealed class ResultsFollowTheLanguageTests : IDisposable
             "не установлен: установка остановилась с ошибкой. Технические сведения: failed",
             RunResults.PackageDetail(new PackageOutcome(PackageOutcomeKind.Failed, Reason: "failed"), installed: false));
         Assert.Equal(
-            "пропущено: LocalAi не установлен",
+            "пропущено: этот запуск не установил пакет LocalAi",
             RunResults.Client(new("Codex", ClientRunState.Skipped)).Detail);
         Assert.Equal("добавлен для этой учётной записи", RunResults.PathDetail(PathOutcome.Added));
         Assert.Equal("уже был прописан", RunResults.PathDetail(PathOutcome.AlreadyThere));
