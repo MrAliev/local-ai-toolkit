@@ -358,6 +358,22 @@ public sealed class InstallerWizardViewModel : ObservableObject
     /// </summary>
     internal string RuntimeRoot { get; init; } = ModelResidencyPolicyStore.DefaultRuntimeRoot;
 
+    /// <summary>
+    /// Scratch space for downloaded release assets; each installation downloads and unpacks
+    /// into a directory of its own below it.
+    ///
+    /// Deliberately outside the installation layout. It first lived in
+    /// %LOCALAPPDATA%\LocalAi\installer\downloads, which looked tidy and broke every
+    /// install: that directory belongs to the installer and must contain exactly "backups"
+    /// and "transaction.lock", so an extra folder made the layout unrecognisable to the
+    /// installer's own validation — after the package had already been downloaded.
+    /// </summary>
+    internal string ScratchRoot { get; init; } = DefaultScratchRoot;
+
+    public static string DefaultScratchRoot => Path.Combine(
+        Path.GetTempPath(),
+        "LocalAi-installer");
+
     public RelayCommand BackCommand { get; }
 
     public RelayCommand NextCommand { get; }
@@ -2228,19 +2244,6 @@ public sealed class InstallerWizardViewModel : ObservableObject
         };
 
     /// <summary>
-    /// Scratch space for downloaded release assets.
-    ///
-    /// Deliberately outside the installation layout. It first lived in
-    /// %LOCALAPPDATA%\LocalAi\installer\downloads, which looked tidy and broke every
-    /// install: that directory belongs to the installer and must contain exactly "backups"
-    /// and "transaction.lock", so an extra folder made the layout unrecognisable to the
-    /// installer's own validation — after the package had already been downloaded.
-    /// </summary>
-    private static string WorkingDirectory => Path.Combine(
-        Path.GetTempPath(),
-        "LocalAi-installer");
-
-    /// <summary>
     /// Resolves and verifies the requested release. Failures are shown on the package page
     /// rather than thrown: an unresolved package does not stop the rest of the installation.
     /// </summary>
@@ -2262,7 +2265,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             // "latest" is not a tag GitHub knows; resolve it to the newest published one so
             // the field can keep its convenient default.
             var tag = await feed.ResolveTagAsync(package.ReleaseVersion, cancellationToken);
-            var release = await feed.ResolveAsync(tag, WorkingDirectory, cancellationToken);
+            var release = await feed.ResolveAsync(tag, ScratchRoot, cancellationToken);
             if (mine != resolveGeneration ||
                 asked != (package.ReleaseVersion, package.SourceFolder))
             {
@@ -2387,7 +2390,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             // Resolved first, then recorded: assigning the tag before this await left the
             // wizard pointing at a release whose manifest had failed to verify, so the run
             // downloaded that asset and checked it against the previous manifest's hash.
-            var release = await feed.ResolveAsync(newest, WorkingDirectory, cancellationToken);
+            var release = await feed.ResolveAsync(newest, ScratchRoot, cancellationToken);
             resolvedTag = newest;
             package.SelectResolvedRelease(release, newest);
         }
@@ -2672,6 +2675,9 @@ public sealed class InstallerWizardViewModel : ObservableObject
         });
         var selection = models.BuildProvisioningSelection();
         var namesBefore = ReadReleaseNamesBeforeRun();
+        // Gone when this method returns or throws; a process that ends first leaves it for the
+        // next start to remove.
+        using var scratch = InstallerScratchDirectory.Claim(ScratchRoot);
         // The intent covers the download too, but the download only touches the temp
         // directory; the effect the journal exists for is the activation. The callback
         // below closes this step at the exact moment activation finishes, so a process
@@ -2686,7 +2692,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         {
             result = await service.InstallAsync(
                 resolved,
-                WorkingDirectory,
+                scratch.Path,
                 resolvedTag ?? resolved.Manifest.ReleaseVersion,
                 downloadProgress,
                 selection,

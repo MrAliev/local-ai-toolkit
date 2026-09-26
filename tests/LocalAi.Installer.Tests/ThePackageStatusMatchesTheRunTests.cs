@@ -68,6 +68,7 @@ public sealed class ThePackageStatusMatchesTheRunTests
             EnableDependencyActions = true,
             LogDirectory = logs.Path,
             RuntimeRoot = logs.Combine("no-runtime-root"),
+            ScratchRoot = logs.Combine("scratch"),
         };
         wizard.Models.CatalogModels.Clear();
         wizard.Package.SourceFolder = logs.Path;
