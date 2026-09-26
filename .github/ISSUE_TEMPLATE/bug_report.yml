@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         Please do not report security problems here. Open a private
-        [security advisory](https://github.com/MrAliev/local-ai-developer-toolkit/security/advisories/new)
+        [security advisory](https://github.com/MrAliev/local-ai-toolkit/security/advisories/new)
         instead.
   - type: input
     id: version

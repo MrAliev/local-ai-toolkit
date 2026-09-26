@@ -25,7 +25,7 @@ namespace LocalAi.ReleaseSigner;
 public static class ReleaseConsistency
 {
     public const string PackageUriPrefix =
-        "https://github.com/MrAliev/local-ai-developer-toolkit/releases/download/";
+        "https://github.com/" + ReleaseAssets.DefaultRepository + "/releases/download/";
 
     public static Uri ExpectedPackageUri(ReleaseVersion version)
     {
