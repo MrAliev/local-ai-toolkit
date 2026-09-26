@@ -22,6 +22,9 @@ public sealed record CatalogRecommendation(
     public static CatalogRecommendation Empty { get; } =
         new([], "No graphics adapter information was available.", false);
 
+    /// <summary>Weighed from a verified release, which is also all that setup plans.</summary>
+    public bool SizedByRelease { get; init; }
+
     public IReadOnlyList<CatalogModelFit> Fitting =>
         [.. Fits.Where(fit => fit.FitsInVideoMemory)];
 }
@@ -104,7 +107,10 @@ public sealed class CatalogModelRecommender(
         var listed = signedModels.Where(model => tags.Contains(model.Name)).ToArray();
         return listed.Length == 0
             ? Unsized
-            : Weighed(new ModelRecommendationEngine(reservePolicy).Recommend(gpu, listed));
+            : Weighed(new ModelRecommendationEngine(reservePolicy).Recommend(gpu, listed)) with
+            {
+                SizedByRelease = true,
+            };
     }
 
     private static CatalogRecommendation Unsized { get; } = CatalogRecommendation.Empty with
