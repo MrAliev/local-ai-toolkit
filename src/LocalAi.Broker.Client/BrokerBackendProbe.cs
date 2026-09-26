@@ -3,9 +3,9 @@ namespace LocalAi.Broker.Client;
 /// <summary>
 /// Whether Ollama answers where the running broker reaches for it, asked after a job failed.
 ///
-/// The broker's own verdict is on its heartbeat, a second late: read straight after a failure it
-/// still says what it said before. The address it publishes does not change, so the listener is
-/// asked now instead.
+/// The broker's own verdict rides its heartbeat, up to a second after the failure, so a client
+/// reading it at once still sees the one before. The address does not change; the listener there
+/// is asked instead.
 /// </summary>
 public static class BrokerBackendProbe
 {
