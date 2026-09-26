@@ -177,7 +177,8 @@ public sealed class TheFinishPageSaysWhatHappenedTests
 
     /// <summary>
     /// The memory rule the run could not store failed the run, and only the log said so: the
-    /// finish page listed every other thing the run touched and not this one.
+    /// finish page listed every other thing the run touched and not this one. The row names the
+    /// rule in the words the review offered it, in the language on screen when it is read.
     /// </summary>
     [Fact]
     public async Task A_memory_rule_that_could_not_be_stored_has_its_own_row()
@@ -194,17 +195,18 @@ public sealed class TheFinishPageSaysWhatHappenedTests
         var row = Assert.Single(wizard.Finish.Results, row => row.Title == "Video memory");
         Assert.Equal(RunMark.Failed, row.Mark);
         Assert.StartsWith(
-            "could not be stored. Technical details: ",
+            "the setting “part of the model in system memory” was not saved. Technical details: ",
             row.Detail,
             StringComparison.Ordinal);
 
-        InstallerCulture.Current = InstallerLanguage.Russian;
-        Assert.Equal(
-            new RunResultRow(
-                RunMark.Failed,
-                "Видеопамять",
-                "не удалось сохранить. Технические сведения: доступ запрещён"),
-            RunResults.ResidencyNotStored("доступ запрещён"));
+        wizard.Presentation.ChooseLanguage(InstallerLanguage.Russian);
+
+        var russian = Assert.Single(wizard.Finish.Results, row => row.Title == "Видеопамять");
+        Assert.Equal(RunMark.Failed, russian.Mark);
+        Assert.StartsWith(
+            "правило «часть модели в системной памяти» не сохранено. Технические сведения: ",
+            russian.Detail,
+            StringComparison.Ordinal);
     }
 
     /// <summary>

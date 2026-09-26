@@ -922,9 +922,36 @@ public sealed class LocalAiPackageInstallerTests : IDisposable
         var result = await Installer(runner).InstallAsync(package, layout, TestContext.Current.CancellationToken);
 
         Assert.Equal(LocalAiPackageInstallStatus.ImmutableConflict, result.Status);
+        // What the finish page tells apart from an inactive version it refuses.
+        Assert.Equal(result.Version, result.PriorVersion);
         Assert.Empty(runner.Calls);
         Assert.Equal(before, File.ReadAllBytes(tampered));
         Assert.Equal("versioned-launcher", File.ReadAllText(packaged));
+    }
+
+    /// <summary>
+    /// A repair whose activation fails keeps the version files it put back, which hold the
+    /// release's own content, and puts the prior launcher back. The launcher is then not among
+    /// what the release put back, and naming it would say the opposite of what is on disk.
+    /// </summary>
+    [Fact]
+    public async Task A_failed_repair_names_only_the_files_it_left_put_back()
+    {
+        CreateExisting("v1", System.Text.Encoding.UTF8.GetBytes("prior-launcher"), packageContent: true);
+        using var package = Package("v1");
+        var layout = InstallationLayout.FromLocalAppData(localAppData);
+        var file = LocalAiPackageLayout.VersionRequiredFiles[1];
+        var tampered = Path.Combine(layout.VersionsRoot, "v1", file);
+        File.AppendAllText(tampered, "tampered");
+        var runner = new RecordingRunner((_, _, _, _) =>
+            Task.FromResult(new ProcessResult(1, "", "activation failed", false, false)));
+
+        var result = await Installer(runner).InstallAsync(package, layout, TestContext.Current.CancellationToken);
+
+        Assert.Equal(LocalAiPackageInstallStatus.RolledBack, result.Status);
+        Assert.Equal("prior-launcher", File.ReadAllText(layout.LauncherPath));
+        Assert.Equal(Content(file), File.ReadAllBytes(tampered));
+        Assert.Equal([file], result.RestoredFiles);
     }
 
     /// <summary>

@@ -175,10 +175,9 @@ public sealed class PackagePageViewModel : ObservableObject
     /// <summary>
     /// The version directory already active on this machine, when there is one.
     ///
-    /// Used only to say so before the run starts. The installer handles the case correctly —
-    /// it reports <c>AlreadyInstalled</c> and changes nothing — but it reports it afterwards,
-    /// in a line of the finish log, so a run that was never going to change anything looks
-    /// exactly like one that did until it is over.
+    /// Used only to say so before the run starts. The installer puts back the files of that
+    /// version that are missing or differ from the release, unless its folder holds something
+    /// the release does not ship, and reports the outcome only afterwards, in the finish log.
     /// </summary>
     public string? InstalledVersionDirectory { get; set; }
 
@@ -218,25 +217,27 @@ public sealed class PackagePageViewModel : ObservableObject
     public string ReviewText => State switch
     {
         // The package installer puts back the files of the installed version that are missing
-        // or differ from the release, and activates — stopping the running servers — only then.
+        // or differ from the release, and activates only then. Activation stops everything the
+        // version owns: its tools, the broker, any localai command still running.
         PackageSourceState.Selected when IsAlreadyInstalled && WantsLatest => string.Format(
             InstallerCulture.Pick(
                 "LocalAi package: {0} is already installed{1} — unless a newer one is published " +
                 "before you press {2}, files that are missing or differ from the release are put " +
-                "back; if any are, LocalAi's running servers are stopped",
+                "back; if any are, LocalAi's running tools and broker are stopped",
                 "Пакет LocalAi: {0} уже установлен{1} — если до нажатия «{2}» не выйдет более " +
                 "новый, файлы, которых нет или которые отличаются от релиза, возвращаются на место; " +
-                "если такие нашлись, запущенные серверы LocalAi останавливаются"),
+                "если такие нашлись, запущенные инструменты и брокер LocalAi останавливаются"),
             ResolvedTag ?? ReleaseVersion,
             Source,
             ActionText),
         PackageSourceState.Selected when IsAlreadyInstalled => string.Format(
             InstallerCulture.Pick(
                 "LocalAi package: {0} is already installed{1} — files that are missing or differ " +
-                "from the release are put back; if any are, LocalAi's running servers are stopped",
+                "from the release are put back; if any are, LocalAi's running tools and broker " +
+                "are stopped",
                 "Пакет LocalAi: {0} уже установлен{1} — файлы, которых нет или которые отличаются " +
-                "от релиза, возвращаются на место; если такие нашлись, запущенные серверы LocalAi " +
-                "останавливаются"),
+                "от релиза, возвращаются на место; если такие нашлись, запущенные инструменты и " +
+                "брокер LocalAi останавливаются"),
             ResolvedTag ?? ReleaseVersion,
             Source),
         PackageSourceState.Selected when WantsLatest => string.Format(
