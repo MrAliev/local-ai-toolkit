@@ -579,6 +579,34 @@ public sealed class UninstallWizardViewModelTests : IDisposable
         Assert.False(wizard.CanContinueToInstall);
     }
 
+    /// <summary>
+    /// The copy parked inside the installation cannot remove the tree it runs from. It hands
+    /// over to a temporary copy before the wizard opens; when that failed, or when it was
+    /// started by hand, the wizard refuses before anything is chosen and says what to do instead.
+    /// </summary>
+    [Fact]
+    public async Task The_copy_inside_the_installation_refuses_and_says_why()
+    {
+        var inside = Path.Combine(machine.Layout.BinRoot, "uninstall", "LocalAi.Installer.exe");
+        var wizard = new UninstallWizardViewModel(
+            layout: machine.Layout,
+            homeDirectory: machine.Home,
+            processRunner: new StubProcessRunner(),
+            readHooksPath: machine.HooksPathReader,
+            executablePath: inside)
+        {
+            LogDirectory = journalDirectory,
+        };
+
+        await wizard.InitializeAsync(TestContext.Current.CancellationToken);
+
+        Assert.True(wizard.IsBlocked);
+        Assert.False(wizard.CanMoveNext);
+        Assert.False(await wizard.MoveNextAsync(TestContext.Current.CancellationToken));
+        Assert.Contains(inside, wizard.BlockingNotice, StringComparison.Ordinal);
+        Assert.Contains(machine.Layout.Root, wizard.BlockingNotice, StringComparison.Ordinal);
+    }
+
     private static RemovalRow Row(UninstallWizardViewModel wizard, RemovalItem item) =>
         wizard.Rows.Single(row => row.Item == item);
 

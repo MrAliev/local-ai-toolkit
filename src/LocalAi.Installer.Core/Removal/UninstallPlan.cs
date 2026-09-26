@@ -124,12 +124,13 @@ public sealed record UninstallPlan(
             if (registration)
             {
                 // The entry is what made this removable from Apps & features in the first
-                // place, and the copy it points at is this very executable — so it is named
-                // here, and it goes last.
+                // place, so it is named here. It goes first and the copy it runs right after,
+                // before any other path, so a run stopped halfway leaves no entry whose program
+                // is gone.
                 text.AppendLine(InstallerCulture.Pick(
-                    "  remove the Apps & features entry, and the uninstaller's own copy last",
-                    "  удалить запись в «Приложениях и возможностях» и, последней, " +
-                    "собственную копию деинсталлятора"));
+                    "  remove the Apps & features entry, then the uninstaller copy it runs",
+                    "  удалить запись в «Приложениях и возможностях», затем копию " +
+                    "деинсталлятора, которую она запускает"));
             }
 
             foreach (var file in agents.SelectMany(plan => plan.Files))

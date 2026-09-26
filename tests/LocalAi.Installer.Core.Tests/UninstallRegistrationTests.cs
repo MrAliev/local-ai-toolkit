@@ -136,35 +136,32 @@ public sealed class UninstallRegistrationTests : IDisposable
         var registration = Registration();
         registration.Register("0.1.50", installerSource);
 
-        Assert.True(registration.RemoveUninstallerCopy());
+        registration.RemoveUninstallerCopy();
 
         Assert.False(Directory.Exists(registration.UninstallerDirectory));
         // Removing it twice is what a second uninstall run would do.
-        Assert.True(registration.RemoveUninstallerCopy());
+        registration.RemoveUninstallerCopy();
     }
 
     /// <summary>
-    /// The ordinary case when Apps &amp; features started the uninstaller: Windows will not
-    /// delete the executable it is running, so the directory is handed to something that
-    /// outlives this process, and the run says the folder goes in a moment rather than leaving
-    /// it to be found later and wondered about.
+    /// A removal never runs from the copy — it hands over to a temporary one first — so a copy
+    /// that cannot be deleted is held by something else. That is said at once, to the caller,
+    /// rather than handed to anything that promises to finish later.
     /// </summary>
     [Fact]
-    public void A_copy_that_is_still_running_is_left_to_a_process_that_outlives_it()
+    public void A_copy_something_is_holding_throws_rather_than_being_left_for_later()
     {
-        var deferred = new List<string>();
-        var registration = Registration(deferred.Add);
+        var registration = Registration();
         registration.Register("0.1.50", installerSource);
-        using var running = new FileStream(
+        using var held = new FileStream(
             registration.UninstallerPath,
             FileMode.Open,
             FileAccess.Read,
             FileShare.Read);
 
-        var removedNow = registration.RemoveUninstallerCopy();
+        var refusal = Record.Exception(registration.RemoveUninstallerCopy);
 
-        Assert.False(removedNow);
-        Assert.Equal([registration.UninstallerDirectory], deferred);
+        Assert.True(refusal is IOException or UnauthorizedAccessException, refusal?.ToString());
         Assert.True(File.Exists(registration.UninstallerPath));
     }
 
@@ -184,6 +181,5 @@ public sealed class UninstallRegistrationTests : IDisposable
         Assert.True(File.Exists(registration.UninstallerPath));
     }
 
-    private UninstallRegistration Registration(Action<string>? removeAfterExit = null) =>
-        new(machine.Layout, subKey, removeAfterExit ?? (_ => { }));
+    private UninstallRegistration Registration() => new(machine.Layout, subKey);
 }
