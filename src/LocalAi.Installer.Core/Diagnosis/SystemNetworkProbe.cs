@@ -3,19 +3,21 @@ using LocalAi.Installer.Core.Abstractions;
 
 namespace LocalAi.Installer.Core.Diagnosis;
 
-public sealed class SystemNetworkProbe : INetworkProbe
+/// <param name="isNetworkAvailable">Stands in for the operating system's answer in a test.</param>
+public sealed class SystemNetworkProbe(Func<bool>? isNetworkAvailable = null) : INetworkProbe
 {
+    private readonly Func<bool> isNetworkAvailable =
+        isNetworkAvailable ?? NetworkInterface.GetIsNetworkAvailable;
+
     public Task<NetworkSnapshot> ObserveAsync(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         try
         {
-            return Task.FromResult(
-                NetworkInterface.GetIsNetworkAvailable()
-                    ? new NetworkSnapshot(ObservationState.Available, null)
-                    : new NetworkSnapshot(
-                        ObservationState.Unavailable,
-                        "No active network interface was reported."));
+            // No reason with the state: the page words it in whatever language it is showing.
+            return Task.FromResult(new NetworkSnapshot(
+                isNetworkAvailable() ? ObservationState.Available : ObservationState.Unavailable,
+                null));
         }
         catch (NetworkInformationException exception)
         {
