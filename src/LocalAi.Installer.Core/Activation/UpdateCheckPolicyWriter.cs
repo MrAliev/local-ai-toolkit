@@ -26,8 +26,31 @@ public static class UpdateCheckPolicyWriter
             return ResidencyPolicyOutcome.SkippedWithoutInstallation;
         }
 
+        if (Holds(runtimeRoot, enabled))
+        {
+            return ResidencyPolicyOutcome.Unchanged;
+        }
+
         var store = new UpdateCheckPolicyStore(runtimeRoot);
         store.Write(store.Read() with { Enabled = enabled });
         return ResidencyPolicyOutcome.Applied;
+    }
+
+    /// <summary>
+    /// Whether the settings file already answers this way, in the place a write would put it.
+    /// </summary>
+    public static bool Holds(string runtimeRoot, bool enabled)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(runtimeRoot);
+        var target = Path.GetFullPath(
+            RuntimeDirectories.SettingsFileForWriting(runtimeRoot, UpdateCheckPolicy.FileName));
+        if (!File.Exists(target))
+        {
+            return false;
+        }
+
+        var store = new UpdateCheckPolicyStore(runtimeRoot);
+        return store.Read().Enabled == enabled &&
+            string.Equals(Path.GetFullPath(store.FilePath), target, StringComparison.OrdinalIgnoreCase);
     }
 }

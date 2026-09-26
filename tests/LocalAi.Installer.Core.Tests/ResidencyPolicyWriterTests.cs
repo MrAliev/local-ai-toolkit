@@ -62,6 +62,49 @@ public sealed class ResidencyPolicyWriterTests : IDisposable
             after);
     }
 
+    /// <summary>
+    /// A run that keeps the rule it found has nothing to store. Writing it anyway failed a repair
+    /// on a policy file somebody had made read-only, for a value that was already in it.
+    /// </summary>
+    [Fact]
+    public void Leaves_a_policy_that_already_holds_the_choice_alone()
+    {
+        Directory.CreateDirectory(root);
+        var store = new ModelResidencyPolicyStore(root);
+        store.Write(store.Read() with { ModelResidency = ModelResidencyPolicy.AllowPartialOffload });
+        var path = RuntimeDirectories.SettingsFileForWriting(root, BrokerPolicy.FileName);
+        var before = File.ReadAllBytes(path);
+        File.SetAttributes(path, FileAttributes.ReadOnly);
+        try
+        {
+            var outcome = ResidencyPolicyWriter.Apply(root, ModelResidencyPolicy.AllowPartialOffload);
+
+            Assert.Equal(ResidencyPolicyOutcome.Unchanged, outcome);
+            Assert.Equal(before, File.ReadAllBytes(path));
+        }
+        finally
+        {
+            File.SetAttributes(path, FileAttributes.Normal);
+        }
+    }
+
+    /// <summary>
+    /// The same value in the file an installation from before the settings split still has is
+    /// not the same as the value in place: writing it is what moves it to where it is read from.
+    /// </summary>
+    [Fact]
+    public void Still_writes_a_choice_found_only_at_the_legacy_path()
+    {
+        Directory.CreateDirectory(root);
+        var legacy = Path.Combine(root, BrokerPolicy.FileName);
+        File.WriteAllText(legacy, "{\"SchemaVersion\":1,\"ModelResidency\":\"AllowCpu\"}");
+
+        var outcome = ResidencyPolicyWriter.Apply(root, ModelResidencyPolicy.AllowCpu);
+
+        Assert.Equal(ResidencyPolicyOutcome.Applied, outcome);
+        Assert.True(File.Exists(RuntimeDirectories.SettingsFileForWriting(root, BrokerPolicy.FileName)));
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(root))

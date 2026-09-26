@@ -62,6 +62,31 @@ public sealed class UpdateCheckPolicyWriterTests : IDisposable
         Assert.False(new UpdateCheckPolicyStore(root).Read().Enabled);
     }
 
+    /// <summary>
+    /// The answer already stored is not written again: a repair that kept it failed on a
+    /// read-only settings file for a value that was already there.
+    /// </summary>
+    [Fact]
+    public void An_answer_already_stored_is_not_written_again()
+    {
+        Directory.CreateDirectory(root);
+        UpdateCheckPolicyWriter.Apply(root, enabled: true);
+        var path = new UpdateCheckPolicyStore(root).FilePath;
+        var before = File.ReadAllBytes(path);
+        File.SetAttributes(path, FileAttributes.ReadOnly);
+        try
+        {
+            var outcome = UpdateCheckPolicyWriter.Apply(root, enabled: true);
+
+            Assert.Equal(ResidencyPolicyOutcome.Unchanged, outcome);
+            Assert.Equal(before, File.ReadAllBytes(path));
+        }
+        finally
+        {
+            File.SetAttributes(path, FileAttributes.Normal);
+        }
+    }
+
     [Fact]
     public void An_interval_somebody_tuned_survives_the_answer_changing()
     {
