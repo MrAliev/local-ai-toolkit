@@ -5,7 +5,7 @@ using LocalAi.Installer.Core.Transactions;
 namespace LocalAi.Installer.Core.Removal;
 
 public enum RemovalReportState { Completed, Failed, Unknown, NotStarted, Retained }
-public enum RemovalReportKind { Path, Configuration, Hooks, LauncherPath, Registration, Other }
+public enum RemovalReportKind { Path, Configuration, Hooks, LauncherPath, Registration, ProcessStop, Other }
 
 public sealed record RemovalReportEntry(
     string Target, RemovalReportKind Kind, RemovalReportState State, string? Detail = null);
@@ -26,12 +26,14 @@ public static class UninstallReport
     /// <summary>
     /// The plan supplies only the inventory. Completion comes exclusively from the journal.
     /// A running intent has an unknown outcome; a failure may include partial effects.
+    /// A journal step the plan does not name goes before the first planned one that did not
+    /// start ahead of it, so the stop, which runs first, is reported first.
     /// </summary>
     public static IReadOnlyList<RemovalReportEntry> Capture(
         UninstallPlan plan, InstallerRunJournalSnapshot? journal, InstallationLayout layout)
     {
         var remaining = journal?.Steps.ToList() ?? [];
-        var entries = new List<RemovalReportEntry>();
+        var entries = new List<(RemovalReportEntry Entry, bool Planned, DateTimeOffset? Started)>();
         foreach (var configuration in plan.AgentConfigurations.Where(item => item.HasChanges))
         {
             Add(string.Join(", ", configuration.Files.Select(file => file.Path)),
@@ -40,11 +42,11 @@ public static class UninstallReport
             // made, and those stay, while the files it never reached have none.
             entries.AddRange(configuration.Files
                 .Where(file => File.Exists(file.BackupPath))
-                .Select(file => new RemovalReportEntry(
+                .Select(file => Unplanned(new RemovalReportEntry(
                     file.BackupPath,
                     RemovalReportKind.Configuration,
                     RemovalReportState.Retained,
-                    InstallerCulture.Pick("the previous version of ", "прежняя версия ") + file.Path)));
+                    InstallerCulture.Pick("the previous version of ", "прежняя версия ") + file.Path))));
         }
 
         foreach (var hook in plan.Hooks)
@@ -55,7 +57,7 @@ public static class UninstallReport
             }
             else if (hook.SkipReason is { } reason)
             {
-                entries.Add(new(hook.CommonDirectory, RemovalReportKind.Hooks, RemovalReportState.Retained, reason));
+                entries.Add(Unplanned(new(hook.CommonDirectory, RemovalReportKind.Hooks, RemovalReportState.Retained, reason)));
             }
         }
 
@@ -78,14 +80,21 @@ public static class UninstallReport
 
         foreach (var step in remaining)
         {
-            entries.Add(new(step.Description, RemovalReportKind.Other, State(step.Status), step.Detail));
+            var before = entries.FindIndex(item => item.Planned && !(item.Started < step.StartedAtUtc));
+            entries.Insert(
+                before < 0 ? entries.Count : before,
+                Unplanned(new(
+                    step.Description,
+                    step.Kind == InstallerRunEffectKind.ProcessStop ? RemovalReportKind.ProcessStop : RemovalReportKind.Other,
+                    State(step.Status),
+                    step.Detail)));
         }
 
         entries.AddRange(plan.RetainedPaths.Select(path =>
-            new RemovalReportEntry(path, RemovalReportKind.Path, RemovalReportState.Retained)));
+            Unplanned(new RemovalReportEntry(path, RemovalReportKind.Path, RemovalReportState.Retained))));
         entries.AddRange(plan.Retained.Select(notice =>
-            new RemovalReportEntry(notice.Title, RemovalReportKind.Other, RemovalReportState.Retained, notice.Detail)));
-        return entries;
+            Unplanned(new RemovalReportEntry(notice.Title, RemovalReportKind.Other, RemovalReportState.Retained, notice.Detail))));
+        return entries.Select(item => item.Entry).ToArray();
 
         void Add(string target, RemovalReportKind kind, string description)
         {
@@ -95,8 +104,13 @@ public static class UninstallReport
                 remaining.Remove(step);
             }
 
-            entries.Add(new(target, kind, step is null ? RemovalReportState.NotStarted : State(step.Status), step?.Detail));
+            entries.Add((
+                new(target, kind, step is null ? RemovalReportState.NotStarted : State(step.Status), step?.Detail),
+                true,
+                step?.StartedAtUtc));
         }
+
+        static (RemovalReportEntry, bool, DateTimeOffset?) Unplanned(RemovalReportEntry entry) => (entry, false, null);
     }
 
     private static RemovalReportState State(InstallerRunStepStatus status) => status switch
