@@ -481,10 +481,12 @@ The first row is today's measurement on this machine. For the other two I have n
 and did not invent any: those are the words the product itself uses for these modes in
 `localai policy show`.
 
-**The ceiling is the sum, not the biggest card.** Models run on Ollama, and it can spread one
-model across several adapters, so two cards pool their video memory. The price is traffic
-between them over the bus, which is why one card the model fits into entirely always beats
-two it is smeared across.
+**The ceiling is one card, not the sum.** When LocalAi estimates whether a model fits in video
+memory — on the installer's models page and in `localai hardware plan` — it counts only the
+card with the most dedicated video memory and never adds cards together: two 4 GB cards are
+planned as one 4 GB card. After a model loads, the broker compares one figure Ollama reports,
+how much of the model is in video memory, with the model's size, and does not look at which
+card holds it.
 
 **2. Run the installer.** The wizard walks through:
 
