@@ -32,6 +32,9 @@ public static class CodeSearchTools
     /// </summary>
     private const int InlineRefreshFileLimit = 200;
 
+    /// <summary>The CLI's exit for sync_busy and for broker_unavailable alike.</summary>
+    private const int TryAgainLaterExitCode = 75;
+
     /// <summary>
     /// Only used when a repository has no index yet. Quality-first, and it fits a single 16GB
     /// card: the bare `:8b` tag is Q4_K_M, and fp16 only runs split across two GPUs.
@@ -1036,10 +1039,11 @@ public static class CodeSearchTools
         since the last build. Run it after committing, so search stops answering for code that no
         longer looks like that. The size of the work is bounded and the bound is enforced: a cold
         build, or a branch switch that changes most of the tree, is refused before anything is
-        embedded. The refusal carries the command to run in the background instead — unless a
-        build already holds this repository's sync gate, where it names that build instead,
-        because a second sync would exit 75 sync_busy. Relay whichever it gives you; the refusal
-        is a decision, not a transient failure, so calling again changes nothing.
+        embedded, and the refusal carries the command to run in the background instead. While a
+        build holds this repository's sync gate, any refresh is refused before a sync starts and
+        the refusal names that build instead, because a second sync would exit 75 sync_busy.
+        Relay whichever it gives you; the refusal is a decision, not a transient failure, so
+        calling again straight away changes nothing.
         """)]
     public static async Task<string> IndexRefresh(
         SearchService service,
@@ -1056,11 +1060,39 @@ public static class CodeSearchTools
             return CodeSearchText.CliUnavailable(executable);
         }
 
-        UsageCall.Current?.UnknownInference();
-        var start = SyncStartInfo(executable, resolvedRoot, InlineRefreshFileLimit);
-        var (exitCode, output, error) = await RunProcessToCompletionAsync(
-            start,
+        return await RefreshAsync(
+            resolvedRoot,
+            executable,
+            notice,
+            RunProcessToCompletionAsync,
             cancellationToken);
+    }
+
+    /// <summary>
+    /// Asked before the start because a second sync waits out the gate's budget and exits 75.
+    /// Asked again on 75, which a build taking the gate after the look also produces - and so
+    /// does broker_unavailable, which stays a failure.
+    /// </summary>
+    internal static async Task<string> RefreshAsync(
+        string root,
+        string executable,
+        SyncNotice notice,
+        Func<ProcessStartInfo, CancellationToken, Task<(int ExitCode, string Output, string Error)>> run,
+        CancellationToken cancellationToken)
+    {
+        if (notice.WhileRunning(root) is { } running)
+        {
+            return BuildRunningRefusal(root, running);
+        }
+
+        UsageCall.Current?.UnknownInference();
+        var start = SyncStartInfo(executable, root, InlineRefreshFileLimit);
+        var (exitCode, output, error) = await run(start, cancellationToken);
+        if (exitCode == TryAgainLaterExitCode && notice.WhileRunning(root) is { } won)
+        {
+            return BuildRunningRefusal(root, won);
+        }
+
         if (exitCode != 0)
         {
             UsageCall.Current?.Failed("sync_failed");
@@ -1068,9 +1100,9 @@ public static class CodeSearchTools
         }
 
         return RefusalMessage(
-                resolvedRoot,
+                root,
                 output,
-                IndexCommand(resolvedRoot),
+                IndexCommand(root),
                 InlineRefreshFileLimit,
                 notice)
             ?? output.Trim();
@@ -1228,6 +1260,20 @@ public static class CodeSearchTools
 
             {CodeSearchText.TooBigForToolCall}
             {instead}
+
+            {CodeSearchText.WhileItRuns}
+            """;
+    }
+
+    private static string BuildRunningRefusal(string root, string running)
+    {
+        UsageCall.Current?.NoInference();
+        UsageCall.Current?.Refused("sync_busy");
+        return $"""
+            Repository: {root}
+            {CodeSearchText.NothingHappened}
+
+            {running.TrimEnd('\n')}
 
             {CodeSearchText.WhileItRuns}
             """;
