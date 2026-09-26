@@ -1067,8 +1067,9 @@ for those.</value>
   Removes what a merged pull request leaves behind in this repository: a
   local branch whose every commit is already in the mainline branch, and
   the worktree that branch was checked out in. A run that removed
-  something then applies this repository's index retention, exactly as
-  localai sync does at the end of every synchronisation.
+  something then applies this repository's retention to its index
+  generations. The overlays a removed worktree leaves behind are deleted
+  by the next localai sync.
 
   A branch goes only when all of these hold: it is not the mainline
   branch and not the branch this command is running on; it carries at
