@@ -24,6 +24,8 @@ public static class LauncherPathRegistration
     /// <summary>
     /// The directory, appended unless it is already there. Appended rather than prepended: this
     /// is not a tool that should win a name collision with something the reader put first.
+    /// A separator the value ends with stays at the end, so it never becomes an empty entry
+    /// and removal gives the value back as it was.
     /// </summary>
     public static string Add(string? path, string directory)
     {
@@ -33,8 +35,13 @@ public static class LauncherPathRegistration
             return path!;
         }
 
-        return string.IsNullOrWhiteSpace(path)
-            ? Normalize(directory)
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return Normalize(directory);
+        }
+
+        return path.EndsWith(Separator, StringComparison.Ordinal)
+            ? path + Normalize(directory) + Separator
             : path + Separator + Normalize(directory);
     }
 
