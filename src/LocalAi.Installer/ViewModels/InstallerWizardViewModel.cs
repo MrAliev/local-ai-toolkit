@@ -943,6 +943,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         runCancellation = linked;
         var token = linked.Token;
 
+        models.KeepMode();
         isRunning = true;
         isComplete = false;
         hasRunError = false;
