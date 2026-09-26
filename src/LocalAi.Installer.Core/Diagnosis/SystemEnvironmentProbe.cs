@@ -6,12 +6,15 @@ namespace LocalAi.Installer.Core.Diagnosis;
 
 public sealed class SystemEnvironmentProbe : IEnvironmentProbe
 {
-    public HostEnvironmentSnapshot GetHost() =>
-        new(
+    public HostEnvironmentSnapshot GetHost()
+    {
+        var version = Environment.OSVersion.Version;
+        return new(
             OperatingSystem.IsWindows(),
-            ReadWindowsProductName(),
-            Environment.OSVersion.Version,
+            ReadWindowsProductName(version),
+            version,
             RuntimeInformation.OSArchitecture);
+    }
 
     public string LocalAppData =>
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
@@ -159,7 +162,7 @@ public sealed class SystemEnvironmentProbe : IEnvironmentProbe
         yield return executableName;
     }
 
-    private static string ReadWindowsProductName()
+    private static string ReadWindowsProductName(Version version)
     {
         if (!OperatingSystem.IsWindows())
         {
@@ -168,15 +171,30 @@ public sealed class SystemEnvironmentProbe : IEnvironmentProbe
 
         try
         {
-            return Registry.GetValue(
-                    @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion",
-                    "ProductName",
-                    null) as string
+            return WindowsProductName(
+                    Registry.GetValue(
+                        @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion",
+                        "ProductName",
+                        null) as string,
+                    version)
                 ?? RuntimeInformation.OSDescription;
         }
         catch (System.Security.SecurityException)
         {
             return RuntimeInformation.OSDescription;
         }
+    }
+
+    /// <summary>
+    /// Windows 11 kept Windows 10's ProductName; build 22000 is where 11 begins.
+    /// </summary>
+    internal static string? WindowsProductName(string? registryProductName, Version version)
+    {
+        const string windows10 = "Windows 10";
+        return version.Build >= 22000 &&
+               registryProductName is not null &&
+               registryProductName.StartsWith(windows10, StringComparison.OrdinalIgnoreCase)
+            ? "Windows 11" + registryProductName[windows10.Length..]
+            : registryProductName;
     }
 }

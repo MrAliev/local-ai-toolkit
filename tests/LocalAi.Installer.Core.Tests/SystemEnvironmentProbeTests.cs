@@ -43,6 +43,27 @@ public sealed class SystemEnvironmentProbeTests
                 null));
     }
 
+    /// <summary>
+    /// Windows 11 left the registry's ProductName at "Windows 10 …", so the system check named a
+    /// Windows 11 24H2 machine "Windows 10 Enterprise". Only the build tells the two apart.
+    /// </summary>
+    [Theory]
+    [InlineData("Windows 10 Enterprise", 26100, "Windows 11 Enterprise")]
+    [InlineData("Windows 10 Pro", 22000, "Windows 11 Pro")]
+    [InlineData("Windows 10 Pro", 19045, "Windows 10 Pro")]
+    [InlineData("Windows Server 2025 Datacenter", 26100, "Windows Server 2025 Datacenter")]
+    public void Windows_is_named_by_its_build_rather_than_by_the_registry_alone(
+        string registryProductName,
+        int build,
+        string expected)
+    {
+        Assert.Equal(
+            expected,
+            SystemEnvironmentProbe.WindowsProductName(
+                registryProductName,
+                new Version(10, 0, build)));
+    }
+
     [Fact]
     public void Installed_npm_scip_commands_resolve_to_windows_shims()
     {
