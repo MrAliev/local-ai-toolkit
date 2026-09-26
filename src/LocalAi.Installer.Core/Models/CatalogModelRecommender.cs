@@ -30,8 +30,9 @@ public sealed record CatalogRecommendation(
 /// Turns the routing catalogue into a hardware-aware recommendation.
 ///
 /// The catalogue supplies what a model is for and which context sizes it permits; the
-/// registry supplies how big it is; the diagnosis supplies what the machine has. Only all
-/// three together answer "will this run here", which is why none of them is hardcoded.
+/// registry, or failing it a verified release, supplies how big it is; the diagnosis supplies
+/// what the machine has. Only all three together answer "will this run here", which is why
+/// none of them is hardcoded.
 /// </summary>
 public sealed class CatalogModelRecommender(
     IModelSizeSource sizeSource,

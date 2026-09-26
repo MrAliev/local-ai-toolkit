@@ -215,7 +215,7 @@ public sealed class ModelsPageViewModel : ObservableObject
                 fit.ContextTokens));
         }
 
-        // The registry did not size these; setup weighs them against the signed manifest.
+        // Nothing sized these here; setup decides them against the signed manifest.
         foreach (var tag in UnsizedTags())
         {
             AutomaticSelection.Add(string.Format(
@@ -256,10 +256,10 @@ public sealed class ModelsPageViewModel : ObservableObject
     /// <summary>
     /// The page's answer in the form the installation understands.
     ///
-    /// Deliberately not a list of tags: the sizes shown here come from the routing catalogue
-    /// and the model registry, neither of which is signed, and the broker installer only
-    /// accepts models weighed against the release manifest. So the page states the intent and
-    /// the signed manifest decides the set.
+    /// Deliberately not a list of tags: the list here is usually weighed from the model
+    /// registry, which is not signed, and the broker installer only accepts models weighed
+    /// against the release manifest. So the page states the intent and the signed manifest
+    /// decides the set.
     /// </summary>
     public ModelProvisioningSelection BuildProvisioningSelection() => Mode switch
     {
@@ -288,8 +288,8 @@ public sealed class ModelsPageViewModel : ObservableObject
     ///
     /// Named for the rule rather than for the policy enum, and counted against the catalogue
     /// rather than against the fits list, so the number answers "how much of what is on offer
-    /// can this computer take". Models the registry did not size are counted apart rather than
-    /// as not fitting.
+    /// can this computer take". Models nothing sized are counted apart rather than as not
+    /// fitting.
     /// </summary>
     private string BuildRuleSummary()
     {
