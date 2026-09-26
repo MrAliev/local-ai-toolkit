@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using LocalAi.Installer.Core.Abstractions;
 using LocalAi.Installer.Core.Releases;
 using LocalAi.Installer.Core.Removal;
@@ -167,6 +169,44 @@ public sealed class TheUserPathKeepsItsSpellingTests : IDisposable
         Assert.True(outcome.Succeeded);
         Assert.Equal(Seeded, Raw());
         Assert.Equal(RegistryValueKind.ExpandString, Kind());
+    }
+
+    /// <summary>
+    /// A PATH this account may not write is one more thing the removal reports, as it was while
+    /// the write went through the runtime: the run finishes and the value stays as it was.
+    /// </summary>
+    [Fact]
+    public async Task A_removal_that_may_not_write_the_path_reports_it_and_finishes()
+    {
+        using var machine = new RemovalFixture();
+        var launcher = Path.Combine(machine.Layout.BinRoot, "launcher");
+        Seed(Seeded + ";" + launcher, RegistryValueKind.ExpandString);
+        var store = Store();
+        var plan = await machine.PlanAsync(
+            RemovalSelection.FromPreset(RemovalPreset.FullUninstall),
+            Token,
+            readUserPath: store.Read);
+        Assert.True(plan.RemovesLauncherFromPath);
+        DenyWritingValues();
+
+        var outcome = await Apply(machine, plan, store);
+
+        Assert.Equal(launcher, Assert.Single(outcome.Failures).Path);
+        Assert.Equal(Seeded + ";" + launcher, Raw());
+    }
+
+    private void DenyWritingValues()
+    {
+        using var key = Registry.CurrentUser.OpenSubKey(
+            SubKey,
+            RegistryKeyPermissionCheck.ReadWriteSubTree,
+            RegistryRights.ReadPermissions | RegistryRights.ChangePermissions)!;
+        var security = key.GetAccessControl();
+        security.AddAccessRule(new RegistryAccessRule(
+            WindowsIdentity.GetCurrent().User!,
+            RegistryRights.SetValue,
+            AccessControlType.Deny));
+        key.SetAccessControl(security);
     }
 
     private async Task<UninstallOutcome> Apply(

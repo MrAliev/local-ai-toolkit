@@ -34,7 +34,10 @@ internal sealed class WindowsUserPathStore(string? registrySubKey = null, Action
     public void Write(string value)
     {
         if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException();
-        using (var key = Registry.CurrentUser.CreateSubKey(subKey, writable: true))
+        // Opened as the runtime opened it: a key this account may not write then refuses with
+        // the SecurityException callers report, where CreateSubKey throws UnauthorizedAccess.
+        using (var key = Registry.CurrentUser.OpenSubKey(subKey, writable: true) ??
+            Registry.CurrentUser.CreateSubKey(subKey, writable: true))
         {
             var kind = key.GetValue(ValueName) is not null &&
                 key.GetValueKind(ValueName) == RegistryValueKind.ExpandString
