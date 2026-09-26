@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using LocalAi.Installer.Core;
+using LocalAi.Installer.Core.Dependencies;
 using LocalAi.Installer.Core.Diagnosis;
 
 namespace LocalAi.Installer.ViewModels;
@@ -123,16 +124,19 @@ public sealed class DiagnosePageViewModel : ObservableObject
             $"{diagnosis.OperatingSystem.ProductName} ({diagnosis.OperatingSystem.Architecture})"));
 
         rows.Add(Describe(
+            "WinGet",
             diagnosis.WinGet,
             InstallerCulture.Pick(
                 "Needed to install Git and Ollama automatically.",
                 "Нужен, чтобы установить Git и Ollama автоматически.")));
         rows.Add(Describe(
+            DependencyCatalog.Git.DisplayName,
             diagnosis.Git,
             InstallerCulture.Pick(
                 "Needed to index repositories.",
                 "Нужен, чтобы индексировать репозитории.")));
         rows.Add(Describe(
+            DependencyCatalog.GitHubCli.DisplayName,
             diagnosis.GitHubCli,
             InstallerCulture.Pick(
                 "Optional. Releases are downloaded over plain HTTPS; this is only used as "
@@ -246,20 +250,21 @@ public sealed class DiagnosePageViewModel : ObservableObject
 
     /// <summary>
     /// Failed is a command found on disk whose version probe did not answer; the detector always
-    /// gives its path. It blocks nothing, so it is a warning rather than "not found".
+    /// gives its path. It blocks nothing, so it is a warning rather than "not found". The title is
+    /// the tool's display name: the snapshot's name is the detector's identifier.
     /// </summary>
-    private static EnvironmentCheck Describe(DependencySnapshot snapshot, string purpose) =>
+    private static EnvironmentCheck Describe(string title, DependencySnapshot snapshot, string purpose) =>
         snapshot.State switch
         {
             DependencyState.Detected => new(
-                snapshot.Name,
+                title,
                 CheckStatus.Ok,
                 string.Join(
                     " — ",
                     new[] { snapshot.Version, snapshot.ExecutablePath }
                         .Where(part => !string.IsNullOrWhiteSpace(part)))),
             DependencyState.Failed => new(
-                snapshot.Name,
+                title,
                 CheckStatus.Warning,
                 string.Format(
                     InstallerCulture.Pick(
@@ -269,7 +274,7 @@ public sealed class DiagnosePageViewModel : ObservableObject
                     snapshot.Reason,
                     purpose)),
             _ => new(
-                snapshot.Name,
+                title,
                 CheckStatus.Missing,
                 snapshot.Reason is { Length: > 0 } reason
                     ? $"{purpose} ({reason})"
