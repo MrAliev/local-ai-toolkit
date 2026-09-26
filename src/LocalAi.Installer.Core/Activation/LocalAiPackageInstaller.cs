@@ -1156,6 +1156,36 @@ public sealed class LocalAiPackageInstaller
     }
 
     /// <summary>
+    /// Whether a package step that succeeds into <paramref name="root"/> deletes launcher copies:
+    /// those already there, with the one it makes of a launcher it replaces, exceed the bound
+    /// <see cref="PruneLauncherBackups"/> keeps.
+    /// </summary>
+    public static bool DeletesLauncherBackups(string root, bool replacesLauncher)
+    {
+        try
+        {
+            var copies = LauncherBackups(InstallationLayout.InstallerBackupsUnder(root)).Count();
+            if (replacesLauncher && File.Exists(InstallationLayout.LauncherPathUnder(root)))
+            {
+                copies++;
+            }
+
+            return copies > LauncherBackupBound(root);
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
+    private static IEnumerable<string> LauncherBackups(string backupsRoot) =>
+        Directory.Exists(backupsRoot) ? Directory.EnumerateDirectories(backupsRoot) : [];
+
+    private static int LauncherBackupBound(string root) =>
+        new RuntimeRetentionPolicyStore(root).Read().LauncherBackups;
+
+    /// <summary>
     /// Applies the runtime's retention bound to launcher backups, which only
     /// <c>localai prune</c> used to apply, so every update left one more copy for good. A backup
     /// is read only by the run that made it, to put the launcher back if that run fails; the
@@ -1171,11 +1201,11 @@ public sealed class LocalAiPackageInstaller
                 return;
             }
 
-            var keep = new RuntimeRetentionPolicyStore(layout.Root).Read().LauncherBackups;
+            var keep = LauncherBackupBound(layout.Root);
             var retained = retainedBackupPath is null
                 ? null
                 : Path.GetDirectoryName(Path.GetFullPath(retainedBackupPath));
-            var surplus = Directory.EnumerateDirectories(layout.InstallerBackupsRoot)
+            var surplus = LauncherBackups(layout.InstallerBackupsRoot)
                 .OrderByDescending(directory => string.Equals(
                     Path.GetFullPath(directory),
                     retained,
