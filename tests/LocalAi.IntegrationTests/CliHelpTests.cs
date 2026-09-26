@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Reflection;
+using LocalAi.Tests.Shared;
 
 namespace LocalAi.IntegrationTests;
 
@@ -28,7 +29,6 @@ public sealed class CliHelpTests
     [Theory]
     [InlineData("--help --bogus")]
     [InlineData("help missing")]
-    [InlineData("repo status --help --bogus")]
     [InlineData("repo status --bogus")]
     public async Task Unknown_arguments_are_refused(string arguments)
     {
@@ -36,13 +36,36 @@ public sealed class CliHelpTests
         Assert.NotEqual(0, result.Exit);
     }
 
-    private static async Task<(int Exit, string Output, string Error)> Run(string language, string arguments)
+    // Where Git finds no repository: each of these ran before the fix, and a sync or a hook
+    // started here fails at once instead of indexing anything.
+    [Theory]
+    [InlineData("sync --base-only --help", "localai sync [--root dir] [--base-only]")]
+    [InlineData("bootstrap --dry-run --help", "localai bootstrap --dry-run")]
+    [InlineData("hook post-commit --root . --help", "localai hook <post-commit|")]
+    [InlineData("repo status --help --bogus", "localai repo status")]
+    public async Task A_help_flag_after_an_option_prints_help_and_runs_nothing(string arguments, string expected)
+    {
+        using var outside = new TemporaryDirectory("cli-help-outside-git");
+
+        var result = await Run("en", arguments, outside.Path);
+
+        Assert.Equal(0, result.Exit);
+        Assert.Contains(expected, result.Output);
+    }
+
+    private static async Task<(int Exit, string Output, string Error)> Run(
+        string language, string arguments, string? outsideGit = null)
     {
         var start = new ProcessStartInfo("dotnet")
         {
             RedirectStandardOutput = true, RedirectStandardError = true,
             UseShellExecute = false, CreateNoWindow = true,
         };
+        if (outsideGit is not null)
+        {
+            start.WorkingDirectory = outsideGit;
+            start.Environment["GIT_DIR"] = Path.Combine(outsideGit, "no-repository");
+        }
         start.Environment["LOCALAI_LANGUAGE"] = language;
         start.ArgumentList.Add(Assembly.Load("localai").Location);
         foreach (var argument in arguments.Split(' ')) start.ArgumentList.Add(argument);
