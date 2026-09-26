@@ -218,6 +218,9 @@ public sealed class InstallerWizardViewModel : ObservableObject
     private string? runLogMessage;
     private Exception? unexpected;
     private EnvironmentDiagnosis? environmentDiagnosis;
+
+    /// <summary>What the registry answered on the last check; null until it has been asked.</summary>
+    private CatalogRecommendation? registryAnswer;
     private CatalogRecommendation lastRecommendation = CatalogRecommendation.Empty;
     private string? resolvedTag;
     private PackageOutcome? packageOutcome;
@@ -300,6 +303,15 @@ public sealed class InstallerWizardViewModel : ObservableObject
             if (args.PropertyName == nameof(ResidencyPageViewModel.Policy))
             {
                 OnResidencyChanged();
+            }
+        };
+
+        // A release can size the models, so choosing, losing or replacing one reaches the list.
+        package.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(PackagePageViewModel.State))
+            {
+                ApplyRecommendation();
             }
         };
 
@@ -390,6 +402,9 @@ public sealed class InstallerWizardViewModel : ObservableObject
     public static string DefaultScratchRoot => Path.Combine(
         Path.GetTempPath(),
         "LocalAi-installer");
+
+    /// <summary>Stands in for the public model registry in a test, which must not go online.</summary>
+    internal IModelSizeSource? ModelSizeSource { get; init; }
 
     public RelayCommand BackCommand { get; }
 
@@ -2204,7 +2219,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
     /// <summary>
     /// Recomputes which catalogue models fit this machine. Sizes come from the public model
     /// registry, so this is a network call: it must never prevent the wizard from running,
-    /// and an offline machine simply gets the catalogue without sizes.
+    /// and an offline machine gets the verified release's sizes instead, or none.
     /// </summary>
     private async Task RefreshRecommendationAsync(
         EnvironmentDiagnosis diagnosis,
@@ -2212,16 +2227,48 @@ public sealed class InstallerWizardViewModel : ObservableObject
     {
         try
         {
-            using var registry = new OllamaRegistryClient();
-            var recommender = new CatalogModelRecommender(registry);
-            lastRecommendation = await recommender.RecommendAsync(
+            using var registry = ModelSizeSource is null ? new OllamaRegistryClient() : null;
+            var recommender = new CatalogModelRecommender(ModelSizeSource ?? registry!);
+            registryAnswer = await recommender.RecommendAsync(
                 diagnosis.Gpu,
                 models.CatalogModels,
                 cancellationToken);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            lastRecommendation = CatalogRecommendation.Empty;
+            registryAnswer = CatalogRecommendation.Empty;
+        }
+
+        ApplyRecommendation();
+    }
+
+    /// <summary>
+    /// The registry's sizes, or the verified release's when the registry sized nothing: offline
+    /// that manifest is the only source there is, and it is what setup weighs anyway.
+    /// </summary>
+    private void ApplyRecommendation()
+    {
+        if (registryAnswer is not { } registry)
+        {
+            return;
+        }
+
+        lastRecommendation = registry;
+        if (!registry.SizesKnown &&
+            package.Resolved is { } release &&
+            environmentDiagnosis is { } diagnosis)
+        {
+            try
+            {
+                lastRecommendation = CatalogModelRecommender.FromRelease(
+                    diagnosis.Gpu,
+                    models.CatalogModels,
+                    release.Manifest.Models);
+            }
+            catch (ArgumentException)
+            {
+                // A snapshot the weighing refuses sizes nothing; it must not cost the release.
+            }
         }
 
         models.ApplyRecommendation(

@@ -66,11 +66,7 @@ public sealed class CatalogModelRecommender(
         {
             // Without sizes there is nothing to weigh against the adapter. Say so plainly
             // instead of presenting a guess as a recommendation.
-            return CatalogRecommendation.Empty with
-            {
-                AdapterExplanation =
-                    "Model sizes could not be retrieved, so no recommendation was computed.",
-            };
+            return Unsized;
         }
 
         var manifestModels = catalogModels
@@ -86,19 +82,43 @@ public sealed class CatalogModelRecommender(
                     sizes[model.Tag])))
             .ToArray();
 
-        var recommendation = engine.Recommend(gpu, manifestModels);
-        var fits = recommendation.Choices
-            .Select(choice => new CatalogModelFit(
+        return Weighed(engine.Recommend(gpu, manifestModels));
+    }
+
+    /// <summary>
+    /// The catalogue's models weighed by a verified release's own sizes, for when the registry
+    /// sized nothing. Its contexts rather than the catalogue's: they are what setup plans from.
+    /// </summary>
+    public static CatalogRecommendation FromRelease(
+        GpuSnapshot gpu,
+        IReadOnlyList<ModelCatalogEntry> catalogModels,
+        IReadOnlyList<ManifestModel> signedModels,
+        ModelMemoryReservePolicy? reservePolicy = null)
+    {
+        ArgumentNullException.ThrowIfNull(gpu);
+        ArgumentNullException.ThrowIfNull(catalogModels);
+        ArgumentNullException.ThrowIfNull(signedModels);
+
+        var tags = catalogModels.Select(model => model.Tag).ToHashSet(StringComparer.Ordinal);
+        var listed = signedModels.Where(model => tags.Contains(model.Name)).ToArray();
+        return listed.Length == 0
+            ? Unsized
+            : Weighed(new ModelRecommendationEngine(reservePolicy).Recommend(gpu, listed));
+    }
+
+    private static CatalogRecommendation Unsized { get; } = CatalogRecommendation.Empty with
+    {
+        AdapterExplanation = "Model sizes could not be retrieved, so no recommendation was computed.",
+    };
+
+    private static CatalogRecommendation Weighed(ModelRecommendation recommendation) =>
+        new(
+            [.. recommendation.Choices.Select(choice => new CatalogModelFit(
                 choice.Name,
                 choice.ContextTokens,
                 choice.IsEnabled,
                 (long)choice.SignedDownloadSizeBytes,
-                choice.Explanation))
-            .ToArray();
-
-        return new CatalogRecommendation(
-            fits,
+                choice.Explanation))],
             recommendation.AdapterSelectionExplanation,
             SizesKnown: true);
-    }
 }
