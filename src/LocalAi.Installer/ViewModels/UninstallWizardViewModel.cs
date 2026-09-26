@@ -618,17 +618,16 @@ public sealed class UninstallWizardViewModel : ObservableObject
             ValidateReportDirectory(LogDirectory);
             journal = InstallerRunJournal.Start(LogDirectory);
             removalJournalPath = journal.JournalPath;
-            var result = await new UninstallRunner(layout, processRunner)
-                .ApplyAsync(
-                    plan,
-                    journal,
-                    linked.Token,
-                    new ObservedProgress(
-                        new Progress<UninstallProgress>(step =>
-                        {
-                            if (acceptingProgress) SetProgress(step.Percent, step.Text);
-                        }),
-                        progressObserver));
+            var runner = new UninstallRunner(layout, processRunner);
+            var reported = new ObservedProgress(
+                new Progress<UninstallProgress>(step =>
+                {
+                    if (acceptingProgress) SetProgress(step.Percent, step.Text);
+                }),
+                progressObserver);
+            // Off the window's thread: the file sweep blocks whichever thread runs it, and on
+            // this one a Cancel click waited until it was done.
+            var result = await Task.Run(() => runner.ApplyAsync(plan, journal, linked.Token, reported));
             hasRunError = !result.Succeeded;
             isComplete = result.Succeeded;
             FinishJournal(journal, result.Succeeded
