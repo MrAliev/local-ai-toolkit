@@ -19,11 +19,7 @@ builder.Logging.AddConsole(options => options.LogToStandardErrorThreshold = LogL
 
 ConsoleOutputText.UseUtf8();
 
-builder.Services.AddSingleton<ILocalModelClient>(
-    new BrokerLocalModelClient(BrokerClientFactory.CreateDefault()));
-builder.Services.AddSingleton<LocalTasks>();
-builder.Services.AddSingleton<ModelManagementTasks>();
-builder.Services.AddHostedService<RecommendedModelSyncService>();
+builder.Services.AddLocalLm(new BrokerLocalModelClient(BrokerClientFactory.CreateDefault()));
 
 builder.Services
     .AddMcpServer()
