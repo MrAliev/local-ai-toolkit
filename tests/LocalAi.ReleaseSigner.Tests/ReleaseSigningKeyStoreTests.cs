@@ -120,12 +120,28 @@ public sealed class ReleaseSigningKeyStoreTests : IDisposable
     }
 
     [Fact]
-    public void A_missing_key_names_the_runbook_not_a_file_error()
+    public void A_missing_key_says_where_to_restore_one_not_a_file_error()
     {
         var error = Assert.Throws<InvalidOperationException>(() =>
             ReleaseSigningKeyStore.Load(null, _directory, TextWriter.Null));
 
-        Assert.Contains("runbook", error.Message, StringComparison.Ordinal);
+        // The runbook this used to point at was deleted; the message has to carry the way
+        // out itself.
+        Assert.DoesNotContain("runbook", error.Message, StringComparison.Ordinal);
+        Assert.Contains("offline backup", error.Message, StringComparison.Ordinal);
+        Assert.Contains("protect-key", error.Message, StringComparison.Ordinal);
+        Assert.Contains("--private-key", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Protect_without_a_raw_key_says_where_to_restore_one()
+    {
+        var error = Assert.Throws<InvalidOperationException>(() =>
+            ReleaseSigningKeyStore.Protect(null, _directory, TextWriter.Null));
+
+        Assert.DoesNotContain("runbook", error.Message, StringComparison.Ordinal);
+        Assert.Contains("offline backup", error.Message, StringComparison.Ordinal);
+        Assert.Contains("--private-key", error.Message, StringComparison.Ordinal);
     }
 
     [Fact]
