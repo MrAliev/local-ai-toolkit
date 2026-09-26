@@ -11,7 +11,9 @@ internal static class HermeticDiagnosis
 {
     public static EnvironmentDiagnosis Supported(
         DependencySnapshot? git = null,
-        NetworkSnapshot? network = null)
+        NetworkSnapshot? network = null,
+        DependencySnapshot? winGet = null,
+        DependencySnapshot? gitHubCli = null)
     {
         static DependencySnapshot Found(string name) =>
             new(name, DependencyState.Detected, @"C:\absent\" + name + ".exe", "1.0", null);
@@ -25,9 +27,9 @@ internal static class HermeticDiagnosis
                 SupportStatus.Supported),
             new DiskSnapshot(ObservationState.Available, 100L * 1024 * 1024 * 1024, null),
             network ?? new NetworkSnapshot(ObservationState.Available, null),
-            Found("winget"),
+            winGet ?? Found("winget"),
             git ?? Found("git"),
-            Found("gh"),
+            gitHubCli ?? Found("gh"),
             Found("gh-auth"),
             Found("ollama"),
             Found("dotnet"),
