@@ -9,7 +9,7 @@ namespace LocalAi.Installer.Tests;
 /// </summary>
 internal static class HermeticDiagnosis
 {
-    public static EnvironmentDiagnosis Supported()
+    public static EnvironmentDiagnosis Supported(DependencySnapshot? git = null)
     {
         static DependencySnapshot Found(string name) =>
             new(name, DependencyState.Detected, @"C:\absent\" + name + ".exe", "1.0", null);
@@ -24,7 +24,7 @@ internal static class HermeticDiagnosis
             new DiskSnapshot(ObservationState.Available, 100L * 1024 * 1024 * 1024, null),
             new NetworkSnapshot(ObservationState.Available, null),
             Found("winget"),
-            Found("git"),
+            git ?? Found("git"),
             Found("gh"),
             Found("gh-auth"),
             Found("ollama"),
