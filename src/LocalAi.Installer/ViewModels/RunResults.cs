@@ -1,4 +1,5 @@
 using System.Globalization;
+using LocalAi.Contracts;
 using LocalAi.Installer.Core;
 using LocalAi.Installer.Core.Activation;
 using LocalAi.Installer.Core.Models;
@@ -28,7 +29,8 @@ public sealed record PackageOutcome(
     LocalAiPackageInstallStatus Status = default,
     string? Version = null,
     string? Reason = null,
-    IReadOnlyList<string>? Restored = null)
+    IReadOnlyList<string>? Restored = null,
+    string? PriorVersion = null)
 {
     /// <summary>What the package installer's answer amounts to.</summary>
     public static PackageOutcome FromResult(ReleaseInstallResult result)
@@ -39,7 +41,8 @@ public sealed record PackageOutcome(
             result.Status,
             result.Version,
             result.Reason,
-            result.RestoredFiles);
+            result.RestoredFiles,
+            result.PriorVersion);
     }
 
     /// <summary>What an installation exception from the package installer amounts to.</summary>
@@ -237,14 +240,15 @@ public static class RunResults
                 : string.Join(", ", configured));
     }
 
-    /// <summary>The memory rule the run was asked to store and could not.</summary>
-    public static RunResultRow ResidencyNotStored(string reason) => new(
+    /// <summary>The memory rule the run was asked to store and could not, named as the review named it.</summary>
+    public static RunResultRow ResidencyNotStored(ModelResidencyPolicy policy, string reason) => new(
         RunMark.Failed,
         PageLabels.VideoMemory,
         string.Format(
             InstallerCulture.Pick(
-                "could not be stored. Technical details: {0}",
-                "не удалось сохранить. Технические сведения: {0}"),
+                "the setting “{0}” was not saved. Technical details: {1}",
+                "правило «{0}» не сохранено. Технические сведения: {1}"),
+            ResidencyPageViewModel.Name(policy),
             reason));
 
     public static RunResultRow PathEntry(RunMark mark, string detail) =>
@@ -318,15 +322,25 @@ public static class RunResults
                 InstallerCulture.Pick(
                     "{0}, version {1}; put back from the release: {2}",
                     "{0}, версия {1}; из релиза возвращены: {2}"),
-                PackageStatusName(outcome.Status),
+                PackageStatusName(outcome),
                 outcome.Version,
                 string.Join(", ", restored)),
             _ when installed => string.Format(
                 InstallerCulture.Pick("{0}, version {1}", "{0}, версия {1}"),
-                PackageStatusName(outcome.Status),
+                PackageStatusName(outcome),
                 outcome.Version),
-            _ => $"{PackageStatusName(outcome.Status)} — {outcome.Reason}".TrimEnd(' ', '—'),
+            // A failed activation leaves in place what the repair put back before it.
+            _ when outcome.Restored is { Count: > 0 } kept => string.Format(
+                InstallerCulture.Pick(
+                    "{0}; put back from the release and kept: {1}",
+                    "{0}; из релиза возвращены и оставлены: {1}"),
+                NotInstalled(outcome).TrimEnd('.'),
+                string.Join(", ", kept)),
+            _ => NotInstalled(outcome),
         };
+
+        static string NotInstalled(PackageOutcome outcome) =>
+            $"{PackageStatusName(outcome)} — {outcome.Reason}".TrimEnd(' ', '—');
     }
 
     public static string PathDetail(PathOutcome outcome) => outcome switch
@@ -345,7 +359,7 @@ public static class RunResults
     /// The summary is read by a person; "ImmutableConflict" tells them nothing about what to
     /// do next, and on a Russian run it also arrives in the wrong language.
     /// </summary>
-    private static string PackageStatusName(LocalAiPackageInstallStatus status) => status switch
+    private static string PackageStatusName(PackageOutcome outcome) => outcome.Status switch
     {
         LocalAiPackageInstallStatus.Installed =>
             InstallerCulture.Pick("installed", "установлен"),
@@ -353,6 +367,13 @@ public static class RunResults
             InstallerCulture.Pick("already installed", "уже был установлен"),
         LocalAiPackageInstallStatus.Refused =>
             InstallerCulture.Pick("refused", "отказано"),
+        // A repair of the active version, refused: it stays installed and selected.
+        LocalAiPackageInstallStatus.ImmutableConflict when outcome.PriorVersion is { } prior &&
+            string.Equals(outcome.Version, prior, StringComparison.Ordinal) => InstallerCulture.Pick(
+            "left as it was: its version folder holds files or folders that are not part of " +
+            "the release, so it was not repaired",
+            "оставлен как был: в каталоге этой версии есть файлы или папки не из релиза, " +
+            "поэтому он не восстановлен"),
         LocalAiPackageInstallStatus.ImmutableConflict => InstallerCulture.Pick(
             "not installed: that version directory already holds different files",
             "не установлен: в каталоге этой версии уже лежат другие файлы"),
@@ -369,7 +390,7 @@ public static class RunResults
         LocalAiPackageInstallStatus.Busy => InstallerCulture.Pick(
             "not installed: another LocalAi installation or activation was under way",
             "не установлен: шла другая установка или активация LocalAi"),
-        _ => status.ToString(),
+        _ => outcome.Status.ToString(),
     };
 
     /// <summary>

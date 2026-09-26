@@ -500,7 +500,6 @@ public sealed class LocalAiPackageInstaller
                 result.ExitCode != 0 || result.TimedOut || result.Cancelled ||
                 !IsCanonicalPointer(ReadPointerLockedOrNull(layout), version))
             {
-                // Files put back stay put back: they hold the release's own content.
                 return (await RecoverActivationFailureAsync(
                         package,
                         layout,
@@ -513,7 +512,10 @@ public sealed class LocalAiPackageInstaller
                         launcherUnchanged,
                         publishedVersion,
                         targetExisted)
-                    .ConfigureAwait(false)) with { RestoredFiles = restoredFiles };
+                    .ConfigureAwait(false)) with
+                {
+                    RestoredFiles = LeftPutBack(package, layout, restoredFiles),
+                };
             }
 
             return new(
@@ -548,7 +550,10 @@ public sealed class LocalAiPackageInstaller
                         launcherUnchanged,
                         publishedVersion,
                         targetExisted)
-                    .ConfigureAwait(false)) with { RestoredFiles = restoredFiles };
+                    .ConfigureAwait(false)) with
+                {
+                    RestoredFiles = LeftPutBack(package, layout, restoredFiles),
+                };
             }
 
             throw;
@@ -980,6 +985,39 @@ public sealed class LocalAiPackageInstaller
         {
             return false;
         }
+    }
+
+    /// <summary>
+    /// What a repair put back that its failed activation left in place. Recovery leaves the
+    /// version files alone and may put the prior launcher back, so the launcher is named only
+    /// while it still is the release's.
+    /// </summary>
+    private static IReadOnlyList<string> LeftPutBack(
+        VerifiedPackage package,
+        InstallationLayout layout,
+        IReadOnlyList<string> restoredFiles)
+    {
+        if (!restoredFiles.Contains(LocalAiPackageLayout.StableLauncherFile))
+        {
+            return restoredFiles;
+        }
+
+        bool launcherKept;
+        try
+        {
+            launcherKept = MatchesVerified(
+                layout.LauncherPath,
+                FileMetadata(package, LocalAiPackageLayout.StableLauncherFile));
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException)
+        {
+            launcherKept = false;
+        }
+
+        return launcherKept
+            ? restoredFiles
+            : restoredFiles.Where(file => file != LocalAiPackageLayout.StableLauncherFile).ToArray();
     }
 
     /// <summary>

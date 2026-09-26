@@ -199,8 +199,11 @@ public sealed class InstallerWizardViewModel : ObservableObject
     private RegistrationOutcome? registrationOutcome;
     private string? reportSaveFailure;
 
-    /// <summary>Why the memory rule could not be stored this run, or null when nothing failed.</summary>
-    private string? residencyNotStored;
+    /// <summary>
+    /// The memory rule this run could not store and why, or null when nothing failed. The rule,
+    /// not its name: the row is worded again when the language changes.
+    /// </summary>
+    private (ModelResidencyPolicy Policy, string Reason)? residencyNotStored;
 
     private RunMark pathMark = RunMark.None;
 
@@ -1741,7 +1744,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         {
             JournalFail(residencyStep, exception.Message);
             AppendLog(report, $"Could not store the residency policy: {exception.Message}");
-            residencyNotStored = exception.Message;
+            residencyNotStored = (residency.Policy, exception.Message);
             hasRunError = true;
         }
     }
@@ -1895,6 +1898,19 @@ public sealed class InstallerWizardViewModel : ObservableObject
             : InstallerCulture.Pick("off", "выключена");
     }
 
+    /// <summary>
+    /// A package step that succeeds ends by deleting the launcher copies beyond the runtime's
+    /// retention bound, read from the root the package goes into.
+    /// </summary>
+    private string LauncherBackupsReviewLine() =>
+        package.HasPackage
+            ? string.Format(
+                InstallerCulture.Pick(
+                    "Earlier copies of localai-launcher.exe: all but the newest {0} are deleted",
+                    "Прежние копии localai-launcher.exe: все, кроме {0} самых новых, удаляются"),
+                new RuntimeRetentionPolicyStore(RuntimeRoot).Read().LauncherBackups)
+            : string.Empty;
+
     private string BuildReview() => string.Join(Environment.NewLine, ReviewGroups.SelectMany(group => group.Lines)).Trim();
 
     private IReadOnlyList<ReviewGroup> BuildReviewGroups()
@@ -1902,7 +1918,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         package.ActionText = ActionText;
         var groups = new List<ReviewGroup>
         {
-            new(PageLabels.ReviewRelease, ReviewGroup.SplitLines(package.ReviewText)),
+            new(PageLabels.ReviewRelease, ReviewGroup.SplitLines(package.ReviewText, LauncherBackupsReviewLine())),
             new(PageLabels.ReviewComponents, ReviewGroup.SplitLines(dependencies.ReviewText)),
             new(PageLabels.ReviewModels, ReviewGroup.SplitLines(models.ReviewText, residency.ReviewText + StoredResidencyNote())),
             new(PageLabels.ReviewClients, ReviewGroup.SplitLines(agents.ReviewText, agents.GateReviewText,
@@ -2078,7 +2094,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
 
         if (residencyNotStored is { } notStored)
         {
-            finish.Results.Add(RunResults.ResidencyNotStored(notStored));
+            finish.Results.Add(RunResults.ResidencyNotStored(notStored.Policy, notStored.Reason));
         }
 
         if (clientOutcomes.Count == 0)
@@ -2888,7 +2904,10 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 (result.RestoredFiles is { Count: > 0 } restored
                     ? " Put back from the release: " + string.Join(", ", restored) + "."
                     : string.Empty)
-            : $"LocalAi package: {result.Status}. {result.Reason}".Trim();
+            : $"LocalAi package: {result.Status}. {result.Reason}".Trim() +
+                (result.RestoredFiles is { Count: > 0 } kept
+                    ? " Put back from the release and kept: " + string.Join(", ", kept) + "."
+                    : string.Empty);
 
     /// <summary>
     /// Retain activation before model provisioning can fail or be cancelled.
