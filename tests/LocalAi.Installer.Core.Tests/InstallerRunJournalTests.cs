@@ -1,3 +1,4 @@
+using System.Globalization;
 using LocalAi.Installer.Core.Transactions;
 
 namespace LocalAi.Installer.Core.Tests;
@@ -166,9 +167,31 @@ public sealed class InstallerRunJournalTests : IDisposable
     {
         using var journal = InstallerRunJournal.Start(directory);
 
-        Assert.Equal(
-            $"journal-{journal.Snapshot.StartedAtUtc.UtcDateTime:yyyyMMdd-HHmmss}Z-{journal.Snapshot.RunId:N}.json",
-            Path.GetFileName(journal.JournalPath));
+        Assert.Equal(NameOf(journal), Path.GetFileName(journal.JournalPath));
+    }
+
+    /// <summary>
+    /// The newest interrupted run is picked by name, so the digits have to count years the same
+    /// way on every machine: a Thai culture counts 2569 where the others count 2026.
+    /// </summary>
+    [Fact]
+    public void A_journal_name_keeps_the_gregorian_year_on_a_thai_machine()
+    {
+        var previous = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("th-TH");
+        try
+        {
+            // The premise: this culture really counts years another way here.
+            Assert.IsType<ThaiBuddhistCalendar>(CultureInfo.CurrentCulture.Calendar);
+
+            using var journal = InstallerRunJournal.Start(directory);
+
+            Assert.Equal(NameOf(journal), Path.GetFileName(journal.JournalPath));
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = previous;
+        }
     }
 
     /// <summary>
@@ -257,6 +280,10 @@ public sealed class InstallerRunJournalTests : IDisposable
         Assert.False(journal.Snapshot.HasReversibleWork);
     }
 
+    private static string NameOf(InstallerRunJournal journal) => string.Create(
+        CultureInfo.InvariantCulture,
+        $"journal-{journal.Snapshot.StartedAtUtc.UtcDateTime:yyyyMMdd-HHmmss}Z-{journal.Snapshot.RunId:N}.json");
+
     /// <summary>An interrupted run's journal under the name it had before the Z.</summary>
     private Guid NamedWithoutZ(DateTime stamp)
     {
@@ -264,7 +291,11 @@ public sealed class InstallerRunJournalTests : IDisposable
         journal.Dispose();
         File.Move(
             journal.JournalPath,
-            Path.Combine(directory, $"journal-{stamp:yyyyMMdd-HHmmss}-{journal.Snapshot.RunId:N}.json"));
+            Path.Combine(
+                directory,
+                string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"journal-{stamp:yyyyMMdd-HHmmss}-{journal.Snapshot.RunId:N}.json")));
         return journal.Snapshot.RunId;
     }
 
