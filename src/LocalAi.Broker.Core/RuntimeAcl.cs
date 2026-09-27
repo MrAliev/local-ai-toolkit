@@ -67,6 +67,40 @@ public sealed class RuntimeAcl
         }
     }
 
+    /// <summary>
+    /// Creates a missing runtime root with the ACL <see cref="Ensure"/> gives it, and leaves an
+    /// existing root as it is. Whoever writes into the root first decides its ACL, and the
+    /// installer refuses a root that inherits one. False when the root could not be created.
+    /// </summary>
+    public bool TryCreateRoot(string runtimeRoot)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(runtimeRoot);
+        var fullPath = Path.GetFullPath(runtimeRoot);
+        if (Directory.Exists(fullPath))
+        {
+            return true;
+        }
+
+        try
+        {
+            if (_isWindows)
+            {
+                EnsureDirectory(fullPath, _normalizeTrustee(_currentUser ?? GetCurrentUser()));
+            }
+            else
+            {
+                Directory.CreateDirectory(fullPath);
+            }
+
+            return true;
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException or IdentityNotMappedException)
+        {
+            return false;
+        }
+    }
+
     private void ApplyAndValidate(
         string path,
         string currentUserSid,
