@@ -397,6 +397,21 @@ public sealed class WindowsEnvironmentDetectorTests : IDisposable
         Assert.Empty(fixture.Files.ReadPaths);
     }
 
+    /// <summary>
+    /// A removal that stopped before its PATH step leaves the launcher's entry behind (#614).
+    /// The system check reads the PATH it is given, so this test never reads the machine's.
+    /// </summary>
+    [Fact]
+    public async Task The_launcher_left_on_the_given_path_is_a_leftover()
+    {
+        var launcher = Path.Combine(_root, "LocalAi", "bin", "launcher");
+        var fixture = CreateFixture(userPath: @"C:\Tools;" + launcher);
+
+        var diagnosis = await fixture.Detector.DetectAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(ExistingLocalAiState.Leftovers, diagnosis.ExistingLocalAi.State);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root))
@@ -408,7 +423,8 @@ public sealed class WindowsEnvironmentDetectorTests : IDisposable
     private DetectorFixture CreateFixture(
         string productName = "Windows 11 Pro",
         Architecture architecture = Architecture.X64,
-        bool isWindows = true)
+        bool isWindows = true,
+        string? userPath = null)
     {
         var environment = new FakeEnvironmentProbe(
             new HostEnvironmentSnapshot(
@@ -431,7 +447,9 @@ public sealed class WindowsEnvironmentDetectorTests : IDisposable
             installed,
             disk,
             network,
-            gpu);
+            gpu,
+            // Never the machine's own PATH, which names the developer's own launcher.
+            () => userPath);
         return new DetectorFixture(
             detector,
             environment,
@@ -484,6 +502,7 @@ public sealed class WindowsEnvironmentDetectorTests : IDisposable
         public string ResolvePhysicalPath(string path) => Path.GetFullPath(path);
         public FileMetadataSnapshot GetMetadata(string path) =>
             Metadata.GetValueOrDefault(path) ?? FileMetadataSnapshot.Absent(path);
+        public IEnumerable<string> EnumerateEntries(string directory) => [];
     }
 
     private sealed class RecordingProcessRunner : IProcessRunner

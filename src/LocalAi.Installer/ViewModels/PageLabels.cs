@@ -282,6 +282,10 @@ public static class PageLabels
 
     public static string Uninstall => InstallerCulture.Pick("Uninstall", "Удалить");
 
+    public static string RemoveWhatIsLeft => InstallerCulture.Pick(
+        "Remove what is left",
+        "Удалить оставшееся");
+
     public static string ModelWaiting => InstallerCulture.Pick("waiting", "ожидает");
 
     /// <summary>

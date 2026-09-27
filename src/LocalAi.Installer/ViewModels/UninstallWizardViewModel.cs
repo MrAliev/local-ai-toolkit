@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using LocalAi.Installer.Core.Abstractions;
 using LocalAi.Installer.Core.Activation;
+using LocalAi.Installer.Core.Diagnosis;
 using LocalAi.Installer.Core.Removal;
 using LocalAi.Installer.Core.Transactions;
 using LocalAi.Installer.Core;
@@ -39,6 +40,7 @@ public sealed class UninstallWizardViewModel : ObservableObject
     private readonly string homeDirectory;
     private readonly IProcessRunner processRunner;
     private readonly UninstallPlanner planner;
+    private readonly IExistingLocalAiInspector inspector;
 
     private UninstallPage currentPage = UninstallPage.Choose;
     private bool isConfirmed;
@@ -46,6 +48,9 @@ public sealed class UninstallWizardViewModel : ObservableObject
     private bool isComplete;
     private bool hasRunError;
     private bool hasLoaded;
+
+    /// <summary>What the disk held when it was last read; null until then.</summary>
+    private ExistingLocalAiState? found;
 
     private enum Blocked
     {
@@ -103,8 +108,10 @@ public sealed class UninstallWizardViewModel : ObservableObject
         Func<string, CancellationToken, Task<string?>>? readHooksPath = null,
         bool canReturnToStart = false,
         InstallerPresentation? presentation = null,
-        string? executablePath = null)
+        string? executablePath = null,
+        IExistingLocalAiInspector? inspector = null)
     {
+        this.inspector = inspector ?? new ExistingLocalAiInspector(new SystemFileSystemProbe());
         Presentation = presentation ?? new InstallerPresentation();
         Presentation.LanguageChanged += OnLanguageChanged;
         OffersInstallAfterwards = offersInstallAfterwards;
@@ -143,6 +150,10 @@ public sealed class UninstallWizardViewModel : ObservableObject
             () => CanRun,
             ReportUnexpectedError);
         CancelCommand = new RelayCommand(Cancel, () => CanCancel);
+        RemoveWhatIsLeftCommand = new AsyncRelayCommand(
+            () => RemoveWhatIsLeftAsync(),
+            () => CanRemoveWhatIsLeft,
+            ReportUnexpectedError);
         visited.Add(currentPage);
     }
 
@@ -205,6 +216,14 @@ public sealed class UninstallWizardViewModel : ObservableObject
 
     public RelayCommand ContinueToInstallCommand { get; }
 
+    public AsyncRelayCommand RemoveWhatIsLeftCommand { get; }
+
+    /// <summary>
+    /// After a run that stopped, failed or was refused. Apps &amp; features has usually lost its
+    /// entry by then, so this window is the one way left to finish (#614).
+    /// </summary>
+    public bool CanRemoveWhatIsLeft => IsFinishPage && !isRunning && hasRunError;
+
     /// <summary>Whether this run is the removal half of a clean reinstall.</summary>
     public bool OffersInstallAfterwards { get; }
 
@@ -227,7 +246,7 @@ public sealed class UninstallWizardViewModel : ObservableObject
             }
 
             currentPage = value;
-            // Added to, never removed from. Going back does not un-visit a page.
+            // Going back does not un-visit a page; only removing what is left starts over.
             visited.Add(value);
             RefreshAll();
         }
@@ -401,7 +420,22 @@ public sealed class UninstallWizardViewModel : ObservableObject
 
     public string StepDescription => CurrentPage switch
     {
-        UninstallPage.Choose => InstallerCulture.Pick(
+        // The rows name binaries and a launcher even when bin is already gone.
+        UninstallPage.Choose => found switch
+        {
+            null or ExistingLocalAiState.Compatible => string.Empty,
+            // What the start screen called it: a directory that is not a working installation.
+            ExistingLocalAiState.Unrecognized => InstallerCulture.Pick(
+                "This is not a working LocalAi installation; these rows apply to what is there, " +
+                "and the next page lists every path found. ",
+                "Это не рабочая установка LocalAi; эти строки относятся к тому, что здесь есть, " +
+                "а на следующей странице перечислены все найденные пути. "),
+            _ => InstallerCulture.Pick(
+                "LocalAi is not installed here; these rows apply to what is left of it, and " +
+                "the next page lists every path found. ",
+                "LocalAi здесь не установлен; эти строки относятся к тому, что от него " +
+                "осталось, а на следующей странице перечислены все найденные пути. "),
+        } + InstallerCulture.Pick(
             "Start from one of the three presets and change any row you like. Nothing is " +
             "removed until you confirm it on the next page.",
             "Начните с одного из трёх наборов и меняйте любые строки. " +
@@ -417,8 +451,12 @@ public sealed class UninstallWizardViewModel : ObservableObject
             "Применяю выбранные удаления."),
         _ => hasRunError
             ? InstallerCulture.Pick(
-                "Check the outcome below before retrying. Removal does not restore deleted data.",
-                "Перед повторной попыткой проверьте результат ниже. Удаление не восстанавливает удалённые данные.")
+                "Check the outcome below before retrying. Removal does not restore deleted data. " +
+                "What was not removed is listed below; the rest can be removed from this window " +
+                "now, and the list is shown again before anything is deleted.",
+                "Перед повторной попыткой проверьте результат ниже. Удаление не восстанавливает удалённые данные. " +
+                "Что не удалено, перечислено ниже; удалить оставшееся можно прямо из этого окна — " +
+                "список снова покажут перед удалением.")
             : OffersInstallAfterwards
                 // Not "or close: either way" when the plan left dispatchers calling a launcher
                 // this run removed: stopping here leaves those repositories failing their hooks.
@@ -474,10 +512,6 @@ public sealed class UninstallWizardViewModel : ObservableObject
 
     public int CurrentPageIndex => StepIndex(CurrentPage);
 
-    /// <summary>
-    /// Reads the machine once: whether another run is happening, whether there is anything
-    /// installed at all, and which repositories carry the dispatchers.
-    /// </summary>
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
         if (hasLoaded)
@@ -486,6 +520,51 @@ public sealed class UninstallWizardViewModel : ObservableObject
         }
 
         hasLoaded = true;
+        await ScanAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Back to the first page after a run that did not finish, with the same choices and the
+    /// disk read again: the next plan is built from what is there now, and the review page lists
+    /// it before anything is deleted.
+    /// </summary>
+    public async Task<bool> RemoveWhatIsLeftAsync(CancellationToken cancellationToken = default)
+    {
+        if (!CanRemoveWhatIsLeft)
+        {
+            return false;
+        }
+
+        runEnd = RunEnd.NotRun;
+        hasRunError = false;
+        isComplete = false;
+        outcome = null;
+        refusal = null;
+        failure = null;
+        removalJournalPath = null;
+        reportEntries = [];
+        reportPath = null;
+        reportSaveError = null;
+        journalError = null;
+        confirmedPlan = null;
+        isConfirmed = false;
+        OnPropertyChanged(nameof(IsConfirmed));
+        SetProgress(0, ProgressWord.Ready);
+        // A new removal, so the rail starts as it did when the window opened.
+        visited.Clear();
+        CurrentPage = UninstallPage.Choose;
+        await ScanAsync(cancellationToken);
+        return true;
+    }
+
+    /// <summary>
+    /// Reads the machine: whether another run is happening, whether there is anything here at
+    /// all, and which repositories carry the dispatchers.
+    /// </summary>
+    private async Task ScanAsync(CancellationToken cancellationToken)
+    {
+        blocked = null;
+        found = null;
         // Windows deletes neither a running executable nor its directory, so a removal from
         // here would fail on bin and leave it behind. App hands over to a temporary copy before
         // this wizard exists; reaching this means that did not happen.
@@ -505,23 +584,35 @@ public sealed class UninstallWizardViewModel : ObservableObject
             return;
         }
 
-        if (!Directory.Exists(layout.Root))
+        // The launcher's PATH entry can outlive the root, and is still something to remove.
+        var state = inspector.Inspect(layout.LocalAppData).State;
+        if (state == ExistingLocalAiState.Absent && !Directory.Exists(layout.Root))
         {
             blocked = Blocked.NothingInstalled;
             RefreshAll();
             return;
         }
 
+        found = state;
         // Planned as a full uninstall purely to inventory the connected repositories: the
-        // page has to list them before anybody has chosen anything.
+        // page has to list them before anybody has chosen anything. A repository left out
+        // before is left out again.
         var inventory = await planner.PlanAsync(
             RemovalSelection.FromPreset(RemovalPreset.FullUninstall),
             cancellationToken);
+        var leftOut = Repositories
+            .Where(repository => repository.CanChoose && !repository.IsSelected)
+            .Select(repository => repository.RepositoryId)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
         Choices.ListRepositories(inventory.Hooks.Select(hook => new RepositoryRow(
             hook.RepositoryId,
             hook.CommonDirectory,
             hook.Dispatchers.Count,
             hook.SkipReason)));
+        foreach (var repository in Repositories.Where(row => leftOut.Contains(row.RepositoryId)))
+        {
+            repository.IsSelected = false;
+        }
 
         RefreshAll();
     }
@@ -977,6 +1068,7 @@ public sealed class UninstallWizardViewModel : ObservableObject
                      nameof(HasKeepNotice), nameof(PreviewText), nameof(ReviewGroups),
                      nameof(Results), nameof(ReportPath), nameof(HasReportPath), nameof(HasReport),
                      nameof(ReportSaveError), nameof(HasReportSaveError), nameof(ReportText),
+                     nameof(CanRemoveWhatIsLeft),
                  })
         {
             OnPropertyChanged(name);
@@ -987,5 +1079,6 @@ public sealed class UninstallWizardViewModel : ObservableObject
         UninstallCommand.RaiseCanExecuteChanged();
         CancelCommand.RaiseCanExecuteChanged();
         ContinueToInstallCommand.RaiseCanExecuteChanged();
+        RemoveWhatIsLeftCommand.RaiseCanExecuteChanged();
     }
 }
