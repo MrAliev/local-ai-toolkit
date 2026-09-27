@@ -65,8 +65,8 @@ public sealed class EveryPrerequisiteHasItsRowTests
         {
             new("SCIP Python", PrerequisiteOutcomeKind.CheckAfterInstallFailed),
             RunMark.Failed,
-            "installed by npm, but the check after installing failed. The log below says what went wrong",
-            "npm установил пакет, но проверка после установки не прошла. Что пошло не так — сказано " +
+            "installed by npm, but a step after installing failed. The log below says which and why",
+            "npm установил пакет, но один из шагов после установки не удался. Какой и почему — сказано " +
             "в журнале ниже"
         },
         {
@@ -82,6 +82,15 @@ public sealed class EveryPrerequisiteHasItsRowTests
             "for it to end before running this installer again",
             "результат неизвестен: не удалось остановить npm, поэтому установка, возможно, ещё идёт. " +
             "Дождитесь её окончания, прежде чем снова запускать установщик"
+        },
+        {
+            new("SCIP Python", PrerequisiteOutcomeKind.CheckCouldNotStop),
+            RunMark.Warned,
+            "outcome unknown: npm installed it, but a check afterwards could not be stopped and may still " +
+            "be running, so whether it works is not known. Reinstalling it with this installer repeats the check",
+            "результат неизвестен: npm установил пакет, но проверку после установки не удалось остановить, " +
+            "и она, возможно, ещё идёт, поэтому неизвестно, работает ли он. Переустановка этим установщиком " +
+            "повторит проверку"
         },
         {
             new("Git", PrerequisiteOutcomeKind.NoAutomatedInstaller),

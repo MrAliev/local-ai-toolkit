@@ -1132,7 +1132,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 catch (PrerequisiteStillRunningException stuck)
                 {
                     prerequisiteOutcomes[dependency.Id] = stuck.Outcome;
-                    AppendLog(report, $"{dependency.Title}: failed.");
+                    AppendLog(report, $"{dependency.Title}: outcome unknown.");
                     AppendLog(report, stuck.Outcome.LogLine ?? string.Empty);
                     throw;
                 }
@@ -3395,6 +3395,18 @@ public sealed class InstallerWizardViewModel : ObservableObject
         PrerequisiteOutcome CheckThrew(Exception exception) =>
             CheckFailed($"SCIP Python was installed, but the check after installing failed: {exception.Message}");
 
+        // A check that could not be stopped may still be running, so it ends the run as a stuck
+        // install does.
+        PrerequisiteStillRunningException CheckStuck(ProcessTerminationException exception, string command) =>
+            new(
+                new(
+                    displayName,
+                    PrerequisiteOutcomeKind.CheckCouldNotStop,
+                    download,
+                    LogLine: "SCIP Python was installed, but the check after installing could not be stopped " +
+                        $"and may still be running: {command}"),
+                exception);
+
         ProcessResult npmRootResult;
         try
         {
@@ -3403,6 +3415,10 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 ["root", "--global"],
                 DependencyInstallTimeout,
                 cancellationToken);
+        }
+        catch (ProcessTerminationException exception)
+        {
+            throw CheckStuck(exception, "npm root --global");
         }
         catch (Exception exception) when (CouldNotStart(exception))
         {
@@ -3449,6 +3465,10 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 ["--version"],
                 DependencyInstallTimeout,
                 cancellationToken);
+        }
+        catch (ProcessTerminationException exception)
+        {
+            throw CheckStuck(exception, "scip-python --version");
         }
         catch (Exception exception) when (CouldNotStart(exception))
         {
