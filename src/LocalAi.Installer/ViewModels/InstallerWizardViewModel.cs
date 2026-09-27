@@ -639,7 +639,8 @@ public sealed class InstallerWizardViewModel : ObservableObject
             isChecking: diagnose.IsChecking,
             isReleaseFolded: IsReleaseFolded,
             areSettingsFolded: AreSettingsFolded,
-            wasCancelled: wasCancelled);
+            wasCancelled: wasCancelled,
+            prerequisites: dependencies.Offer);
 
     public string StepStatus => string.Format(
         InstallerCulture.Pick("Step {0} of {1}", "Шаг {0} из {1}"),

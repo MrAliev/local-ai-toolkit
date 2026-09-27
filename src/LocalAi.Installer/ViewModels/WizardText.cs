@@ -85,7 +85,8 @@ public static class WizardText
         bool isChecking = false,
         bool isReleaseFolded = false,
         bool areSettingsFolded = false,
-        bool wasCancelled = false) =>
+        bool wasCancelled = false,
+        PrerequisiteOffer prerequisites = PrerequisiteOffer.Choose) =>
         page switch
         {
             // The shipped line stopped being true the moment results appeared, so it says one
@@ -97,9 +98,27 @@ public static class WizardText
                 "What was found on this computer. Items marked as a warning still allow " +
                 "installation.",
                 "Что найдено на этом компьютере. Пункты с предупреждением не мешают установке."),
-            InstallerPage.Dependencies => InstallerCulture.Pick(
-                "Choose which prerequisites to install. Nothing is selected for you.",
-                "Выберите, какие компоненты установить. За вас ничего не отмечено."),
+            InstallerPage.Dependencies => prerequisites switch
+            {
+                PrerequisiteOffer.ChooseAndGetTheRestByHand => InstallerCulture.Pick(
+                    "Choose which prerequisites to install. Nothing is selected for you. Those this " +
+                    "installer cannot install say how to get them.",
+                    "Выберите, какие компоненты установить. За вас ничего не отмечено. Для тех, что " +
+                    "установщик поставить не может, сказано, как их получить."),
+                PrerequisiteOffer.AllByHand => InstallerCulture.Pick(
+                    "This installer cannot install any of these on this computer. Install the ones " +
+                    "you need yourself from the links below, then check again.",
+                    "На этом компьютере установщик не может поставить ни один из этих компонентов. " +
+                    "Установите нужные вручную по ссылкам ниже и проверьте снова."),
+                PrerequisiteOffer.AllInstalled => InstallerCulture.Pick(
+                    "Everything listed is already installed; this installer cannot reinstall any of " +
+                    "it here.",
+                    "Всё перечисленное уже установлено; переустановить что-либо здесь установщик " +
+                    "не может."),
+                _ => InstallerCulture.Pick(
+                    "Choose which prerequisites to install. Nothing is selected for you.",
+                    "Выберите, какие компоненты установить. За вас ничего не отмечено."),
+            },
             InstallerPage.Package => InstallerCulture.Pick(
                 "Choose the LocalAi release to install.",
                 "Выберите релиз LocalAi для установки."),
