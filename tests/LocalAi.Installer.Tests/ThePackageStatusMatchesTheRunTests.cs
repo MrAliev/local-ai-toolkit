@@ -383,6 +383,63 @@ public sealed class ThePackageStatusMatchesTheRunTests
         Assert.DoesNotContain(said, line => line.StartsWith("Downloading", StringComparison.Ordinal));
     }
 
+    /// <summary>The log under that rail went on saying "downloading": only the rail was fixed.</summary>
+    [Fact]
+    public async Task A_run_from_a_folder_logs_that_it_is_copying()
+    {
+        using var logs = new TemporaryDirectory("LocalAi-folder-log");
+
+        var log = await LogOfARunFrom(logs, logs.Path);
+
+        Assert.Contains(
+            $"LocalAi package 0.1.51: copying from {logs.Path} and verifying...",
+            log,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("downloading", log, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_run_from_github_logs_that_it_is_downloading()
+    {
+        using var logs = new TemporaryDirectory("LocalAi-download-log");
+
+        var log = await LogOfARunFrom(logs, folder: null);
+
+        Assert.Contains(
+            "LocalAi package 0.1.51: downloading and verifying...",
+            log,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("copying", log, StringComparison.Ordinal);
+    }
+
+    /// <summary>The feed stops the run as soon as the package is asked for.</summary>
+    private static async Task<string?> LogOfARunFrom(TemporaryDirectory logs, string? folder)
+    {
+        var feed = new FolderFeed(Release("0.1.51"));
+        feed.Reported.TrySetResult();
+        var wizard = new InstallerWizardViewModel(
+            StartChoice.UpdateOrRepair,
+            () => null,
+            feed,
+            detectEnvironment: _ => Task.FromResult(HermeticDiagnosis.Supported()))
+        {
+            EnableDependencyActions = true,
+            LogDirectory = logs.Path,
+            RuntimeRoot = logs.Combine("no-runtime-root"),
+            ScratchRoot = logs.Combine("scratch"),
+        };
+        wizard.Models.CatalogModels.Clear();
+        wizard.Package.SourceFolder = folder ?? string.Empty;
+        await wizard.ResolvePackageAsync(TestContext.Current.CancellationToken);
+        wizard.Diagnose.IsChecking = false;
+        wizard.Diagnose.SetResult(supported: true);
+        Assert.True(wizard.MoveNext());
+        wizard.SetReviewConfirmed(true);
+
+        Assert.False(await wizard.RunAsync(TestContext.Current.CancellationToken));
+        return wizard.Finish.Progress;
+    }
+
     private sealed class FolderFeed(ResolvedRelease release) : IReleaseFeed
     {
         public TaskCompletionSource Reported { get; } =

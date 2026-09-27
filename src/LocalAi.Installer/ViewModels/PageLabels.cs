@@ -27,9 +27,9 @@ public static class PageLabels
 
     // --- System check -------------------------------------------------------------------
     public static string Probing => InstallerCulture.Pick(
-        "Part of this goes online: model sizes come from the Ollama registry, and an " +
+        "Part of this goes online: model sizes are asked of the Ollama registry, and an " +
         "installed GitHub CLI is asked whether it is signed in.",
-        "Часть проверки идёт через сеть: размеры моделей берутся из реестра Ollama, а у " +
+        "Часть проверки идёт через сеть: размеры моделей запрашиваются у реестра Ollama, а у " +
         "установленного GitHub CLI запрашивается, выполнен ли вход в GitHub.");
 
     public static string InterruptedRun => InstallerCulture.Pick(
