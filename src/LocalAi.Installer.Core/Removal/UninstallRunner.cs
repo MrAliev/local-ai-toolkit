@@ -11,9 +11,10 @@ namespace LocalAi.Installer.Core.Removal;
 /// <summary>Something the run could not take away, and why. Named rather than swallowed.</summary>
 public sealed record UninstallFailure(string Path, string Reason);
 
+/// <summary><see cref="DisconnectedConfigurations"/>: the name of each client plan that went through.</summary>
 public sealed record UninstallOutcome(
     IReadOnlyList<string> RemovedPaths,
-    IReadOnlyList<string> RewrittenConfigurations,
+    IReadOnlyList<string> DisconnectedConfigurations,
     IReadOnlyList<string> RemovedHooks,
     IReadOnlyList<UninstallFailure> Failures,
     bool ProcessesStopped,
@@ -75,7 +76,7 @@ public sealed class UninstallRunner(
         progress?.Report(new(25, InstallerCulture.Pick(
             "Updating client configurations…",
             "Обновляю конфигурации клиентов…")));
-        var rewritten = await RewriteClientConfigurationsAsync(
+        var disconnected = await RewriteClientConfigurationsAsync(
             plan,
             journal,
             failures,
@@ -116,7 +117,7 @@ public sealed class UninstallRunner(
 
         return new UninstallOutcome(
             removed,
-            rewritten,
+            disconnected,
             hooks,
             failures,
             stopped,
@@ -328,7 +329,7 @@ public sealed class UninstallRunner(
         List<UninstallFailure> failures,
         CancellationToken cancellationToken)
     {
-        var rewritten = new List<string>();
+        var disconnected = new List<string>();
         foreach (var configuration in plan.AgentConfigurations.Where(plan => plan.HasChanges))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -341,7 +342,7 @@ public sealed class UninstallRunner(
                     configuration,
                     cancellationToken,
                     readBackOverride);
-                rewritten.AddRange(configuration.Files.Select(file => file.Path));
+                disconnected.Add(configuration.AgentName);
                 journal.CompleteStep(step, "Disconnected.", isReversible: false);
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
@@ -354,7 +355,7 @@ public sealed class UninstallRunner(
             }
         }
 
-        return rewritten;
+        return disconnected;
     }
 
     /// <summary>

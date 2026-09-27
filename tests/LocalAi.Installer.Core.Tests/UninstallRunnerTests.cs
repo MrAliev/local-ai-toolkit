@@ -287,7 +287,7 @@ public sealed class UninstallRunnerTests : IDisposable
         Assert.DoesNotContain("mcp_servers.codesearch", codex, StringComparison.Ordinal);
         Assert.DoesNotContain("mcp_servers.locallm", codex, StringComparison.Ordinal);
         Assert.Contains("[mcp_servers.other]", codex, StringComparison.Ordinal);
-        Assert.Contains(claudeInstructions, outcome.RewrittenConfigurations);
+        Assert.Equal(["Claude", "Codex"], outcome.DisconnectedConfigurations);
     }
 
     [Fact]
