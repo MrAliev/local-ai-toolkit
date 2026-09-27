@@ -157,6 +157,39 @@ public sealed class InstallerRunJournalTests : IDisposable
         Assert.Equal(intact.Snapshot.RunId, found.Snapshot.RunId);
     }
 
+    /// <summary>
+    /// The stamp is UTC, and a stamp with no zone reads as local time to anyone who compares it
+    /// with the clock on their wall.
+    /// </summary>
+    [Fact]
+    public void A_journal_name_says_its_time_is_utc()
+    {
+        using var journal = InstallerRunJournal.Start(directory);
+
+        Assert.Equal(
+            $"journal-{journal.Snapshot.StartedAtUtc.UtcDateTime:yyyyMMdd-HHmmss}Z-{journal.Snapshot.RunId:N}.json",
+            Path.GetFileName(journal.JournalPath));
+    }
+
+    /// <summary>
+    /// Journals named before the Z share the folder with those named after it, and the newest
+    /// interrupted run is picked by name. The digits come first in both, so a second either way
+    /// decides.
+    /// </summary>
+    [Fact]
+    public void Journals_named_with_and_without_the_z_sort_by_their_time()
+    {
+        using var current = InstallerRunJournal.Start(directory);
+        current.Dispose();
+        var started = current.Snapshot.StartedAtUtc.UtcDateTime;
+
+        NamedWithoutZ(started.AddSeconds(-1));
+        Assert.Equal(current.Snapshot.RunId, InstallerRunJournal.FindInterrupted(directory)?.Snapshot.RunId);
+
+        var later = NamedWithoutZ(started.AddSeconds(1));
+        Assert.Equal(later, InstallerRunJournal.FindInterrupted(directory)?.Snapshot.RunId);
+    }
+
     [Fact]
     public void A_missing_directory_means_no_interrupted_run()
     {
@@ -206,6 +239,17 @@ public sealed class InstallerRunJournalTests : IDisposable
         journal.CompleteStep(completed, "written", isReversible: true);
 
         Assert.True(journal.Snapshot.HasReversibleWork);
+    }
+
+    /// <summary>An interrupted run's journal under the name it had before the Z.</summary>
+    private Guid NamedWithoutZ(DateTime stamp)
+    {
+        using var journal = InstallerRunJournal.Start(Path.Combine(directory, "elsewhere"));
+        journal.Dispose();
+        File.Move(
+            journal.JournalPath,
+            Path.Combine(directory, $"journal-{stamp:yyyyMMdd-HHmmss}-{journal.Snapshot.RunId:N}.json"));
+        return journal.Snapshot.RunId;
     }
 
     public void Dispose()
