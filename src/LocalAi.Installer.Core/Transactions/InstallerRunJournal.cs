@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -202,7 +203,9 @@ public sealed class InstallerRunJournal : IDisposable
         var runId = Guid.NewGuid();
         var path = System.IO.Path.Combine(
             directory,
-            $"{FilePrefix}{now.UtcDateTime:yyyyMMdd-HHmmss}Z-{runId:N}.json");
+            string.Create(
+                CultureInfo.InvariantCulture,
+                $"{FilePrefix}{now.UtcDateTime:yyyyMMdd-HHmmss}Z-{runId:N}.json"));
         var journal = new InstallerRunJournal(
             path,
             new(CurrentSchemaVersion, runId, now, now, null, []));
