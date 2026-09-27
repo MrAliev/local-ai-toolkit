@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using System.Text.Json;
 using LocalAi.Cli;
+using LocalAi.Cli.Resources;
 using LocalAi.Contracts;
 
 namespace LocalAi.IntegrationTests;
@@ -129,15 +130,51 @@ public sealed class DoctorCommandTests : IDisposable
     public void A_broker_silent_for_too_long_is_distinguished_from_a_live_one()
     {
         Install("v1");
-        WriteHost(DateTimeOffset.UtcNow - TimeSpan.FromHours(2));
+        var host = WriteHost(DateTimeOffset.UtcNow - TimeSpan.FromHours(2));
 
-        var stale = Check(DoctorCommand.Inspect(_root), "broker");
-        WriteHost(DateTimeOffset.UtcNow);
-        var live = Check(DoctorCommand.Inspect(_root), "broker");
+        var stale = Check(DoctorCommand.Inspect(_root, processStartedAt: Running(host)), "broker");
+        host = WriteHost(DateTimeOffset.UtcNow);
+        var live = Check(DoctorCommand.Inspect(_root, processStartedAt: Running(host)), "broker");
 
         Assert.Equal(DoctorStatus.Warning, stale.Status);
+        Assert.Contains("4242", stale.Detail, StringComparison.Ordinal);
         Assert.Equal(DoctorStatus.Ok, live.Status);
     }
+
+    /// <summary>
+    /// Run 20260927-233709: the broker's process was gone, host.json was left from 103 s earlier,
+    /// and doctor printed "ok".
+    /// </summary>
+    [Fact]
+    public void A_broker_whose_process_is_gone_is_not_reported_as_running()
+    {
+        Install("v1");
+        WriteHost(DateTimeOffset.UtcNow - TimeSpan.FromSeconds(103));
+
+        var check = Check(DoctorCommand.Inspect(_root, processStartedAt: _ => null), "broker");
+
+        Assert.Equal(DoctorStatus.Warning, check.Status);
+        Assert.Equal(CliText.BrokerNotRunning, check.Detail);
+    }
+
+    [Fact]
+    public void A_process_that_took_the_brokers_id_is_not_taken_for_the_broker()
+    {
+        Install("v1");
+        var host = WriteHost(DateTimeOffset.UtcNow);
+
+        var check = Check(
+            DoctorCommand.Inspect(
+                _root,
+                processStartedAt: id => id == host.ProcessId ? host.StartedAtUtc.AddSeconds(1) : null),
+            "broker");
+
+        Assert.Equal(DoctorStatus.Warning, check.Status);
+        Assert.Equal(CliText.BrokerNotRunning, check.Detail);
+    }
+
+    private static Func<int, DateTimeOffset?> Running(BrokerProcessState host) =>
+        id => id == host.ProcessId ? host.StartedAtUtc : null;
 
     /// <summary>
     /// Quarantined jobs are never retried and nothing else mentions them, so they accumulate
@@ -297,17 +334,19 @@ public sealed class DoctorCommandTests : IDisposable
     private static DoctorCheck Check(DoctorReport report, string name) =>
         report.Checks.Single(check => check.Name == name);
 
-    private void WriteHost(DateTimeOffset heartbeat) =>
+    private BrokerProcessState WriteHost(DateTimeOffset heartbeat)
+    {
+        var host = new BrokerProcessState(
+            4242,
+            heartbeat - TimeSpan.FromMinutes(1),
+            heartbeat,
+            1,
+            Path.Combine(_root, "bin", "versions", "v1", "LocalAi.Broker.exe"));
         File.WriteAllText(
             Path.Combine(_root, "host.json"),
-            JsonSerializer.Serialize(
-                new BrokerProcessState(
-                    4242,
-                    heartbeat - TimeSpan.FromMinutes(1),
-                    heartbeat,
-                    1,
-                    Path.Combine(_root, "bin", "versions", "v1", "LocalAi.Broker.exe")),
-                LocalAiJson.Strict));
+            JsonSerializer.Serialize(host, LocalAiJson.Strict));
+        return host;
+    }
 
     private void Install(string version)
     {
