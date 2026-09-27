@@ -697,6 +697,8 @@ public sealed class AccessibleControlsTests
     /// The window is never loaded here, so its first check of this computer has not run: the box
     /// waits, a muted line under it says for what, and a screen reader hears the same sentence. Once
     /// the box can be ticked, a tick whose list changes is taken back with a warning line under it.
+    /// Only one of the two lines shows at a time, each is a live region, and the box's help is the
+    /// one showing.
     /// </summary>
     private static void CheckConsentWaits(Window window, InstallerWizardViewModel wizard, bool russian)
     {
@@ -732,11 +734,45 @@ public sealed class AccessibleControlsTests
         var notice = Descendants(window.Content).OfType<TextBlock>().Single(text => text.Text == changed);
         Assert.Equal(Visibility.Visible, notice.Visibility);
         Assert.Same(window.FindResource("WarningText"), notice.Style);
+
+        // Both lines are spoken when they appear, and the box's help is the line showing.
+        Assert.All(new[] { line, notice }, shown =>
+        {
+            Assert.IsType<LiveStatusText>(shown);
+            Assert.Equal(AutomationLiveSetting.Polite, AutomationProperties.GetLiveSetting(shown));
+        });
+        Assert.Equal(changed, Peer(consent).GetHelpText());
+
+        // One line at a time: while a check holds the box, the changed line waits for it to end,
+        // and then names what changed during the check as well as before it.
+        var git = wizard.Dependencies.Dependencies.Single(row => row.Id == "Git");
+        Assert.True(git.IsConsented);
+        wizard.Diagnose.IsChecking = true;
+        wizard.RefreshNavigationState();
+        wizard.Dependencies.SetConsent("Git", false);
+        wizard.RefreshNavigationState();
+        Layout(window);
+        Assert.Equal(Visibility.Visible, line.Visibility);
+        Assert.Equal(Visibility.Collapsed, notice.Visibility);
+        Assert.Equal(waiting, Peer(consent).GetHelpText());
+        wizard.Diagnose.IsChecking = false;
+        wizard.RefreshNavigationState();
+        Layout(window);
+        var both = russian
+            ? "Список выше изменился после вашего подтверждения (Компоненты, Клиенты и PATH). Прочитайте его снова и подтвердите."
+            : "The list above changed after you confirmed it (Components, Clients and PATH). Read it again, then confirm.";
+        Assert.Equal(Visibility.Collapsed, line.Visibility);
+        Assert.Equal(Visibility.Visible, notice.Visibility);
+        Assert.Equal(both, notice.Text);
+        Assert.Equal(both, Peer(consent).GetHelpText());
+
         wizard.SetReviewConfirmed(true);
         Layout(window);
         Assert.Equal(Visibility.Collapsed, notice.Visibility);
+        Assert.Equal(string.Empty, Peer(consent).GetHelpText());
         wizard.SetReviewConfirmed(false);
         wizard.Agents.SetChoice("codex", codex);
+        wizard.Dependencies.SetConsent("Git", true);
 
         wizard.Diagnose.IsChecking = true;
         wizard.RefreshNavigationState();

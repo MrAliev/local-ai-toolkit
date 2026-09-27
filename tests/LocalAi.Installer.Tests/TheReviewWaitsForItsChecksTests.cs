@@ -365,6 +365,122 @@ public sealed class TheReviewWaitsForItsChecksTests : IDisposable
         Assert.True(wizard.Review.HasChangedNotice);
     }
 
+    /// <summary>
+    /// While the release is checked its absence is not an outcome yet: the warning that nothing
+    /// will be installed goes until the check ends, taking the group with it when it was the only
+    /// warning, and the PATH line says what it waits for instead of that it will not change.
+    /// </summary>
+    [Theory]
+    [InlineData(
+        InstallerLanguage.English,
+        "Warning: no release has been verified",
+        "PATH: unchanged, because LocalAi will not be installed.",
+        "PATH: depends on the release, still being checked.")]
+    [InlineData(
+        InstallerLanguage.Russian,
+        "Внимание: ни один релиз не проверен",
+        "PATH: не меняется, потому что LocalAi не будет установлен.",
+        "PATH: зависит от релиза, который ещё проверяется.")]
+    public async Task While_the_release_is_checked_its_absence_is_not_warned_of_yet(
+        InstallerLanguage language,
+        string noRelease,
+        string unchanged,
+        string waiting)
+    {
+        InstallerCulture.Current = language;
+        var feed = new Feed { Manifest = new Gate(), Failure = new IOException("no feed in this test") };
+        var wizard = Wizard(feed);
+        WalkToTheReview(wizard);
+        Assert.StartsWith(noRelease, Assert.Single(Group(wizard, PageLabels.ReviewWarnings)), StringComparison.Ordinal);
+        Assert.Contains(unchanged, Group(wizard, PageLabels.ReviewClients));
+
+        var resolving = wizard.ResolvePackageAsync(Token);
+        await Reached(feed.Manifest, resolving);
+
+        Assert.DoesNotContain(wizard.ReviewGroups, group => group.Title == PageLabels.ReviewWarnings);
+        Assert.Contains(waiting, Group(wizard, PageLabels.ReviewClients));
+        Assert.DoesNotContain(unchanged, Group(wizard, PageLabels.ReviewClients));
+
+        feed.Manifest.Open();
+        await resolving;
+
+        Assert.StartsWith(noRelease, Assert.Single(Group(wizard, PageLabels.ReviewWarnings)), StringComparison.Ordinal);
+        Assert.Contains(unchanged, Group(wizard, PageLabels.ReviewClients));
+        Assert.DoesNotContain(waiting, Group(wizard, PageLabels.ReviewClients));
+    }
+
+    /// <summary>
+    /// One line under the box at a time. "Read it again, then confirm" cannot be done while a check
+    /// holds the box, so the line saying the list changed waits for the check to end, and then
+    /// names every group changed since the tick, those the check itself changed among them.
+    /// </summary>
+    [Fact]
+    public async Task The_changed_list_is_named_after_the_check_with_what_the_check_changed()
+    {
+        var detect = new Detect();
+        var wizard = Wizard(new Feed(), detect);
+        WalkToTheReview(wizard);
+        await wizard.CheckPrerequisitesAgainAsync();
+        wizard.Dependencies.SetConsent("Git", true);
+        wizard.RefreshNavigationState();
+        wizard.SetReviewConfirmed(true);
+
+        wizard.Agents.SetChoice("codex", AgentChoice.McpOnly);
+        wizard.RefreshNavigationState();
+        Assert.Equal(
+            "The list above changed after you confirmed it (Clients and PATH). Read it again, then confirm.",
+            wizard.Review.ChangedNotice);
+
+        // Git gone since: the components line now installs it rather than reinstalling it.
+        detect.Answer = HermeticDiagnosis.Supported(
+            git: new DependencySnapshot("git", DependencyState.NotFound, null, null, "not in this test"));
+        detect.Next = new Gate();
+        var check = wizard.CheckPrerequisitesAgainAsync();
+        await Reached(detect.Next, check);
+
+        Assert.True(wizard.Review.IsStillChecking);
+        Assert.False(wizard.Review.HasChangedNotice);
+        Assert.Equal(string.Empty, wizard.Review.ChangedNotice);
+
+        detect.Next.Open();
+        await check;
+
+        Assert.False(wizard.Review.IsConfirmed);
+        Assert.False(wizard.Review.IsStillChecking);
+        Assert.True(wizard.Review.HasChangedNotice);
+        Assert.Equal(
+            "The list above changed after you confirmed it (Components, Clients and PATH). " +
+            "Read it again, then confirm.",
+            wizard.Review.ChangedNotice);
+    }
+
+    /// <summary>
+    /// The line names the union of the groups changed since the tick: a group it already named stays
+    /// named when another changes, even if the first has since gone back to what was ticked.
+    /// </summary>
+    [Fact]
+    public void A_group_already_named_stays_named_when_another_changes()
+    {
+        var wizard = Wizard(new Feed());
+        WalkToTheReview(wizard);
+        var codex = wizard.Agents.Agents.Single(row => row.Agent == "codex").Choice;
+        wizard.SetReviewConfirmed(true);
+
+        wizard.Agents.SetChoice("codex", codex == AgentChoice.McpOnly ? AgentChoice.NoChange : AgentChoice.McpOnly);
+        wizard.RefreshNavigationState();
+        wizard.Agents.SetChoice("codex", codex);
+        wizard.Dependencies.SetConsent("Git", true);
+        wizard.RefreshNavigationState();
+
+        Assert.Equal(
+            "The list above changed after you confirmed it (Components, Clients and PATH). " +
+            "Read it again, then confirm.",
+            wizard.Review.ChangedNotice);
+    }
+
+    private static IReadOnlyList<string> Group(InstallerWizardViewModel wizard, string title) =>
+        wizard.ReviewGroups.Single(group => group.Title == title).Lines;
+
     private InstallerWizardViewModel Wizard(
         IReleaseFeed feed,
         Detect? detect = null,
@@ -425,21 +541,29 @@ public sealed class TheReviewWaitsForItsChecksTests : IDisposable
     {
         public Gate? Next { get; set; }
 
+        public EnvironmentDiagnosis Answer { get; set; } = HermeticDiagnosis.Supported();
+
         public async Task<EnvironmentDiagnosis> Run(CancellationToken cancellationToken)
         {
+            var answer = Answer;
             if (Next is { } gate)
             {
                 await gate.Pass();
             }
 
-            return HermeticDiagnosis.Supported();
+            return answer;
         }
     }
 
-    /// <summary>A feed answering <see cref="Answer"/>, its manifest held at a gate when one is set.</summary>
+    /// <summary>
+    /// A feed answering <see cref="Answer"/>, or throwing <see cref="Failure"/> when one is set, its
+    /// manifest held at a gate when one is set.
+    /// </summary>
     private class Feed : IReleaseFeed
     {
         public ResolvedRelease Answer { get; set; } = Release("0.1.51");
+
+        public Exception? Failure { get; set; }
 
         public Gate? Manifest { get; set; }
 
@@ -457,7 +581,7 @@ public sealed class TheReviewWaitsForItsChecksTests : IDisposable
                 await gate.Pass();
             }
 
-            return answer;
+            return Failure is { } failure ? throw failure : answer;
         }
 
         public Task<string> DownloadPackageAsync(

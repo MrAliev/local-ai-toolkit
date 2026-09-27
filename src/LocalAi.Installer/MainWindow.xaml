@@ -726,7 +726,7 @@
                         <!-- Held while a check the list is built from is running, with the line
                              under it as its help: a disabled box with no reason is argued with. -->
                         <CheckBox AutomationProperties.Name="{Binding ConsentText}"
-                                  AutomationProperties.HelpText="{Binding Review.StillChecking, Mode=OneWay}"
+                                  AutomationProperties.HelpText="{Binding Review.ConsentHelp, Mode=OneWay}"
                                   IsEnabled="{Binding Review.CanConfirm, Mode=OneWay}"
                                   Margin="0,12,0,0"
                                   IsChecked="{Binding Review.IsConfirmed, Mode=TwoWay}"
@@ -734,13 +734,14 @@
                                   Unchecked="OnReviewConfirmedChanged">
                             <TextBlock Text="{Binding ConsentText}" TextWrapping="Wrap" />
                         </CheckBox>
-                        <TextBlock Text="{Binding Review.StillChecking, Mode=OneWay}"
-                                   Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="24,4,0,0"
-                                   Visibility="{Binding Review.IsStillChecking, Mode=OneWay, Converter={StaticResource BoolToVisibility}}" />
+                        <!-- One line at a time, each spoken when it appears. -->
+                        <local:LiveStatusText Text="{Binding Review.StillChecking, Mode=OneWay}"
+                                              Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="24,4,0,0"
+                                              Visibility="{Binding Review.IsStillChecking, Mode=OneWay, Converter={StaticResource BoolToVisibility}}" />
                         <!-- Why a box ticked earlier is clear now; gone at the next tick. -->
-                        <TextBlock Text="{Binding Review.ChangedNotice, Mode=OneWay}"
-                                   Style="{StaticResource WarningText}" TextWrapping="Wrap" Margin="24,4,0,0"
-                                   Visibility="{Binding Review.HasChangedNotice, Mode=OneWay, Converter={StaticResource BoolToVisibility}}" />
+                        <local:LiveStatusText Text="{Binding Review.ChangedNotice, Mode=OneWay}"
+                                              Style="{StaticResource WarningText}" TextWrapping="Wrap" Margin="24,4,0,0"
+                                              Visibility="{Binding Review.HasChangedNotice, Mode=OneWay, Converter={StaticResource BoolToVisibility}}" />
                     </StackPanel>
 
                     <!-- Progress -->
