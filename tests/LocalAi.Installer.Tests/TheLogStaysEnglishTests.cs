@@ -166,6 +166,22 @@ public sealed class TheLogStaysEnglishTests : IDisposable
         Assert.Contains("Remove", line, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// A Russian window wrote «Use "Откатить изменения" below to undo them» into the English log
+    /// of the RC19 → RC29 update: the button's label in whatever language the window spoke,
+    /// under a "below" the log file does not have.
+    /// </summary>
+    [Fact]
+    public void The_rollback_line_points_at_the_finish_page_rather_than_quoting_a_button()
+    {
+        InstallerCulture.Current = InstallerLanguage.Russian;
+
+        Assert.Equal(
+            "Some of the applied actions are reversible and can be rolled back from the finish " +
+            @"page; the journal at C:\logs\journal.json records exactly what was done.",
+            RunResults.RollbackAvailability(reversible: true, @"C:\logs\journal.json"));
+    }
+
     private static ModelProvisioningProgress Step(
         ModelProvisioningPhase phase,
         long completedBytes = 0,

@@ -426,6 +426,14 @@ public static class RunResults
             skipped,
             failed);
 
+    /// <summary>Whether a failed or cancelled run left anything to take back, for the log.</summary>
+    public static string RollbackAvailability(bool reversible, string journalPath) =>
+        reversible
+            ? "Some of the applied actions are reversible and can be rolled back from the " +
+                "finish page; the journal at " + journalPath + " records exactly what was done."
+            : "Nothing this run applied is reversible by the installer. The journal " +
+                "at " + journalPath + " records exactly what was done.";
+
     /// <summary>
     /// The one question this page exists to answer, and it was a log line under eighty others in
     /// a box that did not scroll. A run that configured no client has nothing to say here, and
