@@ -5,8 +5,14 @@ namespace LocalAi.Installer.Core.Models;
 
 public interface IModelSizeSource
 {
-    Task<long?> GetDownloadSizeBytesAsync(string tag, CancellationToken cancellationToken);
+    Task<ModelSizeAnswer> GetDownloadSizeAsync(string tag, CancellationToken cancellationToken);
 }
+
+/// <summary>
+/// One model's size as the registry gave it. <paramref name="Answered"/> is any HTTP response, a
+/// refusal included, so a registry that cannot be reached is told from one without a size.
+/// </summary>
+public readonly record struct ModelSizeAnswer(bool Answered, long? Bytes);
 
 /// <summary>
 /// Reads model sizes from the public Ollama registry.
@@ -45,19 +51,20 @@ public sealed class OllamaRegistryClient : IModelSizeSource, IDisposable
     }
 
     /// <summary>
-    /// Total size of the manifest's layers, or null when the size could not be established.
-    /// Null means "unknown", never "zero": an installer that cannot reach the network must
-    /// say it does not know rather than imply the model is free.
+    /// Total size of the manifest's layers, with null bytes when the size could not be
+    /// established. Null means "unknown", never "zero": an installer that cannot reach the
+    /// network must say it does not know rather than imply the model is free.
     /// </summary>
-    public async Task<long?> GetDownloadSizeBytesAsync(
+    public async Task<ModelSizeAnswer> GetDownloadSizeAsync(
         string tag,
         CancellationToken cancellationToken)
     {
         if (!TrySplit(tag, out var name, out var version))
         {
-            return null;
+            return default;
         }
 
+        var answered = false;
         try
         {
             using var request = new HttpRequestMessage(
@@ -67,9 +74,10 @@ public sealed class OllamaRegistryClient : IModelSizeSource, IDisposable
 
             using var response = await client.SendAsync(request, cancellationToken)
                 .ConfigureAwait(false);
+            answered = true;
             if (!response.IsSuccessStatusCode)
             {
-                return null;
+                return new(true, null);
             }
 
             await using var stream = await response.Content
@@ -82,7 +90,7 @@ public sealed class OllamaRegistryClient : IModelSizeSource, IDisposable
             if (!document.RootElement.TryGetProperty("layers", out var layers) ||
                 layers.ValueKind != JsonValueKind.Array)
             {
-                return null;
+                return new(true, null);
             }
 
             long total = 0;
@@ -96,14 +104,14 @@ public sealed class OllamaRegistryClient : IModelSizeSource, IDisposable
                 }
             }
 
-            return total > 0 ? total : null;
+            return new(true, total > 0 ? total : null);
         }
         catch (Exception exception) when (
             exception is HttpRequestException or JsonException or TaskCanceledException
                 or InvalidOperationException or UriFormatException)
         {
             // Being offline is an ordinary condition for an installer, not a failure.
-            return null;
+            return new(answered, null);
         }
     }
 

@@ -44,10 +44,10 @@ public sealed class OfflineModelChoiceTests
     [Fact]
     public void Until_the_person_chooses_the_mode_follows_the_network()
     {
-        var page = new ModelsPageViewModel { IsOffline = true };
+        var page = new ModelsPageViewModel { Offline = ModelsOffline.NoNetworkConnection };
         Assert.True(page.IsSkip);
 
-        page.IsOffline = false;
+        page.Offline = ModelsOffline.None;
 
         Assert.True(page.IsAutomatic);
     }
@@ -59,12 +59,12 @@ public sealed class OfflineModelChoiceTests
     [InlineData(ModelSelectionMode.Skip)]
     public void A_mode_the_person_chose_stays_whatever_the_network_does(ModelSelectionMode chosen)
     {
-        var page = new ModelsPageViewModel { IsOffline = true };
+        var page = new ModelsPageViewModel { Offline = ModelsOffline.NoNetworkConnection };
         Choose(page, chosen);
 
-        page.IsOffline = false;
+        page.Offline = ModelsOffline.None;
         Assert.Equal(chosen, page.Mode);
-        page.IsOffline = true;
+        page.Offline = ModelsOffline.NoNetworkConnection;
         Assert.Equal(chosen, page.Mode);
     }
 
@@ -170,17 +170,22 @@ public sealed class OfflineModelChoiceTests
         Func<int, bool> offline)
     {
         var checks = 0;
+        var online = false;
         var wizard = new InstallerWizardViewModel(
             StartChoice.Install,
             () => null,
             new OfflineSizesComeFromTheReleaseTests.ReleaseFeed(
                 OfflineSizesComeFromTheReleaseTests.Release(OfflineSizesComeFromTheReleaseTests.CatalogueTags())),
-            detectEnvironment: _ => Task.FromResult(HermeticDiagnosis.Supported(
-                network: new NetworkSnapshot(
-                    offline(++checks) ? ObservationState.Unavailable : ObservationState.Available,
-                    null))))
+            detectEnvironment: _ =>
+            {
+                online = !offline(++checks);
+                return Task.FromResult(HermeticDiagnosis.Supported(
+                    network: new NetworkSnapshot(
+                        online ? ObservationState.Available : ObservationState.Unavailable,
+                        null)));
+            })
         {
-            ModelSizeSource = new OfflineSizesComeFromTheReleaseTests.FixedRegistry(null),
+            ModelSizeSource = new OfflineSizesComeFromTheReleaseTests.FixedRegistry(null, answers: () => online),
             EnableDependencyActions = true,
             LogDirectory = temp.Combine("logs"),
             RuntimeRoot = temp.Combine("no-runtime-root"),

@@ -114,7 +114,7 @@ public sealed class StartScreenAfterAStoppedRemovalTests : IDisposable
     {
         var page = new DiagnosePageViewModel();
 
-        page.Load(HermeticDiagnosis.Supported(existingLocalAi: state));
+        page.Load(HermeticDiagnosis.Supported(existingLocalAi: state), registryAnswered: true);
 
         var row = page.Checks.Single(check => check.Name == "Existing LocalAi");
         Assert.Equal(CheckStatus.Ok, row.Status);

@@ -55,9 +55,9 @@ public static class ReleaseModelList
         var entries = new List<Entry>();
         foreach (var model in models)
         {
-            var size = await sizeSource
-                .GetDownloadSizeBytesAsync(model.Tag, cancellationToken)
-                .ConfigureAwait(false);
+            var size = (await sizeSource
+                .GetDownloadSizeAsync(model.Tag, cancellationToken)
+                .ConfigureAwait(false)).Bytes;
             if (size is not > 0)
             {
                 throw new InvalidOperationException(

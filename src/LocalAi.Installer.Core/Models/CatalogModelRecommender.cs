@@ -25,6 +25,9 @@ public sealed record CatalogRecommendation(
     /// <summary>Weighed from a verified release, which is also all that setup plans.</summary>
     public bool SizedByRelease { get; init; }
 
+    /// <summary>Whether the registry gave any answer while sizing, with or without a size.</summary>
+    public bool RegistryAnswered { get; init; }
+
     public IReadOnlyList<CatalogModelFit> Fitting =>
         [.. Fits.Where(fit => fit.FitsInVideoMemory)];
 }
@@ -55,14 +58,16 @@ public sealed class CatalogModelRecommender(
         ArgumentNullException.ThrowIfNull(catalogModels);
 
         var sizes = new Dictionary<string, long>(StringComparer.Ordinal);
+        var answered = false;
         foreach (var model in catalogModels)
         {
-            var size = await sizeSource
-                .GetDownloadSizeBytesAsync(model.Tag, cancellationToken)
+            var answer = await sizeSource
+                .GetDownloadSizeAsync(model.Tag, cancellationToken)
                 .ConfigureAwait(false);
-            if (size is > 0)
+            answered |= answer.Answered;
+            if (answer.Bytes is { } size && size > 0)
             {
-                sizes[model.Tag] = size.Value;
+                sizes[model.Tag] = size;
             }
         }
 
@@ -70,7 +75,7 @@ public sealed class CatalogModelRecommender(
         {
             // Without sizes there is nothing to weigh against the adapter. Say so plainly
             // instead of presenting a guess as a recommendation.
-            return Unsized;
+            return Unsized with { RegistryAnswered = answered };
         }
 
         var manifestModels = catalogModels
@@ -86,7 +91,7 @@ public sealed class CatalogModelRecommender(
                     sizes[model.Tag])))
             .ToArray();
 
-        return Weighed(engine.Recommend(gpu, manifestModels));
+        return Weighed(engine.Recommend(gpu, manifestModels)) with { RegistryAnswered = answered };
     }
 
     /// <summary>

@@ -178,7 +178,8 @@ public sealed class OfflineSizesComeFromTheReleaseTests
             temp,
             Release(CatalogueTags()),
             registrySize: null,
-            network: new NetworkSnapshot(ObservationState.Available, null));
+            network: new NetworkSnapshot(ObservationState.Available, null),
+            registryAnswers: true);
 
         await wizard.InitializeAsync(TestContext.Current.CancellationToken);
 
@@ -227,7 +228,8 @@ public sealed class OfflineSizesComeFromTheReleaseTests
         long? registrySize,
         GpuSnapshot? gpu = null,
         NetworkSnapshot? network = null,
-        string? unsizedTag = null) =>
+        string? unsizedTag = null,
+        bool? registryAnswers = null) =>
         new(
             StartChoice.Install,
             () => null,
@@ -239,16 +241,24 @@ public sealed class OfflineSizesComeFromTheReleaseTests
                     [new GpuAdapterSnapshot("adapter-1", "Test Adapter", 16UL * 1024 * 1024 * 1024, false)],
                     null))))
         {
-            ModelSizeSource = new FixedRegistry(registrySize, unsizedTag),
+            ModelSizeSource = new FixedRegistry(
+                registrySize,
+                unsizedTag,
+                registryAnswers is { } answers ? () => answers : null),
             LogDirectory = temp.Combine("logs"),
             RuntimeRoot = temp.Combine("no-runtime-root"),
             ScratchRoot = temp.Combine("scratch"),
         };
 
-    internal sealed class FixedRegistry(long? size, string? unsizedTag = null) : IModelSizeSource
+    /// <summary>Answers when <paramref name="answers"/> says so, by default whenever it has a size to give.</summary>
+    internal sealed class FixedRegistry(long? size, string? unsizedTag = null, Func<bool>? answers = null)
+        : IModelSizeSource
     {
-        public Task<long?> GetDownloadSizeBytesAsync(string tag, CancellationToken cancellationToken) =>
-            Task.FromResult(tag == unsizedTag ? null : size);
+        public Task<ModelSizeAnswer> GetDownloadSizeAsync(string tag, CancellationToken cancellationToken)
+        {
+            var answered = answers?.Invoke() ?? size is not null;
+            return Task.FromResult(new ModelSizeAnswer(answered, answered && tag != unsizedTag ? size : null));
+        }
     }
 
     internal sealed class ReleaseFeed(ResolvedRelease release) : IReleaseFeed
