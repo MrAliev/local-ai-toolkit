@@ -135,6 +135,27 @@ public sealed class UninstallPlannerTests : IDisposable
         Assert.Contains(stranger, plan.PreviewText, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// The Apps &amp; features entry goes after every other path, and the copy it runs has to
+    /// outlive it, so the path holding that copy comes last. In bin is where releases before
+    /// this one parked it.
+    /// </summary>
+    [Theory]
+    [InlineData("installer")]
+    [InlineData("bin")]
+    public async Task The_path_holding_the_uninstaller_copy_is_planned_last(string holder)
+    {
+        var copy = Path.Combine(machine.Runtime, holder, "uninstall", "LocalAi.Installer.exe");
+        Directory.CreateDirectory(Path.GetDirectoryName(copy)!);
+        File.WriteAllText(copy, "installer");
+
+        var plan = await Plan(RemovalSelection
+            .FromPreset(RemovalPreset.FullUninstall)
+            .WithSigningKeyRemoval(true));
+
+        Assert.Equal(Path.Combine(machine.Runtime, holder), plan.Paths[^1].Path);
+    }
+
     [Fact]
     public async Task Nothing_selected_plans_nothing()
     {

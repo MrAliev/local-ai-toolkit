@@ -218,10 +218,7 @@ public sealed class UninstallWizardViewModel : ObservableObject
 
     public AsyncRelayCommand RemoveWhatIsLeftCommand { get; }
 
-    /// <summary>
-    /// After a run that stopped, failed or was refused. Apps &amp; features has usually lost its
-    /// entry by then, so this window is the one way left to finish (#614).
-    /// </summary>
+    /// <summary>After a run that stopped, failed or was refused.</summary>
     public bool CanRemoveWhatIsLeft => IsFinishPage && !isRunning && hasRunError;
 
     /// <summary>Whether this run is the removal half of a clean reinstall.</summary>
@@ -566,8 +563,8 @@ public sealed class UninstallWizardViewModel : ObservableObject
         blocked = null;
         found = null;
         // Windows deletes neither a running executable nor its directory, so a removal from
-        // here would fail on bin and leave it behind. App hands over to a temporary copy before
-        // this wizard exists; reaching this means that did not happen.
+        // here would fail on the directory holding it and leave it behind. App hands over to a
+        // temporary copy before this wizard exists; reaching this means that did not happen.
         if (executablePath is not null && IsInside(layout.Root, executablePath))
         {
             blocked = Blocked.InsideInstallation;

@@ -15,7 +15,7 @@ public sealed partial class OfflineBundleApplication
         if (!component.Files.Contains(BundledInstaller, StringComparer.Ordinal) || file is null || file.Bytes <= 0) throw Invalid();
         var before = uninstaller.Read(layout);
         if (before is not null && !SameInstallation(before.InstallLocation, layout.Root)) throw Invalid();
-        var destination = Path.Combine(layout.BinRoot, "uninstall", BundledInstaller);
+        var destination = Path.Combine(layout.UninstallerDirectory, BundledInstaller);
         OfflineEnvironmentBundle.EnsureNoLinks(destination);
         return new(BundledInstaller, destination, file.Bytes, file.Sha256, "current-user", uninstaller.RegistrySubKey, before);
     }

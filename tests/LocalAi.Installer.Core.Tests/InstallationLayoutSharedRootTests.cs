@@ -162,6 +162,27 @@ public sealed class InstallationLayoutSharedRootTests : IDisposable
         Assert.False(Directory.Exists(layout.BinRoot));
     }
 
+    /// <summary>
+    /// The uninstaller the Apps &amp; features entry runs is parked in the installer directory,
+    /// and a removal that stopped leaves it there with bin already gone. The installation that
+    /// follows must not refuse the layout for holding it.
+    /// </summary>
+    [Fact]
+    public void The_parked_uninstaller_does_not_make_the_layout_unsafe()
+    {
+        var layout = ProtectedRoot();
+        Protect(layout.InstallerDirectory);
+        var copy = Path.Combine(layout.InstallerDirectory, "uninstall", "LocalAi.Installer.exe");
+        Directory.CreateDirectory(Path.GetDirectoryName(copy)!);
+        File.WriteAllText(copy, "installer");
+
+        using var lease = InstallationLayoutLease.Acquire(
+            layout,
+            requireFreshInstallerTree: true);
+
+        Assert.Equal(layout.Root, lease.Layout.Root);
+    }
+
     [Fact]
     public void A_root_held_by_the_running_broker_does_not_refuse_the_layout()
     {
@@ -207,7 +228,14 @@ public sealed class InstallationLayoutSharedRootTests : IDisposable
     private InstallationLayout ProtectedRoot()
     {
         var layout = Layout();
-        Directory.CreateDirectory(layout.Root);
+        Protect(layout.Root);
+        return layout;
+    }
+
+    /// <summary>The ACL the installer writes on every directory it creates.</summary>
+    private static void Protect(string directory)
+    {
+        Directory.CreateDirectory(directory);
         var security = new DirectorySecurity();
         var user = WindowsIdentity.GetCurrent().User!;
         security.SetOwner(user);
@@ -221,8 +249,7 @@ public sealed class InstallationLayoutSharedRootTests : IDisposable
             new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null),
             FileSystemRights.FullControl, inheritance, PropagationFlags.None,
             AccessControlType.Allow));
-        new DirectoryInfo(layout.Root).SetAccessControl(security);
-        return layout;
+        new DirectoryInfo(directory).SetAccessControl(security);
     }
 
     private static SafeFileHandle OpenDirectory(string path, FileShare share) =>

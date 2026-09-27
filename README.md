@@ -1288,7 +1288,7 @@ Authenticode requirements still apply. The plan's `uninstall` section shows its 
 registry subkey and previous entry. An existing entry for another installation root is refused.
 
 After runtime activation, `configuration:uninstall` records intent, copies the retained installer
-to `bin/uninstall/LocalAi.Installer.exe` and registers Local AI Toolkit in the current user's Windows
+to `installer/uninstall/LocalAi.Installer.exe` and registers Local AI Toolkit in the current user's Windows
 installed-app list. It opens no installer UI. Registry snapshot checks and registry/file readback
 detect changes and failures; they are not an atomic transaction. Failure stops later steps, and
 partial runtime, file or registry changes may remain without automatic rollback. Functional

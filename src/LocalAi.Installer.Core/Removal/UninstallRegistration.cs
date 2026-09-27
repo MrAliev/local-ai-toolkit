@@ -57,11 +57,18 @@ public sealed class UninstallRegistration(
 
     private readonly string subKey = registrySubKey ?? DefaultSubKey;
 
-    public string UninstallerDirectory =>
-        Path.Combine(layout.BinRoot, UninstallerDirectoryName);
+    public string UninstallerDirectory => layout.UninstallerDirectory;
 
     public string UninstallerPath =>
         Path.Combine(UninstallerDirectory, UninstallerFileName);
+
+    /// <summary>Where releases before this one parked the copy, and their entries still point.</summary>
+    public string LegacyUninstallerDirectory =>
+        Path.Combine(layout.BinRoot, UninstallerDirectoryName);
+
+    /// <summary>Every directory a copy an entry runs may be parked in.</summary>
+    public IReadOnlyList<string> UninstallerDirectories =>
+        [UninstallerDirectory, LegacyUninstallerDirectory];
 
     /// <summary>
     /// Copies this installer into the runtime root and writes the entry pointing at the copy.
@@ -96,7 +103,28 @@ public sealed class UninstallRegistration(
         // and offering buttons here that lead nowhere is worse than not offering them.
         key.SetValue("NoModify", 1, RegistryValueKind.DWord);
         key.SetValue("NoRepair", 1, RegistryValueKind.DWord);
+        RemoveLegacyCopy();
         return entry;
+    }
+
+    /// <summary>
+    /// The copy an earlier release parked in bin, once the entry runs the new one. A repair
+    /// started from it is still running it and Windows will not delete it: it stays, and a
+    /// removal keeps bin until the entry is gone.
+    /// </summary>
+    private void RemoveLegacyCopy()
+    {
+        try
+        {
+            if (Directory.Exists(LegacyUninstallerDirectory))
+            {
+                Directory.Delete(LegacyUninstallerDirectory, recursive: true);
+            }
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException)
+        {
+        }
     }
 
     public UninstallEntry? Read()

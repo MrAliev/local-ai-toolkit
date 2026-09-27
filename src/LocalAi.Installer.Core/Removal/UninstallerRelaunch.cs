@@ -22,9 +22,9 @@ public enum UninstallerRelaunchOutcome
 /// <summary>
 /// Moves a removal out of the tree it deletes before it touches anything.
 ///
-/// Apps &amp; features starts the copy parked in <c>bin\uninstall</c>, and Windows will delete
-/// neither a running executable nor a directory that is a process's current directory — so a
-/// removal run from there can never take <c>bin</c> away. This copies the executable into a
+/// Apps &amp; features starts the copy parked in <c>installer\uninstall</c>, and Windows will
+/// delete neither a running executable nor a directory that is a process's current directory — so
+/// a removal run from there can never take that directory away. This copies the executable into a
 /// directory of its own under <paramref name="temporaryRoot"/> and starts that copy with the
 /// same arguments; the caller then exits and releases the installed copy.
 ///

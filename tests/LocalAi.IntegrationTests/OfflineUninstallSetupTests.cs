@@ -100,7 +100,7 @@ public sealed class OfflineUninstallSetupTests
         public Runner Runner { get; }
         public string Bundle => Source.Materials.Output;
         public string Material => Path.Combine(Bundle, "LocalAi.Installer.exe");
-        public string Installed => Path.Combine(Source.Layout.BinRoot, "uninstall", "LocalAi.Installer.exe");
+        public string Installed => Path.Combine(Source.Layout.InstallerDirectory, "uninstall", "LocalAi.Installer.exe");
         public OfflineExecutionRequest Request => Source.Request with { SchemaVersion = 4, Dependencies = [], ModelsOutput = null, RegisterUninstall = true };
         public OfflineBundleApplication Application => new(Source.Materials.Verifier, Runner, uninstallRegistration: Registration);
         public Fixture() => Runner = new(Source.Layout);
