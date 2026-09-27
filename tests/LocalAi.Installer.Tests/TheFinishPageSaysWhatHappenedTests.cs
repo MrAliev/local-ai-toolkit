@@ -187,8 +187,10 @@ public sealed class TheFinishPageSaysWhatHappenedTests
         var runtime = root.Combine("runtime");
         // A directory where the file goes, so the write is refused.
         Directory.CreateDirectory(Path.Combine(runtime, "settings", BrokerPolicy.FileName));
-        var wizard = RunOver(runtime, root.Combine("logs"));
-        wizard.Residency.Policy = ModelResidencyPolicy.AllowPartialOffload;
+        var wizard = RunOver(
+            runtime,
+            root.Combine("logs"),
+            answers => answers.Residency.Policy = ModelResidencyPolicy.AllowPartialOffload);
 
         Assert.False(await wizard.RunAsync(TestContext.Current.CancellationToken));
 
@@ -253,8 +255,14 @@ public sealed class TheFinishPageSaysWhatHappenedTests
         }
     }
 
-    /// <summary>A package-less run over a runtime root the test owns.</summary>
-    private static InstallerWizardViewModel RunOver(string runtime, string logs)
+    /// <summary>
+    /// A package-less run over a runtime root the test owns, its answers given before the box is
+    /// ticked: an answer changed after the tick takes the tick back.
+    /// </summary>
+    private static InstallerWizardViewModel RunOver(
+        string runtime,
+        string logs,
+        Action<InstallerWizardViewModel>? answers = null)
     {
         var wizard = new InstallerWizardViewModel(
             StartChoice.UpdateOrRepair,
@@ -270,6 +278,7 @@ public sealed class TheFinishPageSaysWhatHappenedTests
         wizard.Diagnose.IsChecking = false;
         wizard.Diagnose.SetResult(supported: true);
         Assert.True(wizard.MoveNext());
+        answers?.Invoke(wizard);
         wizard.SetReviewConfirmed(true);
         return wizard;
     }
