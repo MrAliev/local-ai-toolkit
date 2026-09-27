@@ -3,8 +3,16 @@ using LocalAi.Installer.Core.Agents;
 
 namespace LocalAi.Installer.Core.Removal;
 
-/// <summary>One path an uninstall would delete, and the matrix row that put it there.</summary>
-public sealed record RemovalPathEntry(RemovalItem Item, string Path, bool IsDirectory);
+/// <summary>
+/// One path an uninstall would delete, and the matrix row that put it there.
+/// <see cref="HoldsUninstaller"/>: it holds a copy of the installer an Apps &amp; features entry
+/// may run, so it goes after the entry.
+/// </summary>
+public sealed record RemovalPathEntry(
+    RemovalItem Item,
+    string Path,
+    bool IsDirectory,
+    bool HoldsUninstaller = false);
 
 /// <summary>
 /// What removing the hooks from one connected repository would do — or why it would not.
@@ -124,9 +132,8 @@ public sealed record UninstallPlan(
             if (registration)
             {
                 // The entry is what made this removable from Apps & features in the first
-                // place, so it is named here. It goes first and the copy it runs right after,
-                // before any other path, so a run stopped halfway leaves no entry whose program
-                // is gone.
+                // place, so it is named here. It goes after every other path and the copy it
+                // runs right after it, so a run stopped halfway leaves the entry working.
                 text.AppendLine(InstallerCulture.Pick(
                     "  remove the Apps & features entry, then the uninstaller copy it runs",
                     "  удалить запись в «Приложениях и возможностях», затем копию " +
