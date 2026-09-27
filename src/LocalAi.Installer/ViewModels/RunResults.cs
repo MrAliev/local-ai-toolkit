@@ -112,6 +112,48 @@ public enum ClientRunState
 
 public sealed record ClientRunOutcome(string Name, ClientRunState State, string? Reason = null);
 
+public enum PrerequisiteOutcomeKind
+{
+    Installed,
+    Reinstalled,
+    NoAutomatedInstaller,
+    WinGetNotFound,
+    WinGetRefused,
+    ExitCode,
+    TimedOut,
+    CouldNotStart,
+    NpmNotFound,
+    CheckAfterInstallFailed,
+    Cancelled,
+
+    /// <summary>winget or npm outlived its stop and may still be running; the run ended there.</summary>
+    CouldNotStop,
+
+    /// <summary>npm installed it, but a check afterwards outlived its stop; the run ended there.</summary>
+    CheckCouldNotStop,
+
+    /// <summary>The run stopped before this one.</summary>
+    NotReached,
+}
+
+/// <summary>
+/// What became of one prerequisite, kept as facts so its row is worded in the language on screen.
+/// <see cref="Tool"/> is <c>winget</c> or <c>npm</c> and <see cref="Reason"/> an exception's own
+/// message, neither translated. <see cref="LogLine"/> is the English line for the log and journal.
+/// </summary>
+public sealed record PrerequisiteOutcome(
+    string Title,
+    PrerequisiteOutcomeKind Kind,
+    Uri? Download = null,
+    string? Tool = null,
+    int? ExitCode = null,
+    int? Minutes = null,
+    string? Reason = null,
+    string? LogLine = null)
+{
+    public bool Succeeded => Kind is PrerequisiteOutcomeKind.Installed or PrerequisiteOutcomeKind.Reinstalled;
+}
+
 public enum RegistrationOutcome
 {
     Registered,
@@ -137,13 +179,95 @@ public static class RunResults
             PageLabels.ResultPackage,
             outcome ?? PageLabels.ResultNotAttempted);
 
-    public static RunResultRow Prerequisites(int requested, int installed, int failed) =>
+    /// <summary>One prerequisite's row. The link goes last, without a period: it is copied.</summary>
+    public static RunResultRow Prerequisite(PrerequisiteOutcome outcome)
+    {
+        ArgumentNullException.ThrowIfNull(outcome);
+        var mark = outcome.Kind switch
+        {
+            PrerequisiteOutcomeKind.Installed or PrerequisiteOutcomeKind.Reinstalled => RunMark.Done,
+            PrerequisiteOutcomeKind.NoAutomatedInstaller or PrerequisiteOutcomeKind.NotReached => RunMark.None,
+            PrerequisiteOutcomeKind.CouldNotStop or PrerequisiteOutcomeKind.CheckCouldNotStop => RunMark.Warned,
+            _ => RunMark.Failed,
+        };
+        return new(mark, outcome.Title, outcome.Kind switch
+        {
+            PrerequisiteOutcomeKind.Installed => InstallerCulture.Pick("installed", "установлен"),
+            PrerequisiteOutcomeKind.Reinstalled => InstallerCulture.Pick("reinstalled", "переустановлен"),
+            PrerequisiteOutcomeKind.WinGetNotFound => Format(
+                "not installed: WinGet was not found. Install it yourself: {0}",
+                "не установлен: WinGet не найден. Установите вручную: {0}",
+                outcome.Download),
+            PrerequisiteOutcomeKind.WinGetRefused => Format(
+                "not installed: winget on this computer failed the installer's safety check. The log " +
+                "below says why and what to do; you can also install it yourself: {0}",
+                "не установлен: winget на этом компьютере не прошёл проверку безопасности " +
+                "установщика. Почему и что делать — сказано в журнале ниже; можно также установить " +
+                "вручную: {0}",
+                outcome.Download),
+            PrerequisiteOutcomeKind.ExitCode => Format(
+                "not installed: {0} ended with exit code {1}. Install it yourself: {2}",
+                "не установлен: {0} завершился с кодом {1}. Установите вручную: {2}",
+                outcome.Tool, outcome.ExitCode, outcome.Download),
+            PrerequisiteOutcomeKind.TimedOut => Format(
+                "not installed: {0} did not finish within {1} min and was stopped. Install it yourself: {2}",
+                "не установлен: {0} не завершился за {1} мин и был остановлен. Установите вручную: {2}",
+                outcome.Tool, outcome.Minutes, outcome.Download),
+            PrerequisiteOutcomeKind.CouldNotStart => Format(
+                "not installed: {0} could not be started ({1}). Install it yourself: {2}",
+                "не установлен: не удалось запустить {0} ({1}). Установите вручную: {2}",
+                outcome.Tool, outcome.Reason, outcome.Download),
+            PrerequisiteOutcomeKind.NpmNotFound => InstallerCulture.Pick(
+                "not installed: npm was not found. With Node.js 20 installed, run this installer again",
+                "не установлен: npm не найден. Когда Node.js 20 будет установлен, снова запустите установщик"),
+            PrerequisiteOutcomeKind.CheckAfterInstallFailed => InstallerCulture.Pick(
+                "installed by npm, but a step after installing failed. The log below says which and why",
+                "npm установил пакет, но один из шагов после установки не удался. Какой и почему — " +
+                "сказано в журнале ниже"),
+            PrerequisiteOutcomeKind.Cancelled => InstallerCulture.Pick(
+                "not installed: the run was cancelled",
+                "не установлен: запуск отменён"),
+            PrerequisiteOutcomeKind.CouldNotStop => Format(
+                "outcome unknown: {0} could not be stopped, so the installation may still be running. " +
+                "Wait for it to end before running this installer again",
+                "результат неизвестен: не удалось остановить {0}, поэтому установка, возможно, ещё идёт. " +
+                "Дождитесь её окончания, прежде чем снова запускать установщик",
+                outcome.Tool),
+            PrerequisiteOutcomeKind.CheckCouldNotStop => InstallerCulture.Pick(
+                "outcome unknown: npm installed it, but a check afterwards could not be stopped and may still " +
+                "be running, so whether it works is not known. Reinstalling it with this installer repeats the check",
+                "результат неизвестен: npm установил пакет, но проверку после установки не удалось остановить, " +
+                "и она, возможно, ещё идёт, поэтому неизвестно, работает ли он. Переустановка этим установщиком " +
+                "повторит проверку"),
+            PrerequisiteOutcomeKind.NoAutomatedInstaller => InstallerCulture.Pick(
+                "skipped: there is no automated installer for it",
+                "пропущено: автоматической установки нет"),
+            _ => PageLabels.ResultNotAttempted,
+        });
+
+        static string Format(string english, string russian, params object?[] values) =>
+            string.Format(CultureInfo.InvariantCulture, InstallerCulture.Pick(english, russian), values);
+    }
+
+    public static RunResultRow Prerequisites(
+        int requested,
+        int installed,
+        int failed,
+        IReadOnlyList<string>? stillNeeded = null) =>
         new(
-            requested == 0 ? RunMark.None : failed > 0 ? RunMark.Failed :
+            requested == 0
+                ? stillNeeded is { Count: > 0 } ? RunMark.Warned : RunMark.None
+                : failed > 0 ? RunMark.Failed :
                 installed < requested ? RunMark.Warned : RunMark.Done,
             PageLabels.ResultPrerequisites,
             requested == 0
-                ? PageLabels.ResultNothingSelected
+                ? stillNeeded is { Count: > 0 }
+                    ? string.Format(
+                        InstallerCulture.Pick(
+                            "nothing was selected; still needed, install by hand: {0}",
+                            "ничего не выбрано; ещё нужны, установить вручную: {0}"),
+                        string.Join(", ", stillNeeded))
+                    : PageLabels.ResultNothingSelected
                 : installed + failed < requested
                     ? string.Format(CultureInfo.InvariantCulture,
                         InstallerCulture.Pick(

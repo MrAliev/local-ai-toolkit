@@ -241,6 +241,16 @@ public sealed class InstallerWizardViewModel : ObservableObject
     /// <summary>The counts the finish rows were built from, so they can be built again.</summary>
     private (int Requested, int Installed, int Failed)? finished;
 
+    /// <summary>The prerequisites this run was asked for, in order, and what became of each.</summary>
+    private readonly List<DependencySelection> requestedPrerequisites = [];
+    private readonly Dictionary<string, PrerequisiteOutcome> prerequisiteOutcomes = [];
+
+    /// <summary>
+    /// The one whose command was running when the run stopped on it. Left without an outcome it was
+    /// still attempted, so "not attempted" would be untrue of it.
+    /// </summary>
+    private string? prerequisiteInFlight;
+
     /// <summary>
     /// <paramref name="readInstalledVersion"/> is how the rail learns which version is on this
     /// computer. Injectable because the property that matters — that the answer stops changing
@@ -288,6 +298,10 @@ public sealed class InstallerWizardViewModel : ObservableObject
         CancelCommand = new RelayCommand(Cancel, () => CanCancel);
         RevealSettingsCommand = new RelayCommand(RevealSettings, () => AreSettingsFolded);
         RevealReleaseCommand = new RelayCommand(RevealRelease, () => IsReleaseFolded);
+        CheckPrerequisitesAgainCommand = new AsyncRelayCommand(
+            CheckPrerequisitesAgainAsync,
+            () => !isRunning && !diagnose.IsChecking,
+            ReportUnexpectedError);
         RollbackCommand = new AsyncRelayCommand(
             () => RollbackThisRunAsync(),
             () => CanRollback,
@@ -369,6 +383,18 @@ public sealed class InstallerWizardViewModel : ObservableObject
 
     public bool EnableDependencyActions { get; set; }
 
+    /// <summary>For tests: what runs winget and npm, instead of real processes.</summary>
+    internal IProcessRunner ProcessRunner
+    {
+        init => processRunner = value;
+    }
+
+    /// <summary>For tests: which winget counts as the App Installer's.</summary>
+    internal IWinGetExecutableTrust WinGetTrust
+    {
+        init => wingetSource = new(value);
+    }
+
     /// <summary>
     /// Where the run report and the run journal are written. Outside the LocalAi root on
     /// purpose: that tree is validated against an exact name list on every install, so a
@@ -430,6 +456,12 @@ public sealed class InstallerWizardViewModel : ObservableObject
     public AsyncRelayCommand RollbackCommand { get; }
 
     public AsyncRelayCommand RollbackPreviousRunCommand { get; }
+
+    public AsyncRelayCommand CheckPrerequisitesAgainCommand { get; }
+
+    /// <summary>The check from the first page, again: for a component installed by hand since.</summary>
+    public Task CheckPrerequisitesAgainAsync() =>
+        RefreshEnvironmentDiagnosticsAsync(CancellationToken.None);
 
     public DiagnosePageViewModel Diagnose => diagnose;
     public DependenciesPageViewModel Dependencies => dependencies;
@@ -996,6 +1028,9 @@ public sealed class InstallerWizardViewModel : ObservableObject
         packageOutcome = null;
         packageInstalled = false;
         modelStepFailure = null;
+        requestedPrerequisites.Clear();
+        prerequisiteOutcomes.Clear();
+        prerequisiteInFlight = null;
         finish.ReportPath = null;
         finish.RollbackReport = null;
         ModelRuns.Clear();
@@ -1048,12 +1083,14 @@ public sealed class InstallerWizardViewModel : ObservableObject
                     "continues, but rollback will not be available for it.");
             }
 
-            await RefreshEnvironmentDiagnosticsAsync(token);
-
+            // What the review showed, taken before the check below can untick a component that
+            // stopped being installable: that one is tried, and its row says why it failed.
             var selected = dependencies.Dependencies
-                .Where(dependency => dependency.IsConsented && dependency.IsInstallable)
+                .Where(dependency => dependency.IsConsented)
                 .ToArray();
+            await RefreshEnvironmentDiagnosticsAsync(token);
             requested = selected.Length;
+            requestedPrerequisites.AddRange(selected);
             AppendLog(report, selected.Length == 0
                 ? "No prerequisites were selected."
                 : $"Prerequisites selected: {selected.Length}.");
@@ -1068,10 +1105,13 @@ public sealed class InstallerWizardViewModel : ObservableObject
                         InstallerCulture.Pick("Installing {0}...", "Устанавливаю {0}…"),
                         dependency.Title));
 
-                var definition = ResolveDependencyDefinition(dependency.Id);
-                if (definition is null)
+                var definition = DependenciesPageViewModel.Definition(dependency.Id);
+                if (definition is null or { InstallerKind: DependencyInstallerKind.Npm, PackageVersion: null or "" })
                 {
                     AppendLog(report, $"{dependency.Title}: no automated installer available.");
+                    prerequisiteOutcomes[dependency.Id] = new(
+                        dependency.Title,
+                        PrerequisiteOutcomeKind.NoAutomatedInstaller);
                     skippedActions++;
                     continue;
                 }
@@ -1080,25 +1120,31 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 var dependencyStep = JournalBegin(
                     InstallerRunEffectKind.DependencyInstall,
                     $"Prerequisite {dependency.Title} ({definition.PackageId})");
-                var installed = definition.InstallerKind switch
+                var reinstall = dependency.IsInstalled;
+                prerequisiteInFlight = dependency.Id;
+                PrerequisiteOutcome? failure;
+                try
                 {
-                    DependencyInstallerKind.WinGet =>
-                        await TryInstallDependencyWithWingetAsync(
-                            definition,
-                            dependency.Title,
-                            reinstall: dependency.IsInstalled,
-                            token),
-                    DependencyInstallerKind.Npm =>
-                        await TryInstallDependencyWithNpmAsync(
-                            definition,
-                            dependency.Title,
-                            token),
-                    _ => false,
-                };
-                AppendLog(report, installed
+                    failure = definition.InstallerKind == DependencyInstallerKind.WinGet
+                        ? await TryInstallDependencyWithWingetAsync(definition, dependency.Title, reinstall, token)
+                        : await TryInstallDependencyWithNpmAsync(definition, dependency.Title, token);
+                }
+                catch (PrerequisiteStillRunningException stuck)
+                {
+                    prerequisiteOutcomes[dependency.Id] = stuck.Outcome;
+                    AppendLog(report, $"{dependency.Title}: outcome unknown.");
+                    AppendLog(report, stuck.Outcome.LogLine ?? string.Empty);
+                    throw;
+                }
+
+                prerequisiteInFlight = null;
+                prerequisiteOutcomes[dependency.Id] = failure ?? new(
+                    dependency.Title,
+                    reinstall ? PrerequisiteOutcomeKind.Reinstalled : PrerequisiteOutcomeKind.Installed);
+                AppendLog(report, failure is null
                     ? $"{dependency.Title}: done."
                     : $"{dependency.Title}: failed.");
-                if (installed)
+                if (failure is null)
                 {
                     successfulActions++;
                     JournalComplete(
@@ -1109,9 +1155,10 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 }
                 else
                 {
+                    AppendLog(report, failure.LogLine ?? string.Empty);
                     failedActions++;
                     hasRunError = true;
-                    JournalFail(dependencyStep, "The install command did not succeed.");
+                    JournalFail(dependencyStep, failure.LogLine ?? string.Empty);
                 }
 
                 await RefreshEnvironmentDiagnosticsAsync(token);
@@ -2115,6 +2162,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         CancelCommand.RaiseCanExecuteChanged();
         RollbackCommand.RaiseCanExecuteChanged();
         RollbackPreviousRunCommand.RaiseCanExecuteChanged();
+        CheckPrerequisitesAgainCommand.RaiseCanExecuteChanged();
     }
 
     /// <summary>
@@ -2148,7 +2196,20 @@ public sealed class InstallerWizardViewModel : ObservableObject
         finish.Results.Add(RunResults.Package(
             packageOutcome is { } outcome ? RunResults.PackageDetail(outcome, packageInstalled) : null,
             packageInstalled));
-        finish.Results.Add(RunResults.Prerequisites(requested, installed, failed));
+        finish.Results.Add(RunResults.Prerequisites(requested, installed, failed, dependencies.StillNeeded));
+        foreach (var prerequisite in requestedPrerequisites)
+        {
+            if (prerequisiteOutcomes.TryGetValue(prerequisite.Id, out var result))
+            {
+                finish.Results.Add(RunResults.Prerequisite(result));
+            }
+            else if (prerequisite.Id != prerequisiteInFlight)
+            {
+                finish.Results.Add(RunResults.Prerequisite(
+                    new(prerequisite.Title, PrerequisiteOutcomeKind.NotReached)));
+            }
+        }
+
         finish.Results.Add(RunResults.Models(ModelRuns, modelStepFailure));
         foreach (var model in ModelRuns)
         {
@@ -2254,6 +2315,9 @@ public sealed class InstallerWizardViewModel : ObservableObject
         dependencies.SetInstalled(
             "ScipPython",
             diagnosis.ScipPython.State == DependencyState.Detected);
+        dependencies.SetInstallers(
+            winGetFound: diagnosis.WinGet.State == DependencyState.Detected,
+            npmFound: diagnosis.Npm.State == DependencyState.Detected);
 
         OnPropertyChanged(nameof(Diagnose));
         OnPropertyChanged(nameof(Dependencies));
@@ -2375,20 +2439,6 @@ public sealed class InstallerWizardViewModel : ObservableObject
                     ? null
                     : new GitHubReleaseFeed(processRunner, gitHubCliPath: GitHubCliPath))
             : new DirectoryReleaseFeed(package.SourceFolder));
-
-    private static DependencyDefinition? ResolveDependencyDefinition(string dependencyId) =>
-        dependencyId switch
-        {
-            "Git" => DependencyCatalog.Git,
-            "Ollama" => DependencyCatalog.Ollama,
-            "GitHubCli" => DependencyCatalog.GitHubCli,
-            "DotNetSdk" => DependencyCatalog.DotNetSdk,
-            "NodeJs" => DependencyCatalog.NodeJs,
-            "ScipTypeScript" => DependencyCatalog.ScipTypeScript,
-            "Python" => DependencyCatalog.Python,
-            "ScipPython" => DependencyCatalog.ScipPython,
-            _ => null,
-        };
 
     /// <summary>
     /// Resolves and verifies the requested release. Failures are shown on the package page
@@ -3241,19 +3291,22 @@ public sealed class InstallerWizardViewModel : ObservableObject
         }
     }
 
-    private async Task<bool> TryInstallDependencyWithWingetAsync(
+    /// <summary>Null when installed; otherwise why not.</summary>
+    private async Task<PrerequisiteOutcome?> TryInstallDependencyWithWingetAsync(
         DependencyDefinition dependency,
         string displayName,
         bool reinstall,
         CancellationToken cancellationToken)
     {
+        var download = dependency.OfficialInstallerUri;
         if (environmentDiagnosis?.WinGet is not
             { State: DependencyState.Detected, ExecutablePath: { } wingetPath })
         {
-            SetRunLog(
-                $"WinGet is unavailable; install {displayName} manually from " +
-                $"{dependency.OfficialInstallerUri}.");
-            return false;
+            return new(
+                displayName,
+                PrerequisiteOutcomeKind.WinGetNotFound,
+                download,
+                LogLine: $"WinGet is unavailable; install {displayName} manually from {download}.");
         }
 
         // Checked here rather than at detection, and before every install rather than once: the
@@ -3262,10 +3315,12 @@ public sealed class InstallerWizardViewModel : ObservableObject
         var winget = wingetSource.Authorize(wingetPath);
         if (!winget.Allowed)
         {
-            SetRunLog(
-                $"{displayName} was not installed. {winget.Message} You can install it " +
-                $"yourself from {dependency.OfficialInstallerUri}.");
-            return false;
+            return new(
+                displayName,
+                PrerequisiteOutcomeKind.WinGetRefused,
+                download,
+                LogLine: $"{displayName} was not installed. {winget.Message} You can install it " +
+                    $"yourself from {download}.");
         }
 
         var arguments = new List<string>
@@ -3288,115 +3343,224 @@ public sealed class InstallerWizardViewModel : ObservableObject
             arguments.Add("--force");
         }
 
-        var result = await processRunner.RunAsync(
+        return await RunInstallCommandAsync(
+            "winget",
             winget.ExecutablePath,
-            [.. arguments],
-            DependencyInstallTimeout,
+            arguments,
+            displayName,
+            download,
             cancellationToken);
-        if (result.ExitCode is not 0)
-        {
-            SetRunLog(
-                $"{displayName} installation failed with exit code {result.ExitCode}.");
-            return false;
-        }
-
-        return true;
     }
 
-    private async Task<bool> TryInstallDependencyWithNpmAsync(
+    /// <summary>Null when installed; otherwise why not.</summary>
+    private async Task<PrerequisiteOutcome?> TryInstallDependencyWithNpmAsync(
         DependencyDefinition dependency,
         string displayName,
         CancellationToken cancellationToken)
     {
-        if (dependency.PackageVersion is not { Length: > 0 } packageVersion)
-        {
-            SetRunLog($"{displayName} has no pinned package version.");
-            return false;
-        }
-
+        var download = dependency.OfficialInstallerUri;
+        var packageVersion = dependency.PackageVersion!;
         if (environmentDiagnosis?.Npm is not
             { State: DependencyState.Detected, ExecutablePath: { } npmPath })
         {
-            SetRunLog(
-                $"npm is unavailable; install Node.js 20 before {displayName}.");
-            return false;
+            return new(
+                displayName,
+                PrerequisiteOutcomeKind.NpmNotFound,
+                download,
+                LogLine: $"npm is unavailable; install Node.js 20 before {displayName}.");
         }
 
-        var result = await processRunner.RunAsync(
-            npmPath,
-            ["install", "--global", $"{dependency.PackageId}@{packageVersion}"],
-            DependencyInstallTimeout,
-            cancellationToken);
-        if (result.ExitCode is not 0)
+        if (await RunInstallCommandAsync(
+                "npm",
+                npmPath,
+                ["install", "--global", $"{dependency.PackageId}@{packageVersion}"],
+                displayName,
+                download,
+                cancellationToken) is { } failure)
         {
-            SetRunLog(
-                $"{displayName} installation failed with exit code {result.ExitCode}.");
-            return false;
+            return failure;
         }
 
-        if (string.Equals(
+        if (!string.Equals(
                 dependency.PackageId,
                 DependencyCatalog.ScipPython.PackageId,
                 StringComparison.Ordinal))
         {
-            var npmRootResult = await processRunner.RunAsync(
+            return null;
+        }
+
+        PrerequisiteOutcome CheckFailed(string why) =>
+            new(displayName, PrerequisiteOutcomeKind.CheckAfterInstallFailed, download, LogLine: why);
+
+        PrerequisiteOutcome CheckThrew(Exception exception) =>
+            CheckFailed($"SCIP Python was installed, but the check after installing failed: {exception.Message}");
+
+        // A check that could not be stopped may still be running, so it ends the run as a stuck
+        // install does.
+        PrerequisiteStillRunningException CheckStuck(ProcessTerminationException exception, string command) =>
+            new(
+                new(
+                    displayName,
+                    PrerequisiteOutcomeKind.CheckCouldNotStop,
+                    download,
+                    LogLine: "SCIP Python was installed, but the check after installing could not be stopped " +
+                        $"and may still be running: {command}"),
+                exception);
+
+        ProcessResult npmRootResult;
+        try
+        {
+            npmRootResult = await processRunner.RunAsync(
                 npmPath,
                 ["root", "--global"],
                 DependencyInstallTimeout,
                 cancellationToken);
-            var npmGlobalRoot = npmRootResult.StandardOutput.Trim();
-            if (npmRootResult.ExitCode is not 0 ||
-                string.IsNullOrWhiteSpace(npmGlobalRoot) ||
-                npmGlobalRoot.Contains('\n', StringComparison.Ordinal) ||
-                npmGlobalRoot.Contains('\r', StringComparison.Ordinal))
-            {
-                SetRunLog(
-                    "SCIP Python was installed, but npm did not return a valid global " +
-                    "package directory.");
-                return false;
-            }
+        }
+        catch (ProcessTerminationException exception)
+        {
+            throw CheckStuck(exception, "npm root --global");
+        }
+        catch (Exception exception) when (CouldNotStart(exception))
+        {
+            return CheckThrew(exception);
+        }
 
-            try
-            {
-                _ = new ScipPythonWindowsCompatibilityPatch().Apply(
-                    npmGlobalRoot,
-                    packageVersion);
-            }
-            catch (Exception exception) when (
-                exception is IOException or UnauthorizedAccessException or
-                InvalidOperationException or JsonException)
-            {
-                SetRunLog(
-                    $"SCIP Python Windows compatibility patch failed: {exception.Message}");
-                return false;
-            }
+        var npmGlobalRoot = npmRootResult.StandardOutput.Trim();
+        if (npmRootResult.ExitCode is not 0 ||
+            string.IsNullOrWhiteSpace(npmGlobalRoot) ||
+            npmGlobalRoot.Contains('\n', StringComparison.Ordinal) ||
+            npmGlobalRoot.Contains('\r', StringComparison.Ordinal))
+        {
+            return CheckFailed(
+                "SCIP Python was installed, but npm did not return a valid global package directory.");
+        }
 
-            var globalPrefix = Directory.GetParent(npmGlobalRoot)?.FullName;
-            var scipPythonPath = globalPrefix is null
-                ? null
-                : Path.Combine(globalPrefix, "scip-python.cmd");
-            if (scipPythonPath is null || !File.Exists(scipPythonPath))
-            {
-                SetRunLog(
-                    "SCIP Python was patched, but its npm command shim was not found.");
-                return false;
-            }
+        try
+        {
+            _ = new ScipPythonWindowsCompatibilityPatch().Apply(
+                npmGlobalRoot,
+                packageVersion);
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException or
+            InvalidOperationException or JsonException)
+        {
+            return CheckFailed($"SCIP Python Windows compatibility patch failed: {exception.Message}");
+        }
 
-            var verification = await processRunner.RunAsync(
+        var globalPrefix = Directory.GetParent(npmGlobalRoot)?.FullName;
+        var scipPythonPath = globalPrefix is null
+            ? null
+            : Path.Combine(globalPrefix, "scip-python.cmd");
+        if (scipPythonPath is null || !File.Exists(scipPythonPath))
+        {
+            return CheckFailed("SCIP Python was patched, but its npm command shim was not found.");
+        }
+
+        ProcessResult verification;
+        try
+        {
+            verification = await processRunner.RunAsync(
                 scipPythonPath,
                 ["--version"],
                 DependencyInstallTimeout,
                 cancellationToken);
-            var versionOutput = verification.StandardOutput + verification.StandardError;
-            if (verification.ExitCode is not 0 ||
-                !versionOutput.Contains(packageVersion, StringComparison.Ordinal))
-            {
-                SetRunLog(
-                    "SCIP Python was patched, but its executable verification failed.");
-                return false;
-            }
+        }
+        catch (ProcessTerminationException exception)
+        {
+            throw CheckStuck(exception, "scip-python --version");
+        }
+        catch (Exception exception) when (CouldNotStart(exception))
+        {
+            return CheckThrew(exception);
         }
 
-        return true;
+        var versionOutput = verification.StandardOutput + verification.StandardError;
+        return verification.ExitCode is not 0 ||
+            !versionOutput.Contains(packageVersion, StringComparison.Ordinal)
+                ? CheckFailed("SCIP Python was patched, but its executable verification failed.")
+                : null;
+    }
+
+    /// <summary>
+    /// Runs winget or npm for one prerequisite; null when it succeeded. A command that could not be
+    /// started installed nothing and nothing else depends on it, so the run moves on. One that could
+    /// not be stopped may still be running, so it ends the run, carrying the row that says so.
+    /// </summary>
+    private async Task<PrerequisiteOutcome?> RunInstallCommandAsync(
+        string tool,
+        string executable,
+        IReadOnlyList<string> arguments,
+        string displayName,
+        Uri download,
+        CancellationToken cancellationToken)
+    {
+        ProcessResult result;
+        try
+        {
+            result = await processRunner.RunAsync(
+                executable,
+                arguments,
+                DependencyInstallTimeout,
+                cancellationToken);
+        }
+        catch (ProcessTerminationException exception)
+        {
+            throw new PrerequisiteStillRunningException(
+                new(
+                    displayName,
+                    PrerequisiteOutcomeKind.CouldNotStop,
+                    download,
+                    tool,
+                    LogLine: $"{displayName}: {tool} could not be stopped; the installation may still be running."),
+                exception);
+        }
+        catch (Exception exception) when (CouldNotStart(exception))
+        {
+            return new(
+                displayName,
+                PrerequisiteOutcomeKind.CouldNotStart,
+                download,
+                tool,
+                Reason: exception.Message,
+                LogLine: $"{displayName} was not installed: {tool} could not be started: {exception.Message}");
+        }
+
+        var minutes = (int)DependencyInstallTimeout.TotalMinutes;
+        return result switch
+        {
+            { Cancelled: true } => new(
+                displayName,
+                PrerequisiteOutcomeKind.Cancelled,
+                download,
+                tool,
+                LogLine: $"{displayName} was not installed: the run was cancelled."),
+            { TimedOut: true } => new(
+                displayName,
+                PrerequisiteOutcomeKind.TimedOut,
+                download,
+                tool,
+                Minutes: minutes,
+                LogLine: $"{displayName} installation did not finish within {minutes} minutes and was stopped."),
+            { ExitCode: not 0 } => new(
+                displayName,
+                PrerequisiteOutcomeKind.ExitCode,
+                download,
+                tool,
+                ExitCode: result.ExitCode,
+                LogLine: $"{displayName} installation failed with exit code {result.ExitCode}."),
+            _ => null,
+        };
+    }
+
+    private static bool CouldNotStart(Exception exception) =>
+        exception is not (ProcessTerminationException or OperationCanceledException);
+
+    /// <summary>The run ends on it as on the process it carries, with the component's row.</summary>
+    private sealed class PrerequisiteStillRunningException(
+        PrerequisiteOutcome outcome,
+        ProcessTerminationException cause) : Exception(cause.Message, cause)
+    {
+        public PrerequisiteOutcome Outcome { get; } = outcome;
     }
 }

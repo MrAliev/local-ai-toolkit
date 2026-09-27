@@ -45,6 +45,9 @@ public static class PageLabels
         "No automated installer is available; install it yourself.",
         "Автоматической установки нет; установите его вручную.");
 
+    /// <summary>Before the link under a component this installer cannot install.</summary>
+    public static string Download => InstallerCulture.Pick("Download:", "Скачать:");
+
     // --- LocalAi package ----------------------------------------------------------------
     public static string VersionToInstall => InstallerCulture.Pick(
         "Version to install",

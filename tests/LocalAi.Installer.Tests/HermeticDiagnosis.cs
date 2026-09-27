@@ -15,7 +15,9 @@ internal static class HermeticDiagnosis
         DependencySnapshot? winGet = null,
         DependencySnapshot? gitHubCli = null,
         GpuSnapshot? gpu = null,
-        ExistingLocalAiState existingLocalAi = ExistingLocalAiState.Absent)
+        ExistingLocalAiState existingLocalAi = ExistingLocalAiState.Absent,
+        DependencySnapshot? npm = null,
+        DependencySnapshot? ollama = null)
     {
         static DependencySnapshot Found(string name) =>
             new(name, DependencyState.Detected, @"C:\absent\" + name + ".exe", "1.0", null);
@@ -33,10 +35,10 @@ internal static class HermeticDiagnosis
             git ?? Found("git"),
             gitHubCli ?? Found("gh"),
             Found("gh-auth"),
-            Found("ollama"),
+            ollama ?? Found("ollama"),
             Found("dotnet"),
             Found("node"),
-            Found("npm"),
+            npm ?? Found("npm"),
             Found("scip-typescript"),
             Found("python"),
             Found("scip-python"),
