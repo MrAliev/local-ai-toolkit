@@ -41,12 +41,41 @@ public static class InstallerCulture
     /// default would make every test that does not pin a language answer differently depending on
     /// the machine it ran on.
     /// </summary>
-    public static InstallerLanguage Current { get; set; } = InstallerLanguage.English;
+    public static InstallerLanguage Current
+    {
+        get => worded ?? current;
+        set => current = value;
+    }
+
+    private static InstallerLanguage current = InstallerLanguage.English;
+
+    /// <summary>The language of the call <see cref="In"/> is making on this thread, if any.</summary>
+    [ThreadStatic]
+    private static InstallerLanguage? worded;
 
     public static bool IsRussian => Current == InstallerLanguage.Russian;
 
     /// <summary>The one of two strings this language calls for.</summary>
     public static string Pick(string english, string russian) => IsRussian ? russian : english;
+
+    /// <summary>
+    /// What <paramref name="words"/> returns worded in <paramref name="language"/>, for this call on
+    /// this thread only: the window goes on speaking the language chosen for it. For comparing what
+    /// a text says whatever language it is shown in.
+    /// </summary>
+    public static T In<T>(InstallerLanguage language, Func<T> words)
+    {
+        var outer = worded;
+        worded = language;
+        try
+        {
+            return words();
+        }
+        finally
+        {
+            worded = outer;
+        }
+    }
 
     /// <summary>
     /// Adopts the language this process resolved to, as <c>OutputCulture</c> decided it — the

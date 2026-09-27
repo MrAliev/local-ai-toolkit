@@ -224,6 +224,7 @@ public sealed class AccessibleControlsTests
                     ShowPage(window, wizard, InstallerPage.Confirm);
                     CheckHelp(window, Bound<CheckBox>(window, ToggleButton.IsCheckedProperty, "Review.EnableUpdateCheck"),
                         PageLabels.UpdateCheckHint, wizard.Review.UpdateCheckDisclosure);
+                    CheckConsentWaits(window, wizard, russian);
                     var apply = CheckDefaultAction(window, wizard.InstallCommand);
                     Assert.False(apply.IsEnabled);
                     Assert.Throws<ElementNotEnabledException>(() => ((IInvokeProvider)Peer(apply).GetPattern(PatternInterface.Invoke)!).Invoke());
@@ -690,6 +691,56 @@ public sealed class AccessibleControlsTests
             Assert.Contains(part, shown);
         });
         Assert.Equal(string.Join(" ", explanation), Peer(control).GetHelpText());
+    }
+
+    /// <summary>
+    /// The window is never loaded here, so its first check of this computer has not run: the box
+    /// waits, a muted line under it says for what, and a screen reader hears the same sentence. Once
+    /// the box can be ticked, a tick whose list changes is taken back with a warning line under it.
+    /// </summary>
+    private static void CheckConsentWaits(Window window, InstallerWizardViewModel wizard, bool russian)
+    {
+        var consent = Bound<CheckBox>(window, ToggleButton.IsCheckedProperty, "Review.IsConfirmed");
+        var waiting = russian
+            ? "Ещё идёт проверка этого компьютера. Список выше может измениться, поэтому подтвердить его можно после её окончания."
+            : "Still checking this computer. The list above may change, so it can be confirmed once the check is done.";
+        Assert.True(wizard.Diagnose.IsChecking);
+        Assert.False(consent.IsEnabled);
+        CheckHelp(window, consent, waiting);
+        var line = Descendants(window.Content).OfType<TextBlock>().Single(text => text.Text == waiting);
+        Assert.Equal(Visibility.Visible, line.Visibility);
+        Assert.Same(window.FindResource("Muted"), line.Style);
+
+        wizard.Diagnose.IsChecking = false;
+        wizard.RefreshNavigationState();
+        Layout(window);
+        Assert.True(consent.IsEnabled);
+        Assert.Equal(Visibility.Collapsed, line.Visibility);
+        Assert.Equal(string.Empty, Peer(consent).GetHelpText());
+
+        // A tick whose list then changes is taken back, and the line under the box says which
+        // group changed, in the page's warning style, until the box is ticked again.
+        var codex = wizard.Agents.Agents.Single(row => row.Agent == "codex").Choice;
+        wizard.SetReviewConfirmed(true);
+        wizard.Agents.SetChoice("codex", codex == AgentChoice.McpOnly ? AgentChoice.NoChange : AgentChoice.McpOnly);
+        wizard.RefreshNavigationState();
+        Layout(window);
+        Assert.False(consent.IsChecked);
+        var changed = russian
+            ? "Список выше изменился после вашего подтверждения (Клиенты и PATH). Прочитайте его снова и подтвердите."
+            : "The list above changed after you confirmed it (Clients and PATH). Read it again, then confirm.";
+        var notice = Descendants(window.Content).OfType<TextBlock>().Single(text => text.Text == changed);
+        Assert.Equal(Visibility.Visible, notice.Visibility);
+        Assert.Same(window.FindResource("WarningText"), notice.Style);
+        wizard.SetReviewConfirmed(true);
+        Layout(window);
+        Assert.Equal(Visibility.Collapsed, notice.Visibility);
+        wizard.SetReviewConfirmed(false);
+        wizard.Agents.SetChoice("codex", codex);
+
+        wizard.Diagnose.IsChecking = true;
+        wizard.RefreshNavigationState();
+        Layout(window);
     }
 
     private static T Bound<T>(Window window, DependencyProperty property, string path) where T : DependencyObject =>
