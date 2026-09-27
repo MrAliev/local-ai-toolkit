@@ -18,13 +18,14 @@ public sealed class DiagnosePageViewModel : ObservableObject
     private bool hasGitHubSignIn;
     private bool isChecking = true;
     private EnvironmentDiagnosis? loaded;
+    private bool registryAnswered;
 
     /// <summary>The same findings in the language chosen now; nothing is probed again.</summary>
     internal void Relabel()
     {
         if (loaded is { } diagnosis)
         {
-            Load(diagnosis);
+            Load(diagnosis, registryAnswered);
         }
 
         AnnounceEverything();
@@ -109,11 +110,16 @@ public sealed class DiagnosePageViewModel : ObservableObject
         OnPropertyChanged(nameof(Announcement));
     }
 
-    public void Load(EnvironmentDiagnosis diagnosis)
+    /// <param name="registryAnswered">
+    /// Whether the Ollama registry gave any answer. The network row is worded from it first: an
+    /// adapter that is up says nothing about the internet.
+    /// </param>
+    public void Load(EnvironmentDiagnosis diagnosis, bool registryAnswered)
     {
         ArgumentNullException.ThrowIfNull(diagnosis);
 
         loaded = diagnosis;
+        this.registryAnswered = registryAnswered;
         var rows = new List<EnvironmentCheck>();
         rows.Add(new EnvironmentCheck(
             InstallerCulture.Pick("Operating system", "Операционная система"),
@@ -183,18 +189,27 @@ public sealed class DiagnosePageViewModel : ObservableObject
 
         rows.Add(new EnvironmentCheck(
             InstallerCulture.Pick("Network", "Сеть"),
-            diagnosis.Network.State == ObservationState.Available
-                ? CheckStatus.Ok
-                : CheckStatus.Warning,
-            diagnosis.Network.State switch
-            {
-                ObservationState.Available => InstallerCulture.Pick(
-                    "connected to a network (internet access is not tested here)",
-                    "подключение к сети есть (доступ в интернет здесь не проверяется)"),
-                ObservationState.Unavailable => InstallerCulture.Pick(
-                    "no network connection", "подключения к сети нет"),
-                _ => diagnosis.Network.Reason ?? InstallerCulture.Pick("unknown", "неизвестно"),
-            }));
+            registryAnswered ? CheckStatus.Ok : CheckStatus.Warning,
+            registryAnswered
+                ? InstallerCulture.Pick(
+                    "online: the Ollama registry answers",
+                    "есть доступ в интернет: реестр Ollama отвечает")
+                : diagnosis.Network.State switch
+                {
+                    ObservationState.Available => InstallerCulture.Pick(
+                        "connected to a network, but the Ollama registry does not answer — models " +
+                        "can come only from this computer",
+                        "подключение к сети есть, но реестр Ollama не отвечает — модели можно взять " +
+                        "только с этого компьютера"),
+                    ObservationState.Unavailable => InstallerCulture.Pick(
+                        "no network connection", "подключения к сети нет"),
+                    _ => string.Format(
+                        InstallerCulture.Pick(
+                            "the Ollama registry does not answer, and the network adapters could " +
+                            "not be read: {0}",
+                            "реестр Ollama не отвечает, а сетевые адаптеры прочитать не удалось: {0}"),
+                        diagnosis.Network.Reason ?? InstallerCulture.Pick("unknown", "неизвестно")),
+                }));
 
         rows.Add(new EnvironmentCheck(
             InstallerCulture.Pick("Existing LocalAi", "Установленный LocalAi"),

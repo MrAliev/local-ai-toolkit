@@ -32,7 +32,7 @@ public sealed class ResultsFollowTheLanguageTests : IDisposable
     public void The_system_check_keeps_its_findings_and_changes_their_names()
     {
         var (wizard, presentation) = Wizard();
-        wizard.Diagnose.Load(Diagnosis());
+        wizard.Diagnose.Load(Diagnosis(), registryAnswered: true);
         var checks = wizard.Diagnose.Checks.Count;
         var detail = wizard.Diagnose.Checks[0].Detail;
         var rows = wizard.Diagnose.Checks.ToArray();

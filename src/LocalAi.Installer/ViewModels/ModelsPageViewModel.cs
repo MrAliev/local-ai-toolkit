@@ -195,37 +195,53 @@ public sealed class ModelsPageViewModel : ObservableObject
                     "Ни одна модель каталога не помещается в обнаруженную видеопамять, поэтому " +
                     "ни одна не будет установлена.");
 
-    private bool isOffline;
+    private ModelsOffline offline;
 
     /// <summary>
-    /// From the system check. Setup downloads models through Ollama, so offline the mode starts
-    /// on Skip.
+    /// From the system check: offline is the Ollama registry not answering. Setup downloads
+    /// models through Ollama, so offline the mode starts on Skip.
     /// </summary>
-    public bool IsOffline
+    public ModelsOffline Offline
     {
-        get => isOffline;
+        get => offline;
         set
         {
-            SetProperty(ref isOffline, value);
+            SetProperty(ref offline, value);
+            OnPropertyChanged(nameof(IsOffline));
             OnPropertyChanged(nameof(NetworkNote));
             OnPropertyChanged(nameof(HasNetworkNote));
             OnPropertyChanged(nameof(ReviewText));
             if (!modeChosen)
             {
-                ApplyMode(value ? ModelSelectionMode.Skip : unchosen);
+                ApplyMode(IsOffline ? ModelSelectionMode.Skip : unchosen);
             }
         }
     }
 
-    public bool HasNetworkNote => isOffline;
+    public bool IsOffline => offline != ModelsOffline.None;
 
-    public string NetworkNote => isOffline
-        ? InstallerCulture.Pick(
+    /// <summary>The registry's answer decides; the adapters only say why it did not come.</summary>
+    internal static ModelsOffline OfflineFor(ObservationState adapters, bool registryAnswers) =>
+        registryAnswers ? ModelsOffline.None
+        : adapters == ObservationState.Unavailable ? ModelsOffline.NoNetworkConnection
+        : ModelsOffline.RegistryDoesNotAnswer;
+
+    public bool HasNetworkNote => IsOffline;
+
+    public string NetworkNote => offline switch
+    {
+        ModelsOffline.NoNetworkConnection => InstallerCulture.Pick(
             "No network connection: models that are not on this computer yet cannot be " +
             "downloaded now, so they cannot be set up.",
             "Подключения к сети нет: модели, которых ещё нет на этом компьютере, сейчас " +
-            "скачать не получится, и настроить их не удастся.")
-        : string.Empty;
+            "скачать не получится, и настроить их не удастся."),
+        ModelsOffline.RegistryDoesNotAnswer => InstallerCulture.Pick(
+            "The Ollama registry does not answer: models that are not on this computer yet " +
+            "cannot be downloaded now, so they cannot be set up.",
+            "Реестр Ollama не отвечает: модели, которых ещё нет на этом компьютере, сейчас " +
+            "скачать не получится, и настроить их не удастся."),
+        _ => string.Empty,
+    };
 
     /// <summary>
     /// Applies a computed recommendation.
@@ -397,12 +413,18 @@ public sealed class ModelsPageViewModel : ObservableObject
                 unsized);
     }
 
-    public string ReviewText => Mode == ModelSelectionMode.Skip || !isOffline
+    public string ReviewText => Mode == ModelSelectionMode.Skip || !IsOffline
         ? ChoiceReviewText
-        : ChoiceReviewText + " " + InstallerCulture.Pick(
-            "— no network connection, so only models already on this computer can be set up",
-            "— подключения к сети нет, поэтому настроить можно только модели, которые уже есть " +
-            "на этом компьютере");
+        : ChoiceReviewText + " " + (offline == ModelsOffline.NoNetworkConnection
+            ? InstallerCulture.Pick(
+                "— no network connection, so only models already on this computer can be set up",
+                "— подключения к сети нет, поэтому настроить можно только модели, которые уже есть " +
+                "на этом компьютере")
+            : InstallerCulture.Pick(
+                "— the Ollama registry does not answer, so only models already on this computer " +
+                "can be set up",
+                "— реестр Ollama не отвечает, поэтому настроить можно только модели, которые уже " +
+                "есть на этом компьютере"));
 
     private string ChoiceReviewText => Mode switch
     {
@@ -449,4 +471,12 @@ public sealed class ModelsPageViewModel : ObservableObject
         OnPropertyChanged(nameof(AvailableContexts));
         OnPropertyChanged(nameof(SelectedContext));
     }
+}
+
+/// <summary>Why models cannot be downloaded now, if they cannot.</summary>
+public enum ModelsOffline
+{
+    None,
+    NoNetworkConnection,
+    RegistryDoesNotAnswer,
 }
