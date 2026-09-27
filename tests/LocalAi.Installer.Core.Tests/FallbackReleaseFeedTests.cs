@@ -75,7 +75,7 @@ public sealed class FallbackReleaseFeedTests
     }
 
     /// <summary>
-    /// The page words the anonymous path's reason, and says the CLI did not find the release
+    /// The page words the anonymous path's reason, and says the CLI could not get the release
     /// either, with what the CLI said as the details.
     /// </summary>
     [Fact]
@@ -96,7 +96,7 @@ public sealed class FallbackReleaseFeedTests
     }
 
     /// <summary>
-    /// Saying the CLI did not find the release would be false when it found one whose manifest
+    /// Saying the CLI could not get the release would be false when it got one whose manifest
     /// was refused, so that refusal is the one reported.
     /// </summary>
     [Fact]
