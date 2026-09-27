@@ -77,18 +77,18 @@ public sealed class InstallerStartViewModelTests : IDisposable
     [Fact]
     public void A_broken_installation_can_be_reinstalled_or_removed_but_not_installed_over()
     {
-        File.Delete(Path.Combine(
-            machine.Runtime,
-            "bin",
-            "versions",
-            RemovalFixture.InstalledVersion,
-            "codesearch.exe"));
+        Directory.Delete(
+            Path.Combine(machine.Runtime, "bin", "versions", RemovalFixture.InstalledVersion),
+            recursive: true);
 
         var start = new InstallerStartViewModel(machine.LocalAppData);
 
         Assert.Equal(ExistingLocalAiState.Unrecognized, start.State);
         Assert.True(start.HasProblem);
-        Assert.Contains("codesearch.exe", start.Detail, StringComparison.Ordinal);
+        Assert.Contains(
+            $"Version '{RemovalFixture.InstalledVersion}' is missing.",
+            start.Detail,
+            StringComparison.Ordinal);
         Assert.Contains(
             "A clean reinstall replaces the binaries",
             start.Detail,
@@ -102,6 +102,38 @@ public sealed class InstallerStartViewModelTests : IDisposable
         Assert.True(start.Option(StartChoice.CleanReinstall).IsAvailable);
         Assert.True(start.Option(StartChoice.Remove).IsAvailable);
         Assert.False(start.Option(StartChoice.Install).IsAvailable);
+    }
+
+    /// <summary>
+    /// A version missing a file is repaired, not reinstalled: "Update or repair" puts the file
+    /// back from the verified release, as it does a file that differs.
+    /// </summary>
+    [Fact]
+    public void A_version_missing_a_file_is_offered_the_repair()
+    {
+        File.Delete(Path.Combine(
+            machine.Runtime,
+            "bin",
+            "versions",
+            RemovalFixture.InstalledVersion,
+            "codesearch.exe"));
+
+        var start = new InstallerStartViewModel(machine.LocalAppData);
+
+        Assert.Equal(ExistingLocalAiState.Compatible, start.State);
+        Assert.False(start.HasProblem);
+        Assert.Equal("LocalAi is installed on this computer.", start.Headline);
+        Assert.Contains(
+            "Build " + RemovalFixture.InstalledVersion,
+            start.Detail,
+            StringComparison.Ordinal);
+        Assert.True(start.Option(StartChoice.UpdateOrRepair).IsAvailable);
+        Assert.Equal(
+            "LocalAi is already installed — choose “Update or repair”.",
+            start.Option(StartChoice.Install).UnavailableReason);
+        Assert.False(start.Option(StartChoice.Install).IsAvailable);
+        Assert.True(start.Option(StartChoice.CleanReinstall).IsAvailable);
+        Assert.True(start.Option(StartChoice.Remove).IsAvailable);
     }
 
     /// <summary>

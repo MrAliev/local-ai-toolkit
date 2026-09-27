@@ -1080,6 +1080,87 @@ public sealed class LocalAiPackageInstallerTests : IDisposable
     }
 
     /// <summary>
+    /// The same for a file every release ships. Such a version used to read as unrecognised,
+    /// and the installer refused it before the repair could look at it.
+    /// </summary>
+    [Fact]
+    public async Task A_repair_puts_back_a_required_file_missing_from_the_active_version()
+    {
+        CreateExisting("v1", Content(LocalAiPackageLayout.StableLauncherFile), packageContent: true);
+        using var package = Package("v1");
+        var layout = InstallationLayout.FromLocalAppData(localAppData);
+        var file = LocalAiPackageLayout.VersionRequiredFiles[1];
+        var missing = Path.Combine(layout.VersionsRoot, "v1", file);
+        File.Delete(missing);
+        var runner = new RecordingRunner((_, arguments, _, _) =>
+        {
+            WritePointer(arguments[1]);
+            return Task.FromResult(new ProcessResult(0, "", "", false, false));
+        });
+
+        var result = await Installer(runner).InstallAsync(package, layout, TestContext.Current.CancellationToken);
+
+        Assert.Equal(LocalAiPackageInstallStatus.AlreadyInstalled, result.Status);
+        Assert.Equal(Content(file), File.ReadAllBytes(missing));
+        Assert.Equal([file], result.RestoredFiles);
+    }
+
+    /// <summary>
+    /// A missing file does not make an entry the release does not ship the installer's to
+    /// overwrite: the directory is refused as it is when every file is there.
+    /// </summary>
+    [Fact]
+    public async Task A_repair_leaves_a_version_missing_a_file_and_holding_an_entry_the_release_does_not_ship_untouched()
+    {
+        CreateExisting("v1", Content(LocalAiPackageLayout.StableLauncherFile), packageContent: true);
+        using var package = Package("v1");
+        var layout = InstallationLayout.FromLocalAppData(localAppData);
+        var versionPath = Path.Combine(layout.VersionsRoot, "v1");
+        var missing = Path.Combine(versionPath, LocalAiPackageLayout.VersionRequiredFiles[1]);
+        File.Delete(missing);
+        var packaged = Path.Combine(versionPath, LocalAiPackageLayout.StableLauncherFile);
+        File.WriteAllText(packaged, "versioned-launcher");
+        var runner = new RecordingRunner((_, _, _, _) => throw new InvalidOperationException());
+
+        var result = await Installer(runner).InstallAsync(package, layout, TestContext.Current.CancellationToken);
+
+        Assert.Equal(LocalAiPackageInstallStatus.ImmutableConflict, result.Status);
+        Assert.Equal(result.Version, result.PriorVersion);
+        Assert.Empty(runner.Calls);
+        Assert.False(File.Exists(missing));
+        Assert.Equal("versioned-launcher", File.ReadAllText(packaged));
+    }
+
+    /// <summary>
+    /// Another release installs over a version missing a file, as over one whose file differs.
+    /// That version is not the release's to put back, so it is left as it was found.
+    /// </summary>
+    [Fact]
+    public async Task An_update_installs_over_a_version_missing_a_required_file()
+    {
+        CreateExisting("v1", System.Text.Encoding.UTF8.GetBytes("prior-launcher"));
+        using var package = Package("v2");
+        var layout = InstallationLayout.FromLocalAppData(localAppData);
+        var missing = Path.Combine(
+            layout.VersionsRoot,
+            "v1",
+            LocalAiPackageLayout.VersionRequiredFiles[1]);
+        File.Delete(missing);
+        var runner = new RecordingRunner((_, arguments, _, _) =>
+        {
+            WritePointer(arguments[1]);
+            return Task.FromResult(new ProcessResult(0, "", "", false, false));
+        });
+
+        var result = await Installer(runner).InstallAsync(package, layout, TestContext.Current.CancellationToken);
+
+        Assert.Equal(LocalAiPackageInstallStatus.Installed, result.Status);
+        Assert.Equal("v1", result.PriorVersion);
+        Assert.Equal(new[] { "activate", "v2" }, Assert.Single(runner.Calls).Arguments.Take(2));
+        Assert.False(File.Exists(missing));
+    }
+
+    /// <summary>
     /// A repair puts back what the release ships and nothing else. An entry the release does not
     /// ship for that version is not the installer's to overwrite or delete, so the directory is
     /// refused as before and nothing in it changes.
