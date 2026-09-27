@@ -3060,6 +3060,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             $"LocalAi package {resolved.Manifest.ReleaseVersion}");
         string? modelsStep = null;
         var modelSetupStarted = false;
+        var activated = false;
         ReleaseInstallResult result;
         try
         {
@@ -3073,6 +3074,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 modelProgress,
                 activation =>
                 {
+                    activated = true;
                     ApplyPackageResult(activation);
                     JournalPackageActivation(
                         packageStep,
@@ -3137,6 +3139,24 @@ public sealed class InstallerWizardViewModel : ObservableObject
 
             hasRunError = true;
             return;
+        }
+        catch (Exception exception) when (
+            !activated && PackageFailure.Of(exception, fromFolder) is { } failure)
+        {
+            // Named here, like a refused layout, rather than by the handler below: that ended the
+            // run on "Failed: Release package verification failed." for a changed file and a full
+            // disk alike, with the row "not attempted" and the step left Running (#612).
+            JournalFail(packageStep, failure.LogLine);
+            packageOutcome = new(PackageOutcomeKind.Failed, Reason: failure.Detail, Failure: failure.Kind);
+            AppendLog(report, failure.LogLine);
+            hasRunError = true;
+            return;
+        }
+        catch (Exception exception) when (!activated)
+        {
+            JournalFail(packageStep, exception.Message);
+            packageOutcome = new(PackageOutcomeKind.Failed, Reason: exception.Message);
+            throw;
         }
 
         finally

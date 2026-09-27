@@ -602,11 +602,184 @@ public sealed class ReleasePackageVerifierTests : IDisposable
         var json = ReleaseManifestVerifier.CreateCanonicalUnsignedPayload(manifest);
         var staging = StagingPath();
 
-        await Assert.ThrowsAsync<ReleaseVerificationException>(() =>
+        var refused = await Assert.ThrowsAsync<PackageVerificationException>(() =>
             CreateVerifier(key, package).VerifyAsync(
                 json, Sign(key, json), staging,
                 TestContext.Current.CancellationToken));
+        Assert.Equal(
+            changeHash ? PackageVerificationProblem.HashMismatch : PackageVerificationProblem.SizeMismatch,
+            refused.Problem);
         Assert.False(Directory.Exists(staging));
+    }
+
+    /// <summary>
+    /// Run 20260927-173013-package-validation: a package that did not match its manifest ended
+    /// the run as "Release package verification failed.", and so did a disk too full to hold the
+    /// copy. The run log now names both sizes or both hashes, so the refusal carries them; its
+    /// message stays the sanitised one.
+    /// </summary>
+    [Fact]
+    public async Task A_package_shorter_than_its_manifest_names_both_sizes()
+    {
+        var package = CreatePackage();
+        var served = package[..^7];
+
+        var refused = await RefusedAsync(package, served);
+
+        Assert.Equal(PackageVerificationProblem.SizeMismatch, refused.Problem);
+        Assert.Equal(package.LongLength, refused.ExpectedSize);
+        Assert.Equal(served.LongLength, refused.ActualSize);
+        Assert.Equal("Release package verification failed.", refused.Message);
+    }
+
+    [Fact]
+    public async Task A_package_longer_than_its_manifest_names_the_size_it_passed()
+    {
+        var package = CreatePackage();
+
+        var refused = await RefusedAsync(package, [.. package, 1, 2, 3]);
+
+        Assert.Equal(PackageVerificationProblem.LargerThanManifest, refused.Problem);
+        Assert.Equal(package.LongLength, refused.ExpectedSize);
+    }
+
+    [Fact]
+    public async Task A_package_of_the_right_size_with_other_bytes_names_both_hashes()
+    {
+        var package = CreatePackage();
+        var served = package.ToArray();
+        served[^1] ^= 0xFF;
+
+        var refused = await RefusedAsync(package, served);
+
+        Assert.Equal(PackageVerificationProblem.HashMismatch, refused.Problem);
+        Assert.Equal(Convert.ToHexString(SHA256.HashData(package)), refused.ExpectedSha256);
+        Assert.Equal(Convert.ToHexString(SHA256.HashData(served)), refused.ActualSha256);
+    }
+
+    /// <summary>The hash matched, so what refused it was a check on the contents.</summary>
+    [Fact]
+    public async Task A_package_that_matches_its_manifest_and_fails_a_content_check_says_so()
+    {
+        var package = CreatePackage(missingFile: LocalAiPackageLayout.RequiredFiles[0]);
+
+        var refused = await RefusedAsync(package, package);
+
+        Assert.Equal(PackageVerificationProblem.ContentsRejected, refused.Problem);
+    }
+
+    /// <summary>A parser refusing what the package holds is a check on its contents too.</summary>
+    [Fact]
+    public async Task Package_metadata_that_is_not_json_is_refused_as_contents()
+    {
+        using var stream = new MemoryStream();
+        using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            foreach (var file in LocalAiPackageLayout.PackageArtifactFiles)
+            {
+                WriteEntry(archive, file, Encoding.UTF8.GetBytes("test " + file));
+            }
+
+            WriteEntry(archive, ReleasePackageVerifier.PackageMetadataFileName, "{not json"u8.ToArray());
+        }
+
+        await AssertPackageRejected(stream.ToArray());
+    }
+
+    /// <summary>
+    /// A copy that cannot be written is not a package that failed its checks. Something already
+    /// standing where the copy goes refuses it the way a full disk does, at the same place.
+    /// </summary>
+    [Theory]
+    [InlineData(".package.zip", 1)]
+    [InlineData("localai.exe", 2)]
+    public async Task A_copy_that_cannot_be_written_names_the_file_and_why(
+        string blocked,
+        int afterRevalidations)
+    {
+        using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var package = CreatePackage();
+        var json = ReleaseManifestVerifier.CreateCanonicalUnsignedPayload(CreateManifest(package));
+        var factory = new BlockingFactory(blocked, afterRevalidations);
+        var verifier = new ReleasePackageVerifier(
+            new ReleaseManifestVerifier(key.ExportSubjectPublicKeyInfo()),
+            new ServedReleaseClient(package),
+            new RecordingAuthenticodeVerifier(true),
+            new AuthenticodePublisherPolicy(
+                "CN=Approved Publisher, O=LocalAi, C=US",
+                new string('A', 64)),
+            factory);
+
+        var refused = await Assert.ThrowsAsync<PackageVerificationException>(() =>
+            verifier.VerifyAsync(
+                json,
+                Sign(key, json),
+                StagingPath(),
+                TestContext.Current.CancellationToken));
+
+        Assert.Equal(PackageVerificationProblem.NotWritten, refused.Problem);
+        Assert.Equal(Path.Combine(factory.CanonicalPath!, blocked), refused.Path);
+        Assert.False(string.IsNullOrWhiteSpace(refused.Reason));
+        Assert.Equal("Release package verification failed.", refused.Message);
+    }
+
+    /// <summary>
+    /// The same, part-way through: a lock on the copy refuses the write the way a full disk does,
+    /// after the file was created.
+    /// </summary>
+    [Fact]
+    public async Task A_copy_that_stops_being_writable_names_the_file_and_why()
+    {
+        using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var package = CreatePackage();
+        var json = ReleaseManifestVerifier.CreateCanonicalUnsignedPayload(CreateManifest(package));
+        var factory = new BlockingFactory("unused", onRevalidation: 0);
+        using var client = new LockingReleaseClient(
+            package,
+            () => Path.Combine(factory.CanonicalPath!, ".package.zip"));
+        var verifier = new ReleasePackageVerifier(
+            new ReleaseManifestVerifier(key.ExportSubjectPublicKeyInfo()),
+            client,
+            new RecordingAuthenticodeVerifier(true),
+            new AuthenticodePublisherPolicy(
+                "CN=Approved Publisher, O=LocalAi, C=US",
+                new string('A', 64)),
+            factory);
+
+        var refused = await Assert.ThrowsAsync<PackageVerificationException>(() =>
+            verifier.VerifyAsync(
+                json,
+                Sign(key, json),
+                StagingPath(),
+                TestContext.Current.CancellationToken));
+
+        Assert.True(client.Locked);
+        Assert.Equal(PackageVerificationProblem.NotWritten, refused.Problem);
+        Assert.Equal(Path.Combine(factory.CanonicalPath!, ".package.zip"), refused.Path);
+    }
+
+    private async Task<PackageVerificationException> RefusedAsync(byte[] signed, byte[] served)
+    {
+        using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var json = ReleaseManifestVerifier.CreateCanonicalUnsignedPayload(CreateManifest(signed));
+        var verifier = new ReleasePackageVerifier(
+            new ReleaseManifestVerifier(key.ExportSubjectPublicKeyInfo()),
+            new ServedReleaseClient(served),
+            new RecordingAuthenticodeVerifier(true),
+            new AuthenticodePublisherPolicy(
+                "CN=Approved Publisher, O=LocalAi, C=US",
+                new string('A', 64)));
+        var staging = StagingPath();
+
+        var refused = await Assert.ThrowsAsync<PackageVerificationException>(() =>
+            verifier.VerifyAsync(
+                json,
+                Sign(key, json),
+                staging,
+                TestContext.Current.CancellationToken));
+
+        Assert.False(Directory.Exists(staging));
+        return refused;
     }
 
     [Theory]
@@ -623,10 +796,11 @@ public sealed class ReleasePackageVerifierTests : IDisposable
             ? new RecordingAuthenticodeVerifier(false, failAfter: 2)
             : new RecordingAuthenticodeVerifier(false);
 
-        await Assert.ThrowsAsync<ReleaseVerificationException>(() =>
+        var refused = await Assert.ThrowsAsync<PackageVerificationException>(() =>
             CreateVerifier(key, package, auth).VerifyAsync(
                 json, Sign(key, json), StagingPath(),
                 TestContext.Current.CancellationToken));
+        Assert.Equal(PackageVerificationProblem.ContentsRejected, refused.Problem);
     }
 
     [Theory]
@@ -1004,14 +1178,22 @@ public sealed class ReleasePackageVerifierTests : IDisposable
         var existing = StagingPath();
         Directory.CreateDirectory(existing);
 
-        await AssertPackageRejected(CreatePackage(), existing);
+        await AssertStagingRefused(CreatePackage(), existing);
         Assert.True(Directory.Exists(existing));
 
         var nonLocal = @"\\server\share\stage-" + Guid.NewGuid().ToString("N");
-        await AssertPackageRejected(CreatePackage(), nonLocal);
+        await AssertStagingRefused(CreatePackage(), nonLocal);
     }
 
-    private async Task AssertPackageRejected(byte[] package, string? staging = null)
+    /// <summary>The package matches its manifest, so a refusal is a check on its contents.</summary>
+    private async Task AssertPackageRejected(byte[] package)
+    {
+        var refused = await RefusedAsync(package, package);
+        Assert.Equal(PackageVerificationProblem.ContentsRejected, refused.Problem);
+    }
+
+    /// <summary>A staging root that is refused says nothing about the package.</summary>
+    private static async Task AssertStagingRefused(byte[] package, string staging)
     {
         using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
         var manifest = CreateManifest(package);
@@ -1020,7 +1202,7 @@ public sealed class ReleasePackageVerifierTests : IDisposable
             CreateVerifier(key, package).VerifyAsync(
                 json,
                 Sign(key, json),
-                staging ?? StagingPath(),
+                staging,
                 TestContext.Current.CancellationToken));
     }
 
@@ -1282,6 +1464,104 @@ public sealed class ReleasePackageVerifierTests : IDisposable
 
             return Task.FromResult<Stream>(new MemoryStream(content, writable: false));
         }
+    }
+
+    /// <summary>
+    /// Hands over whatever it holds, as the installer's own client does with the downloaded file:
+    /// the size is the verifier's to check, not the client's.
+    /// </summary>
+    private sealed class ServedReleaseClient(byte[] content) : IReleaseClient
+    {
+        public Task<Stream> OpenPackageAsync(
+            Uri approvedPackageUri,
+            long maximumBytes,
+            CancellationToken cancellationToken) =>
+            Task.FromResult<Stream>(new MemoryStream(content, writable: false));
+    }
+
+    /// <summary>
+    /// Before the first read it locks the copy the verifier has just created, through a handle
+    /// of its own, so the write that follows is refused.
+    /// </summary>
+    private sealed class LockingReleaseClient(byte[] content, Func<string> copy)
+        : IReleaseClient, IDisposable
+    {
+        private FileStream? handle;
+
+        public bool Locked => handle is not null;
+
+        public Task<Stream> OpenPackageAsync(
+            Uri approvedPackageUri,
+            long maximumBytes,
+            CancellationToken cancellationToken) =>
+            Task.FromResult<Stream>(new BeforeFirstReadStream(content, () =>
+            {
+                handle = new FileStream(copy(), FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                handle.Lock(0, content.LongLength);
+            }));
+
+        public void Dispose() => handle?.Dispose();
+    }
+
+    private sealed class BeforeFirstReadStream(byte[] content, Action first)
+        : MemoryStream(content, writable: false)
+    {
+        private Action? pending = first;
+
+        public override ValueTask<int> ReadAsync(
+            Memory<byte> buffer,
+            CancellationToken cancellationToken = default)
+        {
+            Interlocked.Exchange(ref pending, null)?.Invoke();
+            return base.ReadAsync(buffer, cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// A real staging root in which a directory takes the place of <c>name</c> during the given
+    /// revalidation, so the file the verifier then creates there cannot be written.
+    /// </summary>
+    private sealed class BlockingFactory(string name, int onRevalidation) : IStagingRootFactory
+    {
+        public string? CanonicalPath { get; private set; }
+
+        public IStagingRootLease CreateExclusive(string requestedPath)
+        {
+            var lease = new WindowsStagingRootFactory().CreateExclusive(requestedPath);
+            CanonicalPath = lease.CanonicalPath;
+            return new BlockingLease(lease, name, onRevalidation);
+        }
+    }
+
+    private sealed class BlockingLease(
+        IStagingRootLease inner,
+        string name,
+        int onRevalidation) : IStagingRootLease
+    {
+        private int revalidations;
+
+        public string CanonicalPath => inner.CanonicalPath;
+
+        public void Revalidate()
+        {
+            inner.Revalidate();
+            if (++revalidations == onRevalidation)
+            {
+                Directory.CreateDirectory(Path.Combine(inner.CanonicalPath, name));
+            }
+        }
+
+        public void ValidateCreatedFile(SafeFileHandle fileHandle, string expectedPath) =>
+            inner.ValidateCreatedFile(fileHandle, expectedPath);
+
+        public IRetainedStagingFile RetainFile(string relativePath) => inner.RetainFile(relativePath);
+
+        public void ValidateExactLayout(IEnumerable<string> approvedRelativePaths) =>
+            inner.ValidateExactLayout(approvedRelativePaths);
+
+        public void Cleanup() => inner.Cleanup();
+
+        public void Dispose() => inner.Dispose();
     }
 
     private sealed class DisposeFaultingReleaseClient(byte[] content) : IReleaseClient

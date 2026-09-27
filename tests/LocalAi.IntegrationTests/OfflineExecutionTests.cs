@@ -143,8 +143,9 @@ public sealed class OfflineExecutionTests
         Assert.SkipWhen(!OperatingSystem.IsWindows(), "Protected Windows staging is required.");
         using var fixture = new Fixture(invalidPackageMetadata: true); var built = await fixture.Build();
         var runner = new Runner((_, _) => throw new InvalidOperationException("Must not launch."));
-        await Assert.ThrowsAsync<ReleaseVerificationException>(() => new OfflineBundleApplication(fixture.Materials.Verifier, runner)
+        var refused = await Assert.ThrowsAsync<PackageVerificationException>(() => new OfflineBundleApplication(fixture.Materials.Verifier, runner)
             .ExecuteAsync(fixture.Materials.Output, built.ManifestSha256, fixture.Request, fixture.Run, fixture.Materials.Catalog, fixture.Layout, Token));
+        Assert.Equal(PackageVerificationProblem.ContentsRejected, refused.Problem);
         Assert.Equal(0, runner.Calls); Assert.False(Directory.Exists(fixture.Run)); Assert.False(Directory.Exists(fixture.Layout.Root));
     }
 

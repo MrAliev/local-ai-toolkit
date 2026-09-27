@@ -89,7 +89,8 @@ public sealed class OfflineEnvironmentPlanTests
         if (damage == "tampered") File.AppendAllText(Path.Combine(fixture.Output, "ollama.exe"), "changed");
         var failure = await Record.ExceptionAsync(() => Application(fixture).PlanEnvironmentAsync(fixture.Output,
             damage == "pin" ? new string('0', 64) : built.ManifestSha256, fixture.Catalog, new(ObservationState.Unknown, null, null), Token));
-        if (damage == "archive") Assert.IsType<ReleaseVerificationException>(failure);
+        if (damage == "archive")
+            Assert.Equal(PackageVerificationProblem.ContentsRejected, Assert.IsType<PackageVerificationException>(failure).Problem);
         else Assert.IsType<InvalidDataException>(failure);
     }
 
