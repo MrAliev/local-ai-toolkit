@@ -218,10 +218,7 @@ public sealed class UninstallWizardViewModel : ObservableObject
 
     public AsyncRelayCommand RemoveWhatIsLeftCommand { get; }
 
-    /// <summary>
-    /// After a run that stopped, failed or was refused. Apps &amp; features has usually lost its
-    /// entry by then, so this window is the one way left to finish (#614).
-    /// </summary>
+    /// <summary>After a run that stopped, failed or was refused.</summary>
     public bool CanRemoveWhatIsLeft => IsFinishPage && !isRunning && hasRunError;
 
     /// <summary>Whether this run is the removal half of a clean reinstall.</summary>
