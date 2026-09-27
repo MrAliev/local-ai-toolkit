@@ -175,8 +175,12 @@ public sealed class ExistingLocalAiInspectorTests : IDisposable
         Assert.NotEmpty(snapshot.Reason!);
     }
 
+    /// <summary>
+    /// A missing file is what "Update or repair" puts back, as it puts back one that differs;
+    /// whether the rest of the directory allows it is decided against the verified release.
+    /// </summary>
     [Fact]
-    public void Classifies_incomplete_version_as_unrecognized()
+    public void Classifies_version_missing_a_required_file_as_compatible()
     {
         CreateComplete("v1");
         File.Delete(Path.Combine(VersionsRoot, "v1", RequiredFiles[0]));
@@ -184,10 +188,28 @@ public sealed class ExistingLocalAiInspectorTests : IDisposable
 
         var snapshot = CreateInspector().Inspect(_root);
 
+        Assert.Equal(ExistingLocalAiState.Compatible, snapshot.State);
+        Assert.Equal("v1", snapshot.Version);
+        Assert.Equal(Path.Combine(VersionsRoot, "v1"), snapshot.VersionPath);
+        Assert.Null(snapshot.Reason);
+    }
+
+    /// <summary>A directory where a file belongs is not missing, and no repair removes it.</summary>
+    [Fact]
+    public void Classifies_directory_in_place_of_a_required_file_as_unrecognized()
+    {
+        CreateComplete("v1");
+        var required = Path.Combine(VersionsRoot, "v1", RequiredFiles[0]);
+        File.Delete(required);
+        Directory.CreateDirectory(required);
+        WriteCurrent("""{"schemaVersion":1,"version":"v1"}""");
+
+        var snapshot = CreateInspector().Inspect(_root);
+
         Assert.Equal(ExistingLocalAiState.Unrecognized, snapshot.State);
         Assert.Equal("v1", snapshot.Version);
         Assert.Equal(Path.Combine(VersionsRoot, "v1"), snapshot.VersionPath);
-        Assert.Contains("missing", snapshot.Reason!, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal($"Version 'v1' is missing '{RequiredFiles[0]}'.", snapshot.Reason);
     }
 
     [Fact]

@@ -80,6 +80,12 @@ public sealed partial class ExistingLocalAiInspector(
                 var requiredPath = Path.Combine(versionPath, requiredFile);
                 if (!fileSystem.FileExists(requiredPath))
                 {
+                    // A missing file is what a repair puts back; a directory in its place is not.
+                    if (!fileSystem.DirectoryExists(requiredPath))
+                    {
+                        continue;
+                    }
+
                     return Unrecognized(
                         $"Version '{pointer.Version}' is missing '{requiredFile}'.",
                         detectedVersion,
