@@ -35,7 +35,7 @@ public sealed class TheLogIsNamedOnTheJournalsClockTests
 
             Assert.True(await wizard.RunAsync(TestContext.Current.CancellationToken));
 
-            Assert.Equal("install-20260926-221355.log", Path.GetFileName(wizard.Finish.ReportPath));
+            Assert.Equal("install-20260926-221355Z.log", Path.GetFileName(wizard.Finish.ReportPath));
         }
         finally
         {
