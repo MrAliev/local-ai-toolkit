@@ -155,7 +155,11 @@ public sealed class ReleasePackageVerifier
         {
             TryDisposeArchive(archiveStream);
             CleanupOwned(stagingLease, retainedFiles);
-            throw Failure();
+            // A parser refusing the archive is a check on its contents; the rest is about where
+            // it was staged, and says nothing about the package.
+            throw exception is InvalidDataException or JsonException or DecoderFallbackException
+                ? Failure()
+                : new ReleaseVerificationException(FailureMessage);
         }
     }
 
@@ -172,13 +176,13 @@ public sealed class ReleasePackageVerifier
                 manifest.PackageUri,
                 manifest.PackageSize,
                 cancellationToken).ConfigureAwait(false);
-            destination = new FileStream(
+            destination = Create(archivePath, () => new FileStream(
                 archivePath,
                 FileMode.CreateNew,
                 FileAccess.ReadWrite,
                 FileShare.Read,
                 64 * 1024,
-                FileOptions.Asynchronous | FileOptions.RandomAccess);
+                FileOptions.Asynchronous | FileOptions.RandomAccess));
             using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
             var buffer = new byte[64 * 1024];
             long total = 0;
@@ -194,21 +198,40 @@ public sealed class ReleasePackageVerifier
                 total = checked(total + read);
                 if (total > manifest.PackageSize)
                 {
-                    throw Failure();
+                    throw new PackageVerificationException(PackageVerificationProblem.LargerThanManifest)
+                    {
+                        ExpectedSize = manifest.PackageSize,
+                    };
                 }
 
                 hash.AppendData(buffer.AsSpan(0, read));
-                await destination.WriteAsync(buffer.AsMemory(0, read), cancellationToken)
+                await WriteAsync(
+                        archivePath,
+                        () => destination.WriteAsync(buffer.AsMemory(0, read), cancellationToken))
                     .ConfigureAwait(false);
             }
 
-            await destination.FlushAsync(cancellationToken).ConfigureAwait(false);
-            var expectedHash = Convert.FromHexString(manifest.PackageSha256);
-            var actualHash = hash.GetHashAndReset();
-            if (total != manifest.PackageSize ||
-                !CryptographicOperations.FixedTimeEquals(expectedHash, actualHash))
+            await WriteAsync(archivePath, () => new ValueTask(destination.FlushAsync(cancellationToken)))
+                .ConfigureAwait(false);
+            if (total != manifest.PackageSize)
             {
-                throw Failure();
+                throw new PackageVerificationException(PackageVerificationProblem.SizeMismatch)
+                {
+                    ExpectedSize = manifest.PackageSize,
+                    ActualSize = total,
+                };
+            }
+
+            var actualHash = hash.GetHashAndReset();
+            if (!CryptographicOperations.FixedTimeEquals(
+                    Convert.FromHexString(manifest.PackageSha256),
+                    actualHash))
+            {
+                throw new PackageVerificationException(PackageVerificationProblem.HashMismatch)
+                {
+                    ExpectedSha256 = manifest.PackageSha256,
+                    ActualSha256 = Convert.ToHexString(actualHash),
+                };
             }
 
             var sourceToDispose = source;
@@ -460,13 +483,13 @@ public sealed class ReleasePackageVerifier
             var destinationPath = Path.GetFullPath(Path.Combine(stagingRoot, entry.FullName));
             EnsureContained(destinationPath, stagingRoot);
             await using var source = entry.Open();
-            await using var output = new FileStream(
+            await using var output = Create(destinationPath, () => new FileStream(
                 destinationPath,
                 FileMode.CreateNew,
                 FileAccess.Write,
                 FileShare.None,
                 64 * 1024,
-                FileOptions.Asynchronous | FileOptions.SequentialScan);
+                FileOptions.Asynchronous | FileOptions.SequentialScan));
             var buffer = new byte[64 * 1024];
             using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
             long written = 0;
@@ -486,11 +509,14 @@ public sealed class ReleasePackageVerifier
                 }
 
                 hash.AppendData(buffer.AsSpan(0, read));
-                await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken)
+                await WriteAsync(
+                        destinationPath,
+                        () => output.WriteAsync(buffer.AsMemory(0, read), cancellationToken))
                     .ConfigureAwait(false);
             }
 
-            await output.FlushAsync(cancellationToken).ConfigureAwait(false);
+            await WriteAsync(destinationPath, () => new ValueTask(output.FlushAsync(cancellationToken)))
+                .ConfigureAwait(false);
             if (written != central.UncompressedSize)
             {
                 throw Failure();
@@ -829,8 +855,42 @@ public sealed class ReleasePackageVerifier
         ReleaseVerificationException or ObjectDisposedException or
         Win32Exception or System.Security.SecurityException or ArgumentException;
 
-    private static ReleaseVerificationException Failure() =>
-        new("Release package verification failed.");
+    internal const string FailureMessage = "Release package verification failed.";
+
+    /// <summary>Every check on what the package holds; its hash has already matched.</summary>
+    private static PackageVerificationException Failure() =>
+        new(PackageVerificationProblem.ContentsRejected);
+
+    /// <summary>
+    /// A file of the copy the verifier works on, created or written. Failing here is the disk or
+    /// the folder refusing it, which no check on the package should be blamed for.
+    /// </summary>
+    private static FileStream Create(string path, Func<FileStream> create)
+    {
+        try
+        {
+            return create();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            throw NotWritten(path, exception);
+        }
+    }
+
+    private static async ValueTask WriteAsync(string path, Func<ValueTask> write)
+    {
+        try
+        {
+            await write().ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            throw NotWritten(path, exception);
+        }
+    }
+
+    private static PackageVerificationException NotWritten(string path, Exception cause) =>
+        new(PackageVerificationProblem.NotWritten) { Path = path, Reason = cause.Message };
 
     private sealed record CentralEntry(
         string Name,

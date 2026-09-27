@@ -19,8 +19,36 @@ public enum PackageOutcomeKind
     /// <summary>The package installer answered with a status.</summary>
     Result,
 
-    /// <summary>The package installer stopped with an error other than a layout refusal.</summary>
+    /// <summary>
+    /// The package step stopped with an error other than a layout refusal; <see cref="PackageOutcome.Failure"/>
+    /// names it when it is one the row words by its cause.
+    /// </summary>
     Failed,
+}
+
+/// <summary>Why the package was not installed, by what the reader does next.</summary>
+public enum PackageFailureKind
+{
+    /// <summary>Its size or hash is not the manifest's beside it in the folder.</summary>
+    FolderCopyDoesNotMatch,
+
+    /// <summary>Its size or hash is not the manifest's it was downloaded against.</summary>
+    DownloadDoesNotMatch,
+
+    /// <summary>It matched its manifest and a check on its contents refused it.</summary>
+    ContentsRejected,
+
+    NotInFolder,
+    NoReadAccess,
+
+    /// <summary>It could not be opened for another reason; the detail names it.</summary>
+    Unreadable,
+
+    TooLarge,
+    NotDownloaded,
+
+    /// <summary>The installer's working copy could not be written; the detail says why.</summary>
+    NotWritten,
 }
 
 /// <summary>What the package step ended in, kept as facts so its row can be worded in any language.</summary>
@@ -30,7 +58,8 @@ public sealed record PackageOutcome(
     string? Version = null,
     string? Reason = null,
     IReadOnlyList<string>? Restored = null,
-    string? PriorVersion = null)
+    string? PriorVersion = null,
+    PackageFailureKind? Failure = null)
 {
     /// <summary>What the package installer's answer amounts to.</summary>
     public static PackageOutcome FromResult(ReleaseInstallResult result)
@@ -437,6 +466,7 @@ public static class RunResults
                     "not installed: the installation directory failed safety checks. The log below says what to do with it. Technical details: {0}",
                     "не установлен: каталог установки не прошёл проверку безопасности. Что с ним делать, сказано в журнале ниже. Технические сведения: {0}"),
                 outcome.Reason),
+            PackageOutcomeKind.Failed when outcome.Failure is { } failure => FailureDetail(failure, outcome.Reason),
             PackageOutcomeKind.Failed => string.Format(
                 InstallerCulture.Pick(
                     "not installed: the installation stopped with an error. Technical details: {0}",
@@ -466,6 +496,47 @@ public static class RunResults
         static string NotInstalled(PackageOutcome outcome) =>
             $"{PackageStatusName(outcome)} — {outcome.Reason}".TrimEnd(' ', '—');
     }
+
+    /// <summary>
+    /// A size, a hash and another release are one row: the reader does the same about each, and a
+    /// file from another release cannot be told from a changed one. The numbers are in the log.
+    /// </summary>
+    private static string FailureDetail(PackageFailureKind failure, string? detail) => failure switch
+    {
+        PackageFailureKind.FolderCopyDoesNotMatch => InstallerCulture.Pick(
+            "not installed: localai-package.zip in the folder does not match the release manifest beside it — it is incomplete, altered or from another release. Copy all three files again from one release",
+            "не установлен: localai-package.zip в папке не соответствует манифесту релиза рядом с ним — файл неполный, изменён или из другого релиза. Скопируйте заново все три файла одного релиза"),
+        PackageFailureKind.DownloadDoesNotMatch => InstallerCulture.Pick(
+            "not installed: the downloaded package does not match the signed release manifest, so it was not used. Run the installer again to download it anew",
+            "не установлен: скачанный пакет не соответствует подписанному манифесту релиза, поэтому не использован. Запустите установщик снова, чтобы скачать его заново"),
+        PackageFailureKind.ContentsRejected => InstallerCulture.Pick(
+            "not installed: the package matches its release manifest, but its contents failed the installer's safety checks",
+            "не установлен: пакет соответствует манифесту релиза, но его содержимое не прошло проверку безопасности установщика"),
+        PackageFailureKind.NotInFolder => InstallerCulture.Pick(
+            "not installed: localai-package.zip is not in the folder",
+            "не установлен: в папке нет localai-package.zip"),
+        PackageFailureKind.NoReadAccess => InstallerCulture.Pick(
+            "not installed: this account cannot read localai-package.zip in the folder",
+            "не установлен: у этой учётной записи нет доступа на чтение к localai-package.zip в папке"),
+        PackageFailureKind.Unreadable => string.Format(
+            InstallerCulture.Pick(
+                "not installed: localai-package.zip in the folder could not be read. Technical details: {0}",
+                "не установлен: не удалось прочитать localai-package.zip в папке. Технические сведения: {0}"),
+            detail),
+        PackageFailureKind.TooLarge => InstallerCulture.Pick(
+            "not installed: localai-package.zip in the folder is larger than any release publishes",
+            "не установлен: localai-package.zip в папке больше, чем бывает в релизе"),
+        PackageFailureKind.NotDownloaded => string.Format(
+            InstallerCulture.Pick(
+                "not installed: the package could not be downloaded from GitHub. Technical details: {0}",
+                "не установлен: не удалось скачать пакет с GitHub. Технические сведения: {0}"),
+            detail),
+        _ => string.Format(
+            InstallerCulture.Pick(
+                "not installed: the package could not be written to the installer's working folder. Technical details: {0}",
+                "не установлен: не удалось записать пакет в рабочую папку установщика. Технические сведения: {0}"),
+            detail),
+    };
 
     public static string PathDetail(PathOutcome outcome) => outcome switch
     {
