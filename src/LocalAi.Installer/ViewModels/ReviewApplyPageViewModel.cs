@@ -27,7 +27,7 @@ public sealed class ReviewApplyPageViewModel : ObservableObject
     private bool enableUpdateCheck;
     private Func<IReadOnlyList<ReviewCheck>> pending = () => [];
 
-    /// <summary>The groups that changed after the last tick, until the box is ticked again.</summary>
+    /// <summary>Every group that changed since the last tick, until the box is ticked again.</summary>
     private IReadOnlyList<ReviewSection> changed = [];
 
     public bool IsConfirmed
@@ -49,13 +49,19 @@ public sealed class ReviewApplyPageViewModel : ObservableObject
     /// <summary>Clears the box whose list is no longer the one it was given to, and says which groups moved.</summary>
     internal void Withdraw(IReadOnlyList<ReviewSection> sections)
     {
-        changed = sections;
+        changed = [.. changed.Union(sections).Order()];
         IsConfirmed = false;
         AnnounceChanged();
     }
 
-    /// <summary>The line under a box the wizard cleared; empty once it is ticked again.</summary>
-    public string ChangedNotice => changed.Count == 0
+    /// <summary>Whether the wizard cleared the box and it has not been ticked since.</summary>
+    internal bool IsWithdrawn => changed.Count > 0;
+
+    /// <summary>
+    /// The line under a box the wizard cleared; empty once it is ticked again, and while a check
+    /// holds the box, since the list cannot be confirmed again until it ends.
+    /// </summary>
+    public string ChangedNotice => !HasChangedNotice
         ? string.Empty
         : string.Format(
             InstallerCulture.Pick(
@@ -64,7 +70,10 @@ public sealed class ReviewApplyPageViewModel : ObservableObject
                 "подтвердите."),
             string.Join(", ", changed.Select(Title)));
 
-    public bool HasChangedNotice => changed.Count > 0;
+    public bool HasChangedNotice => IsWithdrawn && CanConfirm;
+
+    /// <summary>The box's help: the line under it that is showing, if any.</summary>
+    public string ConsentHelp => IsStillChecking ? StillChecking : ChangedNotice;
 
     /// <summary>The group's heading, as the list shows it.</summary>
     internal static string Title(ReviewSection section) => section switch
@@ -80,6 +89,7 @@ public sealed class ReviewApplyPageViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(ChangedNotice));
         OnPropertyChanged(nameof(HasChangedNotice));
+        OnPropertyChanged(nameof(ConsentHelp));
     }
 
     /// <summary>
@@ -150,5 +160,6 @@ public sealed class ReviewApplyPageViewModel : ObservableObject
         OnPropertyChanged(nameof(IsStillChecking));
         OnPropertyChanged(nameof(StillChecking));
         OnPropertyChanged(nameof(CanApply));
+        AnnounceChanged();
     }
 }

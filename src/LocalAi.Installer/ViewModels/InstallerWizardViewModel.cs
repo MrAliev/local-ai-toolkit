@@ -941,7 +941,12 @@ public sealed class InstallerWizardViewModel : ObservableObject
     public void SetReviewConfirmed(bool confirmed)
     {
         review.IsConfirmed = confirmed;
-        confirmedList = confirmed ? ReviewFacts() : null;
+        // A box the wizard cleared keeps its tick's list, so the line under it names every change since.
+        if (confirmed || !review.IsWithdrawn)
+        {
+            confirmedList = confirmed ? ReviewFacts() : null;
+        }
+
         RefreshAll();
     }
 
@@ -2186,13 +2191,14 @@ public sealed class InstallerWizardViewModel : ObservableObject
         }
     }
 
-    /// <summary>What the list says when the box is ticked; null while it is clear.</summary>
+    /// <summary>What the list said at the last tick; null once the box is cleared by hand.</summary>
     private IReadOnlyList<(ReviewSection Section, IReadOnlyList<string> Lines)>? confirmedList;
 
     /// <summary>
     /// Takes the tick back when the list is no longer the one it was given to: a check that
     /// answered differently, a page changed behind it, or a file the list reads again. Not while a
-    /// check runs: the box is held then, and only its answer is a change.
+    /// check runs: the box is held then, and only its answer is a change. A box already taken back
+    /// goes on collecting the groups that change, until it is ticked again.
     /// </summary>
     private void RecheckConsent()
     {
@@ -2212,7 +2218,6 @@ public sealed class InstallerWizardViewModel : ObservableObject
             return;
         }
 
-        confirmedList = null;
         review.Withdraw(changed);
     }
 
@@ -2252,7 +2257,8 @@ public sealed class InstallerWizardViewModel : ObservableObject
         // reader skims past — "not resolved" sits in a list of five neutral statements. An
         // installation that goes ahead without it leaves the clients unconfigured too, so it
         // is worth saying twice, in the register the rest of the page reserves for warnings.
-        if (!package.HasPackage)
+        // Not while the release is checked: that is an outcome not known yet.
+        if (!package.HasPackage && !package.IsResolving)
         {
             builder.AppendLine();
             // What the run will still do (#264). The settings are written whenever the runtime
@@ -2966,6 +2972,13 @@ public sealed class InstallerWizardViewModel : ObservableObject
         if (!OperatingSystem.IsWindows())
         {
             return string.Empty;
+        }
+
+        if (package.IsResolving)
+        {
+            return InstallerCulture.Pick(
+                "PATH: depends on the release, still being checked.",
+                "PATH: зависит от релиза, который ещё проверяется.");
         }
 
         // The entry is added only after the package installs.
