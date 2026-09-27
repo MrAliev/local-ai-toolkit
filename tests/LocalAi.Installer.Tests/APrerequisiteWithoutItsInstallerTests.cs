@@ -208,6 +208,93 @@ public sealed class APrerequisiteWithoutItsInstallerTests
         Assert.False(wizard.Dependencies.CanContinue);
     }
 
+    /// <summary>
+    /// Without WinGet and npm nothing on the page could be ticked, and the subtitle still said to
+    /// choose (RC30). It says what the page can do, and follows each check run again.
+    /// </summary>
+    [Fact]
+    public async Task The_subtitle_says_what_the_page_can_install_and_follows_check_again()
+    {
+        using var root = new TemporaryDirectory("LocalAi-prerequisite-subtitle");
+        var answers = new Queue<EnvironmentDiagnosis>(
+        [
+            HermeticDiagnosis.Supported(git: Missing("git"), winGet: Missing("winget"), npm: Missing("npm")),
+            HermeticDiagnosis.Supported(git: Missing("git"), winGet: Missing("winget")),
+            HermeticDiagnosis.Supported(),
+        ]);
+        var wizard = Wizard(root, answers.Dequeue);
+        var announced = new List<string>();
+        wizard.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(InstallerWizardViewModel.StepDescription))
+            {
+                announced.Add(wizard.StepDescription);
+            }
+        };
+
+        await wizard.CheckPrerequisitesAgainAsync();
+        Assert.Equal(
+            "This installer cannot install any of these on this computer. Install the ones you need " +
+            "yourself from the links below, then check again.",
+            announced[^1]);
+        Assert.Equal(
+            "На этом компьютере установщик не может поставить ни один из этих компонентов. " +
+            "Установите нужные вручную по ссылкам ниже и проверьте снова.",
+            InstallerCulture.In(InstallerLanguage.Russian, () => wizard.StepDescription));
+
+        await wizard.CheckPrerequisitesAgainAsync();
+        Assert.Equal(
+            "Choose which prerequisites to install. Nothing is selected for you. Those this " +
+            "installer cannot install say how to get them.",
+            announced[^1]);
+        Assert.Equal(
+            "Выберите, какие компоненты установить. За вас ничего не отмечено. Для тех, что " +
+            "установщик поставить не может, сказано, как их получить.",
+            InstallerCulture.In(InstallerLanguage.Russian, () => wizard.StepDescription));
+
+        await wizard.CheckPrerequisitesAgainAsync();
+        Assert.Equal("Choose which prerequisites to install. Nothing is selected for you.", announced[^1]);
+        Assert.Equal(
+            "Выберите, какие компоненты установить. За вас ничего не отмечено.",
+            InstallerCulture.In(InstallerLanguage.Russian, () => wizard.StepDescription));
+    }
+
+    [Fact]
+    public async Task With_everything_here_and_nothing_reinstallable_the_subtitle_says_so()
+    {
+        using var root = new TemporaryDirectory("LocalAi-prerequisite-subtitle-installed");
+        var wizard = Wizard(root, () => HermeticDiagnosis.Supported(winGet: Missing("winget"), npm: Missing("npm")));
+
+        await wizard.CheckPrerequisitesAgainAsync();
+
+        Assert.Equal(
+            "Everything listed is already installed; this installer cannot reinstall any of it here.",
+            wizard.StepDescription);
+        Assert.Equal(
+            "Всё перечисленное уже установлено; переустановить что-либо здесь установщик не может.",
+            InstallerCulture.In(InstallerLanguage.Russian, () => wizard.StepDescription));
+    }
+
+    /// <summary>Node.js ticked beside WinGet brings npm, so the indexers stop being ones to get by hand.</summary>
+    [Fact]
+    public async Task A_tick_that_brings_npm_takes_the_by_hand_sentence_off_the_subtitle()
+    {
+        using var root = new TemporaryDirectory("LocalAi-prerequisite-subtitle-tick");
+        var wizard = Wizard(root, () => HermeticDiagnosis.Supported(npm: Missing("npm")));
+        await wizard.CheckPrerequisitesAgainAsync();
+        wizard.Dependencies.SetInstalled("ScipTypeScript", false);
+        wizard.RefreshNavigationState();
+        Assert.Equal(
+            "Choose which prerequisites to install. Nothing is selected for you. Those this " +
+            "installer cannot install say how to get them.",
+            wizard.StepDescription);
+
+        wizard.Dependencies.SetConsent("NodeJs", true);
+        wizard.RefreshNavigationState();
+
+        Assert.Equal("Choose which prerequisites to install. Nothing is selected for you.", wizard.StepDescription);
+    }
+
     [Fact]
     public async Task A_run_that_selected_nothing_names_the_required_ones_still_missing()
     {
