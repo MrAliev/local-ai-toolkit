@@ -31,11 +31,14 @@ public sealed class PackagePageViewModel : ObservableObject
     {
         NotChecked,
         Resolving,
+        CheckingPackage,
         AlreadyInstalled,
-        Verified,
+        SignatureVerified,
+        SignatureVerifiedInFolder,
         VerifiedInFolder,
         Incompatible,
         Unavailable,
+        PackageMismatch,
     }
 
     private StatusWording wording = StatusWording.NotChecked;
@@ -122,6 +125,9 @@ public sealed class PackagePageViewModel : ObservableObject
     public string StatusText => wording switch
     {
         StatusWording.Resolving => InstallerCulture.Pick("Checking the release…", "Проверяю релиз…"),
+        StatusWording.CheckingPackage => InstallerCulture.Pick(
+            "Checking the package in the folder…",
+            "Проверяю пакет в папке…"),
         StatusWording.AlreadyInstalled => string.Format(
             InstallerCulture.Pick(
                 "Release {0} is already installed. Continuing re-runs the other steps and puts " +
@@ -129,10 +135,16 @@ public sealed class PackagePageViewModel : ObservableObject
                 "Релиз {0} уже установлен. Продолжение повторит остальные шаги и вернёт на " +
                 "место те его файлы, которых нет или которые отличаются от релиза."),
             statusTag),
-        StatusWording.Verified => string.Format(
+        StatusWording.SignatureVerified => string.Format(
             InstallerCulture.Pick(
-                "Release {0} verified, {1:N0} MB to download.",
-                "Релиз {0} проверен, скачать {1:N0} МБ."),
+                "Release {0}: signature verified, {1:N0} MB to download.",
+                "Релиз {0}: подпись проверена, скачать {1:N0} МБ."),
+            statusTag,
+            statusMegabytes),
+        StatusWording.SignatureVerifiedInFolder => string.Format(
+            InstallerCulture.Pick(
+                "Release {0}: signature verified, {1:N0} MB to copy from the folder.",
+                "Релиз {0}: подпись проверена, из папки будет скопировано {1:N0} МБ."),
             statusTag,
             statusMegabytes),
         StatusWording.VerifiedInFolder => string.Format(
@@ -151,6 +163,15 @@ public sealed class PackagePageViewModel : ObservableObject
         StatusWording.Unavailable =>
             InstallerCulture.Pick("No release resolved. ", "Релиз не определён. ") +
             Reason(statusFailure!.Refusal),
+        StatusWording.PackageMismatch =>
+            InstallerCulture.Pick("No release resolved. ", "Релиз не определён. ") +
+            InstallerCulture.Pick(
+                "localai-package.zip in the folder does not match the release manifest beside " +
+                "it — it is incomplete, altered or from another release. Copy all three files " +
+                "again from one release",
+                "localai-package.zip в папке не соответствует манифесту релиза рядом с ним — " +
+                "файл неполный, изменён или из другого релиза. Скопируйте заново все три файла " +
+                "одного релиза"),
         _ => InstallerCulture.Pick(
             "Press Check again to look up this release.",
             "Нажмите «Проверить снова», чтобы найти этот релиз."),
@@ -455,7 +476,22 @@ public sealed class PackagePageViewModel : ObservableObject
         State = PackageSourceState.NotChecked;
     }
 
-    public void SelectResolvedRelease(ResolvedRelease release, string tag)
+    /// <summary>The manifest verified; the package in the folder is being hashed against it.</summary>
+    public void BeginCheckingPackage() => SetStatus(StatusWording.CheckingPackage);
+
+    public void ReportPackageMismatch()
+    {
+        IsResolving = false;
+        Resolved = null;
+        SetStatus(StatusWording.PackageMismatch);
+        State = PackageSourceState.Unavailable;
+    }
+
+    /// <param name="packageChecked">
+    /// The folder's package matched the manifest's size and SHA-256. Only then does a folder
+    /// release read as verified; a download is never hashed before the run.
+    /// </param>
+    public void SelectResolvedRelease(ResolvedRelease release, string tag, bool packageChecked = false)
     {
         ArgumentNullException.ThrowIfNull(release);
         ArgumentException.ThrowIfNullOrWhiteSpace(tag);
@@ -473,7 +509,9 @@ public sealed class PackagePageViewModel : ObservableObject
         {
             // A folder feed copies the package from disk; the same test as Source.
             SetStatus(
-                SourceFolder.Length > 0 ? StatusWording.VerifiedInFolder : StatusWording.Verified,
+                SourceFolder.Length == 0 ? StatusWording.SignatureVerified
+                : packageChecked ? StatusWording.VerifiedInFolder
+                : StatusWording.SignatureVerifiedInFolder,
                 tag,
                 megabytes: release.Manifest.PackageSize / (1024d * 1024));
         }

@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using LocalAi.Contracts;
 namespace LocalAi.Installer.Core.Releases;
 
@@ -23,7 +24,7 @@ namespace LocalAi.Installer.Core.Releases;
 /// Models still come from the Ollama registry. This makes an installation possible without
 /// GitHub, not without the internet.
 /// </summary>
-public sealed class DirectoryReleaseFeed : IReleaseFeed
+public sealed class DirectoryReleaseFeed : IReleaseFeed, IReleasePackageCheck
 {
     /// <summary>
     /// The manifest verifier's own ceiling, so a file that is absurd rather than merely wrong is
@@ -151,6 +152,40 @@ public sealed class DirectoryReleaseFeed : IReleaseFeed
                 cancellationToken)
             .ConfigureAwait(false);
         return target;
+    }
+
+    /// <summary>
+    /// Read where it lies, on a pool thread: this answers the package page before the run, which
+    /// still copies the package and verifies the copy.
+    /// </summary>
+    public Task<bool> PackageMatchesAsync(
+        ReleaseManifest manifest,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(manifest);
+        return Task.Run(() => PackageMatches(manifest, cancellationToken), cancellationToken);
+    }
+
+    private bool PackageMatches(ReleaseManifest manifest, CancellationToken cancellationToken)
+    {
+        using var source = Open(GitHubReleaseFeed.PackageAsset, MaximumPackageBytes);
+        if (source.Length != manifest.PackageSize)
+        {
+            return false;
+        }
+
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        var buffer = new byte[CopyBufferBytes];
+        int read;
+        while ((read = source.Read(buffer)) > 0)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            hash.AppendData(buffer.AsSpan(0, read));
+        }
+
+        return CryptographicOperations.FixedTimeEquals(
+            hash.GetHashAndReset(),
+            Convert.FromHexString(manifest.PackageSha256));
     }
 
     private async Task<ReleaseManifest> ReadVerifiedManifestAsync(
