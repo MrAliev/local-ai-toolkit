@@ -73,10 +73,14 @@ public partial class App : Application
         // the one every other shows.
         var presentation = new InstallerPresentation(preferences, themes.Choose);
 
-        // What a run ended mid-download left in %TEMP%, on both paths. Off the UI thread: an
-        // update's download and staging copy come to about 800 MB.
-        _ = Task.Run(() => InstallerScratchDirectory.RemoveLeftovers(
-            InstallerWizardViewModel.DefaultScratchRoot));
+        // What a run ended mid-download, or a removal copy whose cleanup never ran, left in
+        // %TEMP%, on both paths. Off the UI thread: an update's download and staging copy come
+        // to about 800 MB.
+        _ = Task.Run(() =>
+        {
+            InstallerScratchDirectory.RemoveLeftovers(InstallerWizardViewModel.DefaultScratchRoot);
+            UninstallerRelaunch.RemoveLeftovers(Path.GetTempPath());
+        });
 
         Window window = IsUninstallRequested(e.Args)
             ? new UninstallWindow(presentation)

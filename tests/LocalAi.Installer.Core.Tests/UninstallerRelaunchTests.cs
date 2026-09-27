@@ -41,14 +41,11 @@ public sealed class UninstallerRelaunchTests : IDisposable
         var outcome = Relaunch(processes).Relaunch(InstalledCopy, ["--uninstall", "/extra arg"]);
 
         Assert.Equal(UninstallerRelaunchOutcome.Relaunched, outcome);
-        var started = Assert.Single(processes.Started);
+        var started = processes.Started[0];
         Assert.Equal(["--uninstall", "/extra arg"], started.Arguments);
         Assert.False(Inside(machine.Layout.Root, started.FileName), started.FileName);
         Assert.True(Inside(TemporaryRoot, started.FileName), started.FileName);
         Assert.Equal("the installer itself", File.ReadAllText(started.FileName));
-        // A process's current directory cannot be deleted while it runs, so the copy must not
-        // inherit one inside the tree it is about to remove: it starts in its own.
-        Assert.Equal(Path.GetDirectoryName(started.FileName), started.WorkingDirectory);
         Assert.False(started.UseShellExecute);
         // The copy in the installation is left exactly as it was: it goes with the removal.
         Assert.Equal("the installer itself", File.ReadAllText(InstalledCopy));
@@ -104,6 +101,132 @@ public sealed class UninstallerRelaunchTests : IDisposable
         Assert.Empty(Directory.EnumerateFileSystemEntries(inside));
     }
 
+    [Fact]
+    public async Task A_copy_that_exits_takes_its_directory_with_it()
+    {
+        using var processes = new RealProcesses();
+
+        var outcome = Relaunch(processes).Relaunch(RunnableInstalledCopy(), ["/d", "/c", "exit 0"]);
+
+        Assert.Equal(UninstallerRelaunchOutcome.Relaunched, outcome);
+        await processes.WaitForAllAsync(TestContext.Current.CancellationToken);
+        Assert.Empty(Directory.EnumerateFileSystemEntries(TemporaryRoot));
+    }
+
+    /// <summary>Ended from Task Manager, or crashed: no code of its own runs at the end.</summary>
+    [Fact]
+    public async Task A_copy_that_is_ended_takes_its_directory_with_it()
+    {
+        using var processes = new RealProcesses();
+
+        var outcome = Relaunch(processes).Relaunch(RunnableInstalledCopy(), RunsUntilEnded);
+        Assert.Equal(UninstallerRelaunchOutcome.Relaunched, outcome);
+        processes.Started[0].KillTree();
+
+        await processes.WaitForAllAsync(TestContext.Current.CancellationToken);
+        Assert.Empty(Directory.EnumerateFileSystemEntries(TemporaryRoot));
+    }
+
+    /// <summary>
+    /// A directory that is some process's current directory cannot be removed, and whatever the
+    /// removal starts inherits the copy's — a broker that outlives it would keep it.
+    /// </summary>
+    [Fact]
+    public void Nothing_the_handover_starts_runs_inside_the_directory_that_has_to_go()
+    {
+        var processes = new RecordingProcessFactory();
+
+        Relaunch(processes).Relaunch(InstalledCopy, ["--uninstall"]);
+
+        var copyDirectory = Path.GetDirectoryName(processes.Started[0].FileName)!;
+        Assert.All(processes.Started, started =>
+        {
+            Assert.False(string.IsNullOrEmpty(started.WorkingDirectory), started.FileName);
+            Assert.False(Inside(copyDirectory, started.WorkingDirectory), started.WorkingDirectory);
+            Assert.False(Inside(machine.Layout.Root, started.WorkingDirectory), started.WorkingDirectory);
+        });
+    }
+
+    /// <summary>
+    /// Once the copy runs, the handover has happened: reporting a failure would open a second
+    /// removal wizard inside the installation beside it.
+    /// </summary>
+    [Fact]
+    public void A_cleanup_that_cannot_start_leaves_the_handover_in_place()
+    {
+        var processes = new RecordingProcessFactory
+        {
+            FailWhen = start => !Inside(TemporaryRoot, start.FileName),
+        };
+
+        var outcome = Relaunch(processes).Relaunch(InstalledCopy, ["--uninstall"]);
+
+        Assert.Equal(UninstallerRelaunchOutcome.Relaunched, outcome);
+        Assert.Equal("the installer itself", File.ReadAllText(processes.Started[0].FileName));
+    }
+
+    [Fact]
+    public void What_an_ended_copy_left_is_removed_at_the_next_start()
+    {
+        // Nothing runs here, so the copy's directory stays exactly as a copy whose cleanup never
+        // ran would leave it.
+        Relaunch(new RecordingProcessFactory()).Relaunch(InstalledCopy, ["--uninstall"]);
+        Assert.NotEmpty(Directory.EnumerateFileSystemEntries(TemporaryRoot));
+
+        UninstallerRelaunch.RemoveLeftovers(TemporaryRoot);
+
+        Assert.Empty(Directory.EnumerateFileSystemEntries(TemporaryRoot));
+    }
+
+    [Fact]
+    public void A_directory_that_only_looks_like_a_copys_is_left_alone()
+    {
+        var unmarked = Path.Combine(
+            TemporaryRoot,
+            UninstallerRelaunch.DirectoryPrefix + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(unmarked);
+        File.WriteAllText(Path.Combine(unmarked, UninstallRegistration.UninstallerFileName), "someone's");
+
+        UninstallerRelaunch.RemoveLeftovers(TemporaryRoot);
+
+        Assert.True(File.Exists(Path.Combine(unmarked, UninstallRegistration.UninstallerFileName)));
+    }
+
+    /// <summary>
+    /// The copy does not hold its directory's marker; what keeps the next start's sweep off a
+    /// removal still running is that Windows refuses to delete a running executable.
+    /// </summary>
+    [Fact]
+    public async Task A_copy_still_running_keeps_its_directory()
+    {
+        using var processes = new RealProcesses();
+        Relaunch(processes).Relaunch(RunnableInstalledCopy(), RunsUntilEnded);
+        var copy = processes.Started[0];
+
+        UninstallerRelaunch.RemoveLeftovers(TemporaryRoot);
+
+        Assert.False(copy.HasExited);
+        Assert.Single(Directory.EnumerateFiles(
+            TemporaryRoot,
+            UninstallRegistration.UninstallerFileName,
+            SearchOption.AllDirectories));
+        copy.KillTree();
+        await processes.WaitForAllAsync(TestContext.Current.CancellationToken);
+    }
+
+    /// <summary>Busy rather than waiting on anything, so nothing but a kill ends it.</summary>
+    private static readonly string[] RunsUntilEnded = ["/d", "/q", "/c", "for /l %i in (0,0,1) do rem"];
+
+    /// <summary>
+    /// A real executable in the installed copy's place, so the copy runs and holds its image the
+    /// way the installer does. The command processor runs from any directory under any name.
+    /// </summary>
+    private string RunnableInstalledCopy()
+    {
+        File.Copy(Path.Combine(Environment.SystemDirectory, "cmd.exe"), InstalledCopy, overwrite: true);
+        return InstalledCopy;
+    }
+
     private UninstallerRelaunch Relaunch(IProcessFactory processes) =>
         new(machine.Layout, TemporaryRoot, processes);
 
@@ -127,6 +250,8 @@ public sealed class UninstallerRelaunchTests : IDisposable
 
         public Exception? Failure { get; init; }
 
+        public Func<ProcessStartInfo, bool>? FailWhen { get; init; }
+
         public IRunningProcess Start(ProcessStartInfo startInfo)
         {
             Started.Add(new(
@@ -139,7 +264,67 @@ public sealed class UninstallerRelaunchTests : IDisposable
                 throw Failure;
             }
 
+            if (FailWhen?.Invoke(startInfo) == true)
+            {
+                throw new Win32Exception(2, "The system cannot find the file specified.");
+            }
+
             return new ExitedProcess();
+        }
+    }
+
+    /// <summary>
+    /// Starts the processes for real and keeps them for the test to wait on: the relaunch lets
+    /// go of its handles at once, and only their ends say that everything it set going is done.
+    /// </summary>
+    private sealed class RealProcesses : IProcessFactory, IDisposable
+    {
+        private readonly SystemProcessFactory system = new();
+
+        public List<IRunningProcess> Started { get; } = [];
+
+        public IRunningProcess Start(ProcessStartInfo startInfo)
+        {
+            var process = system.Start(startInfo);
+            Started.Add(process);
+            return new Borrowed(process);
+        }
+
+        public async Task WaitForAllAsync(CancellationToken cancellationToken)
+        {
+            foreach (var process in Started)
+            {
+                await process.WaitForExitAsync(cancellationToken);
+            }
+        }
+
+        public void Dispose()
+        {
+            foreach (var process in Started)
+            {
+                if (!process.HasExited)
+                {
+                    process.KillTree();
+                }
+
+                process.Dispose();
+            }
+        }
+
+        private sealed class Borrowed(IRunningProcess process) : IRunningProcess
+        {
+            public int Id => process.Id;
+            public bool HasExited => process.HasExited;
+            public int ExitCode => process.ExitCode;
+            public TextReader StandardOutput => process.StandardOutput;
+            public Stream StandardOutputStream => process.StandardOutputStream;
+            public TextReader StandardError => process.StandardError;
+
+            public Task WaitForExitAsync(CancellationToken cancellationToken) =>
+                process.WaitForExitAsync(cancellationToken);
+
+            public void KillTree() => process.KillTree();
+            public void Dispose() { }
         }
     }
 

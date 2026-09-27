@@ -11,6 +11,9 @@ namespace LocalAi.Installer.Core.Releases;
 /// lock: the operating system releases it the moment the process dies, so a marker that opens
 /// unshared belongs to a run that has ended, and one that does not belongs to a window still
 /// working. Nothing without the marker is touched.
+///
+/// The removal's temporary copy of the installer claims its directory the same way, under a
+/// prefix of its own.
 /// </summary>
 public sealed class InstallerScratchDirectory : IDisposable
 {
@@ -23,6 +26,8 @@ public sealed class InstallerScratchDirectory : IDisposable
 
     private FileStream? marker;
 
+    private bool released;
+
     private InstallerScratchDirectory(string path, FileStream marker)
     {
         Path = path;
@@ -31,10 +36,13 @@ public sealed class InstallerScratchDirectory : IDisposable
 
     public string Path { get; }
 
-    public static InstallerScratchDirectory Claim(string root)
+    public static InstallerScratchDirectory Claim(string root) => Claim(root, Prefix);
+
+    public static InstallerScratchDirectory Claim(string root, string prefix)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(root);
-        var path = System.IO.Path.Combine(root, Prefix + Guid.NewGuid().ToString("N"));
+        ArgumentException.ThrowIfNullOrWhiteSpace(prefix);
+        var path = System.IO.Path.Combine(root, prefix + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(path);
         var marker = new FileStream(
             System.IO.Path.Combine(path, MarkerFileName),
@@ -59,7 +67,9 @@ public sealed class InstallerScratchDirectory : IDisposable
     /// Removes the directories of runs that have ended. Never throws: a directory that will not
     /// go now is tried again at the next start.
     /// </summary>
-    public static void RemoveLeftovers(string root)
+    public static void RemoveLeftovers(string root) => RemoveLeftovers(root, Prefix);
+
+    public static void RemoveLeftovers(string root, string prefix)
     {
         try
         {
@@ -68,7 +78,7 @@ public sealed class InstallerScratchDirectory : IDisposable
                 return;
             }
 
-            foreach (var directory in new DirectoryInfo(root).EnumerateDirectories(Prefix + "*"))
+            foreach (var directory in new DirectoryInfo(root).EnumerateDirectories(prefix + "*"))
             {
                 if (!directory.Attributes.HasFlag(FileAttributes.ReparsePoint) &&
                     IsLeftover(directory.FullName))
@@ -84,11 +94,25 @@ public sealed class InstallerScratchDirectory : IDisposable
         }
     }
 
+    /// <summary>
+    /// Lets the marker go and leaves the directory to a process that outlives this one; until it
+    /// ends, only the files it has in use keep the sweep off it.
+    /// </summary>
+    public void Release()
+    {
+        marker?.Dispose();
+        marker = null;
+        released = true;
+    }
+
     public void Dispose()
     {
         marker?.Dispose();
         marker = null;
-        TryRemove(Path);
+        if (!released)
+        {
+            TryRemove(Path);
+        }
     }
 
     private static bool IsLeftover(string directory)
