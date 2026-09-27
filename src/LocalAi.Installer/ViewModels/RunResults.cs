@@ -319,11 +319,13 @@ public static class RunResults
     /// <summary>
     /// The count, marked by the worst thing that happened to any of them. Which model did what is
     /// already on the install page, row by row. A step that did not finish is marked by that
-    /// too, and says how it ended when no model got as far as a row.
+    /// too, and says how it ended when no model got as far as a row. Models the run skipped say
+    /// so rather than "not attempted", which is left for models chosen and not reached.
     /// </summary>
     public static RunResultRow Models(
         IReadOnlyList<ModelRunRow> models,
-        ModelStepFailure? failure = null)
+        ModelStepFailure? failure = null,
+        bool skipped = false)
     {
         ArgumentNullException.ThrowIfNull(models);
         var limited = models.Count(model => model.State == ModelRunState.ReadyWithLimitations);
@@ -365,7 +367,7 @@ public static class RunResults
                 ? string.Join("; ", details)
                 : failure?.Kind switch
                 {
-                    null => PageLabels.ResultNotAttempted,
+                    null => skipped ? PageLabels.ResultModelsSkipped : PageLabels.ResultNotAttempted,
                     ModelStepFailureKind.Stopped => string.Format(
                         CultureInfo.InvariantCulture, PageLabels.ModelFailed, failure.Detail),
                     ModelStepFailureKind.Cancelled => PageLabels.ResultModelsCancelledBeforeFirst,
