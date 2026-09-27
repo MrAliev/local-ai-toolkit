@@ -165,8 +165,158 @@ public sealed class AnonymousReleaseFeedTests : IDisposable
             new byte[64]);
         using var feed = new AnonymousReleaseFeed(new HttpClient(handler));
 
-        await Assert.ThrowsAsync<ReleaseResolutionException>(
+        var exception = await Assert.ThrowsAsync<ReleaseResolutionException>(
             () => feed.ResolveAsync("0.1.45", root, TestContext.Current.CancellationToken));
+
+        Assert.Equal(ReleaseRefusalKind.ManifestRejectedOnGitHub, exception.Refusal.Kind);
+        Assert.Equal("0.1.45", exception.Refusal.Release);
+    }
+
+    /// <summary>
+    /// A 404 for the newest release is an answer: a private repository, or one with nothing
+    /// published, looks like that from outside. Advice about the internet connection was the
+    /// wrong remedy on every machine where GitHub had answered.
+    /// </summary>
+    [Fact]
+    public async Task A_github_that_answers_without_a_release_is_not_called_unreachable()
+    {
+        var handler = new ScriptedHandler();
+        using var feed = new AnonymousReleaseFeed(new HttpClient(handler));
+
+        var exception = await Assert.ThrowsAsync<ReleaseResolutionException>(
+            () => feed.ResolveTagAsync("latest", TestContext.Current.CancellationToken));
+
+        Assert.Equal(ReleaseRefusalKind.NoPublishedRelease, exception.Refusal.Kind);
+        Assert.Equal("MrAliev/local-ai-toolkit", exception.Refusal.Repository);
+        Assert.Equal(
+            "GitHub named no newest release of MrAliev/local-ai-toolkit (answered 404 Not Found). " +
+            "A private repository, or one without published releases, looks like this from outside.",
+            exception.Message);
+    }
+
+    [Fact]
+    public async Task An_answer_without_a_tag_counts_as_no_release()
+    {
+        var handler = new ScriptedHandler();
+        handler.Respond(
+            "https://github.com/MrAliev/local-ai-toolkit/releases/latest",
+            HttpStatusCode.OK,
+            "<html>a page, not a redirect</html>");
+        handler.Respond(
+            "https://api.github.com/repos/MrAliev/local-ai-toolkit/releases/latest",
+            HttpStatusCode.OK,
+            "{}");
+        using var feed = new AnonymousReleaseFeed(new HttpClient(handler));
+
+        var exception = await Assert.ThrowsAsync<ReleaseResolutionException>(
+            () => feed.ResolveTagAsync("latest", TestContext.Current.CancellationToken));
+
+        Assert.Equal(ReleaseRefusalKind.NoPublishedRelease, exception.Refusal.Kind);
+        Assert.Contains("(answered 200 OK)", exception.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>Only a lookup where neither path got an answer is a connection problem.</summary>
+    [Fact]
+    public async Task No_answer_from_either_path_is_called_unreachable()
+    {
+        var handler = new ScriptedHandler();
+        handler.Throw(
+            "https://github.com/MrAliev/local-ai-toolkit/releases/latest",
+            new HttpRequestException("No such host is known. (github.com:443)"));
+        handler.Throw(
+            "https://api.github.com/repos/MrAliev/local-ai-toolkit/releases/latest",
+            new HttpRequestException("No such host is known. (api.github.com:443)"));
+        using var feed = new AnonymousReleaseFeed(new HttpClient(handler));
+
+        var exception = await Assert.ThrowsAsync<ReleaseResolutionException>(
+            () => feed.ResolveTagAsync("latest", TestContext.Current.CancellationToken));
+
+        Assert.Equal(ReleaseRefusalKind.GitHubUnreachable, exception.Refusal.Kind);
+        Assert.Equal(
+            "Could not reach GitHub to determine the newest release of MrAliev/local-ai-toolkit: " +
+            "No such host is known. (api.github.com:443). Check this computer's internet " +
+            "connection, then try again.",
+            exception.Message);
+    }
+
+    [Fact]
+    public async Task One_answer_from_github_rules_the_connection_out()
+    {
+        var handler = new ScriptedHandler();
+        handler.Throw(
+            "https://github.com/MrAliev/local-ai-toolkit/releases/latest",
+            new HttpRequestException("The connection was reset."));
+        using var feed = new AnonymousReleaseFeed(new HttpClient(handler));
+
+        var exception = await Assert.ThrowsAsync<ReleaseResolutionException>(
+            () => feed.ResolveTagAsync("latest", TestContext.Current.CancellationToken));
+
+        Assert.Equal(ReleaseRefusalKind.NoPublishedRelease, exception.Refusal.Kind);
+    }
+
+    /// <summary>The page names the file and the release, and sends the reader to the version field.</summary>
+    [Fact]
+    public async Task A_release_without_its_manifest_names_both()
+    {
+        var handler = new ScriptedHandler();
+        using var feed = new AnonymousReleaseFeed(new HttpClient(handler));
+
+        var exception = await Assert.ThrowsAsync<ReleaseResolutionException>(
+            () => feed.ResolveAsync("9.9.9", root, TestContext.Current.CancellationToken));
+
+        Assert.Equal(ReleaseRefusalKind.AssetNotFound, exception.Refusal.Kind);
+        Assert.Equal("9.9.9", exception.Refusal.Release);
+        Assert.Equal("release-manifest.json", exception.Refusal.File);
+    }
+
+    /// <summary>Every other way a download fails keeps its own English message as the details.</summary>
+    [Theory]
+    [InlineData("status")]
+    [InlineData("declared-size")]
+    [InlineData("streamed-size")]
+    [InlineData("insecure-redirect")]
+    [InlineData("redirect-loop")]
+    [InlineData("timeout")]
+    [InlineData("network")]
+    public async Task Any_other_failed_download_names_the_file_and_the_release(string failure)
+    {
+        const string Manifest =
+            "https://github.com/MrAliev/local-ai-toolkit/releases/download/0.1.45/release-manifest.json";
+        var handler = new ScriptedHandler();
+        switch (failure)
+        {
+            case "status":
+                handler.Respond(Manifest, HttpStatusCode.InternalServerError, "boom");
+                break;
+            case "declared-size":
+                handler.Respond(Manifest, HttpStatusCode.OK, new string('m', (64 * 1024) + 1));
+                break;
+            case "streamed-size":
+                handler.RespondUnsized(Manifest, new byte[(64 * 1024) + 1]);
+                break;
+            case "insecure-redirect":
+                handler.Redirect(Manifest, "http://mirror.invalid/release-manifest.json");
+                break;
+            case "redirect-loop":
+                handler.Redirect(Manifest, Manifest);
+                break;
+            case "timeout":
+                handler.Throw(Manifest, new TaskCanceledException("The request timed out."));
+                break;
+            default:
+                handler.Throw(Manifest, new HttpRequestException("The connection was reset."));
+                break;
+        }
+
+        using var feed = new AnonymousReleaseFeed(new HttpClient(handler));
+
+        var exception = await Assert.ThrowsAsync<ReleaseResolutionException>(
+            () => feed.ResolveAsync("0.1.45", root, TestContext.Current.CancellationToken));
+
+        Assert.Equal(ReleaseRefusalKind.DownloadFailed, exception.Refusal.Kind);
+        Assert.Equal("0.1.45", exception.Refusal.Release);
+        Assert.Equal("release-manifest.json", exception.Refusal.File);
+        Assert.Equal(exception.Message, exception.Refusal.Detail);
     }
 
     public void Dispose()
@@ -211,6 +361,16 @@ public sealed class AnonymousReleaseFeedTests : IDisposable
                 Content = new ByteArrayContent(body),
             };
 
+        /// <summary>A body with no Content-Length, so only the transfer itself can find its size.</summary>
+        public void RespondUnsized(string uri, byte[] body) =>
+            answers[uri] = () => new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StreamContent(new UnseekableStream(body)),
+            };
+
+        public void Throw(string uri, Exception failure) =>
+            answers[uri] = () => throw failure;
+
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
@@ -225,5 +385,10 @@ public sealed class AnonymousReleaseFeedTests : IDisposable
                         Content = new StringContent("Not Found"),
                     });
         }
+    }
+
+    private sealed class UnseekableStream(byte[] body) : MemoryStream(body)
+    {
+        public override bool CanSeek => false;
     }
 }

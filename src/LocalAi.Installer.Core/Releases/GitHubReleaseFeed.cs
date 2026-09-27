@@ -9,8 +9,15 @@ public sealed record ResolvedRelease(
     byte[] ManifestJson,
     byte[] Signature);
 
-public sealed class ReleaseResolutionException(string message, Exception? inner = null)
-    : Exception(message, inner);
+public sealed class ReleaseResolutionException(
+    string message,
+    Exception? inner = null,
+    ReleaseRefusal? refusal = null)
+    : Exception(message, inner)
+{
+    public ReleaseRefusal Refusal { get; } =
+        refusal ?? new(ReleaseRefusalKind.Unclassified, Detail: message);
+}
 
 /// <summary>
 /// Resolves a release through the GitHub CLI: the path for a repository that is not
@@ -176,7 +183,10 @@ public sealed class GitHubReleaseFeed(
         {
             throw new ReleaseResolutionException(
                 $"The manifest for release '{tag}' failed verification and will not be used.",
-                exception);
+                exception,
+                ReleaseRefusal.Rejected(
+                    exception,
+                    new(ReleaseRefusalKind.ManifestRejectedOnGitHub, Release: tag)));
         }
     }
 

@@ -333,14 +333,19 @@ public sealed class ResultsFollowTheLanguageTests : IDisposable
     }
 
     [Fact]
-    public void A_release_that_could_not_be_resolved_keeps_the_reason_and_changes_the_lead()
+    public void A_release_that_could_not_be_resolved_says_why_in_the_new_language()
     {
         var (wizard, presentation) = Wizard();
-        wizard.Package.ReportUnavailable("the feed could not be reached");
+        wizard.Package.ReportUnavailable(new ReleaseResolutionException(
+            "The folder is not there.",
+            refusal: new(ReleaseRefusalKind.NoSuchFolder)));
 
         presentation.ChooseLanguage(InstallerLanguage.Russian);
 
-        Assert.Equal("Релиз не определён. the feed could not be reached", wizard.Package.StatusText);
+        Assert.Equal(
+            "Релиз не определён. Такой папки нет. Исправьте путь или сотрите его, чтобы " +
+            "установить с GitHub.",
+            wizard.Package.StatusText);
     }
 
     [Fact]

@@ -40,7 +40,7 @@ public sealed class PackagePageViewModel : ObservableObject
 
     private StatusWording wording = StatusWording.NotChecked;
     private string statusTag = string.Empty;
-    private string statusReason = string.Empty;
+    private ReleaseResolutionException? statusFailure;
     private double statusMegabytes;
 
     private bool isResolving;
@@ -91,15 +91,16 @@ public sealed class PackagePageViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Offers the folder the installer was started from, when it holds a release. That is what
-    /// makes "download it once and pass the folder on" work without the person at the far end
-    /// having to type a path — and it is only ever an offer, because a folder that merely has
-    /// the right three file names still has to pass verification.
+    /// Offers the folder the installer was started from, when it holds any of the three files a
+    /// release publishes. That is what makes "download it once and pass the folder on" work
+    /// without the person at the far end having to type a path. A folder missing a file is
+    /// offered too, so the check names what is missing instead of quietly going to GitHub; and
+    /// it is only ever an offer, because the right file names still have to pass verification.
     /// </summary>
     public void OfferLocalFolder(string? installerDirectory)
     {
         if (sourceFolder.Length == 0 &&
-            DirectoryReleaseFeed.LooksLikeReleaseFolder(installerDirectory))
+            DirectoryReleaseFeed.HoldsAnyReleaseFile(installerDirectory))
         {
             SourceFolder = installerDirectory!;
         }
@@ -140,26 +141,142 @@ public sealed class PackagePageViewModel : ObservableObject
                 "Релиз {0} проверен, из папки будет скопировано {1:N0} МБ."),
             statusTag,
             statusMegabytes),
-        StatusWording.Incompatible => statusReason,
+        StatusWording.Incompatible => string.Format(
+            InstallerCulture.Pick(
+                "Release {0} is signed correctly but is not compatible with this installer. Use " +
+                "the installer published with release {0}.",
+                "Релиз {0} подписан верно, но несовместим с этим установщиком. Используйте " +
+                "установщик, опубликованный вместе с релизом {0}."),
+            IncompatibleRelease),
         StatusWording.Unavailable =>
-            InstallerCulture.Pick("No release resolved. ", "Релиз не определён. ") + statusReason,
+            InstallerCulture.Pick("No release resolved. ", "Релиз не определён. ") +
+            Reason(statusFailure!.Refusal),
         _ => InstallerCulture.Pick(
             "Press Check again to look up this release.",
             "Нажмите «Проверить снова», чтобы найти этот релиз."),
     };
 
+    /// <summary>
+    /// Why no release was resolved, worded by what the check found. The exception's English
+    /// message is the run log's; here it appears only as technical details.
+    /// </summary>
+    private static string Reason(ReleaseRefusal refusal) => refusal.Kind switch
+    {
+        ReleaseRefusalKind.MissingFiles => string.Format(
+            InstallerCulture.Pick(
+                "Not in the folder: {0}. A release folder needs all three files of one release: " +
+                "release-manifest.json, release-manifest.sig, localai-package.zip. To install " +
+                "from GitHub instead, erase the folder path above.",
+                "В папке нет: {0}. Папке релиза нужны все три файла одного релиза: " +
+                "release-manifest.json, release-manifest.sig, localai-package.zip. Чтобы " +
+                "установить с GitHub, сотрите путь к папке выше."),
+            string.Join(", ", refusal.Files ?? [])),
+        ReleaseRefusalKind.NoSuchFolder => InstallerCulture.Pick(
+            "This folder does not exist. Correct the path, or erase it to install from GitHub.",
+            "Такой папки нет. Исправьте путь или сотрите его, чтобы установить с GitHub."),
+        ReleaseRefusalKind.FolderAccessDenied => InstallerCulture.Pick(
+            "This account cannot open the folder. Give it read access, or choose another folder.",
+            "У этой учётной записи нет доступа к папке. Дайте ей право на чтение или выберите " +
+            "другую папку."),
+        ReleaseRefusalKind.ManifestRejectedInFolder => InstallerCulture.Pick(
+            "The release manifest in the folder failed its signature check: it is damaged, " +
+            "altered or not signed with the LocalAi release key. Copy the three files again from " +
+            "the release.",
+            "Манифест релиза в папке не прошёл проверку подписи: он повреждён, изменён или " +
+            "подписан не ключом релизов LocalAi. Скопируйте три файла релиза заново."),
+        ReleaseRefusalKind.ManifestRejectedOnGitHub => string.Format(
+            InstallerCulture.Pick(
+                "The manifest of release {0} on GitHub failed its signature check and was not used.",
+                "Манифест релиза {0} на GitHub не прошёл проверку подписи и не использован."),
+            refusal.Release),
+        ReleaseRefusalKind.OtherReleaseInFolder => string.Format(
+            InstallerCulture.Pick(
+                "This folder holds release {0}, not {1}. To install {0}, set the version above to " +
+                "latest; to install {1}, choose a folder that holds it.",
+                "В этой папке релиз {0}, а не {1}. Чтобы установить {0}, укажите выше версию " +
+                "latest; чтобы установить {1}, выберите папку с ним."),
+            refusal.Release,
+            refusal.Requested),
+        ReleaseRefusalKind.FileAccessDenied => string.Format(
+            InstallerCulture.Pick(
+                "This account cannot read {0} in the folder. Give it read access, or copy the " +
+                "three files somewhere it can read.",
+                "У этой учётной записи нет доступа на чтение к {0} в папке. Дайте ей право на " +
+                "чтение или скопируйте три файла туда, где оно есть."),
+            refusal.File),
+        ReleaseRefusalKind.FileUnreadable => string.Format(
+            InstallerCulture.Pick(
+                "{0} in the folder could not be read. Technical details: {1}",
+                "Не удалось прочитать {0} в папке. Технические сведения: {1}"),
+            refusal.File,
+            refusal.Detail),
+        ReleaseRefusalKind.FileTooLarge => string.Format(
+            InstallerCulture.Pick(
+                "{0} in the folder is larger than any release publishes, so it is not the " +
+                "release's file. Copy it again from the release.",
+                "{0} в папке больше, чем бывает в релизе, — это не файл релиза. Скопируйте его " +
+                "из релиза заново."),
+            refusal.File),
+        ReleaseRefusalKind.GitHubUnreachable => InstallerCulture.Pick(
+            "Could not reach GitHub to find the newest release. Check this computer's internet " +
+            "connection, or choose a folder that holds the release files.",
+            "Не удалось связаться с GitHub, чтобы найти самый новый релиз. Проверьте " +
+            "подключение к интернету или выберите папку с файлами релиза."),
+        ReleaseRefusalKind.NoPublishedRelease => string.Format(
+            InstallerCulture.Pick(
+                "GitHub shows this computer no published release of {0}. Choose a folder that " +
+                "holds the release files.",
+                "На GitHub нет опубликованных релизов {0}, доступных этому компьютеру. Выберите " +
+                "папку с файлами релиза."),
+            refusal.Repository) + (refusal.GitHubCliDetail is { } cli
+            ? " " + string.Format(
+                InstallerCulture.Pick(
+                    "The GitHub CLI did not find it either; if the repository is private, sign " +
+                    "in with gh auth login. Technical details: {0}",
+                    "GitHub CLI тоже его не нашёл; если репозиторий закрытый, войдите командой " +
+                    "gh auth login. Технические сведения: {0}"),
+                cli)
+            : string.Empty),
+        ReleaseRefusalKind.AssetNotFound => string.Format(
+            InstallerCulture.Pick(
+                "GitHub has no {1} in release {0}, or no such release. Check the version above.",
+                "На GitHub нет файла {1} в релизе {0} или нет такого релиза. Проверьте версию выше."),
+            refusal.Release,
+            refusal.File),
+        ReleaseRefusalKind.DownloadFailed => string.Format(
+            InstallerCulture.Pick(
+                "Could not download {1} of release {0} from GitHub. Technical details: {2}",
+                "Не удалось скачать {1} релиза {0} с GitHub. Технические сведения: {2}"),
+            refusal.Release,
+            refusal.File,
+            refusal.Detail),
+        _ => string.Format(
+            InstallerCulture.Pick(
+                "The release could not be checked. Technical details: {0}",
+                "Не удалось проверить релиз. Технические сведения: {0}"),
+            refusal.Detail),
+    };
+
     private void SetStatus(
         StatusWording value,
         string tag = "",
-        string reason = "",
+        ReleaseResolutionException? failure = null,
         double megabytes = 0)
     {
         wording = value;
         statusTag = tag;
-        statusReason = reason;
+        statusFailure = failure;
         statusMegabytes = megabytes;
         OnPropertyChanged(nameof(StatusText));
     }
+
+    /// <summary>
+    /// What the last check said, in the exception's English, while the page shows it; null once
+    /// the question changes. The run log quotes it when the run goes ahead without a release.
+    /// </summary>
+    public string? LastCheckFailure => statusFailure?.Message;
+
+    private string IncompatibleRelease => statusFailure?.Refusal.Release ?? ReleaseVersion;
 
     public bool HasPackage => State == PackageSourceState.Selected;
 
@@ -255,7 +372,7 @@ public sealed class PackagePageViewModel : ObservableObject
             InstallerCulture.Pick(
                 "LocalAi package: {0} is not compatible — it will not be installed",
                 "Пакет LocalAi: {0} несовместим — он не будет установлен"),
-            ResolvedTag ?? ReleaseVersion),
+            IncompatibleRelease),
         _ => InstallerCulture.Pick(
             "LocalAi package: not resolved — it will not be installed",
             "Пакет LocalAi: релиз не определён — он не будет установлен"),
@@ -364,19 +481,23 @@ public sealed class PackagePageViewModel : ObservableObject
         State = PackageSourceState.Selected;
     }
 
-    public void ReportIncompatible(string reason)
+    /// <summary>
+    /// A release signed correctly for another installer. It was found, so the page names it
+    /// rather than saying none was resolved.
+    /// </summary>
+    public void ReportIncompatible(ReleaseResolutionException failure)
     {
         IsResolving = false;
         Resolved = null;
-        SetStatus(StatusWording.Incompatible, reason: reason);
+        SetStatus(StatusWording.Incompatible, failure: failure);
         State = PackageSourceState.Incompatible;
     }
 
-    public void ReportUnavailable(string reason)
+    public void ReportUnavailable(ReleaseResolutionException failure)
     {
         IsResolving = false;
         Resolved = null;
-        SetStatus(StatusWording.Unavailable, reason: reason);
+        SetStatus(StatusWording.Unavailable, failure: failure);
         State = PackageSourceState.Unavailable;
     }
 

@@ -61,14 +61,14 @@ public sealed class DirectoryReleaseFeed : IReleaseFeed
     ];
 
     /// <summary>
-    /// Whether a folder looks like a release, by name alone. Used to offer the folder the
-    /// installer was started from without making the user type a path; it proves nothing about
-    /// the contents, which is what verification is for.
+    /// Whether a folder holds any of the three, by name alone. Used to offer the folder the
+    /// installer was started from without making the user type a path. One is enough: a folder
+    /// missing the others is still where somebody meant to install from, and the check then names
+    /// what is missing. It proves nothing about the contents, which is what verification is for.
     /// </summary>
-    public static bool LooksLikeReleaseFolder(string? directory) =>
+    public static bool HoldsAnyReleaseFile(string? directory) =>
         !string.IsNullOrWhiteSpace(directory) &&
-        Directory.Exists(directory) &&
-        RequiredFiles.All(name => File.Exists(Path.Combine(directory, name)));
+        RequiredFiles.Any(name => File.Exists(Path.Combine(directory, name)));
 
     /// <summary>
     /// A folder holds one release, so "latest" is whichever one is in it. An explicit tag is
@@ -96,7 +96,11 @@ public sealed class DirectoryReleaseFeed : IReleaseFeed
         throw new ReleaseResolutionException(
             $"The folder '{sourceDirectory}' holds release {available}, not '{requested}'. " +
             "Point the installer at a folder holding the release you asked for, or ask for " +
-            "the one that is there.");
+            "the one that is there.",
+            refusal: new(
+                ReleaseRefusalKind.OtherReleaseInFolder,
+                Release: available,
+                Requested: requested));
     }
 
     public async Task<ResolvedRelease> ResolveAsync(
@@ -106,6 +110,7 @@ public sealed class DirectoryReleaseFeed : IReleaseFeed
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(tag);
         ArgumentException.ThrowIfNullOrWhiteSpace(workingDirectory);
+        RequireReleaseFiles();
         Directory.CreateDirectory(workingDirectory);
 
         var manifestJson = await CopyDocumentAsync(
@@ -151,6 +156,7 @@ public sealed class DirectoryReleaseFeed : IReleaseFeed
     private async Task<ReleaseManifest> ReadVerifiedManifestAsync(
         CancellationToken cancellationToken)
     {
+        RequireReleaseFiles();
         var manifestJson = await ReadAsync(
                 GitHubReleaseFeed.ManifestAsset,
                 MaximumDocumentBytes,
@@ -184,9 +190,56 @@ public sealed class DirectoryReleaseFeed : IReleaseFeed
                       "be used."
                     : $"The manifest for release '{tag}' in '{sourceDirectory}' failed " +
                       "verification and will not be used.",
-                exception);
+                exception,
+                ReleaseRefusal.Rejected(exception, new(ReleaseRefusalKind.ManifestRejectedInFolder)));
         }
     }
+
+    /// <summary>
+    /// All three are looked for before anything is read, so every missing one is named. Only
+    /// then is the folder itself looked into: one that is not there and one this account cannot
+    /// open hide their files alike, and the remedies differ.
+    /// </summary>
+    private void RequireReleaseFiles()
+    {
+        string[] missing =
+        [
+            .. RequiredFiles.Where(name => !File.Exists(Path.Combine(sourceDirectory, name))),
+        ];
+        if (missing.Length == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            using var entries = Directory.EnumerateFileSystemEntries(sourceDirectory).GetEnumerator();
+            _ = entries.MoveNext();
+        }
+        catch (UnauthorizedAccessException exception)
+        {
+            throw new ReleaseResolutionException(
+                $"'{sourceDirectory}' could not be read: {exception.Message}",
+                exception,
+                new(ReleaseRefusalKind.FolderAccessDenied));
+        }
+        catch (IOException exception) when (!Directory.Exists(sourceDirectory))
+        {
+            throw new ReleaseResolutionException(
+                $"'{sourceDirectory}' could not be read: {exception.Message}",
+                exception,
+                new(ReleaseRefusalKind.NoSuchFolder));
+        }
+
+        throw Missing(missing);
+    }
+
+    private ReleaseResolutionException Missing(IReadOnlyList<string> names) =>
+        new(
+            $"'{sourceDirectory}' does not hold {string.Join(", ", names)}. An offline " +
+            "installation needs the three files a release publishes: " +
+            string.Join(", ", RequiredFiles) + ".",
+            refusal: new(ReleaseRefusalKind.MissingFiles, Files: names));
 
     private async Task<byte[]> ReadAsync(
         string name,
@@ -256,9 +309,7 @@ public sealed class DirectoryReleaseFeed : IReleaseFeed
         var path = Path.Combine(sourceDirectory, name);
         if (!File.Exists(path))
         {
-            throw new ReleaseResolutionException(
-                $"'{sourceDirectory}' does not hold {name}. An offline installation needs the " +
-                "three files a release publishes: " + string.Join(", ", RequiredFiles) + ".");
+            throw Missing([name]);
         }
 
         var length = new FileInfo(path).Length;
@@ -266,7 +317,8 @@ public sealed class DirectoryReleaseFeed : IReleaseFeed
         {
             throw new ReleaseResolutionException(
                 $"{name} in '{sourceDirectory}' is {length} bytes, which is larger than this " +
-                $"installer will read ({maximumBytes} bytes).");
+                $"installer will read ({maximumBytes} bytes).",
+                refusal: new(ReleaseRefusalKind.FileTooLarge, File: name));
         }
 
         try
@@ -282,7 +334,10 @@ public sealed class DirectoryReleaseFeed : IReleaseFeed
         {
             throw new ReleaseResolutionException(
                 $"{name} in '{sourceDirectory}' could not be read: {exception.Message}",
-                exception);
+                exception,
+                exception is UnauthorizedAccessException
+                    ? new(ReleaseRefusalKind.FileAccessDenied, File: name)
+                    : new(ReleaseRefusalKind.FileUnreadable, File: name, Detail: exception.Message));
         }
     }
 

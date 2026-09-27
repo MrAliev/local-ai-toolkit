@@ -74,6 +74,50 @@ public sealed class FallbackReleaseFeedTests
         Assert.Contains("not signed in", exception.Message, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// The page words the anonymous path's reason, and says the CLI did not find the release
+    /// either, with what the CLI said as the details.
+    /// </summary>
+    [Fact]
+    public async Task When_the_cli_fails_too_the_first_reason_stays_and_the_cli_s_is_carried()
+    {
+        var anonymous = new StubFeed(new ReleaseResolutionException(
+            "GitHub named no newest release.",
+            refusal: new(ReleaseRefusalKind.NoPublishedRelease, Repository: "owner/name")));
+        var cli = new StubFeed(new ReleaseResolutionException("not signed in"));
+        var feed = new FallbackReleaseFeed(anonymous, cli);
+
+        var exception = await Assert.ThrowsAsync<ReleaseResolutionException>(
+            () => feed.ResolveTagAsync("latest", TestContext.Current.CancellationToken));
+
+        Assert.Equal(ReleaseRefusalKind.NoPublishedRelease, exception.Refusal.Kind);
+        Assert.Equal("owner/name", exception.Refusal.Repository);
+        Assert.Equal("not signed in", exception.Refusal.GitHubCliDetail);
+    }
+
+    /// <summary>
+    /// Saying the CLI did not find the release would be false when it found one whose manifest
+    /// was refused, so that refusal is the one reported.
+    /// </summary>
+    [Fact]
+    public async Task A_manifest_the_cli_found_and_refused_is_what_is_reported()
+    {
+        var anonymous = new StubFeed(new ReleaseResolutionException(
+            "Release '0.1.45' has no asset named 'release-manifest.json'.",
+            refusal: new(ReleaseRefusalKind.AssetNotFound, Release: "0.1.45", File: "release-manifest.json")));
+        var cli = new StubFeed(new ReleaseResolutionException(
+            "The manifest for release '0.1.45' failed verification and will not be used.",
+            new ReleaseVerificationException("Release verification failed."),
+            new(ReleaseRefusalKind.ManifestRejectedOnGitHub, Release: "0.1.45")));
+        var feed = new FallbackReleaseFeed(anonymous, cli);
+
+        var exception = await Assert.ThrowsAsync<ReleaseResolutionException>(
+            () => feed.ResolveAsync("0.1.45", "unused", TestContext.Current.CancellationToken));
+
+        Assert.Equal(ReleaseRefusalKind.ManifestRejectedOnGitHub, exception.Refusal.Kind);
+        Assert.Null(exception.Refusal.GitHubCliDetail);
+    }
+
     [Fact]
     public async Task Works_without_a_secondary_feed_at_all()
     {
