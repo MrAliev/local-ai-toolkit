@@ -38,7 +38,6 @@ public sealed class PackagePageViewModel : ObservableObject
         VerifiedInFolder,
         Incompatible,
         Unavailable,
-        PackageMismatch,
     }
 
     private StatusWording wording = StatusWording.NotChecked;
@@ -163,19 +162,16 @@ public sealed class PackagePageViewModel : ObservableObject
         StatusWording.Unavailable =>
             InstallerCulture.Pick("No release resolved. ", "Релиз не определён. ") +
             Reason(statusFailure!.Refusal),
-        StatusWording.PackageMismatch =>
-            InstallerCulture.Pick("No release resolved. ", "Релиз не определён. ") +
-            InstallerCulture.Pick(
-                "localai-package.zip in the folder does not match the release manifest beside " +
-                "it — it is incomplete, altered or from another release. Copy all three files " +
-                "again from one release",
-                "localai-package.zip в папке не соответствует манифесту релиза рядом с ним — " +
-                "файл неполный, изменён или из другого релиза. Скопируйте заново все три файла " +
-                "одного релиза"),
         _ => InstallerCulture.Pick(
             "Press Check again to look up this release.",
             "Нажмите «Проверить снова», чтобы найти этот релиз."),
     };
+
+    /// <summary>The page's own English for a package that failed its hash, and the run log's.</summary>
+    private const string PackageMismatchReason =
+        "The file localai-package.zip in the folder does not match the release manifest beside " +
+        "it — it is incomplete, altered or from another release. Copy all three files again " +
+        "from one release.";
 
     /// <summary>
     /// Why no release was resolved, worded by what the check found. The exception's English
@@ -271,6 +267,11 @@ public sealed class PackagePageViewModel : ObservableObject
             refusal.Release,
             refusal.File,
             refusal.Detail),
+        ReleaseRefusalKind.PackageMismatch => InstallerCulture.Pick(
+            PackageMismatchReason,
+            "Файл localai-package.zip в папке не соответствует манифесту релиза рядом с ним — он " +
+            "неполный, изменён или из другого релиза. Скопируйте заново все три файла одного " +
+            "релиза."),
         _ => string.Format(
             InstallerCulture.Pick(
                 "The release could not be checked. Technical details: {0}",
@@ -479,13 +480,14 @@ public sealed class PackagePageViewModel : ObservableObject
     /// <summary>The manifest verified; the package in the folder is being hashed against it.</summary>
     public void BeginCheckingPackage() => SetStatus(StatusWording.CheckingPackage);
 
-    public void ReportPackageMismatch()
-    {
-        IsResolving = false;
-        Resolved = null;
-        SetStatus(StatusWording.PackageMismatch);
-        State = PackageSourceState.Unavailable;
-    }
+    /// <summary>
+    /// The folder's package failed the hash on this page. No feed threw, so the refusal is made
+    /// here, and its message, the run log's, is the page's English.
+    /// </summary>
+    public void ReportPackageMismatch() =>
+        ReportUnavailable(new ReleaseResolutionException(
+            PackageMismatchReason,
+            refusal: new(ReleaseRefusalKind.PackageMismatch)));
 
     /// <param name="packageChecked">
     /// The folder's package matched the manifest's size and SHA-256. Only then does a folder

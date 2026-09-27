@@ -20,6 +20,8 @@ public enum ReleaseRefusalKind
     NoPublishedRelease,
     AssetNotFound,
     DownloadFailed,
+    /// <summary>The folder's package has another size or SHA-256 than its signed manifest names.</summary>
+    PackageMismatch,
 }
 
 /// <summary>
