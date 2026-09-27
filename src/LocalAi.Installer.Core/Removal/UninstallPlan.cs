@@ -198,9 +198,7 @@ public sealed record UninstallPlan(
                     StringComparison.Ordinal) &&
                 plan.HasChanges) is { } settingsPlan)
         {
-            text.AppendLine(InstallerCulture.Pick(
-                "Claude Code hooks:",
-                "Хуки Claude Code:"));
+            text.AppendLine(HooksHeading + ":");
             foreach (var file in settingsPlan.Files)
             {
                 // A line per effect rather than per file. Both effects live in one document,
@@ -307,14 +305,36 @@ public sealed record UninstallPlan(
                 "keep a copy of the previous version: ",
                 "оставить копию прежней версии: ") + file.BackupPath);
 
+    /// <summary>
+    /// The headings this page puts over the client plans named, in its order. Never "Claude"
+    /// for the hooks plan: it also goes when the Claude row is kept.
+    /// </summary>
+    public static IReadOnlyList<string> Headings(IReadOnlyCollection<string> agentNames)
+    {
+        var headings = RemovalMatrix.Items
+            .Where(item => AgentNameOf(item) is { } agent && agentNames.Contains(agent))
+            .Select(RemovalMatrix.Title)
+            .ToList();
+        if (agentNames.Contains(ClaudeConfigurationAdapter.HooksName))
+        {
+            headings.Add(HooksHeading);
+        }
+
+        return headings;
+    }
+
+    private static string HooksHeading => InstallerCulture.Pick("Claude Code hooks", "Хуки Claude Code");
+
+    private static string? AgentNameOf(RemovalItem item) => item switch
+    {
+        RemovalItem.ClaudeIntegration => "Claude",
+        RemovalItem.CodexIntegration => "Codex",
+        _ => null,
+    };
+
     private AgentConfigurationPlan[] AgentPlansFor(RemovalItem item)
     {
-        var agent = item switch
-        {
-            RemovalItem.ClaudeIntegration => "Claude",
-            RemovalItem.CodexIntegration => "Codex",
-            _ => null,
-        };
+        var agent = AgentNameOf(item);
         return agent is null
             ? []
             : AgentConfigurations
