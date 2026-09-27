@@ -4,6 +4,7 @@ using LocalAi.Installer.Core.Abstractions;
 
 namespace LocalAi.Installer.Core.Diagnosis;
 
+/// <param name="readUserPath">The account's stored PATH, for the inspection; the machine's own when null.</param>
 public sealed class WindowsEnvironmentDetector(
     IEnvironmentProbe environment,
     IFileSystemProbe fileSystem,
@@ -11,7 +12,8 @@ public sealed class WindowsEnvironmentDetector(
     IInstalledApplicationProbe installedApplications,
     IDiskProbe diskProbe,
     INetworkProbe networkProbe,
-    IWindowsGpuProbe gpuProbe)
+    IWindowsGpuProbe gpuProbe,
+    Func<string?>? readUserPath = null)
 {
     private static readonly TimeSpan VersionProbeTimeout = TimeSpan.FromSeconds(5);
 
@@ -110,7 +112,7 @@ public sealed class WindowsEnvironmentDetector(
         var disk = diskProbe.Observe(environment.LocalAppData);
         var network = await networkProbe.ObserveAsync(cancellationToken).ConfigureAwait(false);
         var gpu = await gpuProbe.ProbeAsync(cancellationToken).ConfigureAwait(false);
-        var existing = new ExistingLocalAiInspector(fileSystem).Inspect(
+        var existing = new ExistingLocalAiInspector(fileSystem, readUserPath).Inspect(
             environment.LocalAppData);
         var agents = new[]
         {
