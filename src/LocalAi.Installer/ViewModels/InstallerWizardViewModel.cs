@@ -308,7 +308,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             ReportUnexpectedError);
         RollbackPreviousRunCommand = new AsyncRelayCommand(
             () => RollbackPreviousRunAsync(),
-            () => HasInterruptedRun && !isRunning,
+            () => CanRollbackPreviousRun && !isRunning,
             ReportUnexpectedError);
 
         // The models group names the rule it sits under, so a rule change reaches it at once.
@@ -641,6 +641,13 @@ public sealed class InstallerWizardViewModel : ObservableObject
         journal.Snapshot.HasReversibleWork;
 
     public bool HasInterruptedRun => interruptedJournal is not null;
+
+    /// <summary>
+    /// Read from the snapshot the notice is worded from, so the button and the sentence above it
+    /// cannot disagree about whether anything can be taken back.
+    /// </summary>
+    public bool CanRollbackPreviousRun =>
+        interruptedJournal is not null && interruptedAsFound is { HasReversibleWork: true };
 
     public string? UnexpectedError => unexpected is null
         ? null
@@ -1416,7 +1423,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
 
     public async Task RollbackPreviousRunAsync()
     {
-        if (interruptedJournal is not { } journal || isRunning)
+        if (!CanRollbackPreviousRun || interruptedJournal is not { } journal || isRunning)
         {
             return;
         }
@@ -2154,6 +2161,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         OnPropertyChanged(nameof(ReviewGroups));
         OnPropertyChanged(nameof(CanRollback));
         OnPropertyChanged(nameof(HasInterruptedRun));
+        OnPropertyChanged(nameof(CanRollbackPreviousRun));
         OnPropertyChanged(nameof(InterruptedRunNotice));
         OnPropertyChanged(nameof(HasInterruptedRunNotice));
         BackCommand.RaiseCanExecuteChanged();
