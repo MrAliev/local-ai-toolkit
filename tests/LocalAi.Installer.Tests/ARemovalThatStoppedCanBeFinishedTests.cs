@@ -23,6 +23,10 @@ public sealed class ARemovalThatStoppedCanBeFinishedTests : IDisposable
         "LocalAi is not installed here; these rows apply to what is left of it, and the next " +
         "page lists every path found.";
 
+    private const string NotWorking =
+        "This is not a working LocalAi installation; these rows apply to what is there, and the " +
+        "next page lists every path found.";
+
     private const string AfterAnError =
         "Check the outcome below before retrying. Removal does not restore deleted data.";
 
@@ -71,10 +75,37 @@ public sealed class ARemovalThatStoppedCanBeFinishedTests : IDisposable
             wizard.StepDescription);
     }
 
+    /// <summary>
+    /// Not "not installed": the start screen has just said there is a LocalAi directory here
+    /// that is not a working installation, and this page agrees with it.
+    /// </summary>
     [Fact]
-    public async Task A_broken_installation_is_not_a_working_one_either()
+    public async Task A_broken_installation_is_called_what_the_start_screen_called_it()
     {
         var wizard = await Wizard(inspector: new StubInspector(ExistingLocalAiState.Unrecognized));
+
+        Assert.Equal(NotWorking + " " + Usual, wizard.StepDescription);
+    }
+
+    [Fact]
+    public async Task A_broken_installation_is_called_so_in_russian()
+    {
+        var wizard = await Wizard(inspector: new StubInspector(ExistingLocalAiState.Unrecognized));
+
+        InstallerCulture.Current = InstallerLanguage.Russian;
+
+        Assert.Equal(
+            "Это не рабочая установка LocalAi; эти строки относятся к тому, что здесь есть, а на " +
+            "следующей странице перечислены все найденные пути. Начните с одного из трёх наборов " +
+            "и меняйте любые строки. Ничего не будет удалено, пока вы не подтвердите это на " +
+            "следующей странице.",
+            wizard.StepDescription);
+    }
+
+    [Fact]
+    public async Task The_signing_keys_alone_are_what_is_left_too()
+    {
+        var wizard = await Wizard(inspector: new StubInspector(ExistingLocalAiState.SigningKeysOnly));
 
         Assert.Equal(NotInstalled + " " + Usual, wizard.StepDescription);
     }
@@ -166,6 +197,27 @@ public sealed class ARemovalThatStoppedCanBeFinishedTests : IDisposable
         Assert.False(Directory.Exists(Path.Combine(machine.Runtime, "jobs")));
         Assert.True(File.Exists(Path.Combine(machine.Runtime, RemovalMatrix.SettingsFileNames.First())));
         Assert.True(File.Exists(Path.Combine(machine.HuskyHooks, "post-commit")));
+    }
+
+    /// <summary>
+    /// Removing what is left starts a new removal, so the rail starts over as it did when the
+    /// window opened: Remove and Finished marked beside a removal that has not run yet would say
+    /// it already happened.
+    /// </summary>
+    [Fact]
+    public async Task Removing_what_is_left_starts_the_rail_over()
+    {
+        var opened = (await Wizard()).StepList.ToArray();
+        Assert.True(opened[0].IsCurrent);
+        Assert.All(opened, step => Assert.False(step.IsDone, step.Title));
+        var wizard = await Confirmed(await Wizard());
+        Assert.False(await RunCancelledAfterBin(wizard));
+        Assert.Contains(wizard.StepList, step => step.IsDone);
+
+        Assert.True(await wizard.RemoveWhatIsLeftAsync(TestContext.Current.CancellationToken));
+
+        Assert.Equal(opened, wizard.StepList);
+        Assert.Equal("Step 1 of 4", wizard.StepStatus);
     }
 
     [Fact]

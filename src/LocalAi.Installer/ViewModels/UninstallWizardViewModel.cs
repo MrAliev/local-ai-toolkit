@@ -49,8 +49,8 @@ public sealed class UninstallWizardViewModel : ObservableObject
     private bool hasRunError;
     private bool hasLoaded;
 
-    /// <summary>No working installation when the disk was last read: bin gone, or broken.</summary>
-    private bool withoutInstallation;
+    /// <summary>What the disk held when it was last read; null until then.</summary>
+    private ExistingLocalAiState? found;
 
     private enum Blocked
     {
@@ -246,7 +246,7 @@ public sealed class UninstallWizardViewModel : ObservableObject
             }
 
             currentPage = value;
-            // Added to, never removed from. Going back does not un-visit a page.
+            // Going back does not un-visit a page; only removing what is left starts over.
             visited.Add(value);
             RefreshAll();
         }
@@ -421,13 +421,21 @@ public sealed class UninstallWizardViewModel : ObservableObject
     public string StepDescription => CurrentPage switch
     {
         // The rows name binaries and a launcher even when bin is already gone.
-        UninstallPage.Choose => (withoutInstallation
-            ? InstallerCulture.Pick(
+        UninstallPage.Choose => found switch
+        {
+            null or ExistingLocalAiState.Compatible => string.Empty,
+            // What the start screen called it: a directory that is not a working installation.
+            ExistingLocalAiState.Unrecognized => InstallerCulture.Pick(
+                "This is not a working LocalAi installation; these rows apply to what is there, " +
+                "and the next page lists every path found. ",
+                "Это не рабочая установка LocalAi; эти строки относятся к тому, что здесь есть, " +
+                "а на следующей странице перечислены все найденные пути. "),
+            _ => InstallerCulture.Pick(
                 "LocalAi is not installed here; these rows apply to what is left of it, and " +
                 "the next page lists every path found. ",
                 "LocalAi здесь не установлен; эти строки относятся к тому, что от него " +
-                "осталось, а на следующей странице перечислены все найденные пути. ")
-            : string.Empty) + InstallerCulture.Pick(
+                "осталось, а на следующей странице перечислены все найденные пути. "),
+        } + InstallerCulture.Pick(
             "Start from one of the three presets and change any row you like. Nothing is " +
             "removed until you confirm it on the next page.",
             "Начните с одного из трёх наборов и меняйте любые строки. " +
@@ -542,6 +550,8 @@ public sealed class UninstallWizardViewModel : ObservableObject
         isConfirmed = false;
         OnPropertyChanged(nameof(IsConfirmed));
         SetProgress(0, ProgressWord.Ready);
+        // A new removal, so the rail starts as it did when the window opened.
+        visited.Clear();
         CurrentPage = UninstallPage.Choose;
         await ScanAsync(cancellationToken);
         return true;
@@ -554,7 +564,7 @@ public sealed class UninstallWizardViewModel : ObservableObject
     private async Task ScanAsync(CancellationToken cancellationToken)
     {
         blocked = null;
-        withoutInstallation = false;
+        found = null;
         // Windows deletes neither a running executable nor its directory, so a removal from
         // here would fail on bin and leave it behind. App hands over to a temporary copy before
         // this wizard exists; reaching this means that did not happen.
@@ -583,7 +593,7 @@ public sealed class UninstallWizardViewModel : ObservableObject
             return;
         }
 
-        withoutInstallation = state != ExistingLocalAiState.Compatible;
+        found = state;
         // Planned as a full uninstall purely to inventory the connected repositories: the
         // page has to list them before anybody has chosen anything. A repository left out
         // before is left out again.
