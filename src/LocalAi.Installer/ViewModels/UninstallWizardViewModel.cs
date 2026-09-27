@@ -566,8 +566,8 @@ public sealed class UninstallWizardViewModel : ObservableObject
         blocked = null;
         found = null;
         // Windows deletes neither a running executable nor its directory, so a removal from
-        // here would fail on bin and leave it behind. App hands over to a temporary copy before
-        // this wizard exists; reaching this means that did not happen.
+        // here would fail on the directory holding it and leave it behind. App hands over to a
+        // temporary copy before this wizard exists; reaching this means that did not happen.
         if (executablePath is not null && IsInside(layout.Root, executablePath))
         {
             blocked = Blocked.InsideInstallation;
