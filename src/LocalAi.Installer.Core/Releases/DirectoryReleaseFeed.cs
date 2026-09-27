@@ -316,11 +316,11 @@ public sealed class DirectoryReleaseFeed : IReleaseFeed, IReleasePackageCheck
         var source = Open(name, maximumBytes);
         await using (source.ConfigureAwait(false))
         {
-            var destination = new FileStream(
+            var destination = CreateCopy(target, () => new FileStream(
                 target,
                 FileMode.Create,
                 FileAccess.Write,
-                FileShare.None);
+                FileShare.None));
             await using (destination.ConfigureAwait(false))
             {
                 var buffer = new byte[CopyBufferBytes];
@@ -330,13 +330,42 @@ public sealed class DirectoryReleaseFeed : IReleaseFeed, IReleasePackageCheck
                            .ReadAsync(buffer, cancellationToken)
                            .ConfigureAwait(false)) > 0)
                 {
-                    await destination
-                        .WriteAsync(buffer.AsMemory(0, read), cancellationToken)
+                    await WriteCopyAsync(
+                            target,
+                            () => destination.WriteAsync(buffer.AsMemory(0, read), cancellationToken).AsTask())
                         .ConfigureAwait(false);
                     total += read;
                     progress?.Report(total);
                 }
+
+                await WriteCopyAsync(target, () => destination.FlushAsync(cancellationToken))
+                    .ConfigureAwait(false);
             }
+        }
+    }
+
+    /// <summary>The working folder refusing the copy, told apart from the folder refusing the read.</summary>
+    private static FileStream CreateCopy(string target, Func<FileStream> create)
+    {
+        try
+        {
+            return create();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            throw new WorkingCopyWriteException(target, exception);
+        }
+    }
+
+    private static async Task WriteCopyAsync(string target, Func<Task> write)
+    {
+        try
+        {
+            await write().ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            throw new WorkingCopyWriteException(target, exception);
         }
     }
 
