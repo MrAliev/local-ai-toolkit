@@ -226,6 +226,23 @@ public sealed class McpUsageReportingTests : IDisposable
         Assert.Equal(UsageDelivery.Delivered, report.Outcome.Delivery);
     }
 
+    [Fact]
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    public async Task A_tool_call_before_installation_leaves_a_root_the_installer_accepts()
+    {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "The installation layout is Windows-only.");
+        Directory.CreateDirectory(root);
+        var layout = LocalAi.Installer.Core.Activation.InstallationLayout.FromLocalAppData(root);
+
+        await new UsageReporting(layout.Root).InvokeAsync("locallm", "ask_local", Guid.NewGuid(),
+            _ => ValueTask.FromResult(Text("answer")), TestContext.Current.CancellationToken);
+
+        Assert.NotEmpty(Directory.EnumerateFiles(Path.Combine(layout.Root, "telemetry", "usage")));
+        using var lease = LocalAi.Installer.Core.Activation.InstallationLayoutLease.Acquire(
+            layout, requireFreshInstallerTree: true);
+        Assert.Equal(layout.Root, lease.Layout.Root);
+    }
+
     private async Task<UsageReport> Report(Guid id)
     {
         var report = await new UsageReportStore(root).ReadAsync(id, TestContext.Current.CancellationToken);
