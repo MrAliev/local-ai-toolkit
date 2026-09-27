@@ -83,4 +83,14 @@ public sealed class ReleaseVerificationException : Exception
         : base(message)
     {
     }
+
+    public ReleaseVerificationException(string message, string incompatibleRelease)
+        : base(message) =>
+        IncompatibleRelease = incompatibleRelease;
+
+    /// <summary>
+    /// The version of a release whose signature verified but which this installer cannot install.
+    /// Trustworthy because the signature is checked before compatibility.
+    /// </summary>
+    public string? IncompatibleRelease { get; }
 }

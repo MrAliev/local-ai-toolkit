@@ -3,6 +3,7 @@ using LocalAi.Contracts;
 using LocalAi.Installer.Core;
 using LocalAi.Installer.Core.Dependencies;
 using LocalAi.Installer.Core.Planning;
+using LocalAi.Installer.Core.Releases;
 using LocalAi.Installer.Core.Transactions;
 using LocalAi.Installer.ViewModels;
 
@@ -181,7 +182,7 @@ public sealed class InstallerWizardViewModelTests
         Assert.False(wizard.Package.HasPackage);
         Assert.False(wizard.Package.IsCompatible);
 
-        wizard.Package.ReportUnavailable("no manifest published");
+        wizard.Package.ReportUnavailable(new ReleaseResolutionException("no manifest published"));
 
         Assert.False(wizard.Package.HasPackage);
         Assert.Contains("not resolved", wizard.Package.ReviewText, StringComparison.Ordinal);
@@ -388,9 +389,10 @@ public sealed class InstallerWizardViewModelTests
     }
 
     /// <summary>
-    /// Nothing in the wizard asks anyone to sign in to GitHub any more. Releases are public
+    /// Nothing in the wizard asks anyone to sign in to GitHub up front. Releases are public
     /// and read over plain HTTPS, so an instruction to run `gh auth login` would send someone
-    /// to create an account for a download they are already allowed to make.
+    /// to create an account for a download they are already allowed to make. The package page
+    /// names it only after both the anonymous path and an installed GitHub CLI found no release.
     /// </summary>
     [Fact]
     public void No_page_asks_for_a_GitHub_account()

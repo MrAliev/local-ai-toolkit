@@ -153,7 +153,25 @@ public sealed class PackagePageViewModelTests : IDisposable
     [Fact]
     public void The_installer_own_folder_is_offered_when_it_holds_a_release()
     {
-        var folder = ReleaseFolder(complete: true);
+        var folder = ReleaseFolder(files: 3);
+        var page = new PackagePageViewModel();
+
+        page.OfferLocalFolder(folder);
+
+        Assert.Equal(folder, page.SourceFolder);
+    }
+
+    /// <summary>
+    /// A folder missing a release file is still where somebody meant to install from. Ignoring
+    /// it sent the run to GitHub without a word; offering it lets the check name what is missing
+    /// (run 20260927-173013, variants 09–11).
+    /// </summary>
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    public void A_folder_holding_part_of_a_release_is_offered(int files)
+    {
+        var folder = ReleaseFolder(files);
         var page = new PackagePageViewModel();
 
         page.OfferLocalFolder(folder);
@@ -164,10 +182,10 @@ public sealed class PackagePageViewModelTests : IDisposable
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void A_folder_that_is_not_a_release_is_not_offered(bool exists)
+    public void A_folder_holding_none_of_the_release_files_is_not_offered(bool exists)
     {
         var folder = exists
-            ? ReleaseFolder(complete: false)
+            ? ReleaseFolder(files: 0)
             : Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         var page = new PackagePageViewModel();
 
@@ -182,19 +200,21 @@ public sealed class PackagePageViewModelTests : IDisposable
     {
         var page = new PackagePageViewModel { SourceFolder = @"D:\chosen" };
 
-        page.OfferLocalFolder(ReleaseFolder(complete: true));
+        page.OfferLocalFolder(ReleaseFolder(files: 3));
 
         Assert.Equal(@"D:\chosen", page.SourceFolder);
     }
 
-    private string ReleaseFolder(bool complete)
+    /// <summary>
+    /// The first <paramref name="files"/> of the three a release publishes, beside the files a
+    /// release candidate's set also carries — which count for nothing on their own.
+    /// </summary>
+    private string ReleaseFolder(int files)
     {
         var folder = new TemporaryDirectory("LocalAi.Installer.Tests.Folder");
         _folders.Add(folder);
-        var names = complete
-            ? DirectoryReleaseFeed.RequiredFiles
-            : DirectoryReleaseFeed.RequiredFiles.Take(2).ToArray();
-        foreach (var name in names)
+        foreach (var name in DirectoryReleaseFeed.RequiredFiles.Take(files)
+                     .Concat(["LocalAi.Installer.exe", "INSTALL.txt"]))
         {
             File.WriteAllText(folder.Combine(name), "placeholder");
         }
