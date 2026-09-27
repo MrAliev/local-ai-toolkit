@@ -31,17 +31,17 @@ internal static class InstallerRunMessages
         if (outcome.WasCancelled)
         {
             next.Add(InstallerCulture.Pick(
-                "Installation stopped. Changes already made are listed above.",
-                "Установка остановлена. Выполненные изменения перечислены выше."));
+                "To start over, close this window and run the installer again.",
+                "Чтобы начать заново, закройте это окно и снова запустите установщик."));
         }
         else if (outcome.HasRunError)
         {
             next.Add(InstallerCulture.Pick(
-                "Installation did not complete successfully. Completed and unfinished actions are listed above.",
-                "Установка завершилась с проблемами. Выполненные и незавершённые действия перечислены выше."));
+                "Completed and unfinished actions are listed above.",
+                "Выполненные и незавершённые действия перечислены выше."));
         }
 
-        if (outcome.HasRunError)
+        if (outcome.HasRunError && !outcome.WasCancelled)
         {
             next.Add(InstallerCulture.Pick(
                 "Keep the report or copy the technical details below. After addressing the reported cause, close this window and run the installer again.",
@@ -68,8 +68,8 @@ internal static class InstallerRunMessages
                     "The rollback button can undo recorded reversible changes only. Shared dependencies and downloaded models are retained.",
                     "Кнопка отката отменяет только записанные обратимые изменения. Общие зависимости и скачанные модели сохраняются.")
                 : InstallerCulture.Pick(
-                    "Automatic rollback is unavailable for this run. Changes already made remain in place.",
-                    "Автоматический откат для этого запуска недоступен. Выполненные изменения остаются на месте."));
+                    "Nothing this run applied can be rolled back by the installer.",
+                    "Ничего из применённого этим запуском установщик откатить не может."));
         }
 
         if (outcome.ReportSaveFailure is { } saveFailure)

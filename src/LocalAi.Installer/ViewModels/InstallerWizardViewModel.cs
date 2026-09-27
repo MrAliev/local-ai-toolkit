@@ -549,7 +549,8 @@ public sealed class InstallerWizardViewModel : ObservableObject
     /// </summary>
     private bool IsUpdate => Mode is StartChoice.UpdateOrRepair or StartChoice.CleanReinstall;
 
-    public string StepTitle => WizardText.Title(CurrentPage, IsUpdate, hasRunError);
+    public string StepTitle =>
+        WizardText.Title(CurrentPage, IsUpdate, hasRunError, wasCancelled: wasCancelled);
 
     public string StepDescription =>
         WizardText.Description(
@@ -559,7 +560,8 @@ public sealed class InstallerWizardViewModel : ObservableObject
             hasRunError || choiceNotApplied,
             isChecking: diagnose.IsChecking,
             isReleaseFolded: IsReleaseFolded,
-            areSettingsFolded: AreSettingsFolded);
+            areSettingsFolded: AreSettingsFolded,
+            wasCancelled: wasCancelled);
 
     public string StepStatus => string.Format(
         InstallerCulture.Pick("Step {0} of {1}", "Шаг {0} из {1}"),
