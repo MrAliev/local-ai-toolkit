@@ -187,23 +187,32 @@ public sealed class DependencySelection(string Id, string Title, bool IsRequired
     /// <summary>A recipe, and the tool it runs found on this computer.</summary>
     public bool IsInstallable => HasAutomatedInstaller && missing == MissingInstaller.None;
 
-    /// <summary>Why a missing component cannot be ticked, and where to get it instead.</summary>
-    public string InstallerHint => IsInstalled ? string.Empty : missing switch
+    /// <summary>Why the box cannot be ticked. The address to get it from is <see cref="Download"/>.</summary>
+    public string InstallerHint => (missing, IsInstalled) switch
     {
-        MissingInstaller.WinGet => string.Format(
-            InstallerCulture.Pick(
-                "WinGet was not found, so this installer cannot install it. After installing it " +
-                "yourself, check again. Download: {0}",
-                "WinGet не найден, поэтому установить автоматически не получится. Установите " +
-                "вручную и проверьте снова. Скачать: {0}"),
-            download),
-        MissingInstaller.Npm => InstallerCulture.Pick(
+        (MissingInstaller.WinGet, false) => InstallerCulture.Pick(
+            "WinGet was not found, so this installer cannot install it. After installing it yourself, " +
+            "check again.",
+            "WinGet не найден, поэтому установить автоматически не получится. Установите вручную и " +
+            "проверьте снова."),
+        (MissingInstaller.Npm, false) => InstallerCulture.Pick(
             "npm was not found; it comes with Node.js 20. With Node.js 20 installed, check again.",
             "npm не найден; он входит в Node.js 20. Когда Node.js 20 будет установлен, проверьте снова."),
+        (MissingInstaller.WinGet, true) => InstallerCulture.Pick(
+            "Reinstalling needs WinGet, which was not found.",
+            "Для переустановки нужен WinGet, а он не найден."),
+        (MissingInstaller.Npm, true) => InstallerCulture.Pick(
+            "Reinstalling needs npm, which was not found.",
+            "Для переустановки нужен npm, а он не найден."),
         _ => string.Empty,
     };
 
     public bool HasInstallerHint => InstallerHint.Length > 0;
+
+    /// <summary>Where to get a missing component this installer cannot install: shown as a link of its own.</summary>
+    public Uri? Download => missing == MissingInstaller.WinGet && !IsInstalled ? download : null;
+
+    public bool HasDownload => Download is not null;
 
     internal void SetMissing(MissingInstaller installer, Uri? link)
     {
@@ -261,7 +270,9 @@ public sealed class DependencySelection(string Id, string Title, bool IsRequired
     public string AccessibleName => ActionText + " " + Title;
 
     public string ActionText => !IsInstallable
-        ? InstallerCulture.Pick("Install manually", "Установить вручную")
+        ? IsInstalled
+            ? InstallerCulture.Pick("Cannot reinstall", "Нельзя переустановить")
+            : InstallerCulture.Pick("Install manually", "Установить вручную")
         : IsInstalled
             ? InstallerCulture.Pick("Reinstall", "Переустановить")
             : InstallerCulture.Pick("Install", "Установить");

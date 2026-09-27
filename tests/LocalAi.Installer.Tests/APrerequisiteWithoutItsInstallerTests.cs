@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Xml.Linq;
 using LocalAi.Installer.Core;
 using LocalAi.Installer.Core.Diagnosis;
@@ -36,29 +37,52 @@ public sealed class APrerequisiteWithoutItsInstallerTests
         Assert.True(page.CanContinue);
         Assert.True(Row(page, "ScipTypeScript").IsInstallable);
         Assert.True(Row(page, "Git").HasAutomatedInstaller);
+        // The sentence without the address: the address is a link of its own, on the line below.
         Assert.Equal(
             "WinGet was not found, so this installer cannot install it. After installing it " +
-            "yourself, check again. Download: https://git-scm.com/install/windows",
+            "yourself, check again.",
             Row(page, "Git").InstallerHint);
         Assert.True(Row(page, "Git").HasInstallerHint);
+        Assert.Equal(new Uri("https://git-scm.com/install/windows"), Row(page, "Git").Download);
+        Assert.True(Row(page, "Git").HasDownload);
+        Assert.Equal("Download:", PageLabels.Download);
 
         InstallerCulture.Current = InstallerLanguage.Russian;
         Assert.Equal(
             "WinGet не найден, поэтому установить автоматически не получится. Установите вручную " +
-            "и проверьте снова. Скачать: https://ollama.com/download/windows",
+            "и проверьте снова.",
             Row(page, "Ollama").InstallerHint);
+        Assert.Equal(new Uri("https://ollama.com/download/windows"), Row(page, "Ollama").Download);
+        Assert.Equal("Скачать:", PageLabels.Download);
     }
 
-    /// <summary>"After installing it yourself" is advice for something that is missing.</summary>
+    /// <summary>
+    /// "After installing it yourself" is advice for something that is missing. A component already
+    /// here is told what reinstalling it needs, and its box is not named "Install manually".
+    /// </summary>
     [Fact]
     public void A_component_already_here_is_not_told_to_be_installed_by_hand()
     {
         var page = new DependenciesPageViewModel();
         page.SetInstalled("Git", true);
-        page.SetInstallers(winGetFound: false, npmFound: true);
+        page.SetInstalled("ScipPython", true);
+        page.SetInstallers(winGetFound: false, npmFound: false);
 
-        Assert.False(Row(page, "Git").IsInstallable);
-        Assert.False(Row(page, "Git").HasInstallerHint);
+        var git = Row(page, "Git");
+        Assert.False(git.IsInstallable);
+        Assert.Equal("Reinstalling needs WinGet, which was not found.", git.InstallerHint);
+        Assert.True(git.HasInstallerHint);
+        Assert.Null(git.Download);
+        Assert.False(git.HasDownload);
+        Assert.Equal("Cannot reinstall Git", git.AccessibleName);
+        Assert.Equal("Reinstalling needs npm, which was not found.", Row(page, "ScipPython").InstallerHint);
+        Assert.Equal("Install manually Ollama", Row(page, "Ollama").AccessibleName);
+
+        InstallerCulture.Current = InstallerLanguage.Russian;
+        Assert.Equal("Для переустановки нужен WinGet, а он не найден.", git.InstallerHint);
+        Assert.Equal("Для переустановки нужен npm, а он не найден.", Row(page, "ScipPython").InstallerHint);
+        Assert.Equal("Нельзя переустановить Git", git.AccessibleName);
+        Assert.Equal("Установить вручную Ollama", Row(page, "Ollama").AccessibleName);
     }
 
     [Fact]
@@ -211,23 +235,55 @@ public sealed class APrerequisiteWithoutItsInstallerTests
         Assert.Equal("nothing was selected; still needed, install by hand: Git, Ollama", row.Detail);
     }
 
+    /// <summary>
+    /// Inside a box that is off, text cannot be selected and a link cannot be pressed. The hint and
+    /// its link sit under the box instead, where its label starts: the indicator's width and the
+    /// gap after it, taken from the control template.
+    /// </summary>
     [Fact]
-    public void The_hint_sits_under_its_row_and_the_recipe_note_keeps_to_rows_without_one()
+    public void The_hint_and_its_link_sit_under_the_box_and_the_recipe_note_keeps_to_rows_without_one()
     {
         var template = Window().Descendants(Presentation + "ItemsControl")
             .Single(items => items.Attribute("ItemsSource")?.Value == "{Binding Dependencies.Dependencies}");
+        var box = template.Descendants(Presentation + "CheckBox").Single();
         var texts = template.Descendants(Presentation + "TextBlock").ToList();
 
         var hint = Assert.Single(texts, text => text.Attribute("Text")?.Value == "{Binding InstallerHint, Mode=OneWay}");
-        Assert.Contains(
-            hint.Descendants(Presentation + "DataTrigger"),
-            trigger => trigger.Attribute("Binding")?.Value == "{Binding HasInstallerHint}" &&
-                trigger.Attribute("Value")?.Value == "True");
+        Assert.True(ShownWhen(hint, "{Binding HasInstallerHint}", "True"));
+        var link = Assert.Single(template.Descendants(Presentation + "Hyperlink"));
+        Assert.Equal("{Binding Download, Mode=OneWay}", link.Attribute("NavigateUri")?.Value);
+        Assert.Equal("OnOpenLink", link.Attribute("RequestNavigate")?.Value);
+        Assert.Equal(
+            "{Binding Download.OriginalString, Mode=OneWay}",
+            Assert.Single(link.Elements(Presentation + "Run")).Attribute("Text")?.Value);
+        var line = link.Parent!;
+        Assert.Equal(Presentation + "TextBlock", line.Name);
+        Assert.Equal("{vm:Label Download}", line.Elements(Presentation + "Run").First().Attribute("Text")?.Value);
+        Assert.True(ShownWhen(line, "{Binding HasDownload}", "True"));
+        foreach (var under in new[] { hint, line })
+        {
+            Assert.DoesNotContain(box, under.Ancestors());
+            Assert.Equal(LabelIndent(), double.Parse(under.Attribute("Margin")!.Value.Split(',')[0], CultureInfo.InvariantCulture));
+        }
+
         var recipe = Assert.Single(texts, text => text.Attribute("Text")?.Value == "{vm:Label NoAutomatedInstaller}");
-        Assert.Contains(
-            recipe.Descendants(Presentation + "DataTrigger"),
-            trigger => trigger.Attribute("Binding")?.Value == "{Binding HasAutomatedInstaller}" &&
-                trigger.Attribute("Value")?.Value == "False");
+        Assert.True(ShownWhen(recipe, "{Binding HasAutomatedInstaller}", "False"));
+    }
+
+    private static bool ShownWhen(XElement text, string binding, string value) =>
+        text.Descendants(Presentation + "DataTrigger").Any(trigger =>
+            trigger.Attribute("Binding")?.Value == binding && trigger.Attribute("Value")?.Value == value);
+
+    /// <summary>Where a checkbox's label starts: the box and the gap after it, from Themes/Controls.xaml.</summary>
+    private static double LabelIndent()
+    {
+        var indicator = XDocument.Parse(InstallerMarkup.Read(Path.Combine("Themes", "Controls.xaml")))
+            .Descendants(Presentation + "ControlTemplate")
+            .Single(template => template.Attribute("TargetType")?.Value == "CheckBox")
+            .Descendants(Presentation + "Border")
+            .Single(border => border.Attributes().Any(a => a.Name.LocalName == "Name" && a.Value == "Box"));
+        return double.Parse(indicator.Attribute("Width")!.Value, CultureInfo.InvariantCulture) +
+            double.Parse(indicator.Attribute("Margin")!.Value.Split(',')[2], CultureInfo.InvariantCulture);
     }
 
     [Fact]

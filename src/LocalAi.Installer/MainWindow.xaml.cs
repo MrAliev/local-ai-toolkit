@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Navigation;
 using LocalAi.Installer.ViewModels;
 
 namespace LocalAi.Installer;
@@ -55,6 +56,33 @@ public partial class MainWindow : Window, IReturnsToStart
     }
 
     public event EventHandler? ReturnToStart;
+
+    /// <summary>What a pressed link opens with. Replaceable so a test can press one without a browser.</summary>
+    internal Action<Uri> OpenLink { get; init; } = OpenInBrowser;
+
+    private void OnOpenLink(object sender, RequestNavigateEventArgs e)
+    {
+        OpenLink(e.Uri);
+        e.Handled = true;
+    }
+
+    private static void OpenInBrowser(Uri link)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = link.AbsoluteUri,
+                UseShellExecute = true,
+            });
+        }
+        catch (Exception exception) when (
+            exception is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            // The address is on screen as the link's text; a browser that will not start is not
+            // a reason to take the page down.
+        }
+    }
 
     private void OnDependencyConsentChanged(object sender, RoutedEventArgs e)
     {
