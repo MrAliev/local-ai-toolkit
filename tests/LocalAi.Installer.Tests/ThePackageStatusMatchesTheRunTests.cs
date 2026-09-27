@@ -22,11 +22,39 @@ public sealed class ThePackageStatusMatchesTheRunTests
     {
         var page = new PackagePageViewModel { SourceFolder = @"D:\releases\0.1.51" };
 
-        page.SelectResolvedRelease(Release("0.1.51"), "0.1.51");
+        page.SelectResolvedRelease(Release("0.1.51"), "0.1.51", packageChecked: true);
 
         Assert.Equal("Release 0.1.51 verified, 200 MB to copy from the folder.", page.StatusText);
+
+        InstallerCulture.Current = InstallerLanguage.Russian;
+        Assert.Equal("Релиз 0.1.51 проверен, из папки будет скопировано 200 МБ.", page.StatusText);
     }
 
+    /// <summary>
+    /// "Verified" on a folder release means its package matched the signed manifest. A release
+    /// selected without that check says only what was checked (#612, P2).
+    /// </summary>
+    [Fact]
+    public void A_folder_release_whose_package_was_not_checked_names_only_the_signature()
+    {
+        var page = new PackagePageViewModel { SourceFolder = @"D:\releases\0.1.51" };
+
+        page.SelectResolvedRelease(Release("0.1.51"), "0.1.51");
+
+        Assert.Equal(
+            "Release 0.1.51: signature verified, 200 MB to copy from the folder.",
+            page.StatusText);
+
+        InstallerCulture.Current = InstallerLanguage.Russian;
+        Assert.Equal(
+            "Релиз 0.1.51: подпись проверена, из папки будет скопировано 200 МБ.",
+            page.StatusText);
+    }
+
+    /// <summary>
+    /// A download cannot be hashed before it is downloaded, so on the page only the manifest's
+    /// signature has been checked (#612, P2).
+    /// </summary>
     [Fact]
     public void A_release_from_github_is_downloaded()
     {
@@ -34,7 +62,53 @@ public sealed class ThePackageStatusMatchesTheRunTests
 
         page.SelectResolvedRelease(Release("0.1.51"), "0.1.51");
 
-        Assert.Equal("Release 0.1.51 verified, 200 MB to download.", page.StatusText);
+        Assert.Equal("Release 0.1.51: signature verified, 200 MB to download.", page.StatusText);
+
+        InstallerCulture.Current = InstallerLanguage.Russian;
+        Assert.Equal("Релиз 0.1.51: подпись проверена, скачать 200 МБ.", page.StatusText);
+    }
+
+    [Fact]
+    public void While_the_package_in_the_folder_is_checked_the_page_says_so()
+    {
+        var page = new PackagePageViewModel { SourceFolder = @"D:\releases\0.1.51" };
+        page.BeginResolving();
+
+        page.BeginCheckingPackage();
+
+        Assert.Equal("Checking the package in the folder…", page.StatusText);
+        Assert.True(page.IsResolving);
+        Assert.False(page.HasPackage);
+
+        InstallerCulture.Current = InstallerLanguage.Russian;
+        Assert.Equal("Проверяю пакет в папке…", page.StatusText);
+    }
+
+    [Fact]
+    public void A_package_that_does_not_match_its_manifest_resolves_no_release()
+    {
+        var page = new PackagePageViewModel { SourceFolder = @"D:\releases\0.1.51" };
+        page.BeginResolving();
+        page.BeginCheckingPackage();
+
+        page.ReportPackageMismatch();
+
+        Assert.Equal(
+            "No release resolved. localai-package.zip in the folder does not match the release " +
+            "manifest beside it — it is incomplete, altered or from another release. Copy all " +
+            "three files again from one release",
+            page.StatusText);
+        Assert.Equal(PackageSourceState.Unavailable, page.State);
+        Assert.False(page.HasPackage);
+        Assert.Null(page.Resolved);
+        Assert.False(page.IsResolving);
+
+        InstallerCulture.Current = InstallerLanguage.Russian;
+        Assert.Equal(
+            "Релиз не определён. localai-package.zip в папке не соответствует манифесту релиза " +
+            "рядом с ним — файл неполный, изменён или из другого релиза. Скопируйте заново все " +
+            "три файла одного релиза",
+            page.StatusText);
     }
 
     /// <summary>

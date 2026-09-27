@@ -165,6 +165,8 @@ public sealed class InstallerWizardViewModel : ObservableObject
     /// </summary>
     private int resolveGeneration;
 
+    /// <summary>The hash of a folder's package in flight, if any; nulled before it is disposed.</summary>
+    private CancellationTokenSource? packageCheck;
 
     private readonly Func<string?> readInstalledVersion;
     private readonly AgentIntegrationPageViewModel agents = new();
@@ -329,6 +331,12 @@ public sealed class InstallerWizardViewModel : ObservableObject
             if (args.PropertyName == nameof(PackagePageViewModel.State))
             {
                 ApplyRecommendation();
+            }
+            else if (args.PropertyName is nameof(PackagePageViewModel.ReleaseVersion)
+                     or nameof(PackagePageViewModel.SourceFolder))
+            {
+                // A hash of the package the old question named answers nobody.
+                packageCheck?.Cancel();
             }
         };
 
@@ -2532,6 +2540,8 @@ public sealed class InstallerWizardViewModel : ObservableObject
         var asked = (package.ReleaseVersion, package.SourceFolder);
         var mine = ++resolveGeneration;
         package.BeginResolving();
+        // After BeginResolving: the flag is this resolve's before the old hash hears it lost.
+        packageCheck?.Cancel();
         RefreshAll();
         try
         {
@@ -2550,8 +2560,35 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 return;
             }
 
+            // A folder's package can be hashed before the run, so "verified" there covers it.
+            if (feed is IReleasePackageCheck folder)
+            {
+                package.BeginCheckingPackage();
+                var matches = await CheckFolderPackageAsync(
+                    folder,
+                    release.Manifest,
+                    cancellationToken);
+                if (matches is null ||
+                    mine != resolveGeneration ||
+                    asked != (package.ReleaseVersion, package.SourceFolder))
+                {
+                    return;
+                }
+
+                if (matches == false)
+                {
+                    package.ReportPackageMismatch();
+                    releaseRevealed = true;
+                    RefreshAll();
+                    return;
+                }
+            }
+
             resolvedTag = tag;
-            package.SelectResolvedRelease(release, tag);
+            package.SelectResolvedRelease(
+                release,
+                tag,
+                packageChecked: feed is IReleasePackageCheck);
         }
         catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
         {
@@ -2600,6 +2637,35 @@ public sealed class InstallerWizardViewModel : ObservableObject
         }
 
         RefreshAll();
+    }
+
+    /// <summary>
+    /// Whether the folder's package matches the manifest, or null when a new question cancelled
+    /// the hash: an edit of the version or the folder, or another resolve.
+    /// </summary>
+    private async Task<bool?> CheckFolderPackageAsync(
+        IReleasePackageCheck folder,
+        ReleaseManifest manifest,
+        CancellationToken cancellationToken)
+    {
+        using var check = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        packageCheck = check;
+        try
+        {
+            return await folder.PackageMatchesAsync(manifest, check.Token);
+        }
+        catch (OperationCanceledException) when (
+            check.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+        {
+            return null;
+        }
+        finally
+        {
+            if (ReferenceEquals(packageCheck, check))
+            {
+                packageCheck = null;
+            }
+        }
     }
 
     /// <summary>

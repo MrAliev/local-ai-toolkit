@@ -327,7 +327,7 @@ public sealed class ResultsFollowTheLanguageTests : IDisposable
 
         presentation.ChooseLanguage(InstallerLanguage.Russian);
 
-        Assert.Equal("Релиз 0.1.51 проверен, скачать 0 МБ.", wizard.Package.StatusText);
+        Assert.Equal("Релиз 0.1.51: подпись проверена, скачать 0 МБ.", wizard.Package.StatusText);
         Assert.Equal(PackageSourceState.Selected, wizard.Package.State);
         Assert.NotNull(wizard.Package.Resolved);
     }
