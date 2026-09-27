@@ -2734,10 +2734,15 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 return;
             }
 
+            // A folder answers differently only when its files were replaced after the page
+            // checked them; nothing was published.
             AppendLog(
                 report,
-                $"LocalAi package: {newest} was published after this release was checked; " +
-                "resolving it instead.");
+                feed is IReleasePackageCheck
+                    ? $"LocalAi package: the folder now holds {newest}, not the " +
+                      $"{package.ResolvedTag} checked on the package page; resolving it instead."
+                    : $"LocalAi package: {newest} was published after this release was checked; " +
+                      "resolving it instead.");
             // Resolved first, then recorded: assigning the tag before this await left the
             // wizard pointing at a release whose manifest had failed to verify, so the run
             // downloaded that asset and checked it against the previous manifest's hash.

@@ -1,3 +1,4 @@
+using System.Text;
 using LocalAi.Contracts;
 using LocalAi.Installer.Core.Releases;
 using LocalAi.Installer.ViewModels;
@@ -52,10 +53,11 @@ public sealed class TheFolderPackageIsCheckedOnThePageTests : IDisposable
         (await CheckAskedBy(resolving, feed)).Answer.SetResult(false);
         await resolving;
 
-        Assert.StartsWith(
-            "No release resolved. localai-package.zip in the folder does not match",
-            wizard.Package.StatusText,
-            StringComparison.Ordinal);
+        Assert.Equal(
+            "No release resolved. The file localai-package.zip in the folder does not match the " +
+            "release manifest beside it — it is incomplete, altered or from another release. Copy " +
+            "all three files again from one release.",
+            wizard.Package.StatusText);
         Assert.Equal(PackageSourceState.Unavailable, wizard.Package.State);
         Assert.Null(wizard.Package.Resolved);
         Assert.False(wizard.Package.IsResolving);
@@ -142,6 +144,68 @@ public sealed class TheFolderPackageIsCheckedOnThePageTests : IDisposable
     public async Task The_run_still_copies_the_package_the_page_checked()
     {
         var feed = new CheckedFolderFeed(Release("0.1.51"));
+        await RunAfterTheCheck(feed, matches: true);
+
+        Assert.True(feed.Copied);
+    }
+
+    /// <summary>
+    /// A mismatch on the page resolves no release, and the run log says why, as it does after any
+    /// other check that resolved none.
+    /// </summary>
+    [Fact]
+    public async Task A_run_after_a_package_that_did_not_match_logs_what_the_page_said()
+    {
+        var feed = new CheckedFolderFeed(Release("0.1.51"));
+
+        var wizard = await RunAfterTheCheck(feed, matches: false);
+
+        Assert.Contains(
+            "LocalAi package: no verified release was selected, so nothing was installed. The " +
+            "last check of the release said: The file localai-package.zip in the folder does not " +
+            "match the release manifest beside it — it is incomplete, altered or from another " +
+            "release. Copy all three files again from one release. Return to the package step and " +
+            "check the release before continuing.",
+            wizard.Finish.Progress,
+            StringComparison.Ordinal);
+        Assert.False(feed.Copied);
+    }
+
+    /// <summary>
+    /// "Latest" is asked again right before the run. From a folder, another answer means the
+    /// folder's contents were replaced after the page checked them, not that a release was
+    /// published since; the release is resolved again, and the run verifies the copy it makes.
+    /// </summary>
+    [Fact]
+    public async Task A_folder_replaced_after_the_page_check_is_named_so_in_the_run_log()
+    {
+        var feed = new CheckedFolderFeed(Release("0.1.51"));
+        var wizard = Wizard(feed);
+        var resolving = wizard.ResolvePackageAsync(TestContext.Current.CancellationToken);
+        (await CheckAskedBy(resolving, feed)).Answer.SetResult(true);
+        await resolving;
+
+        feed.Holds = Release("0.1.52");
+        var report = new StringBuilder();
+        await wizard.RefreshLatestBeforeInstallAsync(report, TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            "LocalAi package: the folder now holds 0.1.52, not the 0.1.51 checked on the package " +
+            "page; resolving it instead.",
+            report.ToString().TrimEnd());
+        Assert.Equal("0.1.52", wizard.Package.ResolvedTag);
+        Assert.Equal(
+            "Release 0.1.52: signature verified, 200 MB to copy from the folder.",
+            wizard.Package.StatusText);
+    }
+
+    /// <summary>
+    /// An update over a machine with no runtime root, so the run writes nothing outside this
+    /// test's folder. It stops at the package step: the feed refuses the copy, or there is no
+    /// release to copy.
+    /// </summary>
+    private async Task<InstallerWizardViewModel> RunAfterTheCheck(CheckedFolderFeed feed, bool matches)
+    {
         var wizard = new InstallerWizardViewModel(
             StartChoice.UpdateOrRepair,
             () => null,
@@ -156,16 +220,19 @@ public sealed class TheFolderPackageIsCheckedOnThePageTests : IDisposable
         wizard.Models.CatalogModels.Clear();
         wizard.Package.SourceFolder = scratch.Path;
         var resolving = wizard.ResolvePackageAsync(TestContext.Current.CancellationToken);
-        (await CheckAskedBy(resolving, feed)).Answer.SetResult(true);
+        (await CheckAskedBy(resolving, feed)).Answer.SetResult(matches);
         await resolving;
         wizard.Diagnose.IsChecking = false;
         wizard.Diagnose.SetResult(supported: true);
-        Assert.True(wizard.MoveNext());
+        while (wizard.CurrentPage != InstallerPage.Confirm)
+        {
+            Assert.True(wizard.MoveNext(), $"stuck on {wizard.CurrentPage}");
+        }
+
         wizard.SetReviewConfirmed(true);
 
         Assert.False(await wizard.RunAsync(TestContext.Current.CancellationToken));
-
-        Assert.True(feed.Copied);
+        return wizard;
     }
 
     /// <summary>The hash the resolve asked for; a resolve that ends without asking fails here.</summary>
@@ -203,6 +270,9 @@ public sealed class TheFolderPackageIsCheckedOnThePageTests : IDisposable
         private readonly Lock gate = new();
 
         public bool Copied { get; private set; }
+
+        /// <summary>The release the folder holds; the test replaces it to change the folder's contents.</summary>
+        public ResolvedRelease Holds { get; set; } = release;
 
         public Task<Check> NextCheck(CancellationToken cancellationToken)
         {
@@ -245,13 +315,13 @@ public sealed class TheFolderPackageIsCheckedOnThePageTests : IDisposable
         }
 
         public Task<string> ResolveTagAsync(string requestedTag, CancellationToken ct) =>
-            Task.FromResult(release.Manifest.ReleaseVersion);
+            Task.FromResult(Holds.Manifest.ReleaseVersion);
 
         public Task<ResolvedRelease> ResolveAsync(
             string tag,
             string workingDirectory,
             CancellationToken ct) =>
-            Task.FromResult(release);
+            Task.FromResult(Holds);
 
         public Task<string> DownloadPackageAsync(
             string tag,

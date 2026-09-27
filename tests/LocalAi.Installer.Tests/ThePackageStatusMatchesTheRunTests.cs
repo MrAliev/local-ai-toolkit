@@ -94,9 +94,9 @@ public sealed class ThePackageStatusMatchesTheRunTests
         page.ReportPackageMismatch();
 
         Assert.Equal(
-            "No release resolved. localai-package.zip in the folder does not match the release " +
-            "manifest beside it — it is incomplete, altered or from another release. Copy all " +
-            "three files again from one release",
+            "No release resolved. The file localai-package.zip in the folder does not match the " +
+            "release manifest beside it — it is incomplete, altered or from another release. Copy " +
+            "all three files again from one release.",
             page.StatusText);
         Assert.Equal(PackageSourceState.Unavailable, page.State);
         Assert.False(page.HasPackage);
@@ -105,10 +105,31 @@ public sealed class ThePackageStatusMatchesTheRunTests
 
         InstallerCulture.Current = InstallerLanguage.Russian;
         Assert.Equal(
-            "Релиз не определён. localai-package.zip в папке не соответствует манифесту релиза " +
-            "рядом с ним — файл неполный, изменён или из другого релиза. Скопируйте заново все " +
-            "три файла одного релиза",
+            "Релиз не определён. Файл localai-package.zip в папке не соответствует манифесту " +
+            "релиза рядом с ним — он неполный, изменён или из другого релиза. Скопируйте заново " +
+            "все три файла одного релиза.",
             page.StatusText);
+    }
+
+    /// <summary>
+    /// The page's mismatch is a refusal like any other that resolves no release, so the run log
+    /// is given what the page said, in English whatever the page's language.
+    /// </summary>
+    [Fact]
+    public void A_package_that_does_not_match_is_what_the_run_log_is_given()
+    {
+        InstallerCulture.Current = InstallerLanguage.Russian;
+        var page = new PackagePageViewModel { SourceFolder = @"D:\releases\0.1.51" };
+        page.BeginResolving();
+        page.BeginCheckingPackage();
+
+        page.ReportPackageMismatch();
+
+        Assert.Equal(
+            "The file localai-package.zip in the folder does not match the release manifest " +
+            "beside it — it is incomplete, altered or from another release. Copy all three files " +
+            "again from one release.",
+            page.LastCheckFailure);
     }
 
     /// <summary>
