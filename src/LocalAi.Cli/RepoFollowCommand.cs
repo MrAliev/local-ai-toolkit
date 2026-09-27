@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Globalization;
 using LocalAi.Cli.Resources;
 using LocalAi.Contracts;
@@ -7,6 +8,32 @@ namespace LocalAi.Cli;
 /// <summary>One report, and whether it was the last one.</summary>
 /// <param name="ExitCode">Null while the loop carries on.</param>
 public sealed record FollowStep(string Line, int? ExitCode);
+
+/// <summary>
+/// What a finished build embedded, as far as the readings so far show: the total each embedding
+/// phase counted towards, one per phase and working tree, added up. The base and each overlay
+/// embed their own chunks one after another, so their totals add. The total and not the processed
+/// count, because a reading once an interval catches a phase part-way and no record after it
+/// carries a count (#774). A phase no reading caught is not in the figure.
+/// </summary>
+public sealed class EmbeddedChunks
+{
+    private readonly ImmutableDictionary<(RepositoryIndexProgressPhase Phase, string Root), int> _phases;
+
+    private EmbeddedChunks(
+        ImmutableDictionary<(RepositoryIndexProgressPhase Phase, string Root), int> phases) =>
+        _phases = phases;
+
+    public static EmbeddedChunks None { get; } =
+        new(ImmutableDictionary<(RepositoryIndexProgressPhase Phase, string Root), int>.Empty);
+
+    public int Total => _phases.Values.Sum();
+
+    public EmbeddedChunks After(RepositoryIndexProgress? progress) =>
+        progress is not null && progress.Phase.CountsChunks()
+            ? new(_phases.SetItem((progress.Phase, progress.WorkingRoot), progress.TotalChunks))
+            : this;
+}
 
 /// <summary>
 /// `repo status --follow`, which reads the progress a build writes and reports it on a cadence.
@@ -31,16 +58,16 @@ public static class RepoFollowCommand
     /// </summary>
     public const int BuildDidNotFinish = 75;
 
-    /// <param name="chunksSeen">
-    /// The most chunks this loop has watched go by. The terminal record is written by the
-    /// step-reporting path, which zeroes the chunk counters on purpose, so it is the only
-    /// honest figure a finished build has.
+    /// <param name="chunksEmbedded">
+    /// <see cref="EmbeddedChunks.Total"/> of the readings so far. The terminal record is written
+    /// by the step-reporting path, which zeroes the chunk counters on purpose, so a finished
+    /// build's figure comes from the readings before it.
     /// </param>
     public static FollowStep Step(
         RepositoryIndexProgress? progress,
         TimeSpan sinceLastChange,
         TimeSpan staleAfter,
-        int chunksSeen = 0)
+        int chunksEmbedded = 0)
     {
         if (progress is null)
         {
@@ -50,8 +77,8 @@ public static class RepoFollowCommand
         if (progress.Phase == RepositoryIndexProgressPhase.Completed)
         {
             return new(
-                chunksSeen > 0
-                    ? CliText.RepoFollowCompleted(Counted(chunksSeen))
+                chunksEmbedded > 0
+                    ? CliText.RepoFollowCompleted(Counted(chunksEmbedded))
                     : CliText.RepoFollowCompletedPlain,
                 0);
         }
