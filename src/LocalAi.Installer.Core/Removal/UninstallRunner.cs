@@ -161,7 +161,8 @@ public sealed class UninstallRunner(
     /// Takes the Apps &amp; features entry out and then the uninstaller copy it runs, after every
     /// other path and the PATH entry, and only when all of them went: stopped or failed before
     /// this, the run leaves the entry and its copy, and Apps &amp; features still leads back to
-    /// finishing it. An entry that was already gone is not a failure.
+    /// finishing it. Held back after a failure, that is journalled, so the report can say so.
+    /// An entry that was already gone is not a failure.
     ///
     /// Nothing is deferred. The removal never runs from this copy — it hands over to a
     /// temporary one first — so a copy that cannot be deleted is held by something else, and
@@ -178,13 +179,21 @@ public sealed class UninstallRunner(
             return (false, false);
         }
 
+        var registration = new UninstallRegistration(layout, registrySubKey);
         if (failures.Count > 0)
         {
+            var kept = journal.BeginStep(
+                InstallerRunEffectKind.RuntimeRemoval,
+                UninstallJournalDescriptions.RegistrationKept(registration.UninstallerDirectory));
+            journal.CompleteStep(
+                kept,
+                "an earlier step failed, so the Apps & features entry stays and the removal can be " +
+                "started again from there",
+                isReversible: false);
             return (false, true);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        var registration = new UninstallRegistration(layout, registrySubKey);
         var step = journal.BeginStep(
             InstallerRunEffectKind.RuntimeRemoval,
             UninstallJournalDescriptions.Registration(registration.UninstallerDirectory));

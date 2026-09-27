@@ -114,13 +114,9 @@ public sealed record UninstallPlan(
                 continue;
             }
 
+            // In the order the run takes them: the path holding the copy the entry runs goes last.
             text.AppendLine(RemovalMatrix.Title(item) + ":");
-            foreach (var path in paths)
-            {
-                text.AppendLine(
-                    "  " + InstallerCulture.Pick("remove", "удалить") + " " +
-                    path.Path + (path.IsDirectory ? "\\" : string.Empty));
-            }
+            AppendRemovals(text, paths.Where(path => !path.HoldsUninstaller));
 
             if (item == RemovalItem.Binaries && RemovesLauncherFromPath)
             {
@@ -132,13 +128,14 @@ public sealed record UninstallPlan(
             if (registration)
             {
                 // The entry is what made this removable from Apps & features in the first
-                // place, so it is named here. It goes after every other path and the copy it
-                // runs right after it, so a run stopped halfway leaves the entry working.
+                // place, so it is named here.
                 text.AppendLine(InstallerCulture.Pick(
                     "  remove the Apps & features entry, then the uninstaller copy it runs",
                     "  удалить запись в «Приложениях и возможностях», затем копию " +
                     "деинсталлятора, которую она запускает"));
             }
+
+            AppendRemovals(text, paths.Where(path => path.HoldsUninstaller));
 
             foreach (var file in agents.SelectMany(plan => plan.Files))
             {
@@ -287,6 +284,16 @@ public sealed record UninstallPlan(
         catch (InvalidOperationException)
         {
             return false;
+        }
+    }
+
+    private static void AppendRemovals(StringBuilder text, IEnumerable<RemovalPathEntry> paths)
+    {
+        foreach (var path in paths)
+        {
+            text.AppendLine(
+                "  " + InstallerCulture.Pick("remove", "удалить") + " " +
+                path.Path + (path.IsDirectory ? "\\" : string.Empty));
         }
     }
 
