@@ -66,7 +66,7 @@ public static class ModelSetupRecord
             return ResidencyPolicyOutcome.SkippedWithoutInstallation;
         }
 
-        if (Read(runtimeRoot) == selection)
+        if (Holds(runtimeRoot, selection))
         {
             return ResidencyPolicyOutcome.Unchanged;
         }
@@ -78,6 +78,10 @@ public static class ModelSetupRecord
             AtomicWrite.Irrecoverable);
         return ResidencyPolicyOutcome.Applied;
     }
+
+    /// <summary>Whether the record already holds this choice, so <see cref="Apply"/> would write nothing.</summary>
+    public static bool Holds(string runtimeRoot, ModelProvisioningSelection selection) =>
+        Read(runtimeRoot) == selection;
 
     private sealed record Document(int SchemaVersion, ModelProvisioningMode Mode, string? Model, int ContextTokens);
 }
