@@ -272,7 +272,7 @@
                             <Button Content="{vm:Label RollBackPreviousRun}"
                                     Command="{Binding RollbackPreviousRunCommand}"
                                     HorizontalAlignment="Left" Margin="0,8,0,0" Padding="12,4"
-                                    Visibility="{Binding HasInterruptedRun, Converter={StaticResource BoolToVisibility}}" />
+                                    Visibility="{Binding CanRollbackPreviousRun, Converter={StaticResource BoolToVisibility}}" />
                         </StackPanel>
                     </StackPanel>
 
