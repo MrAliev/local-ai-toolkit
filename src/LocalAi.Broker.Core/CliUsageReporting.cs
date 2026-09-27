@@ -23,6 +23,8 @@ public static class CliUsageReporting
         using var stdout = new CountingWriter(output);
         using var stderr = new CountingWriter(error);
         var store = new UsageReportStore(runtimeRoot);
+        // Before the command: it may write into the root itself, ahead of its report.
+        _ = new RuntimeAcl().TryCreateRoot(runtimeRoot);
         var legacyModelProtocol = component == "localai" && arguments.FirstOrDefault() == "model";
         int exit;
         try
