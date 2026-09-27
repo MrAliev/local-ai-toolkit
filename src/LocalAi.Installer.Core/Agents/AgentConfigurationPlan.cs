@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -98,7 +99,7 @@ internal static class AgentConfigurationFileOperations
             [],
             Sha256(before),
             Sha256([]),
-            path + "." + now.UtcDateTime.ToString("yyyyMMdd-HHmmss") + ".bak",
+            BackupPathFor(path, now),
             Deletes: true);
 
     public static AgentConfigurationFilePlan FilePlan(
@@ -114,8 +115,12 @@ internal static class AgentConfigurationFileOperations
             after,
             Sha256(before),
             Sha256(after),
-            path + "." + now.UtcDateTime.ToString("yyyyMMdd-HHmmss") + ".bak");
+            BackupPathFor(path, now));
     }
+
+    // UTC and invariant, like the run's log and journal it is read beside.
+    private static string BackupPathFor(string path, DateTimeOffset now) =>
+        path + "." + now.UtcDateTime.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture) + "Z.bak";
 
     /// <summary>
     /// Applies the plan as a compare-and-swap against another writer, not merely a check.

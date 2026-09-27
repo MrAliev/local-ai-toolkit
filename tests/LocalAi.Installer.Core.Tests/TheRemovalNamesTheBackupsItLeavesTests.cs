@@ -36,7 +36,7 @@ public sealed class TheRemovalNamesTheBackupsItLeavesTests : IDisposable
     public void The_preview_says_what_the_backup_holds()
     {
         Assert.Contains(
-            "\n    keep a copy of the previous version: C:\\home\\.claude\\CLAUDE.md.20260901-100000.bak",
+            "\n    keep a copy of the previous version: C:\\home\\.claude\\CLAUDE.md.20260901-100000Z.bak",
             "\n" + SyntheticPlan().PreviewText,
             StringComparison.Ordinal);
     }
@@ -47,7 +47,7 @@ public sealed class TheRemovalNamesTheBackupsItLeavesTests : IDisposable
         InstallerCulture.Current = InstallerLanguage.Russian;
 
         Assert.Contains(
-            "\n    оставить копию прежней версии: C:\\home\\.claude\\CLAUDE.md.20260901-100000.bak",
+            "\n    оставить копию прежней версии: C:\\home\\.claude\\CLAUDE.md.20260901-100000Z.bak",
             "\n" + SyntheticPlan().PreviewText,
             StringComparison.Ordinal);
     }

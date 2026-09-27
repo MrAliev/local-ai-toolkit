@@ -209,7 +209,7 @@ public sealed class ClaudeConfigurationAdapterTests : IDisposable
         await adapter.ApplyAsync(plan, TestContext.Current.CancellationToken);
 
         Assert.Equal(SinglePreview(@".claude.json", plan).AfterText, File.ReadAllText(mcp, Encoding.UTF8));
-        Assert.Contains(Directory.GetFiles(Path.GetDirectoryName(mcp)!), file => file.EndsWith(".20260731-101112.bak", StringComparison.Ordinal));
+        Assert.Contains(Directory.GetFiles(Path.GetDirectoryName(mcp)!), file => file.EndsWith(".20260731-101112Z.bak", StringComparison.Ordinal));
 
         File.WriteAllText(mcp, "{\"mcpServers\":{},\"rollback\":true}", Encoding.UTF8);
         var rollback = Adapter(readBackOverride: _ => Encoding.UTF8.GetBytes("bad"));

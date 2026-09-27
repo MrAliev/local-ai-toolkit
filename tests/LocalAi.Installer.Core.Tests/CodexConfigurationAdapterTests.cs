@@ -483,7 +483,7 @@ public sealed class CodexConfigurationAdapterTests : IDisposable
         await adapter.ApplyAsync(plan, TestContext.Current.CancellationToken);
 
         Assert.Equal(SinglePreview(@".codex\config.toml", plan).AfterText, File.ReadAllText(path, Encoding.UTF8));
-        Assert.Contains(Directory.GetFiles(Path.GetDirectoryName(path)!), file => file.EndsWith(".20260731-101112.bak", StringComparison.Ordinal));
+        Assert.Contains(Directory.GetFiles(Path.GetDirectoryName(path)!), file => file.EndsWith(".20260731-101112Z.bak", StringComparison.Ordinal));
 
         File.WriteAllText(path, "approval_policy = \"never\"\n# rollback\n", Encoding.UTF8);
         var rollbackAdapter = Adapter(readBackOverride: _ => Encoding.UTF8.GetBytes("corrupted"));

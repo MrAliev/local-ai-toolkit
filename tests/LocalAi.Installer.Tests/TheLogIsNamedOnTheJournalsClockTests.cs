@@ -1,3 +1,4 @@
+using System.Globalization;
 using LocalAi.Contracts;
 using LocalAi.Installer.ViewModels;
 using LocalAi.Tests.Shared;
@@ -12,6 +13,33 @@ public sealed class TheLogIsNamedOnTheJournalsClockTests
 {
     [Fact]
     public async Task The_run_log_is_named_in_utc()
+    {
+        Assert.Equal("install-20260926-221355Z.log", await LogNameAsync());
+    }
+
+    /// <summary>
+    /// The journal beside it keeps Gregorian digits, and the two are matched by their time: a Thai
+    /// culture counts 2569 where the others count 2026.
+    /// </summary>
+    [Fact]
+    public async Task The_run_log_keeps_the_gregorian_year_on_a_thai_machine()
+    {
+        var previous = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("th-TH");
+        try
+        {
+            // The premise: this culture really counts years another way here.
+            Assert.IsType<ThaiBuddhistCalendar>(CultureInfo.CurrentCulture.Calendar);
+
+            Assert.Equal("install-20260926-221355Z.log", await LogNameAsync());
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = previous;
+        }
+    }
+
+    private static async Task<string?> LogNameAsync()
     {
         using var logs = new TemporaryDirectory("LocalAi-log-clock");
         var presentation = new InstallerPresentation(
@@ -35,7 +63,7 @@ public sealed class TheLogIsNamedOnTheJournalsClockTests
 
             Assert.True(await wizard.RunAsync(TestContext.Current.CancellationToken));
 
-            Assert.Equal("install-20260926-221355Z.log", Path.GetFileName(wizard.Finish.ReportPath));
+            return Path.GetFileName(wizard.Finish.ReportPath);
         }
         finally
         {
