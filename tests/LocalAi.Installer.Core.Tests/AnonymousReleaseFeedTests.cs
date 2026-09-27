@@ -189,30 +189,87 @@ public sealed class AnonymousReleaseFeedTests : IDisposable
         Assert.Equal(ReleaseRefusalKind.NoPublishedRelease, exception.Refusal.Kind);
         Assert.Equal("MrAliev/local-ai-toolkit", exception.Refusal.Repository);
         Assert.Equal(
-            "GitHub named no newest release of MrAliev/local-ai-toolkit (answered 404 Not Found). " +
-            "A private repository, or one without published releases, looks like this from outside.",
+            "GitHub named no newest release of MrAliev/local-ai-toolkit (web page answered 404 Not " +
+            "Found; API answered 404 Not Found). A private repository, or one without published " +
+            "releases, looks like this from outside.",
             exception.Message);
     }
 
-    [Fact]
-    public async Task An_answer_without_a_tag_counts_as_no_release()
+    /// <summary>
+    /// One answer used to stand for both, so an API out of quota answering 403 beside the web
+    /// page's 404 was logged as 403, followed by a sentence about private repositories.
+    /// </summary>
+    [Theory]
+    [InlineData(HttpStatusCode.NotFound, HttpStatusCode.Forbidden, "404 Not Found", "403 Forbidden")]
+    [InlineData(HttpStatusCode.Forbidden, HttpStatusCode.NotFound, "403 Forbidden", "404 Not Found")]
+    public async Task Both_answers_are_logged_and_one_404_is_enough_to_suggest_a_private_repository(
+        HttpStatusCode page,
+        HttpStatusCode api,
+        string pageAnswered,
+        string apiAnswered)
     {
         var handler = new ScriptedHandler();
-        handler.Respond(
-            "https://github.com/MrAliev/local-ai-toolkit/releases/latest",
-            HttpStatusCode.OK,
-            "<html>a page, not a redirect</html>");
+        handler.Respond("https://github.com/MrAliev/local-ai-toolkit/releases/latest", page, "page");
         handler.Respond(
             "https://api.github.com/repos/MrAliev/local-ai-toolkit/releases/latest",
-            HttpStatusCode.OK,
-            "{}");
+            api,
+            "api");
         using var feed = new AnonymousReleaseFeed(new HttpClient(handler));
 
         var exception = await Assert.ThrowsAsync<ReleaseResolutionException>(
             () => feed.ResolveTagAsync("latest", TestContext.Current.CancellationToken));
 
         Assert.Equal(ReleaseRefusalKind.NoPublishedRelease, exception.Refusal.Kind);
-        Assert.Contains("(answered 200 OK)", exception.Message, StringComparison.Ordinal);
+        Assert.Equal(
+            $"GitHub named no newest release of MrAliev/local-ai-toolkit (web page answered " +
+            $"{pageAnswered}; API answered {apiAnswered}). A private repository, or one without " +
+            "published releases, looks like this from outside.",
+            exception.Message);
+    }
+
+    /// <summary>
+    /// Without a 404 nothing says the repository is private or has nothing published, so the
+    /// answers go to the page as technical details rather than as that reason.
+    /// </summary>
+    [Theory]
+    [InlineData("tagless", "web page answered 200 OK; API answered 200 OK")]
+    [InlineData("forbidden", "web page answered 403 Forbidden; API answered 403 Forbidden")]
+    [InlineData(
+        "unanswered",
+        "web page answered no answer: The connection was reset; API answered 403 Forbidden")]
+    public async Task Answers_without_a_404_are_not_read_as_a_private_repository(
+        string answers,
+        string logged)
+    {
+        const string Page = "https://github.com/MrAliev/local-ai-toolkit/releases/latest";
+        const string Api = "https://api.github.com/repos/MrAliev/local-ai-toolkit/releases/latest";
+        var handler = new ScriptedHandler();
+        switch (answers)
+        {
+            case "tagless":
+                handler.Respond(Page, HttpStatusCode.OK, "<html>a page, not a redirect</html>");
+                handler.Respond(Api, HttpStatusCode.OK, "{}");
+                break;
+            case "forbidden":
+                handler.Respond(Page, HttpStatusCode.Forbidden, "blocked");
+                handler.Respond(Api, HttpStatusCode.Forbidden, "rate limit exceeded");
+                break;
+            default:
+                handler.Throw(Page, new HttpRequestException("The connection was reset."));
+                handler.Respond(Api, HttpStatusCode.Forbidden, "rate limit exceeded");
+                break;
+        }
+
+        using var feed = new AnonymousReleaseFeed(new HttpClient(handler));
+
+        var exception = await Assert.ThrowsAsync<ReleaseResolutionException>(
+            () => feed.ResolveTagAsync("latest", TestContext.Current.CancellationToken));
+
+        Assert.Equal(ReleaseRefusalKind.Unclassified, exception.Refusal.Kind);
+        Assert.Equal(
+            $"GitHub named no newest release of MrAliev/local-ai-toolkit ({logged}).",
+            exception.Message);
+        Assert.Equal(exception.Message, exception.Refusal.Detail);
     }
 
     /// <summary>Only a lookup where neither path got an answer is a connection problem.</summary>
@@ -252,6 +309,11 @@ public sealed class AnonymousReleaseFeedTests : IDisposable
             () => feed.ResolveTagAsync("latest", TestContext.Current.CancellationToken));
 
         Assert.Equal(ReleaseRefusalKind.NoPublishedRelease, exception.Refusal.Kind);
+        Assert.Equal(
+            "GitHub named no newest release of MrAliev/local-ai-toolkit (web page answered no " +
+            "answer: The connection was reset; API answered 404 Not Found). A private repository, " +
+            "or one without published releases, looks like this from outside.",
+            exception.Message);
     }
 
     /// <summary>The page names the file and the release, and sends the reader to the version field.</summary>

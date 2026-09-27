@@ -161,7 +161,8 @@ public sealed class PackagePageViewModel : ObservableObject
             IncompatibleRelease),
         StatusWording.Unavailable =>
             InstallerCulture.Pick("No release resolved. ", "Релиз не определён. ") +
-            Reason(statusFailure!.Refusal),
+            Reason(statusFailure!.Refusal) +
+            GitHubCliSaid(statusFailure.Refusal),
         _ => InstallerCulture.Pick(
             "Press Check again to look up this release.",
             "Нажмите «Проверить снова», чтобы найти этот релиз."),
@@ -245,15 +246,7 @@ public sealed class PackagePageViewModel : ObservableObject
                 "holds the release files.",
                 "На GitHub нет опубликованных релизов {0}, доступных этому компьютеру. Выберите " +
                 "папку с файлами релиза."),
-            refusal.Repository) + (refusal.GitHubCliDetail is { } cli
-            ? " " + string.Format(
-                InstallerCulture.Pick(
-                    "The GitHub CLI did not find it either; if the repository is private, sign " +
-                    "in with gh auth login. Technical details: {0}",
-                    "GitHub CLI тоже его не нашёл; если репозиторий закрытый, войдите командой " +
-                    "gh auth login. Технические сведения: {0}"),
-                cli)
-            : string.Empty),
+            refusal.Repository),
         ReleaseRefusalKind.AssetNotFound => string.Format(
             InstallerCulture.Pick(
                 "GitHub has no {1} in release {0}, or no such release. Check the version above.",
@@ -278,6 +271,18 @@ public sealed class PackagePageViewModel : ObservableObject
                 "Не удалось проверить релиз. Технические сведения: {0}"),
             refusal.Detail),
     };
+
+    /// <summary>The fallback feed carries the CLI's answer on a refusal of any kind.</summary>
+    private static string GitHubCliSaid(ReleaseRefusal refusal) =>
+        refusal.GitHubCliDetail is { } cli
+            ? " " + string.Format(
+                InstallerCulture.Pick(
+                    "The GitHub CLI could not get it either; if the repository is private, sign in " +
+                    "with gh auth login. Technical details: {0}",
+                    "GitHub CLI тоже не смог его получить; если репозиторий закрытый, войдите " +
+                    "командой gh auth login. Технические сведения: {0}"),
+                cli)
+            : string.Empty;
 
     private void SetStatus(
         StatusWording value,

@@ -261,7 +261,8 @@ public sealed class DirectoryReleaseFeed : IReleaseFeed, IReleasePackageCheck
         catch (IOException exception) when (!Directory.Exists(sourceDirectory))
         {
             throw new ReleaseResolutionException(
-                $"'{sourceDirectory}' could not be read: {exception.Message}",
+                $"'{sourceDirectory}' does not exist or is not a folder: " +
+                exception.Message.TrimEnd('.'),
                 exception,
                 new(ReleaseRefusalKind.NoSuchFolder));
         }
