@@ -9,6 +9,7 @@ namespace LocalAi.Installer.ViewModels;
 public sealed class ModelsPageViewModel : ObservableObject
 {
     private ModelSelectionMode mode = ModelSelectionMode.Automatic;
+    private bool modeChosen;
     private ModelCatalogEntry? selectedModel;
     private int selectedContext;
     private CatalogRecommendation recommendation = CatalogRecommendation.Empty;
@@ -37,18 +38,28 @@ public sealed class ModelsPageViewModel : ObservableObject
 
     public ObservableCollection<int> AvailableContexts { get; } = [];
 
+    /// <summary>The person's choice; until there is one, the mode follows the network.</summary>
     public ModelSelectionMode Mode
     {
         get => mode;
         set
         {
-            SetProperty(ref mode, value);
-            OnPropertyChanged(nameof(IsAutomatic));
-            OnPropertyChanged(nameof(IsChooseExact));
-            OnPropertyChanged(nameof(IsSkip));
-            OnPropertyChanged(nameof(CanContinue));
-            OnPropertyChanged(nameof(ReviewText));
+            modeChosen = true;
+            ApplyMode(value);
         }
+    }
+
+    /// <summary>The run does what the review named, so a check during it leaves the mode alone.</summary>
+    internal void KeepMode() => modeChosen = true;
+
+    private void ApplyMode(ModelSelectionMode value)
+    {
+        SetProperty(ref mode, value, nameof(Mode));
+        OnPropertyChanged(nameof(IsAutomatic));
+        OnPropertyChanged(nameof(IsChooseExact));
+        OnPropertyChanged(nameof(IsSkip));
+        OnPropertyChanged(nameof(CanContinue));
+        OnPropertyChanged(nameof(ReviewText));
     }
 
     public bool IsAutomatic
@@ -143,6 +154,38 @@ public sealed class ModelsPageViewModel : ObservableObject
                     "Ни одна модель каталога не помещается в обнаруженную видеопамять, поэтому " +
                     "ни одна не будет установлена.");
 
+    private bool isOffline;
+
+    /// <summary>
+    /// From the system check. Setup downloads models through Ollama, so offline the mode starts
+    /// on Skip.
+    /// </summary>
+    public bool IsOffline
+    {
+        get => isOffline;
+        set
+        {
+            SetProperty(ref isOffline, value);
+            OnPropertyChanged(nameof(NetworkNote));
+            OnPropertyChanged(nameof(HasNetworkNote));
+            OnPropertyChanged(nameof(ReviewText));
+            if (!modeChosen)
+            {
+                ApplyMode(value ? ModelSelectionMode.Skip : ModelSelectionMode.Automatic);
+            }
+        }
+    }
+
+    public bool HasNetworkNote => isOffline;
+
+    public string NetworkNote => isOffline
+        ? InstallerCulture.Pick(
+            "No network connection: models that are not on this computer yet cannot be " +
+            "downloaded now, so they cannot be set up.",
+            "Подключения к сети нет: модели, которых ещё нет на этом компьютере, сейчас " +
+            "скачать не получится, и настроить их не удастся.")
+        : string.Empty;
+
     /// <summary>
     /// Applies a computed recommendation.
     ///
@@ -191,13 +234,18 @@ public sealed class ModelsPageViewModel : ObservableObject
                 fit.ContextTokens));
         }
 
-        // The registry did not size these; setup weighs them against the signed manifest.
+        // Setup plans only the signed manifest's models. Sized by the release, these are missing
+        // from it; sized by the registry, setup still weighs them against it.
         foreach (var tag in UnsizedTags())
         {
             AutomaticSelection.Add(string.Format(
-                InstallerCulture.Pick(
-                    "{0} — size unknown; set up only if it fits",
-                    "{0} — размер неизвестен; ставится, только если помещается"),
+                recommendation.SizedByRelease
+                    ? InstallerCulture.Pick(
+                        "{0} — not in this release, so not set up",
+                        "{0} — нет в этом релизе, поэтому не ставится")
+                    : InstallerCulture.Pick(
+                        "{0} — size unknown; set up only if it fits",
+                        "{0} — размер неизвестен; ставится, только если помещается"),
                 tag));
         }
 
@@ -232,10 +280,10 @@ public sealed class ModelsPageViewModel : ObservableObject
     /// <summary>
     /// The page's answer in the form the installation understands.
     ///
-    /// Deliberately not a list of tags: the sizes shown here come from the routing catalogue
-    /// and the model registry, neither of which is signed, and the broker installer only
-    /// accepts models weighed against the release manifest. So the page states the intent and
-    /// the signed manifest decides the set.
+    /// Deliberately not a list of tags: the list here is usually weighed from the model
+    /// registry, which is not signed, and the broker installer only accepts models weighed
+    /// against the release manifest. So the page states the intent and the signed manifest
+    /// decides the set.
     /// </summary>
     public ModelProvisioningSelection BuildProvisioningSelection() => Mode switch
     {
@@ -264,8 +312,8 @@ public sealed class ModelsPageViewModel : ObservableObject
     ///
     /// Named for the rule rather than for the policy enum, and counted against the catalogue
     /// rather than against the fits list, so the number answers "how much of what is on offer
-    /// can this computer take". Models the registry did not size are counted apart rather than
-    /// as not fitting.
+    /// can this computer take". Models nothing sized are counted apart rather than as not
+    /// fitting.
     /// </summary>
     private string BuildRuleSummary()
     {
@@ -295,16 +343,27 @@ public sealed class ModelsPageViewModel : ObservableObject
                 fitting,
                 CatalogModels.Count)
             : string.Format(
-                InstallerCulture.Pick(
-                    "{0} — {1} of {2} catalogue models fit; size unknown: {3}",
-                    "{0} — подходящих моделей: {1} из {2}; без размера: {3}"),
+                recommendation.SizedByRelease
+                    ? InstallerCulture.Pick(
+                        "{0} — {1} of {2} catalogue models fit; not in this release: {3}",
+                        "{0} — подходящих моделей: {1} из {2}; нет в этом релизе: {3}")
+                    : InstallerCulture.Pick(
+                        "{0} — {1} of {2} catalogue models fit; size unknown: {3}",
+                        "{0} — подходящих моделей: {1} из {2}; без размера: {3}"),
                 rule,
                 fitting,
                 CatalogModels.Count,
                 unsized);
     }
 
-    public string ReviewText => Mode switch
+    public string ReviewText => Mode == ModelSelectionMode.Skip || !isOffline
+        ? ChoiceReviewText
+        : ChoiceReviewText + " " + InstallerCulture.Pick(
+            "— no network connection, so only models already on this computer can be set up",
+            "— подключения к сети нет, поэтому настроить можно только модели, которые уже есть " +
+            "на этом компьютере");
+
+    private string ChoiceReviewText => Mode switch
     {
         ModelSelectionMode.Skip => InstallerCulture.Pick(
             "Models: skipped, nothing will be downloaded",

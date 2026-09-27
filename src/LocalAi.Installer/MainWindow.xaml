@@ -438,8 +438,9 @@
                                 </RadioButton>
                             </StackPanel>
                         </GroupBox>
-                        <!-- The only thing on this page that appears, and the only one that
-                             should: it says the chosen rule can degrade an answer. -->
+                        <!-- One of the two warnings on this page, and each appears only when it
+                             applies: this one says the chosen rule can degrade an answer, the
+                             one above the models that offline they cannot be downloaded. -->
                         <Border Background="{DynamicResource WarnFill}" BorderBrush="{DynamicResource WarnLine}"
                                 BorderThickness="1" CornerRadius="3" Padding="8,6" Margin="0,2,0,0"
                                 Visibility="{Binding Residency.HasWarning, Converter={StaticResource BoolToVisibility}}">
@@ -453,6 +454,12 @@
                              and its count moves the moment the rule does. -->
                         <TextBlock Text="{Binding Models.RuleSummary}"
                                    Style="{StaticResource Muted}" FontSize="11" Margin="0,0,0,8" />
+                        <Border Background="{DynamicResource WarnFill}" BorderBrush="{DynamicResource WarnLine}"
+                                BorderThickness="1" CornerRadius="3" Padding="8,6" Margin="0,0,0,8"
+                                Visibility="{Binding Models.HasNetworkNote, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Text="{Binding Models.NetworkNote}"
+                                       Style="{StaticResource WarningText}" TextWrapping="Wrap" />
+                        </Border>
                         <GroupBox Style="{StaticResource NamedGroup}"
                                   AutomationProperties.LabeledBy="{x:Reference LocalModelsLabel}">
                             <StackPanel>

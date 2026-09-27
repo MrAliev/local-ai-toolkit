@@ -218,6 +218,9 @@ public sealed class InstallerWizardViewModel : ObservableObject
     private string? runLogMessage;
     private Exception? unexpected;
     private EnvironmentDiagnosis? environmentDiagnosis;
+
+    /// <summary>What the registry answered on the last check; null until it has been asked.</summary>
+    private CatalogRecommendation? registryAnswer;
     private CatalogRecommendation lastRecommendation = CatalogRecommendation.Empty;
     private string? resolvedTag;
     private PackageOutcome? packageOutcome;
@@ -300,6 +303,15 @@ public sealed class InstallerWizardViewModel : ObservableObject
             if (args.PropertyName == nameof(ResidencyPageViewModel.Policy))
             {
                 OnResidencyChanged();
+            }
+        };
+
+        // A release can size the models, so choosing, losing or replacing one reaches the list.
+        package.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(PackagePageViewModel.State))
+            {
+                ApplyRecommendation();
             }
         };
 
@@ -390,6 +402,9 @@ public sealed class InstallerWizardViewModel : ObservableObject
     public static string DefaultScratchRoot => Path.Combine(
         Path.GetTempPath(),
         "LocalAi-installer");
+
+    /// <summary>Stands in for the public model registry in a test, which must not go online.</summary>
+    internal IModelSizeSource? ModelSizeSource { get; init; }
 
     public RelayCommand BackCommand { get; }
 
@@ -928,6 +943,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         runCancellation = linked;
         var token = linked.Token;
 
+        models.KeepMode();
         isRunning = true;
         isComplete = false;
         hasRunError = false;
@@ -2176,6 +2192,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             .OrderByDescending(adapter => adapter.DedicatedLocalBytes)
             .FirstOrDefault();
         agents.ApplyDetection(diagnosis.Agents);
+        models.IsOffline = diagnosis.Network.State == ObservationState.Unavailable;
         await RefreshRecommendationAsync(diagnosis, cancellationToken);
 
         // Detection records presence only; it must not grant consent on the user's behalf.
@@ -2204,7 +2221,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
     /// <summary>
     /// Recomputes which catalogue models fit this machine. Sizes come from the public model
     /// registry, so this is a network call: it must never prevent the wizard from running,
-    /// and an offline machine simply gets the catalogue without sizes.
+    /// and an offline machine gets the verified release's sizes instead, or none.
     /// </summary>
     private async Task RefreshRecommendationAsync(
         EnvironmentDiagnosis diagnosis,
@@ -2212,16 +2229,48 @@ public sealed class InstallerWizardViewModel : ObservableObject
     {
         try
         {
-            using var registry = new OllamaRegistryClient();
-            var recommender = new CatalogModelRecommender(registry);
-            lastRecommendation = await recommender.RecommendAsync(
+            using var registry = ModelSizeSource is null ? new OllamaRegistryClient() : null;
+            var recommender = new CatalogModelRecommender(ModelSizeSource ?? registry!);
+            registryAnswer = await recommender.RecommendAsync(
                 diagnosis.Gpu,
                 models.CatalogModels,
                 cancellationToken);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            lastRecommendation = CatalogRecommendation.Empty;
+            registryAnswer = CatalogRecommendation.Empty;
+        }
+
+        ApplyRecommendation();
+    }
+
+    /// <summary>
+    /// The registry's sizes, or the verified release's when the registry sized nothing: offline
+    /// that manifest is the only source there is, and it is what setup weighs anyway.
+    /// </summary>
+    private void ApplyRecommendation()
+    {
+        if (registryAnswer is not { } registry)
+        {
+            return;
+        }
+
+        lastRecommendation = registry;
+        if (!registry.SizesKnown &&
+            package.Resolved is { } release &&
+            environmentDiagnosis is { } diagnosis)
+        {
+            try
+            {
+                lastRecommendation = CatalogModelRecommender.FromRelease(
+                    diagnosis.Gpu,
+                    models.CatalogModels,
+                    release.Manifest.Models);
+            }
+            catch (ArgumentException)
+            {
+                // A snapshot the weighing refuses sizes nothing; it must not cost the release.
+            }
         }
 
         models.ApplyRecommendation(
@@ -2635,9 +2684,14 @@ public sealed class InstallerWizardViewModel : ObservableObject
             return;
         }
 
+        // The same test CreateFeed makes: a folder feed copies the package from disk.
+        var fromFolder = !string.IsNullOrWhiteSpace(package.SourceFolder);
         AppendLog(
             report,
-            $"LocalAi package {resolved.Manifest.ReleaseVersion}: downloading and verifying...");
+            fromFolder
+                ? $"LocalAi package {resolved.Manifest.ReleaseVersion}: copying from " +
+                    $"{package.SourceFolder} and verifying..."
+                : $"LocalAi package {resolved.Manifest.ReleaseVersion}: downloading and verifying...");
 
         // Real byte progress: the expected size comes from the verified manifest, and the
         // downloaded bytes are observed as the file grows.
@@ -2647,8 +2701,6 @@ public sealed class InstallerWizardViewModel : ObservableObject
         // 208 MB" for the whole of a two-minute preflight, which reads as a hung installer with
         // nothing to press but Cancel.
         var downloadFinished = false;
-        // The same test CreateFeed makes: a folder feed copies the package from disk.
-        var fromFolder = !string.IsNullOrWhiteSpace(package.SourceFolder);
         var downloadProgress = new Progress<long>(bytes =>
         {
             if (downloadFinished)

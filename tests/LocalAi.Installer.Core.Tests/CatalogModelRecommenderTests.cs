@@ -118,6 +118,28 @@ public sealed class CatalogModelRecommenderTests
         Assert.False(large.FitsInVideoMemory);
     }
 
+    /// <summary>
+    /// Setup plans from the release's own contexts, so the page weighs those rather than the
+    /// catalogue's, and leaves out what the release does not list.
+    /// </summary>
+    [Fact]
+    public void A_release_is_weighed_at_its_own_contexts()
+    {
+        var result = CatalogModelRecommender.FromRelease(
+            Gpu(24UL * 1024 * 1024 * 1024),
+            [Entry("test:1", 2048)],
+            [
+                new ManifestModel("test:1", 2048, TwoGb, TwoGb),
+                new ManifestModel("test:1", 8192, TwoGb, TwoGb),
+                new ManifestModel("other:1", 2048, TwoGb, TwoGb),
+            ]);
+
+        Assert.True(result.SizesKnown);
+        Assert.Equal(
+            [("test:1", 2048), ("test:1", 8192)],
+            result.Fits.Select(fit => (fit.Tag, fit.ContextTokens)).OrderBy(pair => pair.ContextTokens));
+    }
+
     [Fact]
     public async Task Each_catalogue_tag_is_asked_for_exactly_once()
     {
