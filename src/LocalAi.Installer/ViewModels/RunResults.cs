@@ -24,6 +24,12 @@ public enum PackageOutcomeKind
     /// names it when it is one the row words by its cause.
     /// </summary>
     Failed,
+
+    /// <summary>
+    /// The run was cancelled after the package step began and before activation;
+    /// <see cref="PackageOutcome.StillInstalled"/> names the release installed after it.
+    /// </summary>
+    Cancelled,
 }
 
 /// <summary>Why the package was not installed, by what the reader does next.</summary>
@@ -59,7 +65,8 @@ public sealed record PackageOutcome(
     string? Reason = null,
     IReadOnlyList<string>? Restored = null,
     string? PriorVersion = null,
-    PackageFailureKind? Failure = null)
+    PackageFailureKind? Failure = null,
+    string? StillInstalled = null)
 {
     /// <summary>What the package installer's answer amounts to.</summary>
     public static PackageOutcome FromResult(ReleaseInstallResult result)
@@ -474,6 +481,14 @@ public static class RunResults
                     "not installed: the installation stopped with an error. Technical details: {0}",
                     "не установлен: установка остановилась с ошибкой. Технические сведения: {0}"),
                 outcome.Reason),
+            PackageOutcomeKind.Cancelled when outcome.StillInstalled is { } still => string.Format(
+                InstallerCulture.Pick(
+                    "not installed: the run was cancelled; {0} is still installed",
+                    "не установлен: запуск отменён; по-прежнему установлен {0}"),
+                still),
+            PackageOutcomeKind.Cancelled => InstallerCulture.Pick(
+                "not installed: the run was cancelled",
+                "не установлен: запуск отменён"),
             _ when installed && outcome.Restored is { Count: > 0 } restored => string.Format(
                 InstallerCulture.Pick(
                     "{0}, version {1}; put back from the release: {2}",
