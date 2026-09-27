@@ -1903,10 +1903,12 @@ public sealed class InstallerWizardViewModel : ObservableObject
 
     /// <summary>
     /// A package step that succeeds ends by deleting the launcher copies beyond the runtime's
-    /// retention bound, read from the root the package goes into.
+    /// retention bound, read from the root the package goes into. Said only when it deletes any,
+    /// counting the copy of a replaced launcher unless the release is the one installed.
     /// </summary>
     private string LauncherBackupsReviewLine() =>
-        package.HasPackage
+        package.HasPackage &&
+        LocalAiPackageInstaller.DeletesLauncherBackups(RuntimeRoot, !package.IsAlreadyInstalled)
             ? string.Format(
                 InstallerCulture.Pick(
                     "Earlier copies of localai-launcher.exe: all but the newest {0} are deleted",

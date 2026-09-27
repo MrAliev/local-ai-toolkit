@@ -237,17 +237,19 @@ public sealed class ThePackageStatusMatchesTheRunTests
     /// <summary>
     /// A package step that installs or repairs deletes the launcher copies beyond the machine's
     /// retention bound, and the review is meant to list everything the run does. A run without a
-    /// package reaches no such step and says nothing about it.
+    /// package reaches no such step and says nothing about it. An update keeps a copy of the
+    /// launcher it replaces, so at the bound it deletes the oldest.
     /// </summary>
     [Fact]
     public void The_review_says_which_launcher_copies_the_package_step_deletes()
     {
-        using var root = new TemporaryDirectory("LocalAi-review-backups");
-        new RuntimeRetentionPolicyStore(root.Path).Write(
+        using var machine = new TemporaryDirectory("LocalAi-review-backups");
+        var layout = Machine(machine, copies: 5, launcher: true);
+        new RuntimeRetentionPolicyStore(layout.Root).Write(
             RuntimeRetentionPolicy.Default with { LauncherBackups = 5 });
         var wizard = new InstallerWizardViewModel(StartChoice.UpdateOrRepair, () => null)
         {
-            RuntimeRoot = root.Path,
+            RuntimeRoot = layout.Root,
         };
 
         Assert.DoesNotContain("copies of localai-launcher.exe", wizard.ReviewText, StringComparison.Ordinal);
@@ -262,6 +264,58 @@ public sealed class ThePackageStatusMatchesTheRunTests
         Assert.Contains(
             "Прежние копии localai-launcher.exe: все, кроме 5 самых новых, удаляются",
             wizard.ReviewGroups[0].Lines);
+    }
+
+    /// <summary>
+    /// A clean installation was told earlier copies are deleted when there were none (run
+    /// 20260927-010506-clean-install-folder). The run deletes what exceeds the bound: the copies
+    /// already there, and the one it makes of a launcher it replaces, which a repair of the
+    /// installed release does not.
+    /// </summary>
+    [Theory]
+    [InlineData(0, false, false, false)]
+    [InlineData(2, false, false, false)]
+    [InlineData(2, true, true, false)]
+    [InlineData(2, true, false, true)]
+    [InlineData(3, true, true, true)]
+    public void The_review_names_launcher_copies_only_when_the_run_deletes_some(
+        int copies,
+        bool launcher,
+        bool installed,
+        bool deletes)
+    {
+        using var machine = new TemporaryDirectory("LocalAi-review-backups");
+        var layout = Machine(machine, copies, launcher);
+        new RuntimeRetentionPolicyStore(layout.Root).Write(
+            RuntimeRetentionPolicy.Default with { LauncherBackups = 2 });
+        var wizard = new InstallerWizardViewModel(StartChoice.UpdateOrRepair, () => null)
+        {
+            RuntimeRoot = layout.Root,
+        };
+        wizard.Package.InstalledVersionDirectory = installed ? "0123456789ab" : null;
+
+        wizard.Package.SelectResolvedRelease(Release("0.1.51"), "0.1.51");
+
+        Assert.Equal(
+            deletes,
+            wizard.ReviewText!.Contains("copies of localai-launcher.exe", StringComparison.Ordinal));
+    }
+
+    private static InstallationLayout Machine(TemporaryDirectory machine, int copies, bool launcher)
+    {
+        var layout = InstallationLayout.FromLocalAppData(machine.Path);
+        for (var index = 0; index < copies; index++)
+        {
+            Directory.CreateDirectory(Path.Combine(layout.InstallerBackupsRoot, "launcher-" + index));
+        }
+
+        if (launcher)
+        {
+            Directory.CreateDirectory(layout.LauncherDirectory);
+            File.WriteAllText(layout.LauncherPath, "installed-launcher");
+        }
+
+        return layout;
     }
 
     /// <summary>
