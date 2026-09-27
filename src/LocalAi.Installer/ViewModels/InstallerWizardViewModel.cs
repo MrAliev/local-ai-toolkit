@@ -1321,15 +1321,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
 
         AppendLog(
             report,
-            journal.Snapshot.HasReversibleWork
-                // The log is English, but this sentence points at a button, and the button
-                // carries whatever label the window is showing. An instruction naming a
-                // control that is not on screen cannot be followed.
-                ? "Some of the applied actions are reversible. Use \"" +
-                    PageLabels.RollBackChanges + "\" below to undo them; the journal at " +
-                    journal.JournalPath + " records exactly what was done."
-                : "Nothing this run applied is reversible by the installer. The journal " +
-                    "at " + journal.JournalPath + " records exactly what was done.");
+            RunResults.RollbackAvailability(journal.Snapshot.HasReversibleWork, journal.JournalPath));
     }
 
     public async Task RollbackThisRunAsync()
@@ -2532,9 +2524,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             return;
         }
 
-        var step = JournalBegin(
-            InstallerRunEffectKind.UninstallRegistration,
-            "Apps & features entry for LocalAi " + version);
+        var step = BeginRegistrationStep();
         try
         {
             var registration = new UninstallRegistration(InstallationLayout.CreateDefault());
@@ -2917,6 +2907,12 @@ public sealed class InstallerWizardViewModel : ObservableObject
     /// <summary>The model step's intent, written before the first model is asked for.</summary>
     internal string? BeginModelStep() =>
         JournalBegin(InstallerRunEffectKind.ModelInstall, "Local models through the broker");
+
+    /// <summary>The Apps &amp; features step's intent, written before the entry is.</summary>
+    internal string? BeginRegistrationStep() =>
+        JournalBegin(
+            InstallerRunEffectKind.UninstallRegistration,
+            "Apps & features entry and the uninstaller copy it runs");
 
     /// <summary>What model setup ended in, told to the log, the journal and the finish page.</summary>
     internal void FinishModelSetup(
