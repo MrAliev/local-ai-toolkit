@@ -406,6 +406,13 @@ public sealed class InstallerWizardViewModel : ObservableObject
     /// <summary>Stands in for the public model registry in a test, which must not go online.</summary>
     internal IModelSizeSource? ModelSizeSource { get; init; }
 
+    /// <summary>Ollama's model store for a runtime root; a test names a store of its own.</summary>
+    internal Func<string, OllamaModelStore?> LocateOllamaStore { get; init; } = runtimeRoot =>
+        OllamaModelStore.Locate(
+            runtimeRoot,
+            Environment.GetEnvironmentVariable("OLLAMA_MODELS"),
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+
     public RelayCommand BackCommand { get; }
 
     public RelayCommand NextCommand { get; }
@@ -735,11 +742,30 @@ public sealed class InstallerWizardViewModel : ObservableObject
 
             storedUpdateCheck = new UpdateCheckPolicyStore(runtimeRoot).Read().Enabled;
             review.EnableUpdateCheck = storedUpdateCheck.Value;
+
+            SeedModelSetup(runtimeRoot);
         }
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
             // An unreadable installation seeds nothing and the pages keep their safe defaults.
+        }
+    }
+
+    /// <summary>
+    /// Offers the model setup the installation ran with. One from before that was recorded is
+    /// judged by Ollama's store: holding none of the catalogue's models, it was set up without them.
+    /// </summary>
+    private void SeedModelSetup(string runtimeRoot)
+    {
+        if (ModelSetupRecord.Read(runtimeRoot) is { } recorded && models.Restore(recorded))
+        {
+            return;
+        }
+
+        if (LocateOllamaStore(runtimeRoot)?.HoldsAny(models.CatalogModels.Select(model => model.Tag)) == false)
+        {
+            models.StartOnSkip();
         }
     }
 
@@ -756,9 +782,9 @@ public sealed class InstallerWizardViewModel : ObservableObject
     /// A clean reinstall therefore comes up unticked, and that is the decision rather than an
     /// oversight. The removal half takes the entry out with the binaries it points at, this half
     /// then reads a file that no longer carries it, and the box shows what is actually there. The
-    /// alternative — carrying the previous answer across the handover — would make this the one
-    /// setting the installer remembers, and "read the machine, remember nothing" is the property
-    /// that makes a decline survive an update at all.
+    /// alternative — carrying the previous answer across the handover — would have the installer
+    /// remember this answer rather than read it, and "read the machine, remember nothing" is the
+    /// property that makes a decline survive an update at all.
     /// </summary>
     private void SeedTextSearchGate()
     {
@@ -1094,6 +1120,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             // The package goes last: prerequisites must be in place first, and a failure
             // here must not leave half-installed dependencies unexplained.
             await InstallPackageAsync(report, token);
+            RecordModelSetup();
 
             // Deliberately after the package, never before it, and never at all when there is
             // no installation to write into. See ResidencyPolicyWriter for why this write is
@@ -1832,6 +1859,27 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 $"Could not store the update check setting: {exception.Message}. The " +
                 "installation is unaffected; set it with `localai policy set --update-check " +
                 "on` if you want it.");
+        }
+    }
+
+    /// <summary>
+    /// Keeps the model setup this installation ran with, for the next update to offer. Only once
+    /// the package is installed; a failure costs nothing but that offer.
+    /// </summary>
+    internal void RecordModelSetup()
+    {
+        if (!packageInstalled)
+        {
+            return;
+        }
+
+        try
+        {
+            ModelSetupRecord.Apply(RuntimeRoot, models.BuildProvisioningSelection());
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException or ArgumentException)
+        {
         }
     }
 
