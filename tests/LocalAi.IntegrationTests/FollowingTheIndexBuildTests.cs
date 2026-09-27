@@ -40,6 +40,43 @@ public sealed class FollowingTheIndexBuildTests
             UpdatedAtUtc: DateTimeOffset.UnixEpoch,
             Step: step);
 
+    /// <summary>An embedding phase over one working tree, as a reading caught it.</summary>
+    private static RepositoryIndexProgress Counting(
+        RepositoryIndexProgressPhase phase,
+        string root,
+        int processed,
+        int total) =>
+        new(
+            "repo-id",
+            phase,
+            root,
+            ProcessedChunks: processed,
+            TotalChunks: total,
+            ChunksPerSecond: 10.1,
+            EstimatedRemaining: TimeSpan.FromSeconds(102),
+            UpdatedAtUtc: DateTimeOffset.UnixEpoch);
+
+    /// <summary>
+    /// The record a sync leaves: the publishing step's record with the phase moved on, so its
+    /// chunk counters are the ones that step zeroed.
+    /// </summary>
+    private static RepositoryIndexProgress Finished() =>
+        Starting(RepositoryIndexProgressPhase.Completed, IndexBuildStep.SwitchingOver);
+
+    /// <summary>What the loop does with each reading it takes, without the minute between them.</summary>
+    private static FollowStep Followed(params RepositoryIndexProgress[] readings)
+    {
+        var embedded = EmbeddedChunks.None;
+        FollowStep? step = null;
+        foreach (var reading in readings)
+        {
+            embedded = embedded.After(reading);
+            step = RepoFollowCommand.Step(reading, TimeSpan.Zero, StaleAfter, embedded.Total);
+        }
+
+        return step!;
+    }
+
     [Fact]
     public void Follow_is_off_unless_it_is_asked_for()
     {
@@ -128,10 +165,10 @@ public sealed class FollowingTheIndexBuildTests
     /// <summary>
     /// The terminal record is written by the step-reporting path, which zeroes the chunk
     /// counters on purpose — so a finished build reported from it said "чанков — 0" after
-    /// embedding 8803. The count the loop watched go by is the only honest one it holds.
+    /// embedding 8803. The figure comes from the readings before it.
     /// </summary>
     [Fact]
-    public void A_finished_build_reports_what_the_loop_watched()
+    public void A_finished_build_reports_what_the_readings_before_it_counted()
     {
         var step = RepoFollowCommand.Step(
             Building(RepositoryIndexProgressPhase.Completed) with
@@ -141,10 +178,71 @@ public sealed class FollowingTheIndexBuildTests
             },
             TimeSpan.Zero,
             StaleAfter,
-            chunksSeen: 8803);
+            chunksEmbedded: 8803);
 
         Assert.Equal(0, step.ExitCode);
         Assert.Contains("8803", step.Line, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The loop reads the record once an interval, and embedding that ends between two readings
+    /// never reaches it: the records after it carry no chunk counts. A base sync of 1181 chunks,
+    /// last read at 144, reported `Index build finished: 144 chunks.` (#774). The total the phase
+    /// was counting towards was on the reading the loop did take.
+    /// </summary>
+    [Fact]
+    public void A_finished_build_reports_the_total_its_embedding_counted_towards()
+    {
+        var step = Followed(
+            Counting(RepositoryIndexProgressPhase.EmbeddingBase, @"R:\Repo", 144, 1181),
+            Starting(
+                RepositoryIndexProgressPhase.PublishingGeneration,
+                IndexBuildStep.CopyingGeneration),
+            Starting(RepositoryIndexProgressPhase.Publishing, IndexBuildStep.SwitchingOver),
+            Finished());
+
+        Assert.Equal(0, step.ExitCode);
+        Assert.Contains("1181", step.Line, StringComparison.Ordinal);
+        Assert.DoesNotContain("144", step.Line, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A sync embeds the base and then an overlay for each worktree that differs from it, one
+    /// after another and each over its own chunks, so the build embedded their sum. A phase read
+    /// more than once is still one phase.
+    /// </summary>
+    [Fact]
+    public void Embedding_phases_add_up_and_a_phase_read_twice_counts_once()
+    {
+        var step = Followed(
+            Counting(RepositoryIndexProgressPhase.EmbeddingBase, @"R:\Repo", 144, 1181),
+            Counting(RepositoryIndexProgressPhase.EmbeddingBase, @"R:\Repo", 900, 1181),
+            Starting(
+                RepositoryIndexProgressPhase.PublishingGeneration,
+                IndexBuildStep.CopyingGeneration),
+            Counting(RepositoryIndexProgressPhase.EmbeddingOverlay, @"R:\Repo", 0, 12),
+            Counting(RepositoryIndexProgressPhase.EmbeddingOverlay, @"R:\Repo-feature", 30, 57),
+            Starting(RepositoryIndexProgressPhase.Publishing, IndexBuildStep.SwitchingOver),
+            Finished());
+
+        Assert.Equal(0, step.ExitCode);
+        Assert.Contains("1250", step.Line, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Counters beside a phase that counts nothing are not more chunks. The terminal record copies
+    /// its processed count from the total of the record before it: zero today, because the
+    /// publishing step zeroes it, and the embedding's own total if that step ever stops doing so.
+    /// </summary>
+    [Fact]
+    public void A_phase_that_counts_nothing_adds_nothing_to_the_figure()
+    {
+        var step = Followed(
+            Counting(RepositoryIndexProgressPhase.EmbeddingBase, @"R:\Repo", 144, 1181),
+            Finished() with { ProcessedChunks = 1181, TotalChunks = 1181 });
+
+        Assert.Contains("1181", step.Line, StringComparison.Ordinal);
+        Assert.DoesNotContain("2362", step.Line, StringComparison.Ordinal);
     }
 
     /// <summary>
