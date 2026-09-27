@@ -4,8 +4,8 @@ namespace LocalAi.Installer.Core.Models;
 
 /// <summary>
 /// Ollama's model store, read from disk: asking Ollama or the broker which models are there would
-/// start them. <c>IsDefault</c> marks Ollama's own default folder, which Ollama makes
-/// when it first runs; one somebody chose may simply be unavailable.
+/// start them. <c>IsDefault</c> marks Ollama's own default folder, which is taken to hold nothing
+/// when it is missing; a folder somebody chose may simply be unavailable.
 /// </summary>
 public sealed record OllamaModelStore(string Directory, bool IsDefault)
 {
