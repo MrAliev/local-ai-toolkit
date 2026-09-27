@@ -82,10 +82,7 @@ public sealed class InstallerRunRollback(
                 InstallerRunStepStatus.UndoFailed => (
                     InstallerRollbackStepOutcome.Failed,
                     step.Detail ?? "An earlier rollback failed on this step."),
-                // Earlier installers journalled the PATH entry as reversible. Nothing takes it
-                // back: it leads to the launcher every version shares.
-                _ when !step.IsReversible ||
-                    step.Kind == InstallerRunEffectKind.LauncherPath => (
+                _ when !InstallerRunJournalSnapshot.RollbackUndoes(step) => (
                     InstallerRollbackStepOutcome.LeftInPlace,
                     step.Detail is { Length: > 0 } completedDetail
                         ? $"Not undone by this installer. {completedDetail}"

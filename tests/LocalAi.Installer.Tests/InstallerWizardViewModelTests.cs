@@ -1,3 +1,4 @@
+using System.Xml.Linq;
 using LocalAi.Contracts;
 using LocalAi.Installer.Core;
 using LocalAi.Installer.Core.Dependencies;
@@ -647,6 +648,132 @@ public sealed class InstallerWizardViewModelTests
             finally { wizard.DetachPresentation(); }
         }
         finally { DeleteDirectory(logDirectory); }
+    }
+
+    /// <summary>
+    /// The RC29 update found an interrupted run whose one step never finished. The notice said
+    /// nothing it recorded could be rolled back, and a rollback button stood under it anyway.
+    /// </summary>
+    [Fact]
+    public void An_interrupted_run_with_nothing_reversible_offers_no_rollback()
+    {
+        var logDirectory = TestLogDirectory();
+        try
+        {
+            var journal = InstallerRunJournal.Start(logDirectory);
+            journal.BeginStep(InstallerRunEffectKind.PackageActivation, "LocalAi package 0.2.1-RC29");
+            journal.Dispose();
+
+            var wizard = SupportedWizard();
+            wizard.LogDirectory = logDirectory;
+            wizard.LoadInterruptedRunJournal();
+
+            Assert.True(wizard.HasInterruptedRun);
+            Assert.True(wizard.HasInterruptedRunNotice);
+            Assert.False(wizard.CanRollbackPreviousRun);
+            Assert.False(wizard.RollbackPreviousRunCommand.CanExecute(null));
+        }
+        finally { DeleteDirectory(logDirectory); }
+    }
+
+    /// <summary>
+    /// Pressing it undid nothing, marked the journal rolled back and swapped the notice for a
+    /// report in which every line was left in place.
+    /// </summary>
+    [Fact]
+    public async Task Rolling_back_a_previous_run_with_nothing_reversible_changes_nothing()
+    {
+        var logDirectory = TestLogDirectory();
+        try
+        {
+            var journal = InstallerRunJournal.Start(logDirectory);
+            journal.BeginStep(InstallerRunEffectKind.PackageActivation, "LocalAi package 0.2.1-RC29");
+            journal.Dispose();
+            var recorded = File.ReadAllBytes(journal.JournalPath);
+
+            var wizard = SupportedWizard();
+            wizard.LogDirectory = logDirectory;
+            wizard.LoadInterruptedRunJournal();
+            var notice = wizard.InterruptedRunNotice;
+
+            await wizard.RollbackPreviousRunAsync();
+
+            Assert.True(wizard.HasInterruptedRun);
+            Assert.Equal(notice, wizard.InterruptedRunNotice);
+            Assert.Equal(recorded, File.ReadAllBytes(journal.JournalPath));
+        }
+        finally { DeleteDirectory(logDirectory); }
+    }
+
+    /// <summary>
+    /// Rollback never takes the launcher's PATH entry back, so a run that recorded only that has
+    /// nothing to offer, whatever the installer that wrote it called it.
+    /// </summary>
+    [Fact]
+    public void An_interrupted_run_with_only_the_launcher_path_offers_no_rollback()
+    {
+        var logDirectory = TestLogDirectory();
+        try
+        {
+            var journal = InstallerRunJournal.Start(logDirectory);
+            var step = journal.BeginStep(
+                InstallerRunEffectKind.LauncherPath,
+                @"PATH entry for C:\LocalAi\bin\launcher");
+            journal.CompleteStep(step, "Added to the user PATH.", isReversible: true);
+            journal.Dispose();
+
+            var wizard = SupportedWizard();
+            wizard.LogDirectory = logDirectory;
+            wizard.LoadInterruptedRunJournal();
+
+            Assert.False(wizard.CanRollbackPreviousRun);
+            Assert.False(wizard.RollbackPreviousRunCommand.CanExecute(null));
+            Assert.Contains("Nothing it recorded is reversible", wizard.InterruptedRunNotice);
+        }
+        finally { DeleteDirectory(logDirectory); }
+    }
+
+    /// <summary>
+    /// The window binds before the journal is looked for, so finding one has to be announced.
+    /// </summary>
+    [Fact]
+    public void An_interrupted_run_with_reversible_work_offers_its_rollback()
+    {
+        var logDirectory = TestLogDirectory();
+        try
+        {
+            var journal = InstallerRunJournal.Start(logDirectory);
+            var step = journal.BeginStep(
+                InstallerRunEffectKind.ResidencyPolicy,
+                "Model residency policy (RequireFullVram)");
+            journal.CompleteStep(step, "written", isReversible: true);
+            journal.Dispose();
+
+            var wizard = SupportedWizard();
+            wizard.LogDirectory = logDirectory;
+            var announced = new List<string?>();
+            wizard.PropertyChanged += (_, args) => announced.Add(args.PropertyName);
+            wizard.LoadInterruptedRunJournal();
+
+            Assert.True(wizard.CanRollbackPreviousRun);
+            Assert.True(wizard.RollbackPreviousRunCommand.CanExecute(null));
+            Assert.Contains(nameof(InstallerWizardViewModel.CanRollbackPreviousRun), announced);
+        }
+        finally { DeleteDirectory(logDirectory); }
+    }
+
+    [Fact]
+    public void The_previous_run_rollback_button_is_shown_only_when_it_can_roll_back()
+    {
+        XNamespace presentation = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
+        var button = XDocument.Parse(InstallerMarkup.Read("MainWindow.xaml"))
+            .Descendants(presentation + "Button")
+            .Single(element =>
+                element.Attribute("Command")?.Value == "{Binding RollbackPreviousRunCommand}");
+
+        Assert.Equal(
+            "{Binding CanRollbackPreviousRun, Converter={StaticResource BoolToVisibility}}",
+            button.Attribute("Visibility")?.Value);
     }
 
     private static string TestLogDirectory() => Path.Combine(
