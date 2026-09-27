@@ -126,6 +126,9 @@ public enum PrerequisiteOutcomeKind
     CheckAfterInstallFailed,
     Cancelled,
 
+    /// <summary>winget or npm outlived its stop and may still be running; the run ended there.</summary>
+    CouldNotStop,
+
     /// <summary>The run stopped before this one.</summary>
     NotReached,
 }
@@ -181,6 +184,7 @@ public static class RunResults
         {
             PrerequisiteOutcomeKind.Installed or PrerequisiteOutcomeKind.Reinstalled => RunMark.Done,
             PrerequisiteOutcomeKind.NoAutomatedInstaller or PrerequisiteOutcomeKind.NotReached => RunMark.None,
+            PrerequisiteOutcomeKind.CouldNotStop => RunMark.Warned,
             _ => RunMark.Failed,
         };
         return new(mark, outcome.Title, outcome.Kind switch
@@ -220,6 +224,12 @@ public static class RunResults
             PrerequisiteOutcomeKind.Cancelled => InstallerCulture.Pick(
                 "not installed: the run was cancelled",
                 "не установлен: запуск отменён"),
+            PrerequisiteOutcomeKind.CouldNotStop => Format(
+                "outcome unknown: {0} could not be stopped, so the installation may still be running. " +
+                "Wait for it to end before running this installer again",
+                "результат неизвестен: не удалось остановить {0}, поэтому установка, возможно, ещё идёт. " +
+                "Дождитесь её окончания, прежде чем снова запускать установщик",
+                outcome.Tool),
             PrerequisiteOutcomeKind.NoAutomatedInstaller => InstallerCulture.Pick(
                 "skipped: there is no automated installer for it",
                 "пропущено: автоматической установки нет"),
