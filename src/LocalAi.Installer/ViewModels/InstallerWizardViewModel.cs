@@ -147,6 +147,9 @@ public sealed class InstallerWizardViewModel : ObservableObject
 
     private bool? storedUpdateCheck;
 
+    /// <summary>The recorded model setup this installer does not offer, which the review names.</summary>
+    private ModelProvisioningSelection? unofferedModelSetup;
+
     /// <summary>
     /// What was installed when this window opened. Held rather than re-read: null is a real
     /// answer, so the flag beside it is what makes "read once" possible.
@@ -797,9 +800,14 @@ public sealed class InstallerWizardViewModel : ObservableObject
     /// </summary>
     private void SeedModelSetup(string runtimeRoot)
     {
-        if (ModelSetupRecord.Read(runtimeRoot) is { } recorded && models.Restore(recorded))
+        if (ModelSetupRecord.Read(runtimeRoot) is { } recorded)
         {
-            return;
+            if (models.Restore(recorded))
+            {
+                return;
+            }
+
+            unofferedModelSetup = recorded;
         }
 
         if (LocateOllamaStore(runtimeRoot)?.HoldsAny(models.CatalogModels.Select(model => model.Tag)) == false)
@@ -1174,7 +1182,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             // The package goes last: prerequisites must be in place first, and a failure
             // here must not leave half-installed dependencies unexplained.
             await InstallPackageAsync(report, token);
-            RecordModelSetup();
+            RecordModelSetup(report);
 
             // Deliberately after the package, never before it, and never at all when there is
             // no installation to write into. See ResidencyPolicyWriter for why this write is
@@ -1917,25 +1925,71 @@ public sealed class InstallerWizardViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Keeps the model setup this installation ran with, for the next update to offer. Only once
-    /// the package is installed; a failure costs nothing but that offer.
+    /// Keeps the model setup this installation ran with, for the next update to offer, journalled
+    /// like the settings beside it so a rollback puts the earlier one back. Only once the package
+    /// is installed; a failure costs nothing but that offer, so it does not mark the run.
     /// </summary>
-    internal void RecordModelSetup()
+    internal void RecordModelSetup(StringBuilder report)
     {
         if (!packageInstalled)
         {
             return;
         }
 
+        string? step = null;
         try
         {
-            ModelSetupRecord.Apply(RuntimeRoot, models.BuildProvisioningSelection());
+            var runtimeRoot = RuntimeRoot;
+            var selection = models.BuildProvisioningSelection();
+            var recordPath = RuntimeDirectories.SettingsFileForWriting(runtimeRoot, ModelSetupRecord.FileName);
+            var prior = Directory.Exists(runtimeRoot) && !ModelSetupRecord.Holds(runtimeRoot, selection)
+                ? CaptureFileState(recordPath)
+                : null;
+            if (prior is not null)
+            {
+                step = JournalBegin(
+                    InstallerRunEffectKind.ResidencyPolicy,
+                    $"Model setup choice ({ModelSetupChoice(selection)})");
+            }
+
+            var outcome = ModelSetupRecord.Apply(runtimeRoot, selection);
+            if (outcome == ResidencyPolicyOutcome.SkippedWithoutInstallation)
+            {
+                return;
+            }
+
+            if (outcome != ResidencyPolicyOutcome.Unchanged)
+            {
+                JournalComplete(
+                    step,
+                    $"Wrote {recordPath}.",
+                    isReversible: true,
+                    prior is { } captured
+                        ? new InstallerRunUndoData(Files: [BuildFileUndo(recordPath, captured)])
+                        : null);
+            }
+
+            AppendLog(
+                report,
+                $"Model setup choice recorded for the next update or repair: {ModelSetupChoice(selection)}.");
         }
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
+            JournalFail(step, exception.Message);
+            AppendLog(
+                report,
+                $"Could not record the model setup choice ({exception.Message}). The installation is " +
+                "unaffected; the next update or repair may not offer this choice.");
         }
     }
+
+    private static string ModelSetupChoice(ModelProvisioningSelection selection) => selection.Mode switch
+    {
+        ModelProvisioningMode.None => "skip",
+        ModelProvisioningMode.Exact => $"{selection.Model} with a {selection.ContextTokens} token context",
+        _ => "automatic",
+    };
 
     /// <summary>The pre-effect content of a file the run is about to change, or its absence.</summary>
     private sealed record CapturedFileState(bool Existed, byte[] Bytes);
@@ -1988,6 +2042,21 @@ public sealed class InstallerWizardViewModel : ObservableObject
             : string.Empty;
 
     /// <summary>
+    /// The page offers something else in place of a recorded choice it cannot offer, and that
+    /// must not happen silently (#256). A choice carried over needs no note: the models line
+    /// already says what the run does.
+    /// </summary>
+    private string UnofferedModelSetupNote() =>
+        unofferedModelSetup is { } recorded
+            ? string.Format(
+                InstallerCulture.Pick(
+                    "The last installation chose {0} with a {1} token context; this installer does not offer it",
+                    "В прошлой установке была выбрана модель {0} с контекстом {1} токенов; этот установщик такую не предлагает"),
+                recorded.Model,
+                recorded.ContextTokens)
+            : string.Empty;
+
+    /// <summary>
     /// The update check is a stored setting too, so a run that turns it off says so rather
     /// than leaving the change to be discovered later.
     /// </summary>
@@ -2037,7 +2106,8 @@ public sealed class InstallerWizardViewModel : ObservableObject
         {
             new(PageLabels.ReviewRelease, ReviewGroup.SplitLines(package.ReviewText, LauncherBackupsReviewLine())),
             new(PageLabels.ReviewComponents, ReviewGroup.SplitLines(dependencies.ReviewText)),
-            new(PageLabels.ReviewModels, ReviewGroup.SplitLines(models.ReviewText, residency.ReviewText + StoredResidencyNote())),
+            new(PageLabels.ReviewModels, ReviewGroup.SplitLines(
+                models.ReviewText, UnofferedModelSetupNote(), residency.ReviewText + StoredResidencyNote())),
             new(PageLabels.ReviewClients, ReviewGroup.SplitLines(agents.ReviewText, agents.GateReviewText,
                 agents.WorktreeReviewText, LauncherPathReviewLine())),
             new(PageLabels.ReviewAdditional, ReviewGroup.SplitLines(UpdateCheckReviewLine())),

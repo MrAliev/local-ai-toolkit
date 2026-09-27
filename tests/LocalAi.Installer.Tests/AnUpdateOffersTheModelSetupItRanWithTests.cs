@@ -1,3 +1,5 @@
+using System.Text;
+using LocalAi.Installer.Core;
 using LocalAi.Installer.Core.Activation;
 using LocalAi.Installer.Core.Diagnosis;
 using LocalAi.Installer.Core.Models;
@@ -79,7 +81,7 @@ public sealed class AnUpdateOffersTheModelSetupItRanWithTests
         wizard.Models.IsOffline = true;
         wizard.Models.IsOffline = false;
         wizard.ApplyPackageResult(Installed(temp));
-        wizard.RecordModelSetup();
+        wizard.RecordModelSetup(new StringBuilder());
 
         Assert.True(wizard.Models.IsAutomatic);
         Assert.Equal(new ModelProvisioningSelection(ModelProvisioningMode.Automatic), ModelSetupRecord.Read(Runtime(temp)));
@@ -97,11 +99,11 @@ public sealed class AnUpdateOffersTheModelSetupItRanWithTests
         var wizard = await Update(temp, offline: false);
         wizard.Models.IsSkip = true;
 
-        wizard.RecordModelSetup();
+        wizard.RecordModelSetup(new StringBuilder());
         Assert.Equal(new ModelProvisioningSelection(ModelProvisioningMode.Automatic), ModelSetupRecord.Read(Runtime(temp)));
 
         wizard.ApplyPackageResult(Installed(temp));
-        wizard.RecordModelSetup();
+        wizard.RecordModelSetup(new StringBuilder());
         Assert.Equal(ModelProvisioningSelection.None, ModelSetupRecord.Read(Runtime(temp)));
     }
 
@@ -175,6 +177,54 @@ public sealed class AnUpdateOffersTheModelSetupItRanWithTests
 
         Assert.True(wizard.Models.IsSkip);
     }
+
+    /// <summary>
+    /// Offering something else in its place without a word is the silent change of #256, so the
+    /// review names the choice it could not offer, between the models line and the memory rule.
+    /// </summary>
+    [Fact]
+    public async Task A_recorded_model_this_installer_does_not_offer_is_named_under_the_models_line()
+    {
+        using var temp = new TemporaryDirectory("LocalAi-model-setup-offer");
+        Record(temp, new ModelProvisioningSelection(ModelProvisioningMode.Exact, "retired-model:1b", 2048));
+
+        var wizard = await Update(temp, offline: false, Store(temp));
+
+        Assert.Equal(
+            new[]
+            {
+                SkippedReview,
+                "The last installation chose retired-model:1b with a 2048 token context; this installer does not offer it",
+                wizard.Residency.ReviewText,
+            },
+            ModelsGroup(wizard));
+
+        InstallerCulture.Current = InstallerLanguage.Russian;
+        Assert.Equal(
+            "В прошлой установке была выбрана модель retired-model:1b с контекстом 2048 токенов; этот установщик такую не предлагает",
+            ModelsGroup(wizard)[1]);
+    }
+
+    /// <summary>The models line already says what the run downloads; where the mode came from is no news.</summary>
+    [Theory]
+    [InlineData(ModelProvisioningMode.None)]
+    [InlineData(ModelProvisioningMode.Automatic)]
+    [InlineData(ModelProvisioningMode.Exact)]
+    public async Task A_mode_carried_over_from_the_last_installation_has_no_note(ModelProvisioningMode mode)
+    {
+        using var temp = new TemporaryDirectory("LocalAi-model-setup-offer");
+        var model = new ModelsPageViewModel().CatalogModels[0];
+        Record(temp, mode == ModelProvisioningMode.Exact
+            ? new ModelProvisioningSelection(mode, model.Tag, model.ContextTokens[0])
+            : new ModelProvisioningSelection(mode));
+
+        var wizard = await Update(temp, offline: false);
+
+        Assert.Equal(new[] { wizard.Models.ReviewText, wizard.Residency.ReviewText }, ModelsGroup(wizard));
+    }
+
+    private static IReadOnlyList<string> ModelsGroup(InstallerWizardViewModel wizard) =>
+        Assert.Single(wizard.ReviewGroups, group => group.Title == PageLabels.ReviewModels).Lines;
 
     private static string Runtime(TemporaryDirectory temp) => temp.Combine("runtime");
 
