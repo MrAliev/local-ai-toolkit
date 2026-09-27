@@ -5,7 +5,7 @@ using LocalAi.Installer.Core.Transactions;
 namespace LocalAi.Installer.Core.Removal;
 
 public enum RemovalReportState { Completed, Failed, Unknown, NotStarted, Retained }
-public enum RemovalReportKind { Path, Configuration, Hooks, LauncherPath, Registration, ProcessStop, Other }
+public enum RemovalReportKind { Path, Configuration, Hooks, LauncherPath, Registration, ProcessStop, JournalStep, Other }
 
 public sealed record RemovalReportEntry(
     string Target, RemovalReportKind Kind, RemovalReportState State, string? Detail = null);
@@ -85,7 +85,7 @@ public static class UninstallReport
                 before < 0 ? entries.Count : before,
                 Unplanned(new(
                     step.Description,
-                    step.Kind == InstallerRunEffectKind.ProcessStop ? RemovalReportKind.ProcessStop : RemovalReportKind.Other,
+                    step.Kind == InstallerRunEffectKind.ProcessStop ? RemovalReportKind.ProcessStop : RemovalReportKind.JournalStep,
                     State(step.Status),
                     step.Detail)));
         }
