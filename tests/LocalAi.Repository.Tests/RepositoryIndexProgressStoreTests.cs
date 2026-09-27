@@ -104,6 +104,57 @@ public sealed class RepositoryIndexProgressStoreTests : IDisposable
         Assert.Equal(expected, store.Read());
     }
 
+    /// <summary>
+    /// The terminal record of a build from before the figure existed: the reader of today still
+    /// has to take it, and says the figure is not there rather than that it is zero.
+    /// </summary>
+    [Fact]
+    public void A_record_written_before_the_embedded_figure_existed_still_reads()
+    {
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(
+            Path.Combine(_root, "progress.json"),
+            """
+            {"SchemaVersion":1,"Progress":{"RepositoryId":"repository","Phase":"Completed",
+            "WorkingRoot":"C:\\repo","ProcessedChunks":0,"TotalChunks":0,"ChunksPerSecond":0,
+            "EstimatedRemaining":"00:00:00","UpdatedAtUtc":"2026-09-27T10:00:00+00:00",
+            "Pause":null,"Step":"SwitchingOver","StepDone":0,"StepTotal":0}}
+            """);
+
+        var progress = new RepositoryIndexProgressStore(FsPath.From(_root)).Read();
+
+        Assert.NotNull(progress);
+        Assert.Equal(RepositoryIndexProgressPhase.Completed, progress.Phase);
+        Assert.Null(progress.ChunksEmbedded);
+    }
+
+    /// <summary>
+    /// A reader built before the figure refuses a member it does not know, and an MCP server
+    /// started before an update keeps reading this file until it is restarted. Left out where
+    /// there is none, the figure changes the shape of the terminal record only, and every record
+    /// of a build in progress stays one that reader can take.
+    /// </summary>
+    [Fact]
+    public void A_record_without_the_embedded_figure_is_written_without_it()
+    {
+        var store = new RepositoryIndexProgressStore(FsPath.From(_root));
+
+        store.Save(new RepositoryIndexProgress(
+            "repository",
+            RepositoryIndexProgressPhase.EmbeddingBase,
+            @"C:\repo",
+            120,
+            300,
+            2.5,
+            TimeSpan.FromSeconds(72),
+            DateTimeOffset.UtcNow));
+
+        Assert.DoesNotContain(
+            "ChunksEmbedded",
+            File.ReadAllText(Path.Combine(_root, "progress.json")),
+            StringComparison.Ordinal);
+    }
+
     [Fact]
     public void Read_reports_zero_filled_progress_as_invalid_data()
     {
