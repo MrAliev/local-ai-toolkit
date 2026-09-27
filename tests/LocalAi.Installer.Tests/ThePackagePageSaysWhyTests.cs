@@ -1,3 +1,4 @@
+using System.Net;
 using System.Xml.Linq;
 using LocalAi.Contracts;
 using LocalAi.Installer.Core;
@@ -46,6 +47,99 @@ public sealed class ThePackagePageSaysWhyTests : IDisposable
         Assert.Equal("No release resolved. " + english, page.StatusText);
         InstallerCulture.Current = InstallerLanguage.Russian;
         Assert.Equal("Релиз не определён. " + russian, page.StatusText);
+    }
+
+    /// <summary>
+    /// The fallback feed carries what the GitHub CLI said on a refusal of any kind, and the page
+    /// showed it after one kind only.
+    /// </summary>
+    [Theory]
+    [InlineData("MissingFiles")]
+    [InlineData("NoSuchFolder")]
+    [InlineData("FolderAccessDenied")]
+    [InlineData("ManifestRejectedInFolder")]
+    [InlineData("ManifestRejectedOnGitHub")]
+    [InlineData("OtherReleaseInFolder")]
+    [InlineData("FileAccessDenied")]
+    [InlineData("FileUnreadable")]
+    [InlineData("FileTooLarge")]
+    [InlineData("GitHubUnreachable")]
+    [InlineData("NoPublishedRelease")]
+    [InlineData("AssetNotFound")]
+    [InlineData("DownloadFailed")]
+    [InlineData("Unclassified")]
+    public void What_the_github_cli_said_follows_a_reason_of_any_kind_once(string kind)
+    {
+        var (refusal, english, russian) = Case(kind);
+        var page = new PackagePageViewModel();
+
+        page.ReportUnavailable(new ReleaseResolutionException(
+            "The English line for the log.",
+            refusal: refusal with { GitHubCliDetail = "gh: not logged in." }));
+
+        Assert.Equal(
+            "No release resolved. " + english + " The GitHub CLI could not get it either; if the " +
+            "repository is private, sign in with gh auth login. Technical details: gh: not " +
+            "logged in.",
+            page.StatusText);
+        InstallerCulture.Current = InstallerLanguage.Russian;
+        Assert.Equal(
+            "Релиз не определён. " + russian + " GitHub CLI тоже не смог его получить; если " +
+            "репозиторий закрытый, войдите командой gh auth login. Технические сведения: gh: " +
+            "not logged in.",
+            page.StatusText);
+    }
+
+    /// <summary>The chain the wizard builds when the GitHub CLI is installed, up to the page.</summary>
+    [Fact]
+    public async Task What_the_github_cli_said_reaches_the_page_after_an_unreachable_github()
+    {
+        var feed = new FallbackReleaseFeed(
+            new FailingFeed(new ReleaseResolutionException(
+                "Could not reach GitHub to determine the newest release of owner/name: No such " +
+                "host is known. Check this computer's internet connection, then try again.",
+                refusal: new(ReleaseRefusalKind.GitHubUnreachable))),
+            new FailingFeed(new ReleaseResolutionException("error connecting to api.github.com")));
+        var failure = await Assert.ThrowsAsync<ReleaseResolutionException>(
+            () => feed.ResolveTagAsync("latest", TestContext.Current.CancellationToken));
+        var page = new PackagePageViewModel();
+
+        page.ReportUnavailable(failure);
+
+        Assert.Equal(
+            "No release resolved. Could not reach GitHub to find the newest release. Check this " +
+            "computer's internet connection, or choose a folder that holds the release files. The " +
+            "GitHub CLI could not get it either; if the repository is private, sign in with gh " +
+            "auth login. Technical details: error connecting to api.github.com",
+            page.StatusText);
+    }
+
+    /// <summary>
+    /// A 403 is not what a private repository looks like from outside, so answers without a 404
+    /// reach the page as technical details instead of as "no published release".
+    /// </summary>
+    [Fact]
+    public async Task Github_answers_without_a_404_are_given_as_technical_details()
+    {
+        using var client = new HttpClient(new Answering(HttpStatusCode.Forbidden));
+        using var feed = new AnonymousReleaseFeed(client);
+        var failure = await Assert.ThrowsAsync<ReleaseResolutionException>(
+            () => feed.ResolveTagAsync("latest", TestContext.Current.CancellationToken));
+        var page = new PackagePageViewModel();
+
+        page.ReportUnavailable(failure);
+
+        Assert.Equal(
+            "No release resolved. The release could not be checked. Technical details: GitHub " +
+            "named no newest release of MrAliev/local-ai-toolkit (web page answered 403 " +
+            "Forbidden; API answered 403 Forbidden).",
+            page.StatusText);
+        InstallerCulture.Current = InstallerLanguage.Russian;
+        Assert.Equal(
+            "Релиз не определён. Не удалось проверить релиз. Технические сведения: GitHub named " +
+            "no newest release of MrAliev/local-ai-toolkit (web page answered 403 Forbidden; API " +
+            "answered 403 Forbidden).",
+            page.StatusText);
     }
 
     /// <summary>
@@ -153,8 +247,9 @@ public sealed class ThePackagePageSaysWhyTests : IDisposable
     public async Task A_run_without_a_release_logs_what_the_last_check_said()
     {
         const string Said =
-            "GitHub named no newest release of owner/name (answered 404 Not Found). A private " +
-            "repository, or one without published releases, looks like this from outside.";
+            "GitHub named no newest release of owner/name (web page answered 404 Not Found; API " +
+            "answered 404 Not Found). A private repository, or one without published releases, " +
+            "looks like this from outside.";
         var log = await LogOfARunWithout(new FailingFeed(new ReleaseResolutionException(
             Said,
             refusal: new(ReleaseRefusalKind.NoPublishedRelease, Repository: "owner/name"))));
@@ -289,12 +384,13 @@ public sealed class ThePackagePageSaysWhyTests : IDisposable
                 Repository: "MrAliev/local-ai-toolkit",
                 GitHubCliDetail: "gh: not logged in."),
             "GitHub shows this computer no published release of MrAliev/local-ai-toolkit. Choose " +
-            "a folder that holds the release files. The GitHub CLI did not find it either; if the " +
-            "repository is private, sign in with gh auth login. Technical details: gh: not logged in.",
+            "a folder that holds the release files. The GitHub CLI could not get it either; if " +
+            "the repository is private, sign in with gh auth login. Technical details: gh: not " +
+            "logged in.",
             "На GitHub нет опубликованных релизов MrAliev/local-ai-toolkit, доступных этому " +
-            "компьютеру. Выберите папку с файлами релиза. GitHub CLI тоже его не нашёл; если " +
-            "репозиторий закрытый, войдите командой gh auth login. Технические сведения: gh: not " +
-            "logged in."),
+            "компьютеру. Выберите папку с файлами релиза. GitHub CLI тоже не смог его получить; " +
+            "если репозиторий закрытый, войдите командой gh auth login. Технические сведения: " +
+            "gh: not logged in."),
         "AssetNotFound" => (
             new(ReleaseRefusalKind.AssetNotFound, Release: "9.9.9", File: "release-manifest.json"),
             "GitHub has no release-manifest.json in release 9.9.9, or no such release. Check the " +
@@ -379,5 +475,13 @@ public sealed class ThePackagePageSaysWhyTests : IDisposable
             IProgress<long>? bytesDownloaded,
             CancellationToken ct) =>
             throw new NotSupportedException("a run without a release never downloads one");
+    }
+
+    private sealed class Answering(HttpStatusCode status) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(status));
     }
 }

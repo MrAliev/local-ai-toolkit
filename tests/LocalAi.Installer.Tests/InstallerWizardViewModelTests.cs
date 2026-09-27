@@ -392,7 +392,8 @@ public sealed class InstallerWizardViewModelTests
     /// Nothing in the wizard asks anyone to sign in to GitHub up front. Releases are public
     /// and read over plain HTTPS, so an instruction to run `gh auth login` would send someone
     /// to create an account for a download they are already allowed to make. The package page
-    /// names it only after both the anonymous path and an installed GitHub CLI found no release.
+    /// names it only after both the anonymous path and an installed GitHub CLI could not get the
+    /// release.
     /// </summary>
     [Fact]
     public void No_page_asks_for_a_GitHub_account()
