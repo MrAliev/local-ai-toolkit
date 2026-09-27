@@ -1202,7 +1202,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             // UTC, like the journal beside it: one run's two files name the same moment.
             var path = Path.Combine(
                 directory,
-                $"install-{Clock.GetUtcNow().UtcDateTime:yyyyMMdd-HHmmss}.log");
+                $"install-{Clock.GetUtcNow().UtcDateTime:yyyyMMdd-HHmmss}Z.log");
             File.WriteAllText(path, report.ToString());
             // Its own field. Appended to the summary it was the last line of a box 110 high, and
             // the screenshot that started this work has it clipped mid-path.
