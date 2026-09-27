@@ -351,6 +351,82 @@ public sealed class DirectoryReleaseFeedTests : IDisposable
         Assert.Equal("release-manifest.json", exception.Refusal.File);
     }
 
+    /// <summary>
+    /// The page calls a folder release verified before the run copies anything, so the package
+    /// is held to the signed manifest there and then (#612, P2).
+    /// </summary>
+    [Fact]
+    public async Task A_package_that_matches_its_manifest_is_said_to_match()
+    {
+        var source = Release("0.1.45");
+        var feed = Feed(source);
+
+        Assert.True(await feed.PackageMatchesAsync(
+            await ManifestOf(feed),
+            TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task A_package_altered_in_place_does_not_match()
+    {
+        var source = Release("0.1.45");
+        var feed = Feed(source);
+        var manifest = await ManifestOf(feed);
+        var package = Path.Combine(source, "localai-package.zip");
+        var bytes = await File.ReadAllBytesAsync(package, TestContext.Current.CancellationToken);
+        bytes[bytes.Length / 2] ^= 0xFF;
+        await File.WriteAllBytesAsync(package, bytes, TestContext.Current.CancellationToken);
+
+        Assert.False(await feed.PackageMatchesAsync(manifest, TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(1)]
+    public async Task A_package_of_another_size_does_not_match(int difference)
+    {
+        var source = Release("0.1.45");
+        var feed = Feed(source);
+        var manifest = await ManifestOf(feed);
+        var package = Path.Combine(source, "localai-package.zip");
+        var bytes = await File.ReadAllBytesAsync(package, TestContext.Current.CancellationToken);
+        Array.Resize(ref bytes, bytes.Length + difference);
+        await File.WriteAllBytesAsync(package, bytes, TestContext.Current.CancellationToken);
+
+        Assert.False(await feed.PackageMatchesAsync(manifest, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task A_missing_package_is_refused_rather_than_matched()
+    {
+        var source = Release("0.1.45");
+        var feed = Feed(source);
+        var manifest = await ManifestOf(feed);
+        File.Delete(Path.Combine(source, "localai-package.zip"));
+
+        await Assert.ThrowsAsync<ReleaseResolutionException>(() =>
+            feed.PackageMatchesAsync(manifest, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task A_cancelled_check_gives_no_answer()
+    {
+        var source = Release("0.1.45");
+        var feed = Feed(source);
+        var manifest = await ManifestOf(feed);
+        using var cancelled = new CancellationTokenSource();
+        await cancelled.CancelAsync();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            feed.PackageMatchesAsync(manifest, cancelled.Token));
+    }
+
+    private async Task<ReleaseManifest> ManifestOf(DirectoryReleaseFeed feed) =>
+        (await feed.ResolveAsync(
+            "0.1.45",
+            Path.Combine(root, "working"),
+            TestContext.Current.CancellationToken)).Manifest;
+
     private DirectoryReleaseFeed Feed(string source) =>
         new(source, key.ExportSubjectPublicKeyInfo());
 
