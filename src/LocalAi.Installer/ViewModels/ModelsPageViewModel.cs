@@ -41,7 +41,7 @@ public sealed class ModelsPageViewModel : ObservableObject
 
     public ObservableCollection<int> AvailableContexts { get; } = [];
 
-    /// <summary>The person's choice; until there is one, the mode follows the network.</summary>
+    /// <summary>The person's choice; until there is one, a default the network and the installation decide.</summary>
     public ModelSelectionMode Mode
     {
         get => mode;

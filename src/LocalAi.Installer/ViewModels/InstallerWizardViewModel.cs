@@ -782,9 +782,9 @@ public sealed class InstallerWizardViewModel : ObservableObject
     /// A clean reinstall therefore comes up unticked, and that is the decision rather than an
     /// oversight. The removal half takes the entry out with the binaries it points at, this half
     /// then reads a file that no longer carries it, and the box shows what is actually there. The
-    /// alternative — carrying the previous answer across the handover — would make this the one
-    /// setting the installer remembers, and "read the machine, remember nothing" is the property
-    /// that makes a decline survive an update at all.
+    /// alternative — carrying the previous answer across the handover — would have the installer
+    /// remember this answer rather than read it, and "read the machine, remember nothing" is the
+    /// property that makes a decline survive an update at all.
     /// </summary>
     private void SeedTextSearchGate()
     {
