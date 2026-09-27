@@ -137,7 +137,14 @@ public sealed record InstallerRunJournalSnapshot(
     public bool IsInterrupted => Outcome is null;
 
     public bool HasReversibleWork => Steps.Any(step =>
-        step.Status == InstallerRunStepStatus.Completed && step.IsReversible);
+        step.Status == InstallerRunStepStatus.Completed && RollbackUndoes(step));
+
+    /// <summary>
+    /// Whether rollback takes the step back. Earlier installers journalled the PATH entry as
+    /// reversible; nothing takes it back, since it leads to the launcher every version shares.
+    /// </summary>
+    internal static bool RollbackUndoes(InstallerRunStep step) =>
+        step.IsReversible && step.Kind != InstallerRunEffectKind.LauncherPath;
 }
 
 /// <summary>

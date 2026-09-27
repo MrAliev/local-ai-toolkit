@@ -241,6 +241,22 @@ public sealed class InstallerRunJournalTests : IDisposable
         Assert.True(journal.Snapshot.HasReversibleWork);
     }
 
+    /// <summary>
+    /// Earlier installers journalled the launcher's PATH entry as reversible, and rollback never
+    /// takes it back. Counting it offers a rollback that would leave everything in place.
+    /// </summary>
+    [Fact]
+    public void A_launcher_path_entry_journalled_as_reversible_is_not_reversible_work()
+    {
+        using var journal = InstallerRunJournal.Start(directory);
+        var step = journal.BeginStep(
+            InstallerRunEffectKind.LauncherPath,
+            @"PATH entry for C:\LocalAi\bin\launcher");
+        journal.CompleteStep(step, "Added to the user PATH.", isReversible: true);
+
+        Assert.False(journal.Snapshot.HasReversibleWork);
+    }
+
     /// <summary>An interrupted run's journal under the name it had before the Z.</summary>
     private Guid NamedWithoutZ(DateTime stamp)
     {
