@@ -566,8 +566,8 @@ public sealed class InstallerWizardViewModel : ObservableObject
 
         // The right half is not history. It is the answer to what this run is doing, and on
         // an installation it is not known when the window opens: the release resolves behind
-        // the first page, and a request left at "latest" is checked once more immediately
-        // before installing. So it moves until the run settles it.
+        // the first page, and a request left at "latest" is checked once more when the run
+        // starts. So it moves until the run settles it.
         var resolved = package.Resolved?.Manifest.ReleaseVersion
             ?? (package.IsResolving
                 ? InstallerCulture.Pick("checking…", "проверяю…")
@@ -1106,6 +1106,11 @@ public sealed class InstallerWizardViewModel : ObservableObject
                     $"Run journal could not be created ({exception.Message}). The run " +
                     "continues, but rollback will not be available for it.");
             }
+
+            // The review promises whatever is newest when the button is pressed, so it is looked
+            // up now rather than after the prerequisites, and the rail names it from here on.
+            await RefreshLatestBeforeInstallAsync(report, token);
+            RefreshAll();
 
             // What the review showed, taken before the check below can untick a component that
             // stopped being installable: that one is tried, and its row says why it failed.
@@ -2707,7 +2712,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         snapshot.State == ExistingLocalAiState.Compatible ? snapshot.Version : null;
 
     /// <summary>
-    /// Re-resolves a request left at "latest" immediately before installing it.
+    /// Re-resolves a request left at "latest" when the run starts, before its prerequisites.
     ///
     /// The package page checks the release when it is opened, and a wizard can sit on the
     /// confirmation step for a long time — long enough for a release to be published in
@@ -2927,10 +2932,6 @@ public sealed class InstallerWizardViewModel : ObservableObject
         StringBuilder report,
         CancellationToken cancellationToken)
     {
-        await RefreshLatestBeforeInstallAsync(report, cancellationToken);
-        // The version becomes known here on the install path, and the rail says what the run
-        // is doing — so it has to reach the progress page rather than waiting for the finish.
-        RefreshAll();
         if (package.Resolved is not { } resolved)
         {
             // Not a skip: installing the package is the entire point of this wizard. Returning

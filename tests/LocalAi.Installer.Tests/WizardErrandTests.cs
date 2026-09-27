@@ -174,7 +174,7 @@ public sealed class WizardErrandTests
     /// <summary>
     /// A verified release survives a re-check that fails, and the installation goes ahead.
     ///
-    /// The run re-asks the feed immediately before installing, in case something was published
+    /// The run re-asks the feed when it starts, in case something was published
     /// while the wizard sat open. An attempt to show "checking…" on the rail during that
     /// re-check cleared the verified release first — so a transient network fault turned a
     /// successful install into "no verified release was selected, so nothing was installed",
