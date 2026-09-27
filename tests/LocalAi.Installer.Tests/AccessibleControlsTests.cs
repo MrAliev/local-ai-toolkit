@@ -5,6 +5,7 @@ using System.Windows.Automation.Provider;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -129,7 +130,7 @@ public sealed class AccessibleControlsTests
             var wizard = (InstallerWizardViewModel)window.DataContext;
             wizard.Dependencies.SetConsent("Git", true);
             wizard.Dependencies.SetInstalled("Ollama", true);
-            wizard.Dependencies.Dependencies.Add(new DependencySelection("manual", "Manual tool", false) { IsInstallable = false });
+            wizard.Dependencies.Dependencies.Add(new DependencySelection("manual", "Manual tool", false) { HasAutomatedInstaller = false });
             try
             {
                 CheckLogHistory(window, wizard, presentation);
@@ -306,6 +307,7 @@ public sealed class AccessibleControlsTests
         CheckRemovalDefault(presentation, machine);
         CheckReinstallContinuation(presentation, machine);
         CheckRemoveWhatIsLeft(presentation, machine);
+        CheckDownloadLink(presentation);
     }
 
     /// <summary>
@@ -369,6 +371,62 @@ public sealed class AccessibleControlsTests
         public Task<ProcessResult> RunAsync(string executable, IReadOnlyList<string> arguments,
             TimeSpan timeout, CancellationToken cancellationToken) =>
             Task.FromResult(new ProcessResult(1, "", "stop refused", false, false));
+    }
+
+    // A box that is off takes whatever it holds with it, so the hint and its link sit under it. The
+    // link is reached and pressed like any other control, and pressing it asks for the address it
+    // shows; the window's opener is replaced, so no browser starts.
+    private static void CheckDownloadLink(InstallerPresentation presentation)
+    {
+        var opened = new List<Uri>();
+        var window = new MainWindow(presentation) { OpenLink = opened.Add };
+        var wizard = (InstallerWizardViewModel)window.DataContext;
+        wizard.Dependencies.SetInstalled("Ollama", true);
+        wizard.Dependencies.SetInstallers(winGetFound: false, npmFound: true);
+        var git = wizard.Dependencies.Dependencies.Single(row => row.Id == "Git");
+        var ollama = wizard.Dependencies.Dependencies.Single(row => row.Id == "Ollama");
+        try
+        {
+            Hyperlink? pressed = null;
+            foreach (var language in new[] { InstallerLanguage.English, InstallerLanguage.Russian })
+            {
+                presentation.ChooseLanguage(language);
+                ShowPage(window, wizard, InstallerPage.Dependencies);
+                var box = Descendants(window.Content).OfType<CheckBox>().Single(control => ReferenceEquals(control.DataContext, git));
+                Assert.False(box.IsEnabled);
+                var hint = Descendants(window.Content).OfType<TextBlock>()
+                    .Single(text => ReferenceEquals(text.DataContext, git) && text.Text == git.InstallerHint);
+                Assert.Equal(Visibility.Visible, hint.Visibility);
+                Assert.DoesNotContain(box, Ancestors(hint));
+                var link = Links(window).Single(item => ReferenceEquals(item.DataContext, git));
+                var line = Assert.IsType<TextBlock>(link.Parent);
+                Assert.Equal(Visibility.Visible, line.Visibility);
+                Assert.DoesNotContain(box, Ancestors(line));
+                Assert.Equal(PageLabels.Download + " https://git-scm.com/install/windows", Said(line));
+                Assert.Equal("https://git-scm.com/install/windows", ContentElementAutomationPeer.CreatePeerForElement(link)!.GetName());
+                Assert.Equal(new Uri("https://git-scm.com/install/windows"), link.NavigateUri);
+                Assert.True(link.IsEnabled);
+                Assert.True(link.Focusable);
+                Assert.True(KeyboardNavigation.GetIsTabStop(link));
+                Assert.Equal(Visibility.Collapsed, Assert.IsType<TextBlock>(Links(window).Single(item => ReferenceEquals(item.DataContext, ollama)).Parent).Visibility);
+                pressed = link;
+            }
+
+            ((IInvokeProvider)ContentElementAutomationPeer.CreatePeerForElement(pressed!)!.GetPattern(PatternInterface.Invoke)!).Invoke();
+            Dispatcher.CurrentDispatcher.Invoke(() => { }, DispatcherPriority.ApplicationIdle);
+            Assert.Equal([new Uri("https://git-scm.com/install/windows")], opened);
+        }
+        finally { window.Close(); }
+
+        static IEnumerable<Hyperlink> Links(Window window) =>
+            Descendants(window.Content).OfType<TextBlock>().SelectMany(text => text.Inlines.OfType<Hyperlink>());
+
+        static string Said(TextBlock line) => string.Concat(line.Inlines.Select(inline => inline switch
+        {
+            Run run => run.Text,
+            Hyperlink link => string.Concat(link.Inlines.OfType<Run>().Select(run => run.Text)),
+            _ => string.Empty,
+        }));
     }
 
     private static void CheckReinstallContinuation(InstallerPresentation presentation, RemovalFixture machine)
