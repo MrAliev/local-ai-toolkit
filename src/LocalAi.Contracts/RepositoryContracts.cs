@@ -147,7 +147,12 @@ public sealed record RepositoryIndexProgress(
     // counts nothing, and filling them with projects would make that guard lie.
     IndexBuildStep? Step = null,
     int StepDone = 0,
-    int StepTotal = 0);
+    int StepTotal = 0,
+    // On the Completed record only: what the build embedded, base and overlays together (#774).
+    // Absent from a build that did not know to write it, and left out rather than written as
+    // null, because a reader built before it refuses a member it does not know.
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    int? ChunksEmbedded = null);
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record RepositoryWorktree(

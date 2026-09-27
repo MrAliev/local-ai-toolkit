@@ -57,8 +57,9 @@ public sealed class FollowingTheIndexBuildTests
             UpdatedAtUtc: DateTimeOffset.UnixEpoch);
 
     /// <summary>
-    /// The record a sync leaves: the publishing step's record with the phase moved on, so its
-    /// chunk counters are the ones that step zeroed.
+    /// The record a sync from before <see cref="RepositoryIndexProgress.ChunksEmbedded"/> leaves:
+    /// the publishing step's record with the phase moved on, so its chunk counters are the ones
+    /// that step zeroed, and nothing else says what was embedded.
     /// </summary>
     private static RepositoryIndexProgress Finished() =>
         Starting(RepositoryIndexProgressPhase.Completed, IndexBuildStep.SwitchingOver);
@@ -227,6 +228,27 @@ public sealed class FollowingTheIndexBuildTests
 
         Assert.Equal(0, step.ExitCode);
         Assert.Contains("1250", step.Line, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A phase no reading caught is not in the readings' figure: an overlay that starts and ends
+    /// inside one interval never reaches the loop. The sync saw every chunk it embedded and writes
+    /// the sum into its terminal record, so that figure is the one reported where the record has
+    /// it (#774).
+    /// </summary>
+    [Fact]
+    public void A_finished_build_reports_the_figure_its_record_carries_over_the_readings()
+    {
+        var step = Followed(
+            Counting(RepositoryIndexProgressPhase.EmbeddingBase, @"R:\Repo", 144, 1181),
+            Starting(
+                RepositoryIndexProgressPhase.PublishingGeneration,
+                IndexBuildStep.CopyingGeneration),
+            Starting(RepositoryIndexProgressPhase.Publishing, IndexBuildStep.SwitchingOver),
+            Finished() with { ChunksEmbedded = 1238 });
+
+        Assert.Equal(0, step.ExitCode);
+        Assert.Contains("1238", step.Line, StringComparison.Ordinal);
     }
 
     /// <summary>
