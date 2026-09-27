@@ -367,7 +367,7 @@ public sealed class InstallationLayoutLease : IDisposable
                 "installer",
                 layout.InstallerDirectory);
             directories.Add(Evidence(installer.Handle, layout.InstallerDirectory, created: installer.Created));
-            ValidateExactNames(layout.InstallerDirectory, ["backups", "transaction.lock"]);
+            ValidateExactNames(layout.InstallerDirectory, InstallerNames);
             var backups = NativeDirectory.OpenOrCreate(
                 installer.Handle,
                 "backups",
@@ -753,10 +753,8 @@ public sealed class InstallationLayoutLease : IDisposable
     }
 
     /// <summary>
-    /// Everything the installer owns directly inside <c>bin</c>. "uninstall" is the copy of
-    /// the installer that Apps &amp; features points at: it lives in the tree it removes,
-    /// which is what lets it still exist when somebody wants to leave, long after the
-    /// downloaded installer has been cleared out of their downloads folder.
+    /// Everything the installer owns directly inside <c>bin</c>. "uninstall" is where releases
+    /// before the copy moved to <c>installer</c> parked it; their entries still run it.
     /// </summary>
     private static readonly string[] BinNames =
     [
@@ -803,9 +801,16 @@ public sealed class InstallationLayoutLease : IDisposable
         }
     }
 
+    /// <summary>
+    /// Everything the installer owns inside <c>installer</c>. "uninstall" is the copy of the
+    /// installer that Apps &amp; features runs, parked outside bin so that a removal taking bin
+    /// first can leave it, and the entry, until last.
+    /// </summary>
+    private static readonly string[] InstallerNames = ["backups", "transaction.lock", "uninstall"];
+
     private static void ValidateInstallerShape(InstallationLayout layout)
     {
-        ValidateExactNames(layout.InstallerDirectory, ["backups", "transaction.lock"]);
+        ValidateExactNames(layout.InstallerDirectory, InstallerNames);
         ValidateDirectoryPath(layout.InstallerBackupsRoot);
         ValidateOptionalFile(Path.Combine(layout.InstallerDirectory, "transaction.lock"));
     }

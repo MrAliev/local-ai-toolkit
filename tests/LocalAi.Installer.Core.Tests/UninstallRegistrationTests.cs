@@ -166,6 +166,67 @@ public sealed class UninstallRegistrationTests : IDisposable
     }
 
     /// <summary>
+    /// A removal takes bin first and the entry last, so the copy the entry runs cannot live in
+    /// bin: from the first path on, the entry would offer a removal whose program is gone.
+    /// </summary>
+    [Fact]
+    public void The_copy_is_parked_outside_bin()
+    {
+        var registration = Registration();
+
+        registration.Register("0.1.50", installerSource);
+
+        Assert.Equal(
+            Path.Combine(machine.Layout.InstallerDirectory, "uninstall", "LocalAi.Installer.exe"),
+            registration.UninstallerPath);
+        Assert.True(File.Exists(registration.UninstallerPath));
+        Assert.False(Directory.Exists(LegacyCopyDirectory));
+    }
+
+    /// <summary>
+    /// Earlier releases parked the copy in bin\uninstall. Registering again points the entry at
+    /// the new copy and takes the old one out, so nothing in bin is still what the entry runs.
+    /// </summary>
+    [Fact]
+    public void Registering_again_takes_out_the_copy_an_earlier_release_left_in_bin()
+    {
+        var legacy = LegacyCopy();
+        var registration = Registration();
+
+        var entry = registration.Register("0.1.51", installerSource);
+
+        Assert.Equal("\"" + registration.UninstallerPath + "\" --uninstall", entry.UninstallString);
+        Assert.False(Directory.Exists(Path.GetDirectoryName(legacy)));
+    }
+
+    /// <summary>
+    /// A repair started from the old copy is running it, and Windows will not delete it. The
+    /// entry already points at the new copy, so the old one staying is untidy, not a failure.
+    /// </summary>
+    [Fact]
+    public void An_earlier_copy_that_cannot_go_yet_does_not_fail_the_registration()
+    {
+        var legacy = LegacyCopy();
+        using var held = new FileStream(legacy, FileMode.Open, FileAccess.Read, FileShare.Read);
+        var registration = Registration();
+
+        var entry = registration.Register("0.1.51", installerSource);
+
+        Assert.Equal("\"" + registration.UninstallerPath + "\" --uninstall", entry.UninstallString);
+        Assert.True(File.Exists(legacy));
+    }
+
+    private string LegacyCopyDirectory => Path.Combine(machine.Layout.BinRoot, "uninstall");
+
+    private string LegacyCopy()
+    {
+        var legacy = Path.Combine(LegacyCopyDirectory, "LocalAi.Installer.exe");
+        Directory.CreateDirectory(LegacyCopyDirectory);
+        File.WriteAllText(legacy, "earlier installer");
+        return legacy;
+    }
+
+    /// <summary>
     /// A repair started from the parked copy would otherwise try to copy the file over itself,
     /// which throws.
     /// </summary>

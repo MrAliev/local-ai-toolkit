@@ -1,6 +1,7 @@
 using LocalAi.TestFixtures;
 using LocalAi.Installer.Core.Abstractions;
 using LocalAi.Installer.Core.Agents;
+using LocalAi.Installer.Core.Releases;
 using LocalAi.Installer.Core.Removal;
 using LocalAi.Installer.Core.Transactions;
 
@@ -443,12 +444,12 @@ public sealed class UninstallRunnerTests : IDisposable
     }
 
     /// <summary>
-    /// Stopped between two paths, a removal leaves whatever it has not reached yet. The entry
-    /// must not be among what is left once the copy it runs is gone: it would offer a removal
-    /// that cannot start, and nothing else on the machine says where the uninstaller went.
+    /// Stopped between two paths, a removal leaves whatever it has not reached yet, and the
+    /// entry with it: Apps &amp; features is the way back to finishing, and the copy it runs is
+    /// still there to run.
     /// </summary>
     [Fact]
-    public async Task Stopping_after_the_binaries_went_leaves_no_entry_pointing_at_nothing()
+    public async Task Stopping_after_the_binaries_went_leaves_the_entry_and_the_copy_it_runs()
     {
         var registration = new UninstallRegistration(machine.Layout, registrySubKey);
         registration.Register(RemovalFixture.InstalledVersion, machine.LauncherPath);
@@ -474,19 +475,162 @@ public sealed class UninstallRunnerTests : IDisposable
                 })));
 
         Assert.False(Directory.Exists(bin));
+        AssertTheEntryStillRunsItsCopy(registration);
+    }
+
+    /// <summary>
+    /// A path that could not be removed is a removal to finish later, and the entry is how it is
+    /// found again. It stays, and so does the directory holding the copy it runs.
+    /// </summary>
+    [Fact]
+    public async Task A_path_that_could_not_be_removed_leaves_the_entry_and_the_copy_it_runs()
+    {
+        var registration = new UninstallRegistration(machine.Layout, registrySubKey);
+        registration.Register(RemovalFixture.InstalledVersion, machine.LauncherPath);
+        var plan = await Plan(
+            RemovalSelection.FromPreset(RemovalPreset.FullUninstall),
+            registrySubKey);
+        using var held = new FileStream(
+            Path.Combine(machine.Runtime, "jobs", "job.json"),
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.None);
+        using var journal = InstallerRunJournal.Start(journalDirectory);
+
+        var outcome = await Runner(new RecordingProcessRunner()).ApplyAsync(
+            plan,
+            journal,
+            TestContext.Current.CancellationToken);
+
+        Assert.False(outcome.Succeeded);
+        Assert.False(outcome.AppsAndFeaturesEntryRemoved);
+        Assert.False(Directory.Exists(machine.Layout.BinRoot));
+        AssertTheEntryStillRunsItsCopy(registration);
+        Assert.DoesNotContain(
+            journal.Snapshot.Steps,
+            step => step.Description ==
+                UninstallJournalDescriptions.Registration(registration.UninstallerDirectory));
+    }
+
+    /// <summary>
+    /// A copy parked in bin by an earlier release is what that release's entry runs, so bin
+    /// waits for the entry like the directory holding a copy parked by this one.
+    /// </summary>
+    [Fact]
+    public async Task A_copy_an_earlier_release_parked_in_bin_keeps_bin_until_the_entry_goes()
+    {
+        var legacy = Path.Combine(machine.Layout.BinRoot, "uninstall", "LocalAi.Installer.exe");
+        Directory.CreateDirectory(Path.GetDirectoryName(legacy)!);
+        File.WriteAllText(legacy, "earlier installer");
+        using (var key = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(registrySubKey, writable: true))
+        {
+            key.SetValue("DisplayName", UninstallRegistration.DisplayName);
+            key.SetValue("UninstallString", "\"" + legacy + "\" --uninstall");
+            key.SetValue("InstallLocation", machine.Runtime);
+        }
+
+        var registration = new UninstallRegistration(machine.Layout, registrySubKey);
+        var plan = await Plan(
+            RemovalSelection.FromPreset(RemovalPreset.FullUninstall),
+            registrySubKey);
+        using var held = new FileStream(
+            Path.Combine(machine.Runtime, "jobs", "job.json"),
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.None);
+
+        var outcome = await Apply(plan);
+
+        Assert.False(outcome.Succeeded);
+        AssertTheEntryStillRunsItsCopy(registration);
+    }
+
+    /// <summary>
+    /// The order a stopped removal depends on: every other path, then the PATH entry, then the
+    /// Apps &amp; features entry, and only then the directory holding the copy that entry runs.
+    /// </summary>
+    [Fact]
+    public async Task The_entry_goes_after_every_other_path_and_the_path_entry()
+    {
+        var registration = new UninstallRegistration(machine.Layout, registrySubKey);
+        registration.Register(RemovalFixture.InstalledVersion, machine.LauncherPath);
+        var plan = await machine.PlanAsync(
+            RemovalSelection.FromPreset(RemovalPreset.FullUninstall),
+            TestContext.Current.CancellationToken,
+            registrySubKey,
+            readUserPath: () => machine.Layout.LauncherDirectory);
+        Assert.True(plan.RemovesLauncherFromPath);
+        var holder = plan.Paths.Single(entry =>
+            registration.UninstallerDirectory.StartsWith(
+                entry.Path + Path.DirectorySeparatorChar,
+                StringComparison.OrdinalIgnoreCase)).Path;
+        using var journal = InstallerRunJournal.Start(journalDirectory);
+
+        var outcome = await new UninstallRunner(
+                machine.Layout,
+                new RecordingProcessRunner(),
+                registrySubKey: registrySubKey,
+                userPath: new UserPath(machine.Layout.LauncherDirectory))
+            .ApplyAsync(plan, journal, TestContext.Current.CancellationToken);
+
+        Assert.True(outcome.Succeeded);
+        Assert.True(outcome.AppsAndFeaturesEntryRemoved);
+        var steps = journal.Snapshot.Steps.Select(step => step.Description).ToList();
+        int At(string description)
+        {
+            Assert.Contains(description, steps);
+            return steps.IndexOf(description);
+        }
+
+        var entry = At(UninstallJournalDescriptions.Registration(registration.UninstallerDirectory));
         Assert.True(
-            registration.Read() is null || File.Exists(registration.UninstallerPath),
-            "the entry outlived the uninstaller it runs");
+            entry > At(UninstallJournalDescriptions.LauncherPath(machine.Layout.LauncherDirectory)),
+            "the entry went before the PATH step");
+        Assert.All(
+            plan.Paths.Where(path => path.Path != holder),
+            path => Assert.True(
+                entry > At(UninstallJournalDescriptions.Path(path.Path)),
+                "the entry went before " + path.Path));
+        Assert.True(
+            At(UninstallJournalDescriptions.Path(holder)) > entry,
+            "the copy the entry runs went before the entry");
+        Assert.Null(registration.Read());
+        Assert.False(Directory.Exists(holder));
+    }
+
+    /// <summary>Stopped as late as the PATH step, the run still leaves the entry.</summary>
+    [Fact]
+    public async Task Stopping_at_the_path_step_leaves_the_entry_and_the_copy_it_runs()
+    {
+        var registration = new UninstallRegistration(machine.Layout, registrySubKey);
+        registration.Register(RemovalFixture.InstalledVersion, machine.LauncherPath);
+        var plan = await machine.PlanAsync(
+            RemovalSelection.FromPreset(RemovalPreset.FullUninstall),
+            TestContext.Current.CancellationToken,
+            registrySubKey,
+            readUserPath: () => machine.Layout.LauncherDirectory);
+        using var stop = CancellationTokenSource.CreateLinkedTokenSource(
+            TestContext.Current.CancellationToken);
+        using var journal = InstallerRunJournal.Start(journalDirectory);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            new UninstallRunner(
+                    machine.Layout,
+                    new RecordingProcessRunner(),
+                    registrySubKey: registrySubKey,
+                    userPath: new UserPath(machine.Layout.LauncherDirectory, stop.Cancel))
+                .ApplyAsync(plan, journal, stop.Token));
+
+        AssertTheEntryStillRunsItsCopy(registration);
     }
 
     /// <summary>
     /// Nothing schedules a deletion for later — a per-user installation cannot ask for one at
     /// the next restart — so a copy that cannot be deleted now is a failure, reported as one.
-    /// The rest of bin stays whole: an installation still recognised as one is what a reinstall
-    /// adopts, where a bin that is neither installed nor absent is what it refuses.
+    /// The directory holding it is not started, so no entry is left running a copy that is gone.
     /// </summary>
     [Fact]
-    public async Task A_copy_that_cannot_be_deleted_is_a_failure_and_bin_stays_whole()
+    public async Task A_copy_that_cannot_be_deleted_is_a_failure_and_the_directory_holding_it_stays()
     {
         var registration = new UninstallRegistration(machine.Layout, registrySubKey);
         registration.Register(RemovalFixture.InstalledVersion, machine.LauncherPath);
@@ -515,11 +659,21 @@ public sealed class UninstallRunnerTests : IDisposable
             "restart",
             step.Detail ?? string.Empty,
             StringComparison.OrdinalIgnoreCase));
-        Assert.True(File.Exists(machine.Layout.CurrentPointerPath));
-        Assert.True(File.Exists(machine.LauncherPath));
+        Assert.True(File.Exists(registration.UninstallerPath));
         Assert.True(
             registration.Read() is null || File.Exists(registration.UninstallerPath),
             "the entry outlived the uninstaller it runs");
+    }
+
+    /// <summary>The entry is still there, and the file its command line starts is too.</summary>
+    private static void AssertTheEntryStillRunsItsCopy(UninstallRegistration registration)
+    {
+        var entry = registration.Read();
+        Assert.NotNull(entry);
+        var command = entry.UninstallString;
+        Assert.StartsWith("\"", command, StringComparison.Ordinal);
+        var copy = command[1..command.IndexOf('"', 1)];
+        Assert.True(File.Exists(copy), "the entry runs " + copy + ", which is gone");
     }
 
     /// <summary>
@@ -601,6 +755,22 @@ public sealed class UninstallRunnerTests : IDisposable
         Assert.Contains(seen, step => step.Text.Contains("Removing files", StringComparison.Ordinal));
     }
 
+    /// <summary>The path removed after the entry does not send the bar backwards.</summary>
+    [Fact]
+    public async Task The_removal_moves_forward_past_the_entry_too()
+    {
+        new UninstallRegistration(machine.Layout, registrySubKey)
+            .Register(RemovalFixture.InstalledVersion, machine.LauncherPath);
+        var plan = await Plan(RemovalSelection.FromPreset(RemovalPreset.FullUninstall), registrySubKey);
+        var seen = new List<UninstallProgress>();
+
+        await Apply(plan, progress: new SynchronousProgress(seen.Add));
+
+        Assert.Equal(seen.Select(step => step.Percent).Order(), seen.Select(step => step.Percent));
+        Assert.All(seen, step => Assert.InRange(step.Percent, 0, 99));
+        Assert.Contains(seen, step => step.Text.EndsWith(plan.Paths[^1].Path, StringComparison.Ordinal));
+    }
+
     /// <summary>
     /// Nothing reported is a supported caller, not a crash: the standalone runner and every
     /// test that predates this pass no progress at all.
@@ -662,6 +832,19 @@ public sealed class UninstallRunnerTests : IDisposable
 
     private static ProcessResult Exit(int code, string error = "") =>
         new(code, string.Empty, error, false, false);
+
+    private sealed class UserPath(string value, Action? onWrite = null) : IUserPathStore
+    {
+        private string? value = value;
+
+        public string? Read() => value;
+
+        public void Write(string written)
+        {
+            value = written;
+            onWrite?.Invoke();
+        }
+    }
 
     /// <summary>Synchronous, so what was reported is all there when the run returns.</summary>
     private sealed class RecordedProgress : IProgress<UninstallProgress>

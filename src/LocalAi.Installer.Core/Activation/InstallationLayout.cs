@@ -21,6 +21,7 @@ public sealed class InstallationLayout
         CurrentPointerPath = Path.Combine(BinRoot, "current.json");
         InstallerDirectory = Path.Combine(Root, "installer");
         InstallerBackupsRoot = InstallerBackupsUnder(Root);
+        UninstallerDirectory = Path.Combine(InstallerDirectory, "uninstall");
     }
 
     internal static string LauncherPathUnder(string root) =>
@@ -38,6 +39,12 @@ public sealed class InstallationLayout
     public string CurrentPointerPath { get; }
     public string InstallerDirectory { get; }
     public string InstallerBackupsRoot { get; }
+
+    /// <summary>
+    /// Where the copy of the installer that Apps &amp; features runs is parked. Outside bin: a
+    /// removal takes bin first and the entry last, and the copy has to outlive the entry.
+    /// </summary>
+    public string UninstallerDirectory { get; }
 
     public static InstallationLayout CreateDefault()
     {

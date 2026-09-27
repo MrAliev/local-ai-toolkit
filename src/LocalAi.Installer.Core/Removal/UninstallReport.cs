@@ -19,12 +19,16 @@ public static class UninstallJournalDescriptions
     public static string Hooks(string commonDirectory) => "Remove the LocalAi hooks from " + commonDirectory;
     public static string LauncherPath(string directory) => "Take " + directory + " off the user PATH";
     public static string Registration(string directory) => "Remove the Apps & features entry and " + directory;
+
+    /// <summary>The runner held the entry and its copy back because an earlier step failed.</summary>
+    public static string RegistrationKept(string directory) => "Keep the Apps & features entry and " + directory;
 }
 
 public static class UninstallReport
 {
     /// <summary>
-    /// The plan supplies only the inventory. Completion comes exclusively from the journal.
+    /// The plan supplies only the inventory, in the order the runner takes it. Completion comes
+    /// exclusively from the journal, and so does an entry kept after an earlier failure.
     /// A running intent has an unknown outcome; a failure may include partial effects.
     /// A journal step the plan does not name goes before the first planned one that did not
     /// start ahead of it, so the stop, which runs first, is reported first.
@@ -61,7 +65,7 @@ public static class UninstallReport
             }
         }
 
-        foreach (var path in plan.Paths)
+        foreach (var path in plan.Paths.Where(path => !path.HoldsUninstaller))
         {
             Add(path.Path, RemovalReportKind.Path, UninstallJournalDescriptions.Path(path.Path));
         }
@@ -72,10 +76,39 @@ public static class UninstallReport
             Add(directory, RemovalReportKind.LauncherPath, UninstallJournalDescriptions.LauncherPath(directory));
         }
 
+        InstallerRunStep? kept = null;
         if (plan.RemovesAppsAndFeaturesEntry && OperatingSystem.IsWindows())
         {
             var directory = new UninstallRegistration(layout).UninstallerDirectory;
-            Add(directory, RemovalReportKind.Registration, UninstallJournalDescriptions.Registration(directory));
+            kept = remaining.FirstOrDefault(item =>
+                item.Description == UninstallJournalDescriptions.RegistrationKept(directory));
+            if (kept is null)
+            {
+                Add(directory, RemovalReportKind.Registration, UninstallJournalDescriptions.Registration(directory));
+            }
+            else
+            {
+                remaining.Remove(kept);
+                Keep(kept, directory, RemovalReportKind.Registration, InstallerCulture.Pick(
+                    "an earlier step failed, so the Apps & features entry stays and the removal can be " +
+                    "started again from there",
+                    "предыдущий шаг не удался, поэтому запись в «Приложениях и возможностях» остаётся и " +
+                    "удаление можно запустить оттуда снова"));
+            }
+        }
+
+        foreach (var path in plan.Paths.Where(path => path.HoldsUninstaller))
+        {
+            if (kept is null)
+            {
+                Add(path.Path, RemovalReportKind.Path, UninstallJournalDescriptions.Path(path.Path));
+            }
+            else
+            {
+                Keep(kept, path.Path, RemovalReportKind.Path, InstallerCulture.Pick(
+                    "holds the uninstaller the Apps & features entry runs",
+                    "здесь деинсталлятор, который запускает запись в «Приложениях и возможностях»"));
+            }
         }
 
         foreach (var step in remaining)
@@ -109,6 +142,9 @@ public static class UninstallReport
                 true,
                 step?.StartedAtUtc));
         }
+
+        void Keep(InstallerRunStep step, string target, RemovalReportKind kind, string detail) =>
+            entries.Add((new(target, kind, RemovalReportState.Retained, detail), true, step.StartedAtUtc));
 
         static (RemovalReportEntry, bool, DateTimeOffset?) Unplanned(RemovalReportEntry entry) => (entry, false, null);
     }

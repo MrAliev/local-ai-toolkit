@@ -151,6 +151,7 @@ public sealed class UninstallPlanner
             return ([], []);
         }
 
+        var copies = UninstallerCopies();
         var removed = new List<RemovalPathEntry>();
         var retained = new List<string>();
         foreach (var path in SafeEnumerate(layout.Root))
@@ -164,7 +165,13 @@ public sealed class UninstallPlanner
             var item = RemovalMatrix.ClassifyRootEntry(name);
             if (selection.Includes(item))
             {
-                removed.Add(new RemovalPathEntry(item, path, Directory.Exists(path)));
+                removed.Add(new RemovalPathEntry(
+                    item,
+                    path,
+                    Directory.Exists(path),
+                    copies.Any(copy => copy.StartsWith(
+                        path + Path.DirectorySeparatorChar,
+                        StringComparison.OrdinalIgnoreCase))));
             }
             else
             {
@@ -172,13 +179,23 @@ public sealed class UninstallPlanner
             }
         }
 
+        // A path holding the copy an entry runs goes after the entry, which goes after the rest.
         return (
             removed
-                .OrderBy(entry => entry.Item)
+                .OrderBy(entry => entry.HoldsUninstaller)
+                .ThenBy(entry => entry.Item)
                 .ThenBy(entry => entry.Path, StringComparer.OrdinalIgnoreCase)
                 .ToArray(),
             retained.Order(StringComparer.OrdinalIgnoreCase).ToArray());
     }
+
+    private IReadOnlyList<string> UninstallerCopies() =>
+        OperatingSystem.IsWindows()
+            ? new UninstallRegistration(layout, registrySubKey)
+                .UninstallerDirectories
+                .Where(Directory.Exists)
+                .ToArray()
+            : [];
 
     /// <summary>
     /// Whether this removal takes our hooks — the text-search gate and the worktree pair — out

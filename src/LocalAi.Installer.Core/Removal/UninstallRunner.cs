@@ -86,14 +86,34 @@ public sealed class UninstallRunner(
         var hooks = RemoveHooks(plan, journal, failures, cancellationToken);
         progress?.Report(new(60, InstallerCulture.Pick("Removing files…", "Удаляю файлы…")));
         cancellationToken.ThrowIfCancellationRequested();
-        var (unregistered, kept) = RemoveRegistration(plan, journal, failures);
-        var removed = RemovePaths(plan, journal, failures, cancellationToken, progress, kept);
+        var removed = new List<string>();
+        RemovePaths(
+            plan.Paths.Where(entry => !entry.HoldsUninstaller).ToArray(),
+            journal,
+            failures,
+            removed,
+            cancellationToken,
+            progress,
+            (60, 85));
         progress?.Report(new(90, InstallerCulture.Pick(
             "Finishing the removal…",
             "Завершаю удаление…")));
         cancellationToken.ThrowIfCancellationRequested();
         // After the files: the PATH entry names a directory the binaries have already left.
         await RemoveLauncherPathAsync(plan, journal, failures);
+        var (unregistered, copyStays) = RemoveRegistration(plan, journal, failures, cancellationToken);
+        if (!copyStays)
+        {
+            RemovePaths(
+                plan.Paths.Where(entry => entry.HoldsUninstaller).ToArray(),
+                journal,
+                failures,
+                removed,
+                cancellationToken,
+                progress,
+                (90, 99));
+        }
+
         return new UninstallOutcome(
             removed,
             rewritten,
@@ -138,26 +158,42 @@ public sealed class UninstallRunner(
     }
 
     /// <summary>
-    /// Takes the Apps &amp; features entry out and then the uninstaller copy it runs, before any
-    /// path: stopped or failed at any later point, the run then leaves no entry offering a
-    /// removal whose program is gone. An entry that was already gone is not a failure.
+    /// Takes the Apps &amp; features entry out and then the uninstaller copy it runs, after every
+    /// other path and the PATH entry, and only when all of them went: stopped or failed before
+    /// this, the run leaves the entry and its copy, and Apps &amp; features still leads back to
+    /// finishing it. Held back after a failure, that is journalled, so the report can say so.
+    /// An entry that was already gone is not a failure.
     ///
     /// Nothing is deferred. The removal never runs from this copy — it hands over to a
     /// temporary one first — so a copy that cannot be deleted is held by something else, and
-    /// that is a failure. The directory holding it is then returned, and the path containing it
-    /// is left whole: an installation still recognised as one is what a reinstall adopts.
+    /// that is a failure. <c>CopyStays</c> then keeps the paths holding a copy.
     /// </summary>
-    private (bool Unregistered, string? Kept) RemoveRegistration(
+    private (bool Unregistered, bool CopyStays) RemoveRegistration(
         UninstallPlan plan,
         InstallerRunJournal journal,
-        List<UninstallFailure> failures)
+        List<UninstallFailure> failures,
+        CancellationToken cancellationToken)
     {
         if (!plan.RemovesAppsAndFeaturesEntry || !OperatingSystem.IsWindows())
         {
-            return (false, null);
+            return (false, false);
         }
 
         var registration = new UninstallRegistration(layout, registrySubKey);
+        if (failures.Count > 0)
+        {
+            var kept = journal.BeginStep(
+                InstallerRunEffectKind.RuntimeRemoval,
+                UninstallJournalDescriptions.RegistrationKept(registration.UninstallerDirectory));
+            journal.CompleteStep(
+                kept,
+                "an earlier step failed, so the Apps & features entry stays and the removal can be " +
+                "started again from there",
+                isReversible: false);
+            return (false, true);
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
         var step = journal.BeginStep(
             InstallerRunEffectKind.RuntimeRemoval,
             UninstallJournalDescriptions.Registration(registration.UninstallerDirectory));
@@ -167,7 +203,7 @@ public sealed class UninstallRunner(
             unregistered = registration.Unregister();
             registration.RemoveUninstallerCopy();
             journal.CompleteStep(step, "Removed.", isReversible: false);
-            return (unregistered, null);
+            return (unregistered, false);
         }
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException or
@@ -177,7 +213,7 @@ public sealed class UninstallRunner(
             failures.Add(new UninstallFailure(
                 registration.UninstallerDirectory,
                 exception.Message));
-            return (unregistered, registration.UninstallerDirectory);
+            return (unregistered, true);
         }
     }
 
@@ -407,27 +443,20 @@ public sealed class UninstallRunner(
             new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
     }
 
-    /// <summary>
-    /// <paramref name="kept"/> is a directory that must survive this run; the path containing it
-    /// is not started, and the report says so.
-    /// </summary>
-    private static IReadOnlyList<string> RemovePaths(
-        UninstallPlan plan,
+    /// <summary><paramref name="percent"/> is the stretch of the bar these paths move it across.</summary>
+    private static void RemovePaths(
+        IReadOnlyList<RemovalPathEntry> entries,
         InstallerRunJournal journal,
         List<UninstallFailure> failures,
+        List<string> removed,
         CancellationToken cancellationToken,
         IProgress<UninstallProgress>? progress,
-        string? kept)
+        (int From, int To) percent)
     {
-        var removed = new List<string>();
-        foreach (var entry in plan.Paths)
+        var done = 0;
+        foreach (var entry in entries)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (kept is not null && Contains(entry.Path, kept))
-            {
-                continue;
-            }
-
             var step = journal.BeginStep(
                 InstallerRunEffectKind.RuntimeRemoval,
                 UninstallJournalDescriptions.Path(entry.Path));
@@ -436,7 +465,9 @@ public sealed class UninstallRunner(
                 Delete(entry.Path);
                 removed.Add(entry.Path);
                 journal.CompleteStep(step, "Removed.", isReversible: false);
-                progress?.Report(new(60 + (25 * removed.Count / Math.Max(plan.Paths.Count, 1)),
+                done++;
+                progress?.Report(new(
+                    percent.From + ((percent.To - percent.From) * done / entries.Count),
                     InstallerCulture.Pick("Removed ", "Удалено ") + entry.Path));
             }
             catch (Exception exception) when (
@@ -446,8 +477,6 @@ public sealed class UninstallRunner(
                 failures.Add(new UninstallFailure(entry.Path, exception.Message));
             }
         }
-
-        return removed;
     }
 
     /// <summary>
@@ -478,15 +507,6 @@ public sealed class UninstallRunner(
         }
 
         directory.Delete(recursive: true);
-    }
-
-    /// <summary>Whether <paramref name="candidate"/> is that directory or lives inside it.</summary>
-    private static bool Contains(string directory, string candidate)
-    {
-        var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(directory));
-        var full = Path.TrimEndingDirectorySeparator(Path.GetFullPath(candidate));
-        return string.Equals(root, full, StringComparison.OrdinalIgnoreCase) ||
-            full.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
