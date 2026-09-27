@@ -1,3 +1,5 @@
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
@@ -84,7 +86,8 @@ public static class DoctorCommand
         string runtimeRoot,
         string? repositoryRoot = null,
         string? workingDirectory = null,
-        DateTimeOffset? now = null)
+        DateTimeOffset? now = null,
+        Func<int, DateTimeOffset?>? processStartedAt = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(runtimeRoot);
         var root = Path.GetFullPath(runtimeRoot);
@@ -92,7 +95,7 @@ public static class DoctorCommand
         {
             CheckInstalledVersion(root),
             CheckLauncher(root),
-            CheckBroker(root),
+            CheckBroker(root, processStartedAt ?? ProcessStartedAt),
             CheckQueue(root),
             CheckModelCatalog(root),
             CheckTaskModels(root, now ?? DateTimeOffset.UtcNow),
@@ -333,7 +336,7 @@ public static class DoctorCommand
                 CliText.LauncherMissing(launcher));
     }
 
-    private static DoctorCheck CheckBroker(string root)
+    private static DoctorCheck CheckBroker(string root, Func<int, DateTimeOffset?> processStartedAt)
     {
         var hostPath = Path.Combine(root, "host.json");
         if (!File.Exists(hostPath))
@@ -367,6 +370,13 @@ public static class DoctorCommand
             return new DoctorCheck("broker", DoctorStatus.Failed, CliText.BrokerStateEmpty);
         }
 
+        // host.json outlives a broker that was killed. Identity is id plus start time, as the
+        // client judges it, so a reused id is not taken for the broker.
+        if (processStartedAt(state.ProcessId) != state.StartedAtUtc)
+        {
+            return new DoctorCheck("broker", DoctorStatus.Warning, CliText.BrokerNotRunning);
+        }
+
         var silence = DateTimeOffset.UtcNow - state.HeartbeatAtUtc;
         return silence > TimeSpan.FromMinutes(5)
             ? new DoctorCheck(
@@ -382,6 +392,23 @@ public static class DoctorCommand
                     state.ProcessId,
                     silence.TotalSeconds.ToString("F0", CultureInfo.InvariantCulture)),
                 BrokerFacts(state, silence));
+    }
+
+    private static DateTimeOffset? ProcessStartedAt(int processId)
+    {
+        try
+        {
+            using var process = Process.GetProcessById(processId);
+            return process.HasExited
+                ? null
+                : new DateTimeOffset(process.StartTime.ToUniversalTime(), TimeSpan.Zero);
+        }
+        // Gone, exited or unreadable: the client counts each of these as not the owner too.
+        catch (Exception exception) when (
+            exception is ArgumentException or InvalidOperationException or Win32Exception)
+        {
+            return null;
+        }
     }
 
     /// <summary>
