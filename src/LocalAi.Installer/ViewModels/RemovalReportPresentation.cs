@@ -110,10 +110,12 @@ public static class RemovalReportPresentation
     {
         (RemovalReportState.Completed, RemovalReportKind.ProcessStop) => InstallerCulture.Pick("Stopped", "Остановлены"),
         (RemovalReportState.Completed, RemovalReportKind.Hooks) => InstallerCulture.Pick("LocalAi hooks removed", "Хуки LocalAi удалены"),
-        // The title carries the full paths already.
-        _ when Deleted(entry) is { Length: > 0 } deleted => string.Format(
-            InstallerCulture.Pick("Updated; removed {0}", "Обновлено; удалено {0}"),
-            string.Join(", ", deleted.Select(file => System.IO.Path.GetFileName(file.Path)))),
+        // The title carries the full paths already, and names only removed files when nothing was rewritten.
+        _ when Deleted(entry) is { Length: > 0 } deleted => deleted.Length == entry.Files!.Count
+            ? InstallerCulture.Pick("Removed", "Удалено")
+            : string.Format(
+                InstallerCulture.Pick("Updated; removed {0}", "Обновлено; удалено {0}"),
+                string.Join(", ", deleted.Select(file => System.IO.Path.GetFileName(file.Path)))),
         _ => Prefix(entry).TrimEnd(' ', ':'),
     } + Suffix(entry);
 

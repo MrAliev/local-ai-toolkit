@@ -80,6 +80,24 @@ public sealed class TheRemovalSaysWhatItDisconnectedTests : IDisposable
     }
 
     /// <summary>
+    /// The title lists exactly the files that went, so the line under it names none of them, and
+    /// nothing was rewritten for it to say "Updated".
+    /// </summary>
+    [Theory]
+    [InlineData(InstallerLanguage.English, "Removed — LocalAi disconnected")]
+    [InlineData(InstallerLanguage.Russian, "Удалено — LocalAi отключён")]
+    public async Task The_finish_page_says_removed_when_the_plan_only_removed_files(
+        InstallerLanguage language, string detail)
+    {
+        await ConnectSkillsAndHooks();
+        File.WriteAllText(ClaudeJson, "{\"theme\": \"dark\"}\n", new UTF8Encoding(false));
+        File.WriteAllText(ClaudeInstructions, RemovalFixture.ClaudeInstructionsPreamble, new UTF8Encoding(false));
+        var rows = (await Disconnect(language)).Select(RemovalReportPresentation.Row).ToArray();
+
+        Assert.Contains(new RunResultRow(RunMark.Done, ClaudeSkill, detail), rows);
+    }
+
+    /// <summary>
     /// The title already carries the full paths, so the line under it names only the file that
     /// went. Its backup is still reported as the previous version.
     /// </summary>
