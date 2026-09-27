@@ -8,7 +8,7 @@ namespace LocalAi.Installer.Tests;
 /// <summary>
 /// A run started while the release was still being checked had a review saying the package would
 /// not be installed, and installed it anyway whenever the check finished before the package step
-/// (#612). The run does what the review showed.
+/// (#612). The review now waits for the check, so no run starts from a list it could not describe.
 /// </summary>
 public sealed class TheRunInstallsWhatTheReviewShowedTests : IDisposable
 {
@@ -16,60 +16,21 @@ public sealed class TheRunInstallsWhatTheReviewShowedTests : IDisposable
 
     public void Dispose() => scratch.Dispose();
 
-    /// <summary>The check still at the manifest, or at the hash of a folder's package.</summary>
+    /// <summary>
+    /// The check still at the manifest, or at the hash of a folder's package, and a tick given to
+    /// the review by other means than its box, which is held.
+    /// </summary>
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task A_check_that_finishes_after_the_run_started_installs_nothing(bool fromFolder)
+    public async Task A_run_cannot_start_while_the_check_is_running(bool fromFolder)
     {
         var feed = fromFolder ? new GatedFolderFeed() : new GatedFeed();
-        var started = await RunStartedDuringTheCheck(feed);
-
-        feed.Check.Open();
-        await started.Resolving;
-        started.Environment.Open();
-        await started.Run;
-
-        Assert.False(feed.Fetched, "The run fetched the package the review said it would not install.");
-        Assert.Contains(
-            "LocalAi package: no verified release was selected, so nothing was installed.",
-            started.Wizard.Finish.Progress,
-            StringComparison.Ordinal);
-        Assert.Equal("no release", started.Wizard.VersionContext);
-    }
-
-    /// <summary>The run does not go on hashing a package it is not going to install.</summary>
-    [Fact]
-    public async Task Starting_the_run_stops_the_hash_of_the_folder_package()
-    {
-        var feed = new GatedFolderFeed();
-        var started = await RunStartedDuringTheCheck(feed);
-
-        Assert.True(feed.CheckToken.IsCancellationRequested);
-
-        feed.Check.Open();
-        await started.Resolving;
-        started.Environment.Open();
-        await started.Run;
-    }
-
-    /// <summary>
-    /// The review read while the check is running, and the run started from it. The run waits at
-    /// its first check of the machine, before the package step, until the test opens it. An update
-    /// over a machine with no runtime root, so the run writes nothing outside this test's folder.
-    /// </summary>
-    private async Task<Started> RunStartedDuringTheCheck(GatedFeed feed)
-    {
-        var environment = new Gate();
         var wizard = new InstallerWizardViewModel(
             StartChoice.UpdateOrRepair,
             () => null,
             feed,
-            detectEnvironment: async _ =>
-            {
-                await environment.Pass();
-                return HermeticDiagnosis.Supported();
-            })
+            detectEnvironment: _ => Task.FromResult(HermeticDiagnosis.Supported()))
         {
             EnableDependencyActions = true,
             LogDirectory = scratch.Path,
@@ -83,7 +44,9 @@ public sealed class TheRunInstallsWhatTheReviewShowedTests : IDisposable
         }
 
         var resolving = wizard.ResolvePackageAsync(TestContext.Current.CancellationToken);
-        await Reached(feed.Check, resolving, "The resolve finished without reaching the check.");
+        var first = await Task.WhenAny(feed.Check.Reached, resolving)
+            .WaitAsync(TestContext.Current.CancellationToken);
+        Assert.True(first == feed.Check.Reached, "The resolve finished without reaching the check.");
         wizard.Diagnose.IsChecking = false;
         wizard.Diagnose.SetResult(supported: true);
         while (wizard.CurrentPage != InstallerPage.Confirm)
@@ -92,29 +55,17 @@ public sealed class TheRunInstallsWhatTheReviewShowedTests : IDisposable
         }
 
         wizard.SetReviewConfirmed(true);
+
         Assert.True(wizard.Package.IsResolving);
-        Assert.Contains(
-            "LocalAi package: not resolved — it will not be installed",
-            wizard.ReviewText,
-            StringComparison.Ordinal);
+        Assert.False(wizard.CanRun);
+        Assert.False(await wizard.RunAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(InstallerPage.Confirm, wizard.CurrentPage);
 
-        var run = wizard.RunAsync(TestContext.Current.CancellationToken);
-        await Reached(environment, run, "The run ended before its check of the machine.");
-        return new(wizard, resolving, run, environment);
+        feed.Check.Open();
+        await resolving;
+
+        Assert.False(feed.Fetched, "The run fetched a package the review had not shown.");
     }
-
-    private static async Task Reached(Gate gate, Task task, string otherwise)
-    {
-        var first = await Task.WhenAny(gate.Reached, task)
-            .WaitAsync(TestContext.Current.CancellationToken);
-        Assert.True(first == gate.Reached, otherwise);
-    }
-
-    private sealed record Started(
-        InstallerWizardViewModel Wizard,
-        Task Resolving,
-        Task<bool> Run,
-        Gate Environment);
 
     /// <summary>Held shut until the test opens it; says when something has arrived at it.</summary>
     private sealed class Gate
@@ -169,8 +120,6 @@ public sealed class TheRunInstallsWhatTheReviewShowedTests : IDisposable
     /// <summary>A folder whose manifest is answered at once and whose package hash waits at the gate.</summary>
     private sealed class GatedFolderFeed : GatedFeed, IReleasePackageCheck
     {
-        public CancellationToken CheckToken { get; private set; }
-
         public override Task<ResolvedRelease> ResolveAsync(
             string tag,
             string workingDirectory,
@@ -181,7 +130,6 @@ public sealed class TheRunInstallsWhatTheReviewShowedTests : IDisposable
             ReleaseManifest manifest,
             CancellationToken cancellationToken)
         {
-            CheckToken = cancellationToken;
             await Check.Pass();
             return true;
         }

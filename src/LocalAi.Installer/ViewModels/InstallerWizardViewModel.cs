@@ -344,8 +344,36 @@ public sealed class InstallerWizardViewModel : ObservableObject
         // beside it. Not the current directory: a wizard is usually launched from Explorer,
         // whose current directory is not where the file is.
         package.OfferLocalFolder(StartedFrom(Environment.ProcessPath, AppContext.BaseDirectory));
+        review.WaitFor(PendingChecks);
+        review.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(ReviewApplyPageViewModel.EnableUpdateCheck))
+            {
+                OnUpdateCheckChanged();
+            }
+        };
         visited.Add(CurrentPage);
         RebuildSteps();
+    }
+
+    /// <summary>
+    /// The checks still running whose answers the review's list is built from. The first check of
+    /// this computer is among them, though the rail cannot pass its page until it ends.
+    /// </summary>
+    private IReadOnlyList<ReviewCheck> PendingChecks()
+    {
+        var checks = new List<ReviewCheck>(2);
+        if (package.IsResolving)
+        {
+            checks.Add(package.IsCheckingPackage ? ReviewCheck.FolderPackage : ReviewCheck.Release);
+        }
+
+        if (diagnose.IsChecking)
+        {
+            checks.Add(ReviewCheck.ThisComputer);
+        }
+
+        return checks;
     }
 
     /// <summary>
@@ -913,6 +941,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
     public void SetReviewConfirmed(bool confirmed)
     {
         review.IsConfirmed = confirmed;
+        confirmedList = confirmed ? ReviewFacts() : null;
         RefreshAll();
     }
 
@@ -1019,6 +1048,14 @@ public sealed class InstallerWizardViewModel : ObservableObject
     {
         if (!CanRun)
         {
+            return false;
+        }
+
+        // Nothing may have refreshed the page since a file the list reads was changed.
+        RecheckConsent();
+        if (!CanRun)
+        {
+            RefreshAll();
             return false;
         }
 
@@ -2113,19 +2150,96 @@ public sealed class InstallerWizardViewModel : ObservableObject
 
     private string BuildReview() => string.Join(Environment.NewLine, ReviewGroups.SelectMany(group => group.Lines)).Trim();
 
-    private IReadOnlyList<ReviewGroup> BuildReviewGroups()
+    /// <summary>
+    /// The groups the consent is given to. The warnings after them are drawn from these and are
+    /// not a group of their own to compare.
+    /// </summary>
+    private IReadOnlyList<(ReviewSection Section, IReadOnlyList<string> Lines)> ReviewSections()
     {
         package.ActionText = ActionText;
-        var groups = new List<ReviewGroup>
-        {
-            new(PageLabels.ReviewRelease, ReviewGroup.SplitLines(package.ReviewText, LauncherBackupsReviewLine())),
-            new(PageLabels.ReviewComponents, ReviewGroup.SplitLines(dependencies.ReviewText)),
-            new(PageLabels.ReviewModels, ReviewGroup.SplitLines(
+        return
+        [
+            (ReviewSection.Release, ReviewGroup.SplitLines(package.ReviewText, LauncherBackupsReviewLine())),
+            (ReviewSection.Components, ReviewGroup.SplitLines(dependencies.ReviewText)),
+            (ReviewSection.Models, ReviewGroup.SplitLines(
                 models.ReviewText, UnofferedModelSetupNote(), residency.ReviewText + StoredResidencyNote())),
-            new(PageLabels.ReviewClients, ReviewGroup.SplitLines(agents.ReviewText, agents.GateReviewText,
+            (ReviewSection.Clients, ReviewGroup.SplitLines(agents.ReviewText, agents.GateReviewText,
                 agents.WorktreeReviewText, LauncherPathReviewLine())),
-            new(PageLabels.ReviewAdditional, ReviewGroup.SplitLines(UpdateCheckReviewLine())),
-        };
+            (ReviewSection.Additional, ReviewGroup.SplitLines(UpdateCheckReviewLine())),
+        ];
+    }
+
+    /// <summary>
+    /// The groups worded in one language whatever the window speaks: a switch of language rewords
+    /// every line and changes no fact, and no page, answer or consent moves with it. The package
+    /// line's button name is put back in the window's language afterwards.
+    /// </summary>
+    private IReadOnlyList<(ReviewSection Section, IReadOnlyList<string> Lines)> ReviewFacts()
+    {
+        try
+        {
+            return InstallerCulture.In(InstallerLanguage.English, ReviewSections);
+        }
+        finally
+        {
+            package.ActionText = ActionText;
+        }
+    }
+
+    /// <summary>What the list says when the box is ticked; null while it is clear.</summary>
+    private IReadOnlyList<(ReviewSection Section, IReadOnlyList<string> Lines)>? confirmedList;
+
+    /// <summary>
+    /// Takes the tick back when the list is no longer the one it was given to: a check that
+    /// answered differently, a page changed behind it, or a file the list reads again. Not while a
+    /// check runs: the box is held then, and only its answer is a change.
+    /// </summary>
+    private void RecheckConsent()
+    {
+        if (confirmedList is not { } confirmed || isRunning || !review.CanConfirm)
+        {
+            return;
+        }
+
+        var now = ReviewFacts();
+        ReviewSection[] changed =
+        [
+            .. now.Where((section, index) => !section.Lines.SequenceEqual(confirmed[index].Lines))
+                .Select(section => section.Section),
+        ];
+        if (changed.Length == 0)
+        {
+            return;
+        }
+
+        confirmedList = null;
+        review.Withdraw(changed);
+    }
+
+    /// <summary>
+    /// The update check is answered on the review page, above the box and in view of the list, so
+    /// its answer is taken into a tick already given rather than taking it back. Only its own group
+    /// is taken again: the rest is still held to what was ticked.
+    /// </summary>
+    private void OnUpdateCheckChanged()
+    {
+        if (confirmedList is { } confirmed)
+        {
+            var additional = ReviewFacts().Single(section => section.Section == ReviewSection.Additional);
+            confirmedList =
+            [
+                .. confirmed.Select(section => section.Section == ReviewSection.Additional ? additional : section),
+            ];
+        }
+
+        RefreshAll();
+    }
+
+    private IReadOnlyList<ReviewGroup> BuildReviewGroups()
+    {
+        var groups = ReviewSections()
+            .Select(section => new ReviewGroup(ReviewApplyPageViewModel.Title(section.Section), section.Lines))
+            .ToList();
         var builder = new StringBuilder();
         if (residency.HasWarning)
         {
@@ -2218,6 +2332,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
 
     private void RefreshAll()
     {
+        RecheckConsent();
         RebuildSteps();
         OnPropertyChanged(nameof(CurrentPage));
         OnPropertyChanged(nameof(StepTitle));
@@ -2248,6 +2363,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         OnPropertyChanged(nameof(CanRollbackPreviousRun));
         OnPropertyChanged(nameof(InterruptedRunNotice));
         OnPropertyChanged(nameof(HasInterruptedRunNotice));
+        review.AnnounceChecks();
         BackCommand.RaiseCanExecuteChanged();
         NextCommand.RaiseCanExecuteChanged();
         InstallCommand.RaiseCanExecuteChanged();
@@ -2570,6 +2686,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             if (feed is IReleasePackageCheck folder)
             {
                 package.BeginCheckingPackage();
+                RefreshAll();
                 var matches = await CheckFolderPackageAsync(
                     folder,
                     release.Manifest,
@@ -2646,8 +2763,9 @@ public sealed class InstallerWizardViewModel : ObservableObject
     }
 
     /// <summary>
-    /// A check still running when the run starts was on the review as no release, so the run
-    /// installs none: its answer is dropped, and a folder's hash stopped.
+    /// A check still running when the run starts is dropped, and a folder's hash stopped, so the run
+    /// installs no release the review did not show. The review holds its box while a check runs, so
+    /// this is the last line behind it rather than a path a run takes.
     /// </summary>
     private void AbandonReleaseCheck()
     {

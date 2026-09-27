@@ -360,6 +360,13 @@ public sealed class PackagePageViewModel : ObservableObject
 
     public string ReviewText => State switch
     {
+        // BeginResolving leaves the state unchecked, which would read as "will not be installed".
+        _ when IsCheckingPackage => InstallerCulture.Pick(
+            "LocalAi package: checking the package in the folder…",
+            "Пакет LocalAi: проверяю пакет в папке…"),
+        _ when IsResolving => InstallerCulture.Pick(
+            "LocalAi package: checking the release…",
+            "Пакет LocalAi: проверяю релиз…"),
         // The package installer puts back the files of the installed version that are missing
         // or differ from the release, and activates only then. Activation stops everything the
         // version owns: its tools, the broker, any localai command still running.
@@ -453,8 +460,13 @@ public sealed class PackagePageViewModel : ObservableObject
             isResolving = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(CanCheck));
+            OnPropertyChanged(nameof(IsCheckingPackage));
+            OnPropertyChanged(nameof(ReviewText));
         }
     }
+
+    /// <summary>The second half of a folder's check: its package hashed against the manifest.</summary>
+    public bool IsCheckingPackage => IsResolving && wording == StatusWording.CheckingPackage;
 
     /// <summary>
     /// Whether the button can be pressed. It is not how an answer arrives any more — the page
@@ -483,7 +495,12 @@ public sealed class PackagePageViewModel : ObservableObject
     }
 
     /// <summary>The manifest verified; the package in the folder is being hashed against it.</summary>
-    public void BeginCheckingPackage() => SetStatus(StatusWording.CheckingPackage);
+    public void BeginCheckingPackage()
+    {
+        SetStatus(StatusWording.CheckingPackage);
+        OnPropertyChanged(nameof(IsCheckingPackage));
+        OnPropertyChanged(nameof(ReviewText));
+    }
 
     /// <summary>
     /// The folder's package failed the hash on this page. No feed threw, so the refusal is made
