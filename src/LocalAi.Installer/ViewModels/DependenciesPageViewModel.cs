@@ -128,6 +128,15 @@ public sealed class DependenciesPageViewModel : ObservableObject
     public bool NeedsCheckAgain =>
         Dependencies.Any(dependency => !dependency.IsInstalled && !dependency.IsInstallable);
 
+    public PrerequisiteOffer Offer =>
+        (Dependencies.Any(dependency => dependency.IsInstallable), NeedsCheckAgain) switch
+        {
+            (true, false) => PrerequisiteOffer.Choose,
+            (true, true) => PrerequisiteOffer.ChooseAndGetTheRestByHand,
+            (false, true) => PrerequisiteOffer.AllByHand,
+            (false, false) => PrerequisiteOffer.AllInstalled,
+        };
+
     /// <summary>Required, missing, and not installable by this installer.</summary>
     public IReadOnlyList<string> StillNeeded =>
         [.. Dependencies
@@ -226,4 +235,13 @@ public sealed class DependenciesPageViewModel : ObservableObject
         OnPropertyChanged(nameof(NeedsCheckAgain));
         OnPropertyChanged(nameof(StillNeeded));
     }
+}
+
+/// <summary>What the prerequisites page can offer, which its subtitle says.</summary>
+public enum PrerequisiteOffer
+{
+    Choose,
+    ChooseAndGetTheRestByHand,
+    AllByHand,
+    AllInstalled,
 }
