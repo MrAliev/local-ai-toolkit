@@ -67,6 +67,17 @@ public sealed class WizardSpeaksRussianTests : IDisposable
                 RussianText.AssertRussian(
                     WizardText.Description(page, isUpdate, "Установить", hasRunError: true),
                     $"{page} description");
+                RussianText.AssertRussian(
+                    WizardText.Title(page, isUpdate, hasRunError: true, wasCancelled: true),
+                    $"{page} title, cancelled");
+                RussianText.AssertRussian(
+                    WizardText.Description(
+                        page,
+                        isUpdate,
+                        "Установить",
+                        hasRunError: true,
+                        wasCancelled: true),
+                    $"{page} description, cancelled");
                 foreach (var (release, settings) in new[] { (true, true), (true, false), (false, true) })
                 {
                     RussianText.AssertRussian(
