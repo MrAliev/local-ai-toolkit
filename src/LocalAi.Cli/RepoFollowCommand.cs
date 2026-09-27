@@ -10,11 +10,12 @@ namespace LocalAi.Cli;
 public sealed record FollowStep(string Line, int? ExitCode);
 
 /// <summary>
-/// What a finished build embedded, as far as the readings so far show: the total each embedding
-/// phase counted towards, one per phase and working tree, added up. The base and each overlay
-/// embed their own chunks one after another, so their totals add. The total and not the processed
-/// count, because a reading once an interval catches a phase part-way and no record after it
-/// carries a count (#774). A phase no reading caught is not in the figure.
+/// What a build embedded, as far as the records seen show: the total each embedding phase counted
+/// towards, one per phase and working tree, added up. The base and each overlay embed their own
+/// chunks one after another, so their totals add. The total and not the processed count, because
+/// a reading once an interval catches a phase part-way and no record after it carries a count
+/// (#774). The sync folds every record it writes; a follow loop folds the ones it happened to
+/// read, and a phase none of them caught is not in its figure.
 /// </summary>
 public sealed class EmbeddedChunks
 {
@@ -59,9 +60,9 @@ public static class RepoFollowCommand
     public const int BuildDidNotFinish = 75;
 
     /// <param name="chunksEmbedded">
-    /// <see cref="EmbeddedChunks.Total"/> of the readings so far. The terminal record is written
-    /// by the step-reporting path, which zeroes the chunk counters on purpose, so a finished
-    /// build's figure comes from the readings before it.
+    /// <see cref="EmbeddedChunks.Total"/> of the readings so far, for a terminal record from a
+    /// build too old to carry <see cref="RepositoryIndexProgress.ChunksEmbedded"/>. The readings
+    /// miss a phase that ends between two of them; the build that wrote the record did not.
     /// </param>
     public static FollowStep Step(
         RepositoryIndexProgress? progress,
@@ -76,9 +77,10 @@ public static class RepoFollowCommand
 
         if (progress.Phase == RepositoryIndexProgressPhase.Completed)
         {
+            var figure = progress.ChunksEmbedded ?? chunksEmbedded;
             return new(
-                chunksEmbedded > 0
-                    ? CliText.RepoFollowCompleted(Counted(chunksEmbedded))
+                figure > 0
+                    ? CliText.RepoFollowCompleted(Counted(figure))
                     : CliText.RepoFollowCompletedPlain,
                 0);
         }

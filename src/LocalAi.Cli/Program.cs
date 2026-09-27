@@ -146,8 +146,8 @@ static async Task<int> FollowIndexBuildAsync(RepositoryStatus status, TimeSpan i
         Path.GetFullPath(ModelResidencyPolicyStore.DefaultRuntimeRoot),
         "repositories",
         status.Identity.Id)));
-    // The record a finished build leaves has its chunk counters zeroed by the step-reporting
-    // path, so the figure the completion line reports is carried from the readings before it.
+    // For a terminal record from a build too old to write what it embedded: its chunk counters
+    // are zeroed, so the completion line falls back to the readings before it.
     var embedded = EmbeddedChunks.None;
     while (true)
     {

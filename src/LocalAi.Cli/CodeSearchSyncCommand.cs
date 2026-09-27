@@ -82,6 +82,10 @@ public static class CodeSearchSyncCommand
     /// machine's own, which is the only value production uses; naming one is what lets a test
     /// run a whole sync without touching the real runtime.
     /// </param>
+    /// <param name="embedder">
+    /// Null means the broker, which is the only value production uses; naming one is what lets a
+    /// test run a sync to its end without an embedding backend.
+    /// </param>
     public static async Task<CodeSearchSyncResult> ExecuteAsync(
         string workingRoot,
         TextWriter error,
@@ -90,7 +94,8 @@ public static class CodeSearchSyncCommand
         bool includeOverlays = true,
         string? runtimeRoot = null,
         bool requireSemantics = false,
-        int? refuseInlineOverFiles = null)
+        int? refuseInlineOverFiles = null,
+        IEmbeddingClient? embedder = null)
     {
         // Before the gate, so the figure is what the caller waited rather than what the work
         // took: a run that spent four minutes queued behind another one waited four minutes.
@@ -131,6 +136,8 @@ public static class CodeSearchSyncCommand
             // candidate — and it is the first thing a reader ever sees said about a build.
             Step: IndexBuildStep.ReadingRepository);
         progressStore.Save(lastProgress);
+        // Every embedding record this run writes, where a follow loop sees one an interval (#774).
+        var embedded = EmbeddedChunks.None;
 
         // Before the lease does any work, and long before the semantic phase: this is the only
         // point where declining is free. Scanning and hashing the tree costs seconds and needs
@@ -181,6 +188,7 @@ public static class CodeSearchSyncCommand
                 progress.EstimatedRemaining,
                 DateTimeOffset.UtcNow,
                 progress.Pause);
+            embedded = embedded.After(lastProgress);
             progressStore.Save(lastProgress);
         }
 
@@ -311,6 +319,7 @@ public static class CodeSearchSyncCommand
                     runtimeRoot,
                     requireSemantics,
                     error,
+                    embedder,
                     cancellationToken);
             }
 
@@ -558,11 +567,10 @@ public static class CodeSearchSyncCommand
                             .Materialize(baseSemantics ?? SemanticIndex.Load(
                                 store.SemanticIndexPath(generation.Identity.Id))));
                     var embeddingCheckpointPath = overlayPath + ".embedding-checkpoint";
-                    var embedder = new BrokerEmbeddingClient(
-                        generation.Identity.EmbeddingModel,
-                        BrokerClientFactory.CreateDefault());
                     var builder = new IndexBuilder(
-                        embedder,
+                        embedder ?? new BrokerEmbeddingClient(
+                            generation.Identity.EmbeddingModel,
+                            BrokerClientFactory.CreateDefault()),
                         error.WriteLine,
                         progress => ReportProgress(
                             RepositoryIndexProgressPhase.EmbeddingOverlay,
@@ -654,6 +662,7 @@ public static class CodeSearchSyncCommand
                 ProcessedChunks = lastProgress.TotalChunks,
                 EstimatedRemaining = TimeSpan.Zero,
                 UpdatedAtUtc = DateTimeOffset.UtcNow,
+                ChunksEmbedded = embedded.Total,
             });
 
             error.WriteLine(CliText.SyncFinished(Seconds(elapsed)));
@@ -954,6 +963,7 @@ public static class CodeSearchSyncCommand
         string? runtimeRoot,
         bool requireSemantics,
         TextWriter error,
+        IEmbeddingClient? embedder,
         CancellationToken cancellationToken)
     {
         var stagingRoot = Path.Combine(
@@ -1037,11 +1047,10 @@ public static class CodeSearchSyncCommand
                 error);
 
             phase(RepositoryIndexProgressPhase.EmbeddingBase);
-            var embedder = new BrokerEmbeddingClient(
-                generation.EmbeddingModel,
-                BrokerClientFactory.CreateDefault());
             var builder = new IndexBuilder(
-                embedder,
+                embedder ?? new BrokerEmbeddingClient(
+                    generation.EmbeddingModel,
+                    BrokerClientFactory.CreateDefault()),
                 error.WriteLine,
                 progress,
                 // The definition bodies the phase above just produced. This is the whole reason
