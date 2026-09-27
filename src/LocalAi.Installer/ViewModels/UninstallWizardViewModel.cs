@@ -383,8 +383,14 @@ public sealed class UninstallWizardViewModel : ObservableObject
         InstallerCulture.Pick("Could not save the report: {0}. Copy the details below.",
             "Не удалось сохранить отчёт: {0}. Скопируйте сведения ниже."), reportSaveError);
     public string ReportText => Summary + Environment.NewLine + Environment.NewLine + Report +
-        (removalJournalPath is null ? string.Empty : Environment.NewLine + "Journal: " + removalJournalPath) +
-        (journalError is null ? string.Empty : Environment.NewLine + "Journal error: " + journalError);
+        (removalJournalPath is null ? string.Empty : Environment.NewLine + string.Format(
+            InstallerCulture.Pick("Journal: {0}", "Журнал: {0}"),
+            removalJournalPath)) +
+        (journalError is null ? string.Empty : Environment.NewLine + string.Format(
+            InstallerCulture.Pick(
+                "The journal could not record how this run ended: {0}",
+                "Не удалось записать в журнал, чем закончился этот запуск: {0}"),
+            journalError));
 
     public int Progress => progress;
 
