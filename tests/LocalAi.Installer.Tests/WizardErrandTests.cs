@@ -105,7 +105,7 @@ public sealed class WizardErrandTests
         wizard.Package.BeginResolving();
         Assert.Equal("checking…", wizard.VersionContext);
 
-        wizard.Package.ReportUnavailable("the feed could not be reached");
+        wizard.Package.ReportUnavailable(new ReleaseResolutionException("the feed could not be reached"));
         Assert.Equal("no release", wizard.VersionContext);
     }
 

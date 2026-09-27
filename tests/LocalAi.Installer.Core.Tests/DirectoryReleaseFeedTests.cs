@@ -1,5 +1,7 @@
 using System.Numerics;
+using System.Security.AccessControl;
 using System.Security.Cryptography;
+using System.Security.Principal;
 using LocalAi.Contracts;
 using LocalAi.Installer.Core.Releases;
 
@@ -67,6 +69,9 @@ public sealed class DirectoryReleaseFeedTests : IDisposable
 
         Assert.Contains("0.1.44", exception.Message, StringComparison.Ordinal);
         Assert.Contains("0.1.45", exception.Message, StringComparison.Ordinal);
+        Assert.Equal(ReleaseRefusalKind.OtherReleaseInFolder, exception.Refusal.Kind);
+        Assert.Equal("0.1.44", exception.Refusal.Release);
+        Assert.Equal("0.1.45", exception.Refusal.Requested);
     }
 
     [Fact]
@@ -161,24 +166,239 @@ public sealed class DirectoryReleaseFeedTests : IDisposable
 
         Assert.Contains("failed verification", exception.Message, StringComparison.Ordinal);
         Assert.IsType<ReleaseVerificationException>(exception.InnerException);
+        Assert.Equal(ReleaseRefusalKind.ManifestRejectedInFolder, exception.Refusal.Kind);
+    }
+
+    /// <summary>
+    /// A correctly signed release for another installer is not a damaged one. Its version comes
+    /// from a manifest whose signature was checked first, so it can be named.
+    /// </summary>
+    [Fact]
+    public async Task A_release_for_another_installer_is_named_incompatible_with_its_version()
+    {
+        var source = Release("0.9.0", compatibility: "another-installer");
+
+        var exception = await Assert.ThrowsAsync<ReleaseResolutionException>(() =>
+            Feed(source).ResolveTagAsync("latest", TestContext.Current.CancellationToken));
+
+        Assert.Equal(ReleaseRefusalKind.Incompatible, exception.Refusal.Kind);
+        Assert.Equal("0.9.0", exception.Refusal.Release);
+        // Still a verification failure, which no other transport is asked to retry.
+        Assert.IsType<ReleaseVerificationException>(exception.InnerException);
+    }
+
+    /// <summary>
+    /// The folder the installer starts from is offered when any one of the three is in it: a
+    /// folder missing a file is still where somebody meant to install from, and the check then
+    /// names what is missing instead of the folder being silently ignored.
+    /// </summary>
+    [Theory]
+    [InlineData("release-manifest.json")]
+    [InlineData("release-manifest.sig")]
+    [InlineData("localai-package.zip")]
+    public void A_folder_holding_any_one_of_the_three_files_is_offered(string kept)
+    {
+        var source = Release("0.1.45");
+        foreach (var name in DirectoryReleaseFeed.RequiredFiles.Where(name => name != kept))
+        {
+            File.Delete(Path.Combine(source, name));
+        }
+
+        Assert.True(DirectoryReleaseFeed.HoldsAnyReleaseFile(source));
+    }
+
+    /// <summary>Anything can sit beside a lone installer, so the rest of a release set counts for nothing.</summary>
+    [Fact]
+    public void A_folder_holding_none_of_the_three_files_is_not_offered()
+    {
+        var beside = Path.Combine(root, "beside-the-installer");
+        Directory.CreateDirectory(beside);
+        foreach (var name in new[] { "LocalAi.Installer.exe", "INSTALL.txt", "release-models.json" })
+        {
+            File.WriteAllText(Path.Combine(beside, name), "x");
+        }
+
+        Assert.False(DirectoryReleaseFeed.HoldsAnyReleaseFile(beside));
+        Assert.False(DirectoryReleaseFeed.HoldsAnyReleaseFile(Path.Combine(root, "absent")));
+        Assert.False(DirectoryReleaseFeed.HoldsAnyReleaseFile(null));
+    }
+
+    /// <summary>All three are looked for before the manifest is read, so every missing one is named.</summary>
+    [Fact]
+    public async Task Every_missing_file_is_named_not_only_the_first()
+    {
+        var source = Release("0.1.45");
+        File.Delete(Path.Combine(source, "release-manifest.sig"));
+        File.Delete(Path.Combine(source, "localai-package.zip"));
+
+        var exception = await Assert.ThrowsAsync<ReleaseResolutionException>(() =>
+            Feed(source).ResolveTagAsync("latest", TestContext.Current.CancellationToken));
+
+        Assert.Equal(ReleaseRefusalKind.MissingFiles, exception.Refusal.Kind);
+        Assert.Equal(["release-manifest.sig", "localai-package.zip"], exception.Refusal.Files);
+        Assert.StartsWith(
+            $"'{source}' does not hold release-manifest.sig, localai-package.zip.",
+            exception.Message,
+            StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The page takes the manifest and the signature; without this the package's absence surfaced
+    /// only in the run, after the page had called the release verified.
+    /// </summary>
+    [Fact]
+    public async Task A_folder_without_the_package_is_refused_when_its_release_is_taken()
+    {
+        var source = Release("0.1.45");
+        File.Delete(Path.Combine(source, "localai-package.zip"));
+
+        var exception = await Assert.ThrowsAsync<ReleaseResolutionException>(() =>
+            Feed(source).ResolveAsync(
+                "0.1.45",
+                Path.Combine(root, "working"),
+                TestContext.Current.CancellationToken));
+
+        Assert.Equal(ReleaseRefusalKind.MissingFiles, exception.Refusal.Kind);
+        Assert.Equal(["localai-package.zip"], exception.Refusal.Files);
     }
 
     [Fact]
-    public void A_folder_is_recognised_only_when_all_three_files_are_there()
+    public async Task A_folder_that_is_not_there_is_called_missing()
+    {
+        var exception = await Assert.ThrowsAsync<ReleaseResolutionException>(() =>
+            Feed(Path.Combine(root, "absent")).ResolveTagAsync(
+                "latest",
+                TestContext.Current.CancellationToken));
+
+        Assert.Equal(ReleaseRefusalKind.NoSuchFolder, exception.Refusal.Kind);
+    }
+
+    /// <summary>
+    /// A folder this account cannot open hid its files from File.Exists, so it was reported as
+    /// not holding release-manifest.json (run 20260927-173013, variant 14). Whether a file is
+    /// absent or only hidden cannot be told from outside such a folder, so the folder is what is
+    /// named. Here the files are absent and listing is denied, which is what the check sees there.
+    /// </summary>
+    [Fact]
+    public async Task A_folder_this_account_cannot_open_is_not_called_missing()
+    {
+        var source = Path.Combine(root, "closed");
+        Directory.CreateDirectory(source);
+        using var denied = Deny(source, FileSystemRights.ListDirectory);
+
+        var exception = await Assert.ThrowsAsync<ReleaseResolutionException>(() =>
+            Feed(source).ResolveTagAsync("latest", TestContext.Current.CancellationToken));
+
+        Assert.Equal(ReleaseRefusalKind.FolderAccessDenied, exception.Refusal.Kind);
+    }
+
+    /// <summary>The folder is looked into only to explain a missing file, never as a condition of its own.</summary>
+    [Fact]
+    public async Task A_folder_that_cannot_be_listed_but_whose_files_can_be_read_still_resolves()
     {
         var source = Release("0.1.45");
-        Assert.True(DirectoryReleaseFeed.LooksLikeReleaseFolder(source));
+        using var denied = Deny(source, FileSystemRights.ListDirectory);
 
-        File.Delete(Path.Combine(source, "localai-package.zip"));
-        Assert.False(DirectoryReleaseFeed.LooksLikeReleaseFolder(source));
-        Assert.False(DirectoryReleaseFeed.LooksLikeReleaseFolder(Path.Combine(root, "absent")));
+        var tag = await Feed(source).ResolveTagAsync("latest", TestContext.Current.CancellationToken);
+
+        Assert.Equal("0.1.45", tag);
+    }
+
+    [Fact]
+    public async Task A_file_this_account_cannot_read_is_named()
+    {
+        var source = Release("0.1.45");
+        using var denied = Deny(
+            Path.Combine(source, "release-manifest.json"),
+            FileSystemRights.ReadData);
+
+        var exception = await Assert.ThrowsAsync<ReleaseResolutionException>(() =>
+            Feed(source).ResolveTagAsync("latest", TestContext.Current.CancellationToken));
+
+        Assert.Equal(ReleaseRefusalKind.FileAccessDenied, exception.Refusal.Kind);
+        Assert.Equal("release-manifest.json", exception.Refusal.File);
+    }
+
+    [Fact]
+    public async Task A_file_that_cannot_be_read_for_another_reason_carries_the_reason()
+    {
+        var source = Release("0.1.45");
+        using var held = new FileStream(
+            Path.Combine(source, "release-manifest.json"),
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.None);
+
+        var exception = await Assert.ThrowsAsync<ReleaseResolutionException>(() =>
+            Feed(source).ResolveTagAsync("latest", TestContext.Current.CancellationToken));
+
+        Assert.Equal(ReleaseRefusalKind.FileUnreadable, exception.Refusal.Kind);
+        Assert.Equal("release-manifest.json", exception.Refusal.File);
+        var cause = Assert.IsAssignableFrom<IOException>(exception.InnerException);
+        Assert.Equal(cause.Message, exception.Refusal.Detail);
+    }
+
+    [Fact]
+    public async Task A_file_larger_than_a_release_publishes_is_named()
+    {
+        var source = Release("0.1.45");
+        File.WriteAllBytes(Path.Combine(source, "release-manifest.json"), new byte[(64 * 1024) + 1]);
+
+        var exception = await Assert.ThrowsAsync<ReleaseResolutionException>(() =>
+            Feed(source).ResolveTagAsync("latest", TestContext.Current.CancellationToken));
+
+        Assert.Equal(ReleaseRefusalKind.FileTooLarge, exception.Refusal.Kind);
+        Assert.Equal("release-manifest.json", exception.Refusal.File);
     }
 
     private DirectoryReleaseFeed Feed(string source) =>
         new(source, key.ExportSubjectPublicKeyInfo());
 
+    /// <summary>
+    /// A deny rule for this account on one file or folder of the test's own, not inherited by
+    /// anything inside, and taken back on dispose.
+    /// </summary>
+    private static Denial Deny(string path, FileSystemRights rights) => new(path, rights);
+
+    private sealed class Denial : IDisposable
+    {
+        private readonly FileSystemInfo target;
+        private readonly FileSystemAccessRule rule;
+
+        public Denial(string path, FileSystemRights rights)
+        {
+            target = Directory.Exists(path) ? new DirectoryInfo(path) : new FileInfo(path);
+            rule = new FileSystemAccessRule(
+                WindowsIdentity.GetCurrent().User!,
+                rights,
+                AccessControlType.Deny);
+            Change(security => security.AddAccessRule(rule));
+        }
+
+        public void Dispose() => Change(security => security.RemoveAccessRule(rule));
+
+        private void Change(Action<FileSystemSecurity> change)
+        {
+            if (target is DirectoryInfo directory)
+            {
+                var security = directory.GetAccessControl();
+                change(security);
+                directory.SetAccessControl(security);
+            }
+            else
+            {
+                var file = (FileInfo)target;
+                var security = file.GetAccessControl();
+                change(security);
+                file.SetAccessControl(security);
+            }
+        }
+    }
+
     /// <summary>Writes the three files a release publishes, signed by this test's own key.</summary>
-    private string Release(string version)
+    private string Release(
+        string version,
+        string compatibility = BrokerCompatibilityContract.BuildCompatibilityId)
     {
         var source = Path.Combine(root, "release-" + version);
         Directory.CreateDirectory(source);
@@ -192,7 +412,7 @@ public sealed class DirectoryReleaseFeedTests : IDisposable
             version,
             "signed-7",
             BrokerCompatibilityContract.ProtocolVersion,
-            BrokerCompatibilityContract.BuildCompatibilityId,
+            compatibility,
             new Uri("https://releases.example.invalid/localai-" + version + ".zip"),
             package.LongLength,
             Convert.ToHexString(SHA256.HashData(package)),

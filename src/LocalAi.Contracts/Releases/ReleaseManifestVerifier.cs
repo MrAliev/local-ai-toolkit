@@ -83,7 +83,8 @@ public sealed partial class ReleaseManifestVerifier : IDisposable
                     StringComparison.Ordinal))
             {
                 throw new ReleaseVerificationException(
-                    "The release is not compatible with this installer.");
+                    "The release is not compatible with this installer.",
+                    manifest.ReleaseVersion);
             }
 
             return manifest;

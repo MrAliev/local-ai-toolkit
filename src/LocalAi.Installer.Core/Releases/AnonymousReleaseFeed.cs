@@ -92,17 +92,39 @@ public sealed class AnonymousReleaseFeed : IReleaseFeed, IDisposable
         // an installer that fails on a shared network for no reason.
         var redirected = await TryResolveTagByRedirectAsync(cancellationToken)
             .ConfigureAwait(false);
-        if (redirected is not null)
+        if (redirected.Tag is { } tag)
         {
-            return redirected;
+            return tag;
         }
 
         cancellationToken.ThrowIfCancellationRequested();
         var api = await TryResolveTagByApiAsync(cancellationToken).ConfigureAwait(false);
-        return api ?? throw new ReleaseResolutionException(
-            "Could not determine the newest release of " + repository +
-            ". Check this computer's internet connection, then try again.");
+        if (api.Tag is { } apiTag)
+        {
+            return apiTag;
+        }
+
+        // Only a lookup that neither path got an answer to is a connection problem. A 404 is an
+        // answer, and a private repository or one with nothing published gives exactly that.
+        var answered = api.Answered ?? redirected.Answered;
+        throw answered is null
+            ? new ReleaseResolutionException(
+                $"Could not reach GitHub to determine the newest release of {repository}: " +
+                $"{(api.Failure ?? redirected.Failure)?.TrimEnd('.')}. Check this computer's " +
+                "internet connection, then try again.",
+                refusal: new(ReleaseRefusalKind.GitHubUnreachable))
+            : new ReleaseResolutionException(
+                $"GitHub named no newest release of {repository} (answered {answered}). A " +
+                "private repository, or one without published releases, looks like this from " +
+                "outside.",
+                refusal: new(ReleaseRefusalKind.NoPublishedRelease, Repository: repository));
     }
+
+    /// <summary>A tag, or what GitHub answered instead of one, or why it could not be asked.</summary>
+    private readonly record struct TagLookup(string? Tag, string? Answered, string? Failure);
+
+    private static string Answer(HttpResponseMessage response) =>
+        $"{(int)response.StatusCode} {response.ReasonPhrase}";
 
     public async Task<ResolvedRelease> ResolveAsync(
         string tag,
@@ -144,7 +166,10 @@ public sealed class AnonymousReleaseFeed : IReleaseFeed, IDisposable
         {
             throw new ReleaseResolutionException(
                 $"The manifest for release '{tag}' failed verification and will not be used.",
-                exception);
+                exception,
+                ReleaseRefusal.Rejected(
+                    exception,
+                    new(ReleaseRefusalKind.ManifestRejectedOnGitHub, Release: tag)));
         }
     }
 
@@ -174,7 +199,7 @@ public sealed class AnonymousReleaseFeed : IReleaseFeed, IDisposable
         new($"https://github.com/{repository}/releases/download/" +
             $"{Uri.EscapeDataString(tag)}/{Uri.EscapeDataString(assetName)}");
 
-    private async Task<string?> TryResolveTagByRedirectAsync(CancellationToken cancellationToken)
+    private async Task<TagLookup> TryResolveTagByRedirectAsync(CancellationToken cancellationToken)
     {
         try
         {
@@ -186,7 +211,7 @@ public sealed class AnonymousReleaseFeed : IReleaseFeed, IDisposable
                 .ConfigureAwait(false);
             if (response.Headers.Location is not { } location)
             {
-                return null;
+                return new(null, Answer(response), null);
             }
 
             var absolute = location.IsAbsoluteUri
@@ -197,16 +222,16 @@ public sealed class AnonymousReleaseFeed : IReleaseFeed, IDisposable
                 StringSplitOptions.RemoveEmptyEntries);
             var index = Array.LastIndexOf(segments, "tag");
             return index >= 0 && index + 1 < segments.Length
-                ? Uri.UnescapeDataString(segments[index + 1])
-                : null;
+                ? new(Uri.UnescapeDataString(segments[index + 1]), null, null)
+                : new(null, Answer(response), null);
         }
         catch (Exception exception) when (exception is HttpRequestException or IOException)
         {
-            return null;
+            return new(null, null, exception.Message);
         }
     }
 
-    private async Task<string?> TryResolveTagByApiAsync(CancellationToken cancellationToken)
+    private async Task<TagLookup> TryResolveTagByApiAsync(CancellationToken cancellationToken)
     {
         try
         {
@@ -220,20 +245,27 @@ public sealed class AnonymousReleaseFeed : IReleaseFeed, IDisposable
                 .ConfigureAwait(false);
             if (response.StatusCode != HttpStatusCode.OK)
             {
-                return null;
+                return new(null, Answer(response), null);
             }
 
-            using var document = JsonDocument.Parse(
-                await response.Content.ReadAsByteArrayAsync(cancellationToken)
-                    .ConfigureAwait(false));
-            return document.RootElement.TryGetProperty("tag_name", out var tag)
-                ? tag.GetString()
-                : null;
+            try
+            {
+                using var document = JsonDocument.Parse(
+                    await response.Content.ReadAsByteArrayAsync(cancellationToken)
+                        .ConfigureAwait(false));
+                return document.RootElement.TryGetProperty("tag_name", out var tag) &&
+                    tag.GetString() is { } name
+                        ? new(name, null, null)
+                        : new(null, Answer(response), null);
+            }
+            catch (JsonException)
+            {
+                return new(null, Answer(response), null);
+            }
         }
-        catch (Exception exception) when (
-            exception is HttpRequestException or IOException or JsonException)
+        catch (Exception exception) when (exception is HttpRequestException or IOException)
         {
-            return null;
+            return new(null, null, exception.Message);
         }
     }
 
@@ -275,7 +307,9 @@ public sealed class AnonymousReleaseFeed : IReleaseFeed, IDisposable
                                 Uri.UriSchemeHttps,
                                 StringComparison.Ordinal))
                         {
-                            throw new ReleaseResolutionException(
+                            throw DownloadFailed(
+                                tag,
+                                assetName,
                                 $"The download of '{assetName}' was redirected away from " +
                                 "HTTPS and was abandoned.");
                         }
@@ -288,12 +322,18 @@ public sealed class AnonymousReleaseFeed : IReleaseFeed, IDisposable
                     {
                         throw new ReleaseResolutionException(
                             $"Release '{tag}' has no asset named '{assetName}'. Check the " +
-                            "release tag.");
+                            "release tag.",
+                            refusal: new(
+                                ReleaseRefusalKind.AssetNotFound,
+                                Release: tag,
+                                File: assetName));
                     }
 
                     if (response.StatusCode != HttpStatusCode.OK)
                     {
-                        throw new ReleaseResolutionException(
+                        throw DownloadFailed(
+                            tag,
+                            assetName,
                             $"Could not download '{assetName}' from release '{tag}': the " +
                             $"server answered {(int)response.StatusCode} " +
                             $"{response.ReasonPhrase}.");
@@ -302,7 +342,9 @@ public sealed class AnonymousReleaseFeed : IReleaseFeed, IDisposable
                     if (response.Content.Headers.ContentLength is { } declared &&
                         declared > maximumBytes)
                     {
-                        throw new ReleaseResolutionException(
+                        throw DownloadFailed(
+                            tag,
+                            assetName,
                             $"'{assetName}' is larger than this installer will download " +
                             $"({declared} bytes).");
                     }
@@ -311,6 +353,7 @@ public sealed class AnonymousReleaseFeed : IReleaseFeed, IDisposable
                             response,
                             targetPath,
                             maximumBytes,
+                            tag,
                             assetName,
                             progress,
                             token)
@@ -322,29 +365,46 @@ public sealed class AnonymousReleaseFeed : IReleaseFeed, IDisposable
                 }
             }
 
-            throw new ReleaseResolutionException(
+            throw DownloadFailed(
+                tag,
+                assetName,
                 $"The download of '{assetName}' was redirected too many times.");
         }
         catch (OperationCanceledException) when (
             !cancellationToken.IsCancellationRequested)
         {
-            throw new ReleaseResolutionException(
+            throw DownloadFailed(
+                tag,
+                assetName,
                 $"The download of '{assetName}' from release '{tag}' timed out.");
         }
         catch (Exception exception) when (
             exception is HttpRequestException or IOException or
                 UnauthorizedAccessException or NotSupportedException)
         {
-            throw new ReleaseResolutionException(
+            throw DownloadFailed(
+                tag,
+                assetName,
                 $"Could not download '{assetName}' from release '{tag}': {exception.Message}",
                 exception);
         }
     }
 
+    private static ReleaseResolutionException DownloadFailed(
+        string tag,
+        string assetName,
+        string message,
+        Exception? inner = null) =>
+        new(
+            message,
+            inner,
+            new(ReleaseRefusalKind.DownloadFailed, Release: tag, File: assetName, Detail: message));
+
     private static async Task<byte[]> CopyAsync(
         HttpResponseMessage response,
         string targetPath,
         long maximumBytes,
+        string tag,
         string assetName,
         IProgress<long>? progress,
         CancellationToken cancellationToken)
@@ -373,7 +433,9 @@ public sealed class AnonymousReleaseFeed : IReleaseFeed, IDisposable
             total += read;
             if (total > maximumBytes)
             {
-                throw new ReleaseResolutionException(
+                throw DownloadFailed(
+                    tag,
+                    assetName,
                     $"'{assetName}' is larger than this installer will download.");
             }
 
