@@ -151,6 +151,80 @@ public sealed class DirectoryReleaseFeedTests : IDisposable
     }
 
     /// <summary>
+    /// Run 20260927-173013-package-validation ended three different folders on one row, "not
+    /// attempted", because the run could not tell a missing package from one it may not read. The
+    /// run's copy is refused with the same kinds the page's check gives, so the row says which.
+    /// </summary>
+    [Fact]
+    public async Task A_package_the_folder_does_not_hold_is_named_as_missing()
+    {
+        var source = Release("0.1.45");
+        File.Delete(Path.Combine(source, "localai-package.zip"));
+
+        var exception = await DownloadRefusedAsync(source);
+
+        Assert.Equal(ReleaseRefusalKind.MissingFiles, exception.Refusal.Kind);
+        Assert.Equal(["localai-package.zip"], exception.Refusal.Files);
+    }
+
+    [Fact]
+    public async Task A_package_this_account_may_not_read_is_named_as_that()
+    {
+        var source = Release("0.1.45");
+        using var denied = Deny(
+            Path.Combine(source, "localai-package.zip"),
+            FileSystemRights.ReadData);
+
+        var exception = await DownloadRefusedAsync(source);
+
+        Assert.Equal(ReleaseRefusalKind.FileAccessDenied, exception.Refusal.Kind);
+        Assert.Equal("localai-package.zip", exception.Refusal.File);
+        Assert.IsType<UnauthorizedAccessException>(exception.InnerException);
+    }
+
+    [Fact]
+    public async Task A_package_that_cannot_be_opened_names_why()
+    {
+        var source = Release("0.1.45");
+        using var held = new FileStream(
+            Path.Combine(source, "localai-package.zip"),
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.None);
+
+        var exception = await DownloadRefusedAsync(source);
+
+        Assert.Equal(ReleaseRefusalKind.FileUnreadable, exception.Refusal.Kind);
+        Assert.Equal("localai-package.zip", exception.Refusal.File);
+        var cause = Assert.IsType<IOException>(exception.InnerException);
+        Assert.Equal(cause.Message, exception.Refusal.Detail);
+    }
+
+    /// <summary>A copy the working folder refuses is not a folder that holds no package.</summary>
+    [Fact]
+    public async Task A_copy_the_working_folder_refuses_names_where_it_was_going()
+    {
+        var source = Release("0.1.45");
+        var working = Path.Combine(root, "working");
+        var target = Path.Combine(working, "localai-package.zip");
+        Directory.CreateDirectory(target);
+
+        var exception = await Assert.ThrowsAsync<WorkingCopyWriteException>(() =>
+            Feed(source).DownloadPackageAsync("0.1.45", working, null, TestContext.Current.CancellationToken));
+
+        Assert.Equal(target, exception.Path);
+        Assert.Equal(exception.InnerException!.Message, exception.Message);
+    }
+
+    private Task<ReleaseResolutionException> DownloadRefusedAsync(string source) =>
+        Assert.ThrowsAsync<ReleaseResolutionException>(() =>
+            Feed(source).DownloadPackageAsync(
+                "0.1.45",
+                Path.Combine(root, "working"),
+                null,
+                TestContext.Current.CancellationToken));
+
+    /// <summary>
     /// The whole point: a folder is not trusted for being a folder. A manifest signed by anything
     /// other than the embedded key is refused exactly as it would be over HTTPS.
     /// </summary>

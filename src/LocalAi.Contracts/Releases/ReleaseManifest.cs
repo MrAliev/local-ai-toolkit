@@ -77,7 +77,7 @@ public sealed record ReleaseManifest
     public IReadOnlyList<ManifestModel> Models { get; }
 }
 
-public sealed class ReleaseVerificationException : Exception
+public class ReleaseVerificationException : Exception
 {
     public ReleaseVerificationException(string message)
         : base(message)
