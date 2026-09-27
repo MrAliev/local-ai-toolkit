@@ -231,6 +231,9 @@ public sealed class InstallerWizardViewModel : ObservableObject
     private PackageOutcome? packageOutcome;
     private bool packageInstalled;
     private ModelStepFailure? modelStepFailure;
+
+    /// <summary>Whether this run was set to skip the models, as the review said.</summary>
+    private bool modelsSkipped;
     private InstallerRunJournal? runJournal;
     private InstallerRunJournal? interruptedJournal;
 
@@ -1071,6 +1074,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
 
         AbandonReleaseCheck();
         models.KeepMode();
+        modelsSkipped = models.BuildProvisioningSelection().Mode == ModelProvisioningMode.None;
         isRunning = true;
         isComplete = false;
         hasRunError = false;
@@ -2425,7 +2429,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             }
         }
 
-        finish.Results.Add(RunResults.Models(ModelRuns, modelStepFailure));
+        finish.Results.Add(RunResults.Models(ModelRuns, modelStepFailure, modelsSkipped));
         foreach (var model in ModelRuns)
         {
             finish.Results.Add(new RunResultRow(model.Mark, model.Tag, model.Detail));

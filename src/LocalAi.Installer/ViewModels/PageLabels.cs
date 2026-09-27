@@ -413,6 +413,10 @@ public static class PageLabels
         "cancelled before the first model",
         "отменено до первой модели");
 
+    public static string ResultModelsSkipped => InstallerCulture.Pick(
+        "skipped, nothing was downloaded",
+        "пропущены, ничего не скачано");
+
     public static string WhatToDoNext => InstallerCulture.Pick(
         "What to do next",
         "Что делать дальше");
