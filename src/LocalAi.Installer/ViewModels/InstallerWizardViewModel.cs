@@ -3240,6 +3240,17 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 modelStepFailure = new(ModelStepFailureKind.Cancelled, "cancelled");
             }
 
+            if (!activated)
+            {
+                // Read after the cancellation, not recalled: the row names what it left installed.
+                var still = InstalledVersionReader.Read(RuntimeRoot).ReleaseVersion;
+                packageOutcome = new(PackageOutcomeKind.Cancelled, StillInstalled: still);
+                AppendLog(
+                    report,
+                    $"LocalAi package {resolved.Manifest.ReleaseVersion}: cancelled before activation; not installed." +
+                    (still is null ? string.Empty : $" {still} is still the active version."));
+            }
+
             throw;
         }
         catch (LocalAiPackageInstallationException exception) when (packageInstalled)
