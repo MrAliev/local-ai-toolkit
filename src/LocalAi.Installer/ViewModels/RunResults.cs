@@ -129,6 +129,9 @@ public enum PrerequisiteOutcomeKind
     /// <summary>winget or npm outlived its stop and may still be running; the run ended there.</summary>
     CouldNotStop,
 
+    /// <summary>npm installed it, but a check afterwards outlived its stop; the run ended there.</summary>
+    CheckCouldNotStop,
+
     /// <summary>The run stopped before this one.</summary>
     NotReached,
 }
@@ -184,7 +187,7 @@ public static class RunResults
         {
             PrerequisiteOutcomeKind.Installed or PrerequisiteOutcomeKind.Reinstalled => RunMark.Done,
             PrerequisiteOutcomeKind.NoAutomatedInstaller or PrerequisiteOutcomeKind.NotReached => RunMark.None,
-            PrerequisiteOutcomeKind.CouldNotStop => RunMark.Warned,
+            PrerequisiteOutcomeKind.CouldNotStop or PrerequisiteOutcomeKind.CheckCouldNotStop => RunMark.Warned,
             _ => RunMark.Failed,
         };
         return new(mark, outcome.Title, outcome.Kind switch
@@ -218,8 +221,8 @@ public static class RunResults
                 "not installed: npm was not found. With Node.js 20 installed, run this installer again",
                 "не установлен: npm не найден. Когда Node.js 20 будет установлен, снова запустите установщик"),
             PrerequisiteOutcomeKind.CheckAfterInstallFailed => InstallerCulture.Pick(
-                "installed by npm, but the check after installing failed. The log below says what went wrong",
-                "npm установил пакет, но проверка после установки не прошла. Что пошло не так — " +
+                "installed by npm, but a step after installing failed. The log below says which and why",
+                "npm установил пакет, но один из шагов после установки не удался. Какой и почему — " +
                 "сказано в журнале ниже"),
             PrerequisiteOutcomeKind.Cancelled => InstallerCulture.Pick(
                 "not installed: the run was cancelled",
@@ -230,6 +233,12 @@ public static class RunResults
                 "результат неизвестен: не удалось остановить {0}, поэтому установка, возможно, ещё идёт. " +
                 "Дождитесь её окончания, прежде чем снова запускать установщик",
                 outcome.Tool),
+            PrerequisiteOutcomeKind.CheckCouldNotStop => InstallerCulture.Pick(
+                "outcome unknown: npm installed it, but a check afterwards could not be stopped and may still " +
+                "be running, so whether it works is not known. Reinstalling it with this installer repeats the check",
+                "результат неизвестен: npm установил пакет, но проверку после установки не удалось остановить, " +
+                "и она, возможно, ещё идёт, поэтому неизвестно, работает ли он. Переустановка этим установщиком " +
+                "повторит проверку"),
             PrerequisiteOutcomeKind.NoAutomatedInstaller => InstallerCulture.Pick(
                 "skipped: there is no automated installer for it",
                 "пропущено: автоматической установки нет"),

@@ -139,8 +139,9 @@ public sealed class APrerequisiteThatFailedSaysWhyTests
         Assert.False(await wizard.RunAsync(TestContext.Current.CancellationToken));
 
         Assert.Single(runner.Started);
+        // Not "failed": the row is Warned, and whether it failed is what nobody knows.
         Assert.Contains(
-            "SCIP TypeScript: failed." + Environment.NewLine +
+            "SCIP TypeScript: outcome unknown." + Environment.NewLine +
             "SCIP TypeScript: npm could not be stopped; the installation may still be running.",
             wizard.Finish.Progress,
             StringComparison.Ordinal);
@@ -192,7 +193,49 @@ public sealed class APrerequisiteThatFailedSaysWhyTests
             StringComparison.Ordinal);
         Assert.Contains(
             (RunMark.Failed, "SCIP Python",
-                "installed by npm, but the check after installing failed. The log below says what went wrong"),
+                "installed by npm, but a step after installing failed. The log below says which and why"),
+            PrerequisiteRows(wizard));
+    }
+
+    /// <summary>
+    /// npm installed SCIP Python and the check after it could not be stopped. The check may still be
+    /// running, so the run ends as it does on a stuck install; the row says npm installed it and that
+    /// whether it works is not known, and the log names the check.
+    /// </summary>
+    [Fact]
+    public async Task A_check_after_installing_that_could_not_be_stopped_leaves_the_outcome_unknown()
+    {
+        using var root = new TemporaryDirectory("LocalAi-prerequisite-check-stuck");
+        var runner = new ScriptedRunner(arguments => arguments.Contains("root")
+            ? throw new ProcessTerminationException(
+                42, ProcessTerminationCause.Timeout, "Process tree 42 did not confirm exit.")
+            : new ProcessResult(0, string.Empty, string.Empty, false, false));
+        var wizard = ConfirmedInstall(
+            HermeticDiagnosis.Supported(),
+            root,
+            page =>
+            {
+                FoundTheRequiredOnes(page);
+                page.SetConsent("ScipPython", true);
+            },
+            runner);
+
+        Assert.False(await wizard.RunAsync(TestContext.Current.CancellationToken));
+
+        Assert.Equal(2, runner.Started.Count);
+        Assert.Contains(
+            "SCIP Python: outcome unknown." + Environment.NewLine +
+            "SCIP Python was installed, but the check after installing could not be stopped and may still " +
+            "be running: npm root --global",
+            wizard.Finish.Progress,
+            StringComparison.Ordinal);
+        Assert.Contains("Failed: Process tree 42 did not confirm exit.", wizard.Finish.Progress, StringComparison.Ordinal);
+        Assert.DoesNotContain("LocalAi package:", wizard.Finish.Progress, StringComparison.Ordinal);
+        Assert.Contains(
+            (RunMark.Warned, "SCIP Python",
+                "outcome unknown: npm installed it, but a check afterwards could not be stopped and may still " +
+                "be running, so whether it works is not known. Reinstalling it with this installer repeats " +
+                "the check"),
             PrerequisiteRows(wizard));
     }
 
