@@ -146,21 +146,20 @@ static async Task<int> FollowIndexBuildAsync(RepositoryStatus status, TimeSpan i
         Path.GetFullPath(ModelResidencyPolicyStore.DefaultRuntimeRoot),
         "repositories",
         status.Identity.Id)));
-    // The most chunks this run has watched go by. The record a finished build leaves has its
-    // chunk counters zeroed by the step-reporting path, so without this the completion line
-    // reported 0 after embedding thousands.
-    var chunksSeen = 0;
+    // For a terminal record from a build too old to write what it embedded: its chunk counters
+    // are zeroed, so the completion line falls back to the readings before it.
+    var embedded = EmbeddedChunks.None;
     while (true)
     {
         var progress = store.Read();
-        chunksSeen = Math.Max(chunksSeen, progress?.ProcessedChunks ?? 0);
+        embedded = embedded.After(progress);
         var step = RepoFollowCommand.Step(
             progress,
             progress is null
                 ? TimeSpan.Zero
                 : DateTimeOffset.UtcNow - progress.UpdatedAtUtc,
             RepoFollowCommand.DefaultStaleAfter,
-            chunksSeen);
+            embedded.Total);
         followOutput.WriteLine(step.Line);
         followOutput.Flush();
         if (step.ExitCode is { } code)
