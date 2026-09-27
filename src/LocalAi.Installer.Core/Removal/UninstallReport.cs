@@ -7,8 +7,12 @@ namespace LocalAi.Installer.Core.Removal;
 public enum RemovalReportState { Completed, Failed, Unknown, NotStarted, Retained }
 public enum RemovalReportKind { Path, Configuration, Hooks, LauncherPath, Registration, ProcessStop, JournalStep, Other }
 
+/// <summary>A file a client step covers, and whether the step deletes it rather than rewrites it.</summary>
+public sealed record RemovalReportFile(string Path, bool Deletes);
+
 public sealed record RemovalReportEntry(
-    string Target, RemovalReportKind Kind, RemovalReportState State, string? Detail = null);
+    string Target, RemovalReportKind Kind, RemovalReportState State, string? Detail = null,
+    IReadOnlyList<RemovalReportFile>? Files = null);
 
 /// <summary>Shared journal identities; presentation never parses paths out of prose.</summary>
 public static class UninstallJournalDescriptions
@@ -41,7 +45,8 @@ public static class UninstallReport
         foreach (var configuration in plan.AgentConfigurations.Where(item => item.HasChanges))
         {
             Add(string.Join(", ", configuration.Files.Select(file => file.Path)),
-                RemovalReportKind.Configuration, UninstallJournalDescriptions.Configuration(configuration));
+                RemovalReportKind.Configuration, UninstallJournalDescriptions.Configuration(configuration),
+                files: configuration.Files.Select(file => new RemovalReportFile(file.Path, file.Deletes)).ToArray());
             // Read from disk: a step that failed part-way rolled back from the backups it had
             // made, and those stay, while the files it never reached have none.
             entries.AddRange(configuration.Files
@@ -135,7 +140,8 @@ public static class UninstallReport
             Unplanned(new RemovalReportEntry(notice.Title, RemovalReportKind.Other, RemovalReportState.Retained, notice.Detail))));
         return entries.Select(item => item.Entry).ToArray();
 
-        InstallerRunStep? Add(string target, RemovalReportKind kind, string description, string? notStarted = null)
+        InstallerRunStep? Add(string target, RemovalReportKind kind, string description, string? notStarted = null,
+            IReadOnlyList<RemovalReportFile>? files = null)
         {
             var step = remaining.FirstOrDefault(item => item.Description == description);
             if (step is not null)
@@ -145,8 +151,8 @@ public static class UninstallReport
 
             entries.Add((
                 step is null
-                    ? new(target, kind, RemovalReportState.NotStarted, notStarted)
-                    : new(target, kind, State(step.Status), step.Detail),
+                    ? new(target, kind, RemovalReportState.NotStarted, notStarted, files)
+                    : new(target, kind, State(step.Status), step.Detail, files),
                 true,
                 step?.StartedAtUtc));
             return step;
