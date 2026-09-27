@@ -60,7 +60,7 @@ public sealed class OllamaModelStoreTests : IDisposable
         Assert.False(store.HoldsAny(["embedder"]));
     }
 
-    /// <summary>Ollama makes its default store when it first runs, so where there is none, nothing was pulled.</summary>
+    /// <summary>Where Ollama's default store is missing, nothing is taken to have been pulled.</summary>
     [Fact]
     public void A_default_store_that_does_not_exist_holds_none()
     {
