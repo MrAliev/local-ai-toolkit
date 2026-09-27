@@ -19,6 +19,7 @@ public sealed class UsageReporting(string runtimeRoot)
         using var call = new UsageCall(UsageSurface.Mcp, component, operation, callId);
         call.Comparison.SourceContext(sourceContext);
         var store = new UsageReportStore(RuntimeRoot);
+        _ = new RuntimeAcl().TryCreateRoot(RuntimeRoot);
         CallToolResult result;
         try { result = await next(cancellationToken); }
         catch (Exception exception)
