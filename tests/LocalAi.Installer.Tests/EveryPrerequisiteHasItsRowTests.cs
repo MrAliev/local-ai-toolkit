@@ -76,6 +76,14 @@ public sealed class EveryPrerequisiteHasItsRowTests
             "не установлен: запуск отменён"
         },
         {
+            new("SCIP TypeScript", PrerequisiteOutcomeKind.CouldNotStop, Scip, Tool: "npm"),
+            RunMark.Warned,
+            "outcome unknown: npm could not be stopped, so the installation may still be running. Wait " +
+            "for it to end before running this installer again",
+            "результат неизвестен: не удалось остановить npm, поэтому установка, возможно, ещё идёт. " +
+            "Дождитесь её окончания, прежде чем снова запускать установщик"
+        },
+        {
             new("Git", PrerequisiteOutcomeKind.NoAutomatedInstaller),
             RunMark.None,
             "skipped: there is no automated installer for it",

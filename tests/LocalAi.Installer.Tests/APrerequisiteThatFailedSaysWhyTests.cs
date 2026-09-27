@@ -91,6 +91,7 @@ public sealed class APrerequisiteThatFailedSaysWhyTests
     public async Task A_command_that_could_not_be_started_moves_on_to_the_next_one()
     {
         using var root = new TemporaryDirectory("LocalAi-prerequisite-start");
+        var logs = root.Combine("logs");
         var runner = new ScriptedRunner(arguments => arguments.Contains("@sourcegraph/scip-typescript@0.4.0")
             ? throw new Win32Exception(2, "The system cannot find the file specified.")
             : new ProcessResult(1, string.Empty, string.Empty, false, false));
@@ -98,6 +99,13 @@ public sealed class APrerequisiteThatFailedSaysWhyTests
 
         Assert.False(await wizard.RunAsync(TestContext.Current.CancellationToken));
 
+        const string cause =
+            "SCIP TypeScript was not installed: npm could not be started: The system cannot find the file specified.";
+        Assert.Contains(
+            "SCIP TypeScript: failed." + Environment.NewLine + cause,
+            wizard.Finish.Progress,
+            StringComparison.Ordinal);
+        Assert.Equal(cause, StepDetail(logs, "Prerequisite SCIP TypeScript (@sourcegraph/scip-typescript)"));
         Assert.Contains(runner.Started, arguments => arguments.Contains("@sourcegraph/scip-python@0.6.6"));
         Assert.Contains(
             "LocalAi package: no verified release was selected",
@@ -116,7 +124,10 @@ public sealed class APrerequisiteThatFailedSaysWhyTests
             rows);
     }
 
-    /// <summary>A process that could not be stopped may still be running, so the run stops.</summary>
+    /// <summary>
+    /// A process that could not be stopped may still be running, so the run stops. Its component
+    /// was attempted and its outcome is unknown, which is what its row says.
+    /// </summary>
     [Fact]
     public async Task A_command_that_could_not_be_stopped_still_ends_the_run()
     {
@@ -128,8 +139,61 @@ public sealed class APrerequisiteThatFailedSaysWhyTests
         Assert.False(await wizard.RunAsync(TestContext.Current.CancellationToken));
 
         Assert.Single(runner.Started);
+        Assert.Contains(
+            "SCIP TypeScript: failed." + Environment.NewLine +
+            "SCIP TypeScript: npm could not be stopped; the installation may still be running.",
+            wizard.Finish.Progress,
+            StringComparison.Ordinal);
         Assert.Contains("Failed: Process tree 42 did not confirm exit.", wizard.Finish.Progress, StringComparison.Ordinal);
         Assert.DoesNotContain("LocalAi package:", wizard.Finish.Progress, StringComparison.Ordinal);
+        var rows = PrerequisiteRows(wizard);
+        Assert.Contains(
+            (RunMark.Warned, "SCIP TypeScript",
+                "outcome unknown: npm could not be stopped, so the installation may still be running. Wait " +
+                "for it to end before running this installer again"),
+            rows);
+        Assert.Contains((RunMark.None, "SCIP Python", "not attempted"), rows);
+    }
+
+    /// <summary>
+    /// npm installed SCIP Python and the check after it could not be started. The run goes on, and
+    /// the log names the check rather than giving the exception's message alone.
+    /// </summary>
+    [Fact]
+    public async Task A_check_after_installing_that_could_not_be_started_says_which_check()
+    {
+        using var root = new TemporaryDirectory("LocalAi-prerequisite-check");
+        var logs = root.Combine("logs");
+        var runner = new ScriptedRunner(arguments => arguments.Contains("root")
+            ? throw new Win32Exception(2, "The system cannot find the file specified.")
+            : new ProcessResult(0, string.Empty, string.Empty, false, false));
+        var wizard = ConfirmedInstall(
+            HermeticDiagnosis.Supported(),
+            root,
+            page =>
+            {
+                FoundTheRequiredOnes(page);
+                page.SetConsent("ScipPython", true);
+            },
+            runner);
+
+        Assert.False(await wizard.RunAsync(TestContext.Current.CancellationToken));
+
+        const string cause =
+            "SCIP Python was installed, but the check after installing failed: The system cannot find the file specified.";
+        Assert.Contains(
+            "SCIP Python: failed." + Environment.NewLine + cause,
+            wizard.Finish.Progress,
+            StringComparison.Ordinal);
+        Assert.Equal(cause, StepDetail(logs, "Prerequisite SCIP Python (@sourcegraph/scip-python)"));
+        Assert.Contains(
+            "LocalAi package: no verified release was selected",
+            wizard.Finish.Progress,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            (RunMark.Failed, "SCIP Python",
+                "installed by npm, but the check after installing failed. The log below says what went wrong"),
+            PrerequisiteRows(wizard));
     }
 
     [Fact]
@@ -179,9 +243,11 @@ public sealed class APrerequisiteThatFailedSaysWhyTests
             "SCIP TypeScript was not installed: the run was cancelled.",
             wizard.Finish.Progress,
             StringComparison.Ordinal);
-        Assert.Contains(
-            (RunMark.Failed, "SCIP TypeScript", "not installed: the run was cancelled"),
-            PrerequisiteRows(wizard));
+        // Cancelled is for the one that was running; the run never reached the next one.
+        Assert.Single(runner.Started);
+        var rows = PrerequisiteRows(wizard);
+        Assert.Contains((RunMark.Failed, "SCIP TypeScript", "not installed: the run was cancelled"), rows);
+        Assert.Contains((RunMark.None, "SCIP Python", "not attempted"), rows);
     }
 
     [Fact]

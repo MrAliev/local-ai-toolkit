@@ -246,8 +246,8 @@ public sealed class InstallerWizardViewModel : ObservableObject
     private readonly Dictionary<string, PrerequisiteOutcome> prerequisiteOutcomes = [];
 
     /// <summary>
-    /// The one whose command was running when the run stopped on it. It has no outcome, and it was
-    /// attempted, so "not attempted" would be untrue of it.
+    /// The one whose command was running when the run stopped on it. Left without an outcome it was
+    /// still attempted, so "not attempted" would be untrue of it.
     /// </summary>
     private string? prerequisiteInFlight;
 
@@ -1122,9 +1122,21 @@ public sealed class InstallerWizardViewModel : ObservableObject
                     $"Prerequisite {dependency.Title} ({definition.PackageId})");
                 var reinstall = dependency.IsInstalled;
                 prerequisiteInFlight = dependency.Id;
-                var failure = definition.InstallerKind == DependencyInstallerKind.WinGet
-                    ? await TryInstallDependencyWithWingetAsync(definition, dependency.Title, reinstall, token)
-                    : await TryInstallDependencyWithNpmAsync(definition, dependency.Title, token);
+                PrerequisiteOutcome? failure;
+                try
+                {
+                    failure = definition.InstallerKind == DependencyInstallerKind.WinGet
+                        ? await TryInstallDependencyWithWingetAsync(definition, dependency.Title, reinstall, token)
+                        : await TryInstallDependencyWithNpmAsync(definition, dependency.Title, token);
+                }
+                catch (PrerequisiteStillRunningException stuck)
+                {
+                    prerequisiteOutcomes[dependency.Id] = stuck.Outcome;
+                    AppendLog(report, $"{dependency.Title}: failed.");
+                    AppendLog(report, stuck.Outcome.LogLine ?? string.Empty);
+                    throw;
+                }
+
                 prerequisiteInFlight = null;
                 prerequisiteOutcomes[dependency.Id] = failure ?? new(
                     dependency.Title,
@@ -3380,6 +3392,9 @@ public sealed class InstallerWizardViewModel : ObservableObject
         PrerequisiteOutcome CheckFailed(string why) =>
             new(displayName, PrerequisiteOutcomeKind.CheckAfterInstallFailed, download, LogLine: why);
 
+        PrerequisiteOutcome CheckThrew(Exception exception) =>
+            CheckFailed($"SCIP Python was installed, but the check after installing failed: {exception.Message}");
+
         ProcessResult npmRootResult;
         try
         {
@@ -3391,7 +3406,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         }
         catch (Exception exception) when (CouldNotStart(exception))
         {
-            return CheckFailed(exception.Message);
+            return CheckThrew(exception);
         }
 
         var npmGlobalRoot = npmRootResult.StandardOutput.Trim();
@@ -3437,7 +3452,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         }
         catch (Exception exception) when (CouldNotStart(exception))
         {
-            return CheckFailed(exception.Message);
+            return CheckThrew(exception);
         }
 
         var versionOutput = verification.StandardOutput + verification.StandardError;
@@ -3450,7 +3465,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
     /// <summary>
     /// Runs winget or npm for one prerequisite; null when it succeeded. A command that could not be
     /// started installed nothing and nothing else depends on it, so the run moves on. One that could
-    /// not be stopped may still be running: <see cref="ProcessTerminationException"/> ends the run.
+    /// not be stopped may still be running, so it ends the run, carrying the row that says so.
     /// </summary>
     private async Task<PrerequisiteOutcome?> RunInstallCommandAsync(
         string tool,
@@ -3469,6 +3484,17 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 DependencyInstallTimeout,
                 cancellationToken);
         }
+        catch (ProcessTerminationException exception)
+        {
+            throw new PrerequisiteStillRunningException(
+                new(
+                    displayName,
+                    PrerequisiteOutcomeKind.CouldNotStop,
+                    download,
+                    tool,
+                    LogLine: $"{displayName}: {tool} could not be stopped; the installation may still be running."),
+                exception);
+        }
         catch (Exception exception) when (CouldNotStart(exception))
         {
             return new(
@@ -3477,7 +3503,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 download,
                 tool,
                 Reason: exception.Message,
-                LogLine: exception.Message);
+                LogLine: $"{displayName} was not installed: {tool} could not be started: {exception.Message}");
         }
 
         var minutes = (int)DependencyInstallTimeout.TotalMinutes;
@@ -3509,4 +3535,12 @@ public sealed class InstallerWizardViewModel : ObservableObject
 
     private static bool CouldNotStart(Exception exception) =>
         exception is not (ProcessTerminationException or OperationCanceledException);
+
+    /// <summary>The run ends on it as on the process it carries, with the component's row.</summary>
+    private sealed class PrerequisiteStillRunningException(
+        PrerequisiteOutcome outcome,
+        ProcessTerminationException cause) : Exception(cause.Message, cause)
+    {
+        public PrerequisiteOutcome Outcome { get; } = outcome;
+    }
 }
