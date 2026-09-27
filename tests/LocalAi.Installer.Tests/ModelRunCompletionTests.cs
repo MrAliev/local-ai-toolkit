@@ -213,7 +213,10 @@ public sealed class ModelRunCompletionTests
         Assert.False(wizard.IsComplete);
         Assert.Equal(cancelled, wizard.IsCanceled);
         Assert.True(wizard.Finish.HasNextSteps);
-        Assert.Contains(cancelled ? "Installation stopped" : "Installation did not complete",
+        Assert.Contains(
+            cancelled
+                ? "To start over, close this window and run the installer again."
+                : "Completed and unfinished actions are listed above.",
             wizard.Finish.NextSteps!, StringComparison.Ordinal);
         Assert.NotEqual(RunMark.Done,
             wizard.Finish.Results.Single(row => row.Title == PageLabels.LocalModels).Mark);
@@ -237,7 +240,10 @@ public sealed class ModelRunCompletionTests
         Assert.True(File.Exists(wizard.Finish.ReportPath));
         var technicalLog = wizard.Finish.Progress;
         presentation.ChooseLanguage(InstallerLanguage.Russian);
-        Assert.Contains(cancelled ? "Установка остановлена" : "Установка завершилась с проблемами",
+        Assert.Contains(
+            cancelled
+                ? "Чтобы начать заново, закройте это окно и снова запустите установщик."
+                : "Выполненные и незавершённые действия перечислены выше.",
             wizard.Finish.NextSteps!, StringComparison.Ordinal);
         Assert.Equal(technicalLog, wizard.Finish.Progress);
         Assert.Equal(technicalLog + Environment.NewLine, File.ReadAllText(wizard.Finish.ReportPath!));

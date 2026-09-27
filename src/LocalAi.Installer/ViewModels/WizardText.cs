@@ -28,7 +28,11 @@ public static class WizardText
         (InstallerPage.Finish, InstallerCulture.Pick("Finished", "Готово")),
     ];
 
-    public static string Title(InstallerPage page, bool isUpdate, bool hasRunError) =>
+    public static string Title(
+        InstallerPage page,
+        bool isUpdate,
+        bool hasRunError,
+        bool wasCancelled = false) =>
         page switch
         {
             InstallerPage.Diagnose =>
@@ -48,6 +52,9 @@ public static class WizardText
             InstallerPage.Progress => isUpdate
                 ? InstallerCulture.Pick("Updating", "Обновление")
                 : InstallerCulture.Pick("Installing", "Установка"),
+            _ when wasCancelled => isUpdate
+                ? InstallerCulture.Pick("Update cancelled", "Обновление отменено")
+                : InstallerCulture.Pick("Installation cancelled", "Установка отменена"),
             _ => (hasRunError, isUpdate) switch
             {
                 (true, true) =>
@@ -77,7 +84,8 @@ public static class WizardText
         bool hasRunError,
         bool isChecking = false,
         bool isReleaseFolded = false,
-        bool areSettingsFolded = false) =>
+        bool areSettingsFolded = false,
+        bool wasCancelled = false) =>
         page switch
         {
             // The shipped line stopped being true the moment results appeared, so it says one
@@ -124,6 +132,9 @@ public static class WizardText
             InstallerPage.Progress => InstallerCulture.Pick(
                 "Applying the selected actions.",
                 "Применяю выбранные действия."),
+            _ when wasCancelled => InstallerCulture.Pick(
+                "The list below shows how far it got before you cancelled.",
+                "Список ниже показывает, докуда дошёл запуск до отмены."),
             _ => hasRunError
                 ? InstallerCulture.Pick(
                     "Some actions did not complete. The log below shows what happened.",
