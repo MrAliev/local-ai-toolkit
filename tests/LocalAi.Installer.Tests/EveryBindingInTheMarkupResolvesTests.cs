@@ -144,7 +144,7 @@ public sealed class EveryBindingInTheMarkupResolvesTests
 
     private static string[] DependencyRowBindings() =>
         ["Id", "IsConsented", "IsInstallable", "HeadLine", "RequirementText", "HasAutomatedInstaller",
-            "InstallerHint", "HasInstallerHint"];
+            "InstallerHint", "HasInstallerHint", "Download", "HasDownload"];
 
     private static string Source() => InstallerMarkup.Read(Markup);
 

@@ -291,53 +291,74 @@
                         <ItemsControl ItemsSource="{Binding Dependencies.Dependencies}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <CheckBox IsChecked="{Binding IsConsented}"
+                                    <!-- The hint and its link sit under the box, not in it: a box that
+                                         is off takes what it holds with it, so a link inside could
+                                         be neither pressed nor copied. -->
+                                    <StackPanel Margin="0,0,0,10">
+                                        <CheckBox IsChecked="{Binding IsConsented}"
                                                   IsEnabled="{Binding IsInstallable}"
                                                   Tag="{Binding Id}"
                                                   Checked="OnDependencyConsentChanged"
                                                   Unchecked="OnDependencyConsentChanged"
                                                   AutomationProperties.Name="{Binding AccessibleName}"
-                                                  AutomationProperties.HelpText="{Binding RequirementText}"
-                                                  Margin="0,0,0,10">
-                                        <!-- Two lines, not one long one. The name and the state are
-                                             what somebody scans; what skipping costs is what they
-                                             read when the scan stops, and joined onto the first
-                                             line it ran off the page. -->
-                                        <StackPanel>
-                                            <TextBlock Text="{Binding HeadLine, Mode=OneWay}" TextWrapping="Wrap" />
-                                            <TextBlock Text="{Binding RequirementText, Mode=OneWay}"
-                                                       Style="{StaticResource Muted}" FontSize="11"
-                                                       TextWrapping="Wrap" Margin="0,2,0,0" />
-                                            <TextBlock Text="{vm:Label NoAutomatedInstaller}"
-                                                       FontSize="11" Margin="0,2,0,0">
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource Muted}">
-                                                        <Setter Property="Visibility" Value="Collapsed" />
-                                                        <Setter Property="TextWrapping" Value="Wrap" />
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding HasAutomatedInstaller}" Value="False">
-                                                                <Setter Property="Visibility" Value="Visible" />
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
-                                            <TextBlock Text="{Binding InstallerHint, Mode=OneWay}"
-                                                       FontSize="11" Margin="0,2,0,0">
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource Muted}">
-                                                        <Setter Property="Visibility" Value="Collapsed" />
-                                                        <Setter Property="TextWrapping" Value="Wrap" />
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding HasInstallerHint}" Value="True">
-                                                                <Setter Property="Visibility" Value="Visible" />
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
-                                        </StackPanel>
-                                    </CheckBox>
+                                                  AutomationProperties.HelpText="{Binding RequirementText}">
+                                            <!-- Two lines, not one long one. The name and the state are
+                                                 what somebody scans; what skipping costs is what they
+                                                 read when the scan stops, and joined onto the first
+                                                 line it ran off the page. -->
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding HeadLine, Mode=OneWay}" TextWrapping="Wrap" />
+                                                <TextBlock Text="{Binding RequirementText, Mode=OneWay}"
+                                                           Style="{StaticResource Muted}" FontSize="11"
+                                                           TextWrapping="Wrap" Margin="0,2,0,0" />
+                                                <TextBlock Text="{vm:Label NoAutomatedInstaller}"
+                                                           FontSize="11" Margin="0,2,0,0">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock" BasedOn="{StaticResource Muted}">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                            <Setter Property="TextWrapping" Value="Wrap" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding HasAutomatedInstaller}" Value="False">
+                                                                    <Setter Property="Visibility" Value="Visible" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </CheckBox>
+                                        <!-- 23: the box and the gap after it, where the label above starts. -->
+                                        <TextBlock Text="{Binding InstallerHint, Mode=OneWay}"
+                                                   FontSize="11" Margin="23,2,0,0">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock" BasedOn="{StaticResource Muted}">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Setter Property="TextWrapping" Value="Wrap" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding HasInstallerHint}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <TextBlock FontSize="11" Margin="23,2,0,0">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock" BasedOn="{StaticResource Muted}">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Setter Property="TextWrapping" Value="Wrap" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding HasDownload}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                            <Run Text="{vm:Label Download}" /><Run Text=" " /><Hyperlink NavigateUri="{Binding Download, Mode=OneWay}" RequestNavigate="OnOpenLink"
+                                                       Foreground="{DynamicResource Accent}"
+                                                       FocusVisualStyle="{StaticResource FocusRingVisual}"><Run Text="{Binding Download.OriginalString, Mode=OneWay}" /></Hyperlink>
+                                        </TextBlock>
+                                    </StackPanel>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
