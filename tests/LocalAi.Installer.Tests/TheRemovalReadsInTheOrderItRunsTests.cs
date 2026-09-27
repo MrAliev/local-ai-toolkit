@@ -65,7 +65,9 @@ public sealed class TheRemovalReadsInTheOrderItRunsTests : IDisposable
         var lines = Lines(plan, journal);
 
         var path = Array.IndexOf(lines, "Removed from PATH: " + machine.Layout.LauncherDirectory);
-        Assert.Equal("Registration processed: " + Copy, lines[path + 1]);
+        Assert.Equal(
+            "Apps & features entry no longer listed; the uninstaller copy in " + Copy + " is gone",
+            lines[path + 1]);
         Assert.Equal("Removed " + Installer, lines[path + 2]);
         Assert.All(
             plan.Paths.Where(entry => !entry.HoldsUninstaller),
@@ -88,7 +90,10 @@ public sealed class TheRemovalReadsInTheOrderItRunsTests : IDisposable
 
         var lines = Lines(plan, journal);
         var path = Array.IndexOf(lines, "Removed from PATH: " + machine.Layout.LauncherDirectory);
-        Assert.Equal("Not started: " + Copy, lines[path + 1]);
+        Assert.Equal(
+            "Not started: removing the Apps & features entry and the uninstaller copy in " + Copy +
+            " — the entry stays, and the removal can be started again from there",
+            lines[path + 1]);
         Assert.Equal("Not started: " + Installer, lines[path + 2]);
     }
 
@@ -96,17 +101,19 @@ public sealed class TheRemovalReadsInTheOrderItRunsTests : IDisposable
     [InlineData(
         InstallerLanguage.English,
         "Kept",
-        "an earlier step failed, so the Apps & features entry stays and the removal can be " +
-        "started again from there",
+        "Apps & features entry",
+        "Kept: the Apps & features entry and the uninstaller copy in {dir} — ",
+        "an earlier step failed, so the entry stays and the removal can be started again from there",
         "holds the uninstaller the Apps & features entry runs")]
     [InlineData(
         InstallerLanguage.Russian,
         "Оставлено",
-        "предыдущий шаг не удался, поэтому запись в «Приложениях и возможностях» остаётся и " +
-        "удаление можно запустить оттуда снова",
+        "Запись в «Приложениях и возможностях»",
+        "Оставлено: запись в «Приложениях и возможностях» и копия деинсталлятора в {dir} — ",
+        "предыдущий шаг не удался, поэтому запись остаётся и удаление можно запустить оттуда снова",
         "здесь деинсталлятор, который запускает запись в «Приложениях и возможностях»")]
     public async Task An_entry_held_back_after_a_failure_is_reported_as_kept_and_why(
-        InstallerLanguage language, string kept, string entryDetail, string holderDetail)
+        InstallerLanguage language, string kept, string entry, string entryKept, string entryDetail, string holderDetail)
     {
         var plan = await Plan();
         using var journal = Journal();
@@ -121,7 +128,7 @@ public sealed class TheRemovalReadsInTheOrderItRunsTests : IDisposable
         var path = Array.FindIndex(
             lines,
             line => line.EndsWith(machine.Layout.LauncherDirectory, StringComparison.Ordinal));
-        Assert.Equal(kept + ": " + Copy + " — " + entryDetail, lines[path + 1]);
+        Assert.Equal(entryKept.Replace("{dir}", Copy, StringComparison.Ordinal) + entryDetail, lines[path + 1]);
         Assert.Equal(kept + ": " + Installer + " — " + holderDetail, lines[path + 2]);
         Assert.InRange(
             Array.FindIndex(lines, line => line.Contains(Jobs + " — ", StringComparison.Ordinal)),
@@ -130,7 +137,7 @@ public sealed class TheRemovalReadsInTheOrderItRunsTests : IDisposable
         var rows = UninstallReport.Capture(plan, journal.Snapshot, machine.Layout)
             .Select(RemovalReportPresentation.Row)
             .ToArray();
-        Assert.Contains(new RunResultRow(RunMark.None, Copy, kept + " — " + entryDetail), rows);
+        Assert.Contains(new RunResultRow(RunMark.None, entry, kept + " — " + entryDetail), rows);
         Assert.Contains(new RunResultRow(RunMark.None, Installer, kept + " — " + holderDetail), rows);
     }
 
@@ -141,12 +148,14 @@ public sealed class TheRemovalReadsInTheOrderItRunsTests : IDisposable
     [Theory]
     [InlineData(
         InstallerLanguage.English,
-        "Could not remove (partial changes possible): ",
+        "Could not remove completely: the Apps & features entry and the uninstaller copy in {dir} — either may " +
+        "remain: ",
         "Not started",
         "the step removing the Apps & features entry and its uninstaller copy failed")]
     [InlineData(
         InstallerLanguage.Russian,
-        "Не удалось удалить (возможны частичные изменения): ",
+        "Не удалось удалить полностью: запись в «Приложениях и возможностях» и копию деинсталлятора в {dir} — " +
+        "одна из них могла остаться: ",
         "Не начато",
         "шаг удаления записи в «Приложениях и возможностях» и копии деинсталлятора завершился ошибкой")]
     public async Task The_path_holding_the_copy_says_the_entry_step_failed(
@@ -174,7 +183,7 @@ public sealed class TheRemovalReadsInTheOrderItRunsTests : IDisposable
         var path = Array.FindIndex(
             lines,
             line => line.EndsWith(machine.Layout.LauncherDirectory, StringComparison.Ordinal));
-        Assert.StartsWith(failed + Copy + " — ", lines[path + 1], StringComparison.Ordinal);
+        Assert.StartsWith(failed.Replace("{dir}", Copy, StringComparison.Ordinal), lines[path + 1], StringComparison.Ordinal);
         Assert.Equal(notStarted + ": " + Installer + " — " + detail, lines[path + 2]);
         Assert.Contains(
             new RunResultRow(RunMark.None, Installer, notStarted + " — " + detail),
@@ -191,7 +200,10 @@ public sealed class TheRemovalReadsInTheOrderItRunsTests : IDisposable
 
         var lines = Lines(plan, journal);
 
-        var entry = Array.IndexOf(lines, "Outcome unknown: " + Copy);
+        var entry = Array.IndexOf(
+            lines,
+            "Outcome unknown: removing the Apps & features entry and the uninstaller copy in " + Copy +
+            " — look for Local AI Toolkit in Apps & features");
         Assert.InRange(entry, 0, lines.Length - 2);
         Assert.Equal("Not started: " + Installer, lines[entry + 1]);
     }

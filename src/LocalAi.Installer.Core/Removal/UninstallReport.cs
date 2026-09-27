@@ -98,10 +98,8 @@ public static class UninstallReport
             {
                 remaining.Remove(kept);
                 Keep(kept, directory, RemovalReportKind.Registration, InstallerCulture.Pick(
-                    "an earlier step failed, so the Apps & features entry stays and the removal can be " +
-                    "started again from there",
-                    "предыдущий шаг не удался, поэтому запись в «Приложениях и возможностях» остаётся и " +
-                    "удаление можно запустить оттуда снова"));
+                    "an earlier step failed, so the entry stays and the removal can be started again from there",
+                    "предыдущий шаг не удался, поэтому запись остаётся и удаление можно запустить оттуда снова"));
             }
         }
 
