@@ -546,8 +546,8 @@ public sealed class UninstallRunnerTests : IDisposable
     }
 
     /// <summary>
-    /// The order E4 settles: every other path, then the PATH entry, then the Apps &amp; features
-    /// entry, and only then the directory holding the copy that entry runs.
+    /// The order a stopped removal depends on: every other path, then the PATH entry, then the
+    /// Apps &amp; features entry, and only then the directory holding the copy that entry runs.
     /// </summary>
     [Fact]
     public async Task The_entry_goes_after_every_other_path_and_the_path_entry()
@@ -576,19 +576,23 @@ public sealed class UninstallRunnerTests : IDisposable
         Assert.True(outcome.Succeeded);
         Assert.True(outcome.AppsAndFeaturesEntryRemoved);
         var steps = journal.Snapshot.Steps.Select(step => step.Description).ToList();
-        var entry = steps.IndexOf(
-            UninstallJournalDescriptions.Registration(registration.UninstallerDirectory));
+        int At(string description)
+        {
+            Assert.Contains(description, steps);
+            return steps.IndexOf(description);
+        }
+
+        var entry = At(UninstallJournalDescriptions.Registration(registration.UninstallerDirectory));
         Assert.True(
-            entry > steps.IndexOf(
-                UninstallJournalDescriptions.LauncherPath(machine.Layout.LauncherDirectory)),
+            entry > At(UninstallJournalDescriptions.LauncherPath(machine.Layout.LauncherDirectory)),
             "the entry went before the PATH step");
         Assert.All(
             plan.Paths.Where(path => path.Path != holder),
             path => Assert.True(
-                entry > steps.IndexOf(UninstallJournalDescriptions.Path(path.Path)),
+                entry > At(UninstallJournalDescriptions.Path(path.Path)),
                 "the entry went before " + path.Path));
         Assert.True(
-            steps.IndexOf(UninstallJournalDescriptions.Path(holder)) > entry,
+            At(UninstallJournalDescriptions.Path(holder)) > entry,
             "the copy the entry runs went before the entry");
         Assert.Null(registration.Read());
         Assert.False(Directory.Exists(holder));
