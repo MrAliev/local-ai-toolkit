@@ -45,6 +45,24 @@ public sealed class ExistingLocalAiInspectorTests : IDisposable
         Assert.Equal(ExistingLocalAiState.Leftovers, snapshot.State);
         Assert.Null(snapshot.Version);
         Assert.Null(snapshot.Reason);
+        Assert.False(snapshot.BinWithoutPointer);
+    }
+
+    /// <summary>
+    /// A removal whose deletion of bin failed partway can leave bin without its pointer, and an
+    /// installation refuses to adopt a bin it did not create: that is told apart from the rest
+    /// of what is left.
+    /// </summary>
+    [Fact]
+    public void A_bin_left_without_its_pointer_is_told_apart()
+    {
+        Directory.CreateDirectory(Path.Combine(BinRoot, "launcher"));
+        Directory.CreateDirectory(Path.Combine(RuntimeRoot, "jobs"));
+
+        var snapshot = CreateInspector().Inspect(_root);
+
+        Assert.Equal(ExistingLocalAiState.Leftovers, snapshot.State);
+        Assert.True(snapshot.BinWithoutPointer);
     }
 
     /// <summary>One entry beside the keys is enough, a bin without its pointer included.</summary>

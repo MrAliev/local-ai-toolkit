@@ -1,5 +1,6 @@
 using LocalAi.Contracts.Activation;
 using LocalAi.Installer.Core;
+using LocalAi.Installer.Core.Abstractions;
 using LocalAi.Installer.Core.Diagnosis;
 using LocalAi.Installer.ViewModels;
 using LocalAi.TestFixtures;
@@ -94,7 +95,8 @@ public sealed class StartScreenAfterAStoppedRemovalTests : IDisposable
 
         var start = new InstallerStartViewModel(
             machine.LocalAppData,
-            readInstalledVersion: () => new InstalledVersion(null, null));
+            new ExistingLocalAiInspector(new SystemFileSystemProbe(), () => null),
+            () => new InstalledVersion(null, null));
 
         Assert.Equal(ExistingLocalAiState.Leftovers, start.State);
         Assert.True(start.Option(StartChoice.Remove).IsAvailable);
