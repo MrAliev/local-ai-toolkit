@@ -95,6 +95,22 @@
   <data name="BrokerNotRunning" xml:space="preserve">
     <value>Не запущен. Запускается по требованию, так что это просто к сведению.</value>
   </data>
+  <data name="ModelOllamaNotAnswering" xml:space="preserve">
+    <value>Ollama не отвечает по адресу {0}, поэтому брокер не смог выполнить команду. Запустите Ollama (если на этом компьютере её нет, сначала установите) и повторите команду. Сам брокер запускает Ollama, только после того как установщик LocalAi найдёт её и запишет, где она.</value>
+    <comment>0 is the address the broker reaches Ollama at, as the broker publishes it. Said only when nothing answers there and no Ollama launch record exists.</comment>
+  </data>
+  <data name="ModelOllamaNotAnsweringStartsItself" xml:space="preserve">
+    <value>Ollama не отвечает по адресу {0}, поэтому брокер не смог выполнить команду. Брокер сам запускает её один раз за время работы; повторите команду чуть позже, а если Ollama так и не ответит, запустите её сами.</value>
+    <comment>0 as in ModelOllamaNotAnswering. Said when the launch record names no models folder.</comment>
+  </data>
+  <data name="ModelOllamaNotAnsweringModelsFolder" xml:space="preserve">
+    <value>Ollama не отвечает по адресу {0}, поэтому брокер не смог выполнить команду. Брокер сам запускает её один раз за время работы; повторите команду чуть позже, а если Ollama так и не ответит, запустите её сами с переменной OLLAMA_MODELS, равной {1}.</value>
+    <comment>0 as in ModelOllamaNotAnswering; 1 is the models folder the launch record names. OLLAMA_MODELS is an environment variable and is never translated.</comment>
+  </data>
+  <data name="ModelBrokerNotStarted" xml:space="preserve">
+    <value>Брокер LocalAi не удалось запустить или использовать, поэтому к Ollama не обращались. Повторите команду; если ошибка повторится, проверьте установку командой localai doctor. Причина: {0}</value>
+    <comment>0 is the broker client's own account, English whatever the reader's language, so it is quoted last. No closing period: the reason brings its own or ends in a path.</comment>
+  </data>
   <data name="BrokerSilent" xml:space="preserve">
     <value>процесс {0}, последний сигнал {1} мин назад — либо остановлен без очистки host.json, либо завис.</value>
   </data>

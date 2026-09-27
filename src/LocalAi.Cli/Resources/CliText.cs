@@ -57,6 +57,18 @@ public static class CliText
 
     public static string BrokerNotRunning => Catalogue.Get(nameof(BrokerNotRunning));
 
+    public static string ModelOllamaNotAnswering(string endpoint) =>
+        Catalogue.Format(nameof(ModelOllamaNotAnswering), endpoint);
+
+    public static string ModelOllamaNotAnsweringStartsItself(string endpoint) =>
+        Catalogue.Format(nameof(ModelOllamaNotAnsweringStartsItself), endpoint);
+
+    public static string ModelOllamaNotAnsweringModelsFolder(string endpoint, string modelsDirectory) =>
+        Catalogue.Format(nameof(ModelOllamaNotAnsweringModelsFolder), endpoint, modelsDirectory);
+
+    public static string ModelBrokerNotStarted(string reason) =>
+        Catalogue.Format(nameof(ModelBrokerNotStarted), reason);
+
     public static string BrokerStateUnreadable(string reason) =>
         Catalogue.Format(nameof(BrokerStateUnreadable), reason);
 
