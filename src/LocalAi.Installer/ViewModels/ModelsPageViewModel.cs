@@ -10,6 +10,9 @@ public sealed class ModelsPageViewModel : ObservableObject
 {
     private ModelSelectionMode mode = ModelSelectionMode.Automatic;
     private bool modeChosen;
+
+    /// <summary>What a connected machine starts on while nobody has chosen.</summary>
+    private ModelSelectionMode unchosen = ModelSelectionMode.Automatic;
     private ModelCatalogEntry? selectedModel;
     private int selectedContext;
     private CatalogRecommendation recommendation = CatalogRecommendation.Empty;
@@ -51,6 +54,44 @@ public sealed class ModelsPageViewModel : ObservableObject
 
     /// <summary>The run does what the review named, so a check during it leaves the mode alone.</summary>
     internal void KeepMode() => modeChosen = true;
+
+    /// <summary>
+    /// The mode the installation recorded, which is the person's earlier choice. False when it
+    /// names a model and context the catalogue no longer offers.
+    /// </summary>
+    internal bool Restore(ModelProvisioningSelection recorded)
+    {
+        if (recorded.Mode == ModelProvisioningMode.Exact)
+        {
+            var model = CatalogModels.FirstOrDefault(entry =>
+                entry.Tag == recorded.Model && entry.ContextTokens.Contains(recorded.ContextTokens));
+            if (model is null)
+            {
+                return false;
+            }
+
+            SelectedModel = model;
+            SelectedContext = recorded.ContextTokens;
+        }
+
+        Mode = recorded.Mode switch
+        {
+            ModelProvisioningMode.None => ModelSelectionMode.Skip,
+            ModelProvisioningMode.Exact => ModelSelectionMode.ChooseExact,
+            _ => ModelSelectionMode.Automatic,
+        };
+        return true;
+    }
+
+    /// <summary>An installation set up without models: until somebody chooses, Skip whatever the network.</summary>
+    internal void StartOnSkip()
+    {
+        unchosen = ModelSelectionMode.Skip;
+        if (!modeChosen)
+        {
+            ApplyMode(ModelSelectionMode.Skip);
+        }
+    }
 
     private void ApplyMode(ModelSelectionMode value)
     {
@@ -171,7 +212,7 @@ public sealed class ModelsPageViewModel : ObservableObject
             OnPropertyChanged(nameof(ReviewText));
             if (!modeChosen)
             {
-                ApplyMode(value ? ModelSelectionMode.Skip : ModelSelectionMode.Automatic);
+                ApplyMode(value ? ModelSelectionMode.Skip : unchosen);
             }
         }
     }
