@@ -2568,10 +2568,20 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 asked != (package.ReleaseVersion, package.SourceFolder);
             if (!stale)
             {
-                package.ReportUnavailable(
-                    exception is ReleaseResolutionException
-                        ? exception.Message
-                        : $"The release could not be checked: {exception.Message}");
+                var failure = exception as ReleaseResolutionException ??
+                    new ReleaseResolutionException(
+                        $"The release could not be checked: {exception.Message}",
+                        exception,
+                        new(ReleaseRefusalKind.Unclassified, Detail: exception.Message));
+                if (failure.Refusal.Kind == ReleaseRefusalKind.Incompatible)
+                {
+                    package.ReportIncompatible(failure);
+                }
+                else
+                {
+                    package.ReportUnavailable(failure);
+                }
+
                 // The box that installs from a folder lives on the page an update folds away,
                 // so a machine that cannot reach the feed had no route to it at all. A failed
                 // resolve is exactly the run that needs one: the page joins the rail and the
@@ -2847,6 +2857,9 @@ public sealed class InstallerWizardViewModel : ObservableObject
             AppendLog(
                 report,
                 "LocalAi package: no verified release was selected, so nothing was installed. " +
+                (package.LastCheckFailure is { } said
+                    ? $"The last check of the release said: {said} "
+                    : string.Empty) +
                 "Return to the package step and check the release before continuing.");
             hasRunError = true;
             return;

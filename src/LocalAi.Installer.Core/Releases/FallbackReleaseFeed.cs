@@ -70,11 +70,16 @@ public sealed class FallbackReleaseFeed(IReleaseFeed primary, IReleaseFeed? seco
             {
                 // Both messages, because on a machine where neither path works the useful
                 // question is which of the two failures the user can act on, and only they
-                // know whether the repository is supposed to be public.
+                // know whether the repository is supposed to be public. The refusal keeps the
+                // first path's reason and carries the CLI's message, unless the CLI found the
+                // release and refused its manifest: then that is the finding.
                 throw new ReleaseResolutionException(
                     $"{exception.Message} The GitHub CLI was tried as well: " +
                     fallbackException.Message,
-                    fallbackException);
+                    fallbackException,
+                    fallbackException.InnerException is ReleaseVerificationException
+                        ? fallbackException.Refusal
+                        : exception.Refusal with { GitHubCliDetail = fallbackException.Message });
             }
         }
     }

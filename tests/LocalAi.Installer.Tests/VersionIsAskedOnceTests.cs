@@ -48,15 +48,17 @@ public sealed class VersionIsAskedOnceTests
 
     /// <summary>
     /// A failure used to land in the same muted grey as a success, so the page read as blank
-    /// rather than as a state with a way out. The reason still comes from the feed — it carries
-    /// its own remedy — but it is now announced as a failure first.
+    /// rather than as a state with a way out. The reason, worded from what the feed found and
+    /// carrying its remedy, is announced as a failure first.
     /// </summary>
     [Fact]
     public void A_failed_lookup_says_so_before_it_says_why()
     {
         var page = new PackagePageViewModel();
 
-        page.ReportUnavailable("Check this computer's internet connection, then try again.");
+        page.ReportUnavailable(new ReleaseResolutionException(
+            "Could not reach GitHub.",
+            refusal: new(ReleaseRefusalKind.GitHubUnreachable)));
 
         Assert.StartsWith("No release resolved.", page.StatusText, StringComparison.Ordinal);
         Assert.Contains("internet connection", page.StatusText, StringComparison.Ordinal);
