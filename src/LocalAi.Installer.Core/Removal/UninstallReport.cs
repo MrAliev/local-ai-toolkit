@@ -77,6 +77,7 @@ public static class UninstallReport
         }
 
         InstallerRunStep? kept = null;
+        string? holderNotStarted = null;
         if (plan.RemovesAppsAndFeaturesEntry && OperatingSystem.IsWindows())
         {
             var directory = new UninstallRegistration(layout).UninstallerDirectory;
@@ -84,7 +85,14 @@ public static class UninstallReport
                 item.Description == UninstallJournalDescriptions.RegistrationKept(directory));
             if (kept is null)
             {
-                Add(directory, RemovalReportKind.Registration, UninstallJournalDescriptions.Registration(directory));
+                var entry = Add(directory, RemovalReportKind.Registration, UninstallJournalDescriptions.Registration(directory));
+                if (entry?.Status == InstallerRunStepStatus.Failed)
+                {
+                    holderNotStarted = InstallerCulture.Pick(
+                        "the step removing the Apps & features entry and its uninstaller copy failed",
+                        "шаг удаления записи в «Приложениях и возможностях» и копии деинсталлятора " +
+                        "завершился ошибкой");
+                }
             }
             else
             {
@@ -101,7 +109,7 @@ public static class UninstallReport
         {
             if (kept is null)
             {
-                Add(path.Path, RemovalReportKind.Path, UninstallJournalDescriptions.Path(path.Path));
+                Add(path.Path, RemovalReportKind.Path, UninstallJournalDescriptions.Path(path.Path), holderNotStarted);
             }
             else
             {
@@ -129,7 +137,7 @@ public static class UninstallReport
             Unplanned(new RemovalReportEntry(notice.Title, RemovalReportKind.Other, RemovalReportState.Retained, notice.Detail))));
         return entries.Select(item => item.Entry).ToArray();
 
-        void Add(string target, RemovalReportKind kind, string description)
+        InstallerRunStep? Add(string target, RemovalReportKind kind, string description, string? notStarted = null)
         {
             var step = remaining.FirstOrDefault(item => item.Description == description);
             if (step is not null)
@@ -138,9 +146,12 @@ public static class UninstallReport
             }
 
             entries.Add((
-                new(target, kind, step is null ? RemovalReportState.NotStarted : State(step.Status), step?.Detail),
+                step is null
+                    ? new(target, kind, RemovalReportState.NotStarted, notStarted)
+                    : new(target, kind, State(step.Status), step.Detail),
                 true,
                 step?.StartedAtUtc));
+            return step;
         }
 
         void Keep(InstallerRunStep step, string target, RemovalReportKind kind, string detail) =>

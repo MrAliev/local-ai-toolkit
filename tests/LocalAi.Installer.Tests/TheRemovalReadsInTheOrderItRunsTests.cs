@@ -135,6 +135,68 @@ public sealed class TheRemovalReadsInTheOrderItRunsTests : IDisposable
     }
 
     /// <summary>
+    /// The entry's own step failed, so the run never started the path holding the copy. That
+    /// path is still not started, and says why without claiming whether the entry is there.
+    /// </summary>
+    [Theory]
+    [InlineData(
+        InstallerLanguage.English,
+        "Could not remove (partial changes possible): ",
+        "Not started",
+        "the step removing the Apps & features entry and its uninstaller copy failed")]
+    [InlineData(
+        InstallerLanguage.Russian,
+        "Не удалось удалить (возможны частичные изменения): ",
+        "Не начато",
+        "шаг удаления записи в «Приложениях и возможностях» и копии деинсталлятора завершился ошибкой")]
+    public async Task The_path_holding_the_copy_says_the_entry_step_failed(
+        InstallerLanguage language, string failed, string notStarted, string detail)
+    {
+        var plan = await Plan();
+        using var journal = Journal();
+        using (new FileStream(
+            Path.Combine(Copy, UninstallRegistration.UninstallerFileName),
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.None))
+        {
+            Assert.False((await Runner().ApplyAsync(plan, journal, Token)).Succeeded);
+        }
+
+        Assert.Equal(
+            InstallerRunStepStatus.Failed,
+            Assert.Single(
+                journal.Snapshot.Steps,
+                step => step.Description == UninstallJournalDescriptions.Registration(Copy)).Status);
+        InstallerCulture.Current = language;
+
+        var lines = Lines(plan, journal);
+        var path = Array.FindIndex(
+            lines,
+            line => line.EndsWith(machine.Layout.LauncherDirectory, StringComparison.Ordinal));
+        Assert.StartsWith(failed + Copy + " — ", lines[path + 1], StringComparison.Ordinal);
+        Assert.Equal(notStarted + ": " + Installer + " — " + detail, lines[path + 2]);
+        Assert.Contains(
+            new RunResultRow(RunMark.None, Installer, notStarted + " — " + detail),
+            UninstallReport.Capture(plan, journal.Snapshot, machine.Layout).Select(RemovalReportPresentation.Row));
+    }
+
+    /// <summary>An entry step whose outcome is unknown did not fail, and the line does not say it did.</summary>
+    [Fact]
+    public async Task An_entry_step_that_did_not_fail_gives_the_path_holding_the_copy_no_reason()
+    {
+        var plan = await Plan();
+        using var journal = Journal();
+        journal.BeginStep(InstallerRunEffectKind.RuntimeRemoval, UninstallJournalDescriptions.Registration(Copy));
+
+        var lines = Lines(plan, journal);
+
+        var entry = Array.IndexOf(lines, "Outcome unknown: " + Copy);
+        Assert.InRange(entry, 0, lines.Length - 2);
+        Assert.Equal("Not started: " + Installer, lines[entry + 1]);
+    }
+
+    /// <summary>
     /// A full removal whose PATH step and entry are both planned, over an installation whose
     /// copy is parked in installer\uninstall. The registry key is one nothing writes.
     /// </summary>
