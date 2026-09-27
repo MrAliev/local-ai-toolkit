@@ -671,6 +671,30 @@ public sealed class BrokerModelInstallerTests : IDisposable
         Assert.DoesNotContain("secret", result.Code, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// A model command that failed says why on standard error, for a person (#612). The code on
+    /// standard output is still the answer, so the sentence beside it is not a protocol fault.
+    /// </summary>
+    [Fact]
+    public async Task A_broker_failure_that_says_why_is_still_a_broker_failure()
+    {
+        var runner = new RecordingProcessRunner(
+            new ProcessResult(
+                1,
+                Json(new ModelCommandError(1, "status", false, "broker_failure")),
+                "localai: Ollama is not answering at http://127.0.0.1:11434/.",
+                false,
+                false));
+        var installer = Installer(runner, Launcher());
+
+        var result = await installer.InstallAsync(
+            [Request("a", "model-a", 2048, "signed-7")],
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(BrokerModelBatchStopReason.ProcessFailure, result.StopReason);
+        Assert.Equal("broker_failure", result.Code);
+    }
+
     [Fact]
     public async Task Cancellation_during_pull_stops_later_models_and_marks_state_indeterminate()
     {

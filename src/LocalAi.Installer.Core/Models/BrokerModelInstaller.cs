@@ -798,15 +798,21 @@ public sealed class BrokerModelInstaller : IDisposable
 
     /// <summary>
     /// Nothing on standard error, or — for an invocation that was asked for progress —
-    /// nothing but progress objects.
+    /// nothing but progress objects, or — for one that failed with <c>broker_failure</c> —
+    /// the sentence saying why, which is for a person; the code on standard output still decides.
     ///
-    /// Truncation is tolerated for those, and only those: a twelve-hour download reports
+    /// Truncation is tolerated for those two, and only those: a twelve-hour download reports
     /// thousands of lines and this runner keeps a bounded prefix of them. Losing the tail
     /// of a progress report costs nothing, because the answer is on standard output; a
     /// truncated answer still fails, as it always did.
     /// </summary>
     private static bool IsExpectedStandardError(ProcessResult process, bool reportsProgress)
     {
+        if (process.ExitCode == 1)
+        {
+            return true;
+        }
+
         if (process.StandardError.Length == 0)
         {
             return !process.StandardErrorTruncated;

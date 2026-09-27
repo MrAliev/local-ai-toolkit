@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using LocalAi.Broker.Client;
+using LocalAi.Cli.Resources;
 using LocalAi.Contracts;
 using LocalLm.Core;
 
@@ -37,6 +38,8 @@ public static class ModelCommand
             request,
             client,
             output,
+            TextWriter.Null,
+            silentBackend: null,
             cancellationToken);
     }
 
@@ -63,7 +66,8 @@ public static class ModelCommand
                         deadline: deadline));
             },
             output,
-            cancellationToken, error);
+            cancellationToken, error,
+            BrokerBackendProbe.SilentEndpoint);
 
     internal static Task<int> ExecuteProductionAsync(
         IReadOnlyList<string> arguments,
@@ -78,7 +82,8 @@ public static class ModelCommand
         IReadOnlyList<string> arguments,
         Func<ILocalRunObserver?, TimeSpan?, string?, CancellationToken, ILocalModelClient> clientFactory,
         TextWriter output,
-        CancellationToken cancellationToken, TextWriter? error = null)
+        CancellationToken cancellationToken, TextWriter? error = null,
+        Func<string, string?>? silentBackend = null)
     {
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(clientFactory);
@@ -93,7 +98,8 @@ public static class ModelCommand
         // Only a pull is long enough to have anything to say, and only a pull needs the
         // long guard. Everything else here answers in a moment.
         var isPull = string.Equals(request.Operation, "pull", StringComparison.Ordinal);
-        var observer = isPull ? Watching(request, error ?? Console.Error) : null;
+        error ??= Console.Error;
+        var observer = isPull ? Watching(request, error) : null;
 
         ILocalModelClient client;
         try
@@ -115,19 +121,17 @@ public static class ModelCommand
                 "cancelled",
                 CancelledExitCode);
         }
-        catch (Exception)
+        catch (Exception exception)
         {
-            return await WriteErrorAsync(
-                output,
-                request.Operation,
-                "broker_failure",
-                FailureExitCode);
+            return await BrokerFailureAsync(output, error, request, exception, silentBackend);
         }
 
         return await ExecuteParsedAsync(
             request,
             client,
             output,
+            error,
+            silentBackend,
             cancellationToken);
     }
 
@@ -135,6 +139,8 @@ public static class ModelCommand
         Request request,
         ILocalModelClient client,
         TextWriter output,
+        TextWriter error,
+        Func<string, string?>? silentBackend,
         CancellationToken cancellationToken)
     {
         try
@@ -177,15 +183,72 @@ public static class ModelCommand
                 "cancelled",
                 CancelledExitCode);
         }
-        catch (Exception)
+        catch (Exception exception)
         {
-            return await WriteErrorAsync(
-                output,
-                request.Operation,
-                "broker_failure",
-                FailureExitCode);
+            return await BrokerFailureAsync(output, error, request, exception, silentBackend);
         }
     }
+
+    /// <summary>
+    /// The code stays one token for a program; the reason goes to standard error for a person,
+    /// because the code alone left the cause in the broker's diagnostics log (#612).
+    /// <c>--progress-json</c> promised a program nothing but objects there, so it gets none.
+    /// </summary>
+    private static async Task<int> BrokerFailureAsync(
+        TextWriter output,
+        TextWriter error,
+        Request request,
+        Exception exception,
+        Func<string, string?>? silentBackend)
+    {
+        var exit = await WriteErrorAsync(
+            output,
+            request.Operation,
+            "broker_failure",
+            FailureExitCode);
+        if (!request.ProgressJson)
+        {
+            await error.WriteLineAsync("localai: " + Explain(
+                exception,
+                request.RuntimeRoot ?? ModelResidencyPolicyStore.DefaultRuntimeRoot,
+                silentBackend));
+        }
+
+        return exit;
+    }
+
+    /// <summary>
+    /// Ollama is named only when nothing answers where the broker reaches for it: an HTTP failure
+    /// is also every status a running server can send.
+    /// </summary>
+    private static string Explain(
+        Exception exception,
+        string runtimeRoot,
+        Func<string, string?>? silentBackend) =>
+        exception switch
+        {
+            BrokerBackendUnreachableException unreachable =>
+                OllamaNotAnswering(unreachable.Endpoint, runtimeRoot),
+            BrokerJobFailedException { FailureCode: "HttpRequestException" } when
+                silentBackend?.Invoke(runtimeRoot) is { } endpoint =>
+                OllamaNotAnswering(endpoint, runtimeRoot),
+            BrokerJobFailedException failed => failed.Message,
+            BrokerBootstrapException bootstrap => CliText.ModelBrokerNotStarted(bootstrap.Message),
+            _ => UnexpectedFailure.Describe(exception),
+        };
+
+    /// <summary>
+    /// The broker starts Ollama only from the installer's launch record, with its models folder
+    /// when one is named, so the advice reads the same record.
+    /// </summary>
+    private static string OllamaNotAnswering(string endpoint, string runtimeRoot) =>
+        new OllamaLaunchRecordStore(runtimeRoot).Read() switch
+        {
+            null => CliText.ModelOllamaNotAnswering(endpoint),
+            { ModelsDirectory: { } models } =>
+                CliText.ModelOllamaNotAnsweringModelsFolder(endpoint, models),
+            _ => CliText.ModelOllamaNotAnsweringStartsItself(endpoint),
+        };
 
     private static async Task<int> StatusAsync(
         ILocalModelClient client,
