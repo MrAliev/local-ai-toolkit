@@ -1026,6 +1026,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         runCancellation = linked;
         var token = linked.Token;
 
+        AbandonReleaseCheck();
         models.KeepMode();
         isRunning = true;
         isComplete = false;
@@ -2637,6 +2638,17 @@ public sealed class InstallerWizardViewModel : ObservableObject
         }
 
         RefreshAll();
+    }
+
+    /// <summary>
+    /// A check still running when the run starts was on the review as no release, so the run
+    /// installs none: its answer is dropped, and a folder's hash stopped.
+    /// </summary>
+    private void AbandonReleaseCheck()
+    {
+        resolveGeneration++;
+        packageCheck?.Cancel();
+        package.EndResolving();
     }
 
     /// <summary>
