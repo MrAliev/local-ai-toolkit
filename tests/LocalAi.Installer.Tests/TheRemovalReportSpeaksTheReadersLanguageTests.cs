@@ -41,7 +41,9 @@ public sealed class TheRemovalReportSpeaksTheReadersLanguageTests : IDisposable
             Assert.Contains("Removed LocalAi hooks from " + directory, lines));
         Assert.All(plan.Paths, path => Assert.Contains("Removed " + path.Path, lines));
         Assert.Contains("Removed from PATH: " + machine.Layout.LauncherDirectory, lines);
-        Assert.Contains("Registration processed: " + UninstallerDirectory, lines);
+        Assert.Contains(
+            "Apps & features entry no longer listed; the uninstaller copy in " + UninstallerDirectory + " is gone",
+            lines);
         AssertNoJournalDetail(lines);
     }
 
@@ -57,7 +59,10 @@ public sealed class TheRemovalReportSpeaksTheReadersLanguageTests : IDisposable
             Assert.Contains("Удалены хуки LocalAi из " + directory, lines));
         Assert.All(plan.Paths, path => Assert.Contains("Удалено " + path.Path, lines));
         Assert.Contains("Удалено из PATH: " + machine.Layout.LauncherDirectory, lines);
-        Assert.Contains("Регистрация обработана: " + UninstallerDirectory, lines);
+        Assert.Contains(
+            "Запись в «Приложениях и возможностях» больше не значится; копии деинсталлятора в " +
+            UninstallerDirectory + " больше нет",
+            lines);
         AssertNoJournalDetail(lines);
     }
 
