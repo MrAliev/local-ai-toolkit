@@ -4,6 +4,9 @@ using LocalAi.Installer.Core.Abstractions;
 using LocalAi.Installer.Core.Activation;
 using LocalAi.Installer.Core.Diagnosis;
 using LocalAi.Installer.Core.Releases;
+using LocalAi.Installer.Core.Removal;
+using LocalAi.Installer.Core.Transactions;
+using LocalAi.TestFixtures;
 using System.ComponentModel;
 using System.Runtime.Versioning;
 using System.Security;
@@ -238,6 +241,182 @@ public sealed class LocalAiPackageInstallerTests : IDisposable
                 .ToArray());
         Assert.Empty(Directory.EnumerateFileSystemEntries(layout.VersionsRoot));
         Assert.Empty(Directory.EnumerateFileSystemEntries(layout.LauncherDirectory));
+    }
+
+    /// <summary>
+    /// A removal that stopped leaves no pointer, so what follows is a first installation, and a
+    /// bin tree still there is refused rather than adopted, whatever else the root holds. The
+    /// tree is one the installer built, so its access rules are not what refuses it.
+    /// </summary>
+    [Theory]
+    [InlineData(ExistingLocalAiState.Leftovers)]
+    [InlineData(ExistingLocalAiState.SigningKeysOnly)]
+    public async Task Without_a_pointer_a_bin_tree_still_there_is_not_adopted(ExistingLocalAiState state)
+    {
+        CreateExisting("v0", System.Text.Encoding.UTF8.GetBytes("prior-launcher"));
+        var layout = InstallationLayout.FromLocalAppData(localAppData);
+        File.Delete(layout.CurrentPointerPath);
+        using var package = Package("v1");
+        var runner = new RecordingRunner((_, arguments, _, _) =>
+        {
+            WritePointer(arguments[1]);
+            return Task.FromResult(new ProcessResult(0, "", "", false, false));
+        });
+        var installer = new LocalAiPackageInstaller(
+            runner,
+            new ConstantInspector(new ExistingLocalAiSnapshot(state, null, null, null)),
+            TimeSpan.FromSeconds(5));
+
+        var result = await installer.InstallAsync(package, layout, TestContext.Current.CancellationToken);
+
+        Assert.Equal(LocalAiPackageInstallStatus.Refused, result.Status);
+        Assert.Empty(runner.Calls);
+        Assert.Equal(
+            ["v0"],
+            Directory.EnumerateFileSystemEntries(layout.VersionsRoot).Select(Path.GetFileName));
+    }
+
+    /// <summary>
+    /// Inspected without a pointer, and one appears before it is read under the lock: the run
+    /// was prepared as a first installation, so it refuses rather than installing over it.
+    /// </summary>
+    [Theory]
+    [InlineData(ExistingLocalAiState.Absent)]
+    [InlineData(ExistingLocalAiState.Leftovers)]
+    [InlineData(ExistingLocalAiState.SigningKeysOnly)]
+    public async Task A_pointer_that_appears_after_an_inspection_without_one_is_refused(ExistingLocalAiState state)
+    {
+        using var package = Package("v1");
+        var layout = InstallationLayout.FromLocalAppData(localAppData);
+        var runner = new RecordingRunner((_, arguments, _, _) =>
+        {
+            WritePointer(arguments[1]);
+            return Task.FromResult(new ProcessResult(0, "", "", false, false));
+        });
+        var installer = new LocalAiPackageInstaller(
+            runner,
+            new ConstantInspector(new ExistingLocalAiSnapshot(state, null, null, null)),
+            TimeSpan.FromSeconds(5),
+            (candidate, requireFresh) =>
+            {
+                var lease = InstallationLayoutLease.Acquire(candidate, requireFresh);
+                WritePointer("v0");
+                return lease;
+            });
+
+        var result = await installer.InstallAsync(package, layout, TestContext.Current.CancellationToken);
+
+        Assert.Equal(LocalAiPackageInstallStatus.Refused, result.Status);
+        Assert.Equal(
+            "The current-version pointer changed during installation preparation.",
+            result.Reason);
+        Assert.Empty(runner.Calls);
+    }
+
+    /// <summary>
+    /// What a stopped removal left in the root (#614) — the runtime's own files and names the
+    /// installer never wrote — does not stop an installation: only bin and installer are the
+    /// installer's, and the rest is left exactly as it was. The root is the one an earlier
+    /// installation made, as it is after a real removal.
+    /// </summary>
+    [Fact]
+    public async Task What_a_stopped_removal_left_in_the_root_does_not_stop_an_installation()
+    {
+        CreateExisting("v0", System.Text.Encoding.UTF8.GetBytes("prior-launcher"));
+        var layout = InstallationLayout.FromLocalAppData(localAppData);
+        Directory.Delete(layout.BinRoot, recursive: true);
+        Directory.Delete(layout.InstallerDirectory, recursive: true);
+        using var package = Package("v1");
+        string[] directories = ["settings", "jobs", "telemetry", "seed-unknown-dir", "release-signing"];
+        string[] files = ["retention.json", "diagnostics.jsonl", "update-state.json", "seed-файл с пробелом.txt"];
+        foreach (var directory in directories)
+        {
+            Directory.CreateDirectory(Path.Combine(layout.Root, directory));
+            File.WriteAllText(Path.Combine(layout.Root, directory, "kept.txt"), directory);
+        }
+
+        foreach (var file in files)
+        {
+            File.WriteAllText(Path.Combine(layout.Root, file), file);
+        }
+
+        var inspector = new ExistingLocalAiInspector(new SystemFileSystemProbe(), () => null);
+        Assert.Equal(ExistingLocalAiState.Leftovers, inspector.Inspect(localAppData).State);
+        var runner = new RecordingRunner((_, arguments, _, _) =>
+        {
+            WritePointer(arguments[1]);
+            return Task.FromResult(new ProcessResult(0, "", "", false, false));
+        });
+
+        var result = await new LocalAiPackageInstaller(runner, inspector, TimeSpan.FromSeconds(5))
+            .InstallAsync(package, layout, TestContext.Current.CancellationToken);
+
+        Assert.Equal(LocalAiPackageInstallStatus.Installed, result.Status);
+        Assert.All(directories, directory => Assert.Equal(
+            directory,
+            File.ReadAllText(Path.Combine(layout.Root, directory, "kept.txt"))));
+        Assert.All(files, file => Assert.Equal(file, File.ReadAllText(Path.Combine(layout.Root, file))));
+    }
+
+    /// <summary>
+    /// A bin left without its pointer is not adopted (#614), so the start screen offers a clean
+    /// reinstall there. Its removal half, planned and run as the wizard runs it, asks the launcher
+    /// to stop and takes bin; the installation that follows is then a first one and goes through.
+    /// </summary>
+    [Fact]
+    public async Task A_clean_reinstall_goes_through_a_bin_left_without_its_pointer()
+    {
+        var token = TestContext.Current.CancellationToken;
+        CreateExisting("v0", System.Text.Encoding.UTF8.GetBytes("prior-launcher"));
+        var layout = InstallationLayout.FromLocalAppData(localAppData);
+        File.Delete(layout.CurrentPointerPath);
+        var settings = Path.Combine(layout.Root, "retention.json");
+        File.WriteAllText(settings, "kept");
+        var home = Path.Combine(localAppData, "home");
+        Directory.CreateDirectory(home);
+        var inspector = new ExistingLocalAiInspector(new SystemFileSystemProbe(), () => null);
+        Assert.True(inspector.Inspect(localAppData).BinWithoutPointer);
+        // `stop` with no pointer is answered with 0: the launcher finds nothing to stop.
+        var launcher = new RecordingRunner((_, arguments, _, _) =>
+        {
+            if (arguments[0] == "activate")
+            {
+                WritePointer(arguments[1]);
+            }
+
+            return Task.FromResult(new ProcessResult(0, "", "", false, false));
+        });
+
+        var plan = await new UninstallPlanner(
+                layout,
+                home,
+                (_, _) => Task.FromResult<string?>(null),
+                registrySubKey: RemovalFixture.UnusedRegistrySubKey,
+                readUserPath: () => null)
+            .PlanAsync(
+                RemovalSelection.FromPreset(RemovalPreset.ReinstallFriendly),
+                token,
+                installationFollows: true);
+        using (var journal = InstallerRunJournal.Start(Path.Combine(localAppData, "journal")))
+        {
+            var outcome = await new UninstallRunner(
+                    layout,
+                    launcher,
+                    registrySubKey: RemovalFixture.UnusedRegistrySubKey)
+                .ApplyAsync(plan, journal, token);
+            Assert.True(outcome.Succeeded, string.Join("; ", outcome.Failures));
+        }
+
+        Assert.False(Directory.Exists(layout.BinRoot));
+        Assert.False(inspector.Inspect(localAppData).BinWithoutPointer);
+        using var package = Package("v1");
+        var result = await new LocalAiPackageInstaller(launcher, inspector, TimeSpan.FromSeconds(5))
+            .InstallAsync(package, layout, token);
+
+        Assert.Equal(LocalAiPackageInstallStatus.Installed, result.Status);
+        Assert.Equal("v1", ReadPointerVersion(layout.CurrentPointerPath));
+        Assert.Equal("kept", File.ReadAllText(settings));
+        Assert.Equal(["stop"], launcher.Calls[0].Arguments);
     }
 
     /// <summary>

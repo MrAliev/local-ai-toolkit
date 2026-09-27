@@ -1,5 +1,6 @@
 using LocalAi.Installer.Core.Abstractions;
 using LocalAi.Installer.Core.Agents;
+using LocalAi.Installer.Core.Diagnosis;
 using LocalAi.Installer.Core.Removal;
 using LocalAi.Installer.Core.Transactions;
 using LocalAi.Installer.ViewModels;
@@ -653,7 +654,9 @@ public sealed class UninstallWizardViewModelTests : IDisposable
             machine.Layout,
             machine.Home,
             processRunner ?? new StubProcessRunner(),
-            machine.HooksPathReader)
+            machine.HooksPathReader,
+            // Never the machine's own PATH, which names the developer's own launcher.
+            inspector: new ExistingLocalAiInspector(new SystemFileSystemProbe(), () => null))
         {
             LogDirectory = journalDirectory,
         };

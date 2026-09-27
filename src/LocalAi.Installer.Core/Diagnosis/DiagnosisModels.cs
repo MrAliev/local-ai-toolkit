@@ -30,6 +30,27 @@ public enum ExistingLocalAiState
     Absent,
     Compatible,
     Unrecognized,
+
+    /// <summary>
+    /// No current-version pointer, but something besides the signing keys is still in the
+    /// runtime root, or the launcher is still on the user's PATH: a removal that stopped.
+    /// </summary>
+    Leftovers,
+
+    /// <summary>
+    /// No current-version pointer, and the signing keys alone in the runtime root: what a full
+    /// removal keeps on purpose.
+    /// </summary>
+    SigningKeysOnly,
+}
+
+public static class ExistingLocalAiStates
+{
+    /// <summary>No current-version pointer: whatever else is still here, nothing is installed.</summary>
+    public static bool NothingInstalled(this ExistingLocalAiState state) =>
+        state is ExistingLocalAiState.Absent or
+            ExistingLocalAiState.Leftovers or
+            ExistingLocalAiState.SigningKeysOnly;
 }
 
 public enum AgentKind
@@ -94,11 +115,16 @@ public sealed record GpuSnapshot
         Array.AsReadOnly((source ?? throw new ArgumentNullException(nameof(source))).ToArray());
 }
 
+/// <param name="BinWithoutPointer">
+/// Leftovers only: bin is still there without its pointer. An installation will not adopt a bin
+/// it did not create, so from here a clean reinstall is the way to install.
+/// </param>
 public sealed record ExistingLocalAiSnapshot(
     ExistingLocalAiState State,
     string? Version,
     string? VersionPath,
-    string? Reason);
+    string? Reason,
+    bool BinWithoutPointer = false);
 
 public sealed record FileMetadataSnapshot(
     string Path,
