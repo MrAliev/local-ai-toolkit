@@ -106,25 +106,48 @@ public sealed class AnonymousReleaseFeed : IReleaseFeed, IDisposable
 
         // Only a lookup that neither path got an answer to is a connection problem. A 404 is an
         // answer, and a private repository or one with nothing published gives exactly that.
-        var answered = api.Answered ?? redirected.Answered;
-        throw answered is null
-            ? new ReleaseResolutionException(
+        if (api.Answered is null && redirected.Answered is null)
+        {
+            throw new ReleaseResolutionException(
                 $"Could not reach GitHub to determine the newest release of {repository}: " +
                 $"{(api.Failure ?? redirected.Failure)?.TrimEnd('.')}. Check this computer's " +
                 "internet connection, then try again.",
-                refusal: new(ReleaseRefusalKind.GitHubUnreachable))
-            : new ReleaseResolutionException(
-                $"GitHub named no newest release of {repository} (answered {answered}). A " +
-                "private repository, or one without published releases, looks like this from " +
-                "outside.",
-                refusal: new(ReleaseRefusalKind.NoPublishedRelease, Repository: repository));
+                refusal: new(ReleaseRefusalKind.GitHubUnreachable));
+        }
+
+        // Both answers: an API out of quota answers 403 beside the web page's 404, and only a
+        // 404 looks like a private repository.
+        var notFound = redirected.NotFound || api.NotFound;
+        var message =
+            $"GitHub named no newest release of {repository} (web page answered " +
+            $"{redirected.Said}; API answered {api.Said})." +
+            (notFound
+                ? " A private repository, or one without published releases, looks like this " +
+                  "from outside."
+                : string.Empty);
+        throw new ReleaseResolutionException(
+            message,
+            refusal: notFound
+                ? new(ReleaseRefusalKind.NoPublishedRelease, Repository: repository)
+                : new(ReleaseRefusalKind.Unclassified, Detail: message));
     }
 
     /// <summary>A tag, or what GitHub answered instead of one, or why it could not be asked.</summary>
-    private readonly record struct TagLookup(string? Tag, string? Answered, string? Failure);
+    private readonly record struct TagLookup(
+        string? Tag,
+        string? Answered,
+        string? Failure,
+        bool NotFound = false)
+    {
+        public string Said => Answered ?? $"no answer: {Failure?.TrimEnd('.')}";
+    }
 
-    private static string Answer(HttpResponseMessage response) =>
-        $"{(int)response.StatusCode} {response.ReasonPhrase}";
+    private static TagLookup Answer(HttpResponseMessage response) =>
+        new(
+            null,
+            $"{(int)response.StatusCode} {response.ReasonPhrase}",
+            null,
+            response.StatusCode == HttpStatusCode.NotFound);
 
     public async Task<ResolvedRelease> ResolveAsync(
         string tag,
@@ -211,7 +234,7 @@ public sealed class AnonymousReleaseFeed : IReleaseFeed, IDisposable
                 .ConfigureAwait(false);
             if (response.Headers.Location is not { } location)
             {
-                return new(null, Answer(response), null);
+                return Answer(response);
             }
 
             var absolute = location.IsAbsoluteUri
@@ -223,7 +246,7 @@ public sealed class AnonymousReleaseFeed : IReleaseFeed, IDisposable
             var index = Array.LastIndexOf(segments, "tag");
             return index >= 0 && index + 1 < segments.Length
                 ? new(Uri.UnescapeDataString(segments[index + 1]), null, null)
-                : new(null, Answer(response), null);
+                : Answer(response);
         }
         catch (Exception exception) when (exception is HttpRequestException or IOException)
         {
@@ -245,7 +268,7 @@ public sealed class AnonymousReleaseFeed : IReleaseFeed, IDisposable
                 .ConfigureAwait(false);
             if (response.StatusCode != HttpStatusCode.OK)
             {
-                return new(null, Answer(response), null);
+                return Answer(response);
             }
 
             try
@@ -256,11 +279,11 @@ public sealed class AnonymousReleaseFeed : IReleaseFeed, IDisposable
                 return document.RootElement.TryGetProperty("tag_name", out var tag) &&
                     tag.GetString() is { } name
                         ? new(name, null, null)
-                        : new(null, Answer(response), null);
+                        : Answer(response);
             }
             catch (JsonException)
             {
-                return new(null, Answer(response), null);
+                return Answer(response);
             }
         }
         catch (Exception exception) when (exception is HttpRequestException or IOException)

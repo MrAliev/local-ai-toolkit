@@ -262,15 +262,40 @@ public sealed class DirectoryReleaseFeedTests : IDisposable
         Assert.Equal(["localai-package.zip"], exception.Refusal.Files);
     }
 
+    /// <summary>"Could not be read" in the run log named a cause the check had not found.</summary>
     [Fact]
     public async Task A_folder_that_is_not_there_is_called_missing()
     {
+        var absent = Path.Combine(root, "absent");
+
         var exception = await Assert.ThrowsAsync<ReleaseResolutionException>(() =>
-            Feed(Path.Combine(root, "absent")).ResolveTagAsync(
+            Feed(absent).ResolveTagAsync(
                 "latest",
                 TestContext.Current.CancellationToken));
 
         Assert.Equal(ReleaseRefusalKind.NoSuchFolder, exception.Refusal.Kind);
+        Assert.Equal(
+            $"'{absent}' does not exist or is not a folder: " +
+            exception.InnerException!.Message.TrimEnd('.'),
+            exception.Message);
+    }
+
+    /// <summary>The same branch catches a path that leads to a file.</summary>
+    [Fact]
+    public async Task A_path_to_a_file_is_called_not_a_folder()
+    {
+        Directory.CreateDirectory(root);
+        var file = Path.Combine(root, "localai-package.zip");
+        File.WriteAllText(file, "a file, not a folder");
+
+        var exception = await Assert.ThrowsAsync<ReleaseResolutionException>(() =>
+            Feed(file).ResolveTagAsync("latest", TestContext.Current.CancellationToken));
+
+        Assert.Equal(ReleaseRefusalKind.NoSuchFolder, exception.Refusal.Kind);
+        Assert.Equal(
+            $"'{file}' does not exist or is not a folder: " +
+            exception.InnerException!.Message.TrimEnd('.'),
+            exception.Message);
     }
 
     /// <summary>
