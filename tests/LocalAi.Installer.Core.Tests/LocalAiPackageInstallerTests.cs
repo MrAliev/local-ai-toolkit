@@ -4,6 +4,9 @@ using LocalAi.Installer.Core.Abstractions;
 using LocalAi.Installer.Core.Activation;
 using LocalAi.Installer.Core.Diagnosis;
 using LocalAi.Installer.Core.Releases;
+using LocalAi.Installer.Core.Removal;
+using LocalAi.Installer.Core.Transactions;
+using LocalAi.TestFixtures;
 using System.ComponentModel;
 using System.Runtime.Versioning;
 using System.Security;
@@ -353,6 +356,67 @@ public sealed class LocalAiPackageInstallerTests : IDisposable
             directory,
             File.ReadAllText(Path.Combine(layout.Root, directory, "kept.txt"))));
         Assert.All(files, file => Assert.Equal(file, File.ReadAllText(Path.Combine(layout.Root, file))));
+    }
+
+    /// <summary>
+    /// A bin left without its pointer is not adopted (#614), so the start screen offers a clean
+    /// reinstall there. Its removal half, planned and run as the wizard runs it, asks the launcher
+    /// to stop and takes bin; the installation that follows is then a first one and goes through.
+    /// </summary>
+    [Fact]
+    public async Task A_clean_reinstall_goes_through_a_bin_left_without_its_pointer()
+    {
+        var token = TestContext.Current.CancellationToken;
+        CreateExisting("v0", System.Text.Encoding.UTF8.GetBytes("prior-launcher"));
+        var layout = InstallationLayout.FromLocalAppData(localAppData);
+        File.Delete(layout.CurrentPointerPath);
+        var settings = Path.Combine(layout.Root, "retention.json");
+        File.WriteAllText(settings, "kept");
+        var home = Path.Combine(localAppData, "home");
+        Directory.CreateDirectory(home);
+        var inspector = new ExistingLocalAiInspector(new SystemFileSystemProbe(), () => null);
+        Assert.True(inspector.Inspect(localAppData).BinWithoutPointer);
+        // `stop` with no pointer is answered with 0: the launcher finds nothing to stop.
+        var launcher = new RecordingRunner((_, arguments, _, _) =>
+        {
+            if (arguments[0] == "activate")
+            {
+                WritePointer(arguments[1]);
+            }
+
+            return Task.FromResult(new ProcessResult(0, "", "", false, false));
+        });
+
+        var plan = await new UninstallPlanner(
+                layout,
+                home,
+                (_, _) => Task.FromResult<string?>(null),
+                registrySubKey: RemovalFixture.UnusedRegistrySubKey,
+                readUserPath: () => null)
+            .PlanAsync(
+                RemovalSelection.FromPreset(RemovalPreset.ReinstallFriendly),
+                token,
+                installationFollows: true);
+        using (var journal = InstallerRunJournal.Start(Path.Combine(localAppData, "journal")))
+        {
+            var outcome = await new UninstallRunner(
+                    layout,
+                    launcher,
+                    registrySubKey: RemovalFixture.UnusedRegistrySubKey)
+                .ApplyAsync(plan, journal, token);
+            Assert.True(outcome.Succeeded, string.Join("; ", outcome.Failures));
+        }
+
+        Assert.False(Directory.Exists(layout.BinRoot));
+        Assert.False(inspector.Inspect(localAppData).BinWithoutPointer);
+        using var package = Package("v1");
+        var result = await new LocalAiPackageInstaller(launcher, inspector, TimeSpan.FromSeconds(5))
+            .InstallAsync(package, layout, token);
+
+        Assert.Equal(LocalAiPackageInstallStatus.Installed, result.Status);
+        Assert.Equal("v1", ReadPointerVersion(layout.CurrentPointerPath));
+        Assert.Equal("kept", File.ReadAllText(settings));
+        Assert.Equal(["stop"], launcher.Calls[0].Arguments);
     }
 
     /// <summary>

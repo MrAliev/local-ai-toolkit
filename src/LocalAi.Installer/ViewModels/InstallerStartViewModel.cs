@@ -262,6 +262,13 @@ public sealed class InstallerStartViewModel : ObservableObject
                 : "Установку не удалось прочитать.") +
             "\nЧистая переустановка заменит бинарные файлы; удаление уберёт LocalAi с этого " +
             "компьютера."),
+        ExistingLocalAiState.Leftovers when existing.BinWithoutPointer => InstallerCulture.Pick(
+            "A clean reinstall removes the binaries that are left and installs again; removing " +
+            "takes everything that is left off this computer. Nothing is changed until you " +
+            "confirm it on a review page.",
+            "Чистая переустановка удалит оставшиеся бинарные файлы и установит заново; " +
+            "удаление уберёт с этого компьютера всё, что осталось. Ничего не изменится, пока " +
+            "вы это не подтвердите на итоговой странице."),
         ExistingLocalAiState.Leftovers => InstallerCulture.Pick(
             "You can install it again, or remove what is left. Nothing is changed until you " +
             "confirm it on a review page.",
@@ -296,6 +303,9 @@ public sealed class InstallerStartViewModel : ObservableObject
         var installed = !existing.State.NothingInstalled();
         // What a stopped removal left: nothing to update or reinstall, but something to remove.
         var removable = existing.State != ExistingLocalAiState.Absent;
+        // Unless bin is left without its pointer: an installation will not adopt it, so the
+        // way to install is the one that removes it first.
+        var reinstallable = installed || existing.BinWithoutPointer;
         // The release, not the directory: the row says why Install is off, and "already
         // installed" is the answer — naming a build id there repeats the headline's old
         // mistake in smaller type.
@@ -311,7 +321,7 @@ public sealed class InstallerStartViewModel : ObservableObject
                 "Sets up the prerequisites, the runtime and the client integrations.",
                 "Устанавливает необходимые компоненты, рантайм и интеграции с клиентскими " +
                 "приложениями."),
-            !installed,
+            !reinstallable,
             working
                 ? string.Format(
                     InstallerCulture.Pick(
@@ -354,7 +364,7 @@ public sealed class InstallerStartViewModel : ObservableObject
                 "and the settings a fresh install would honour, then installs again.",
                 "Удаляет бинарные файлы и временное состояние, сохраняет индексы репозиториев " +
                 "и настройки, которые учла бы чистая установка, и устанавливает заново."),
-            installed,
+            reinstallable,
             InstallerCulture.Pick(
                 "Nothing is installed to reinstall.",
                 "Нечего переустанавливать — ничего не установлено."));

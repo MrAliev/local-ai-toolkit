@@ -37,7 +37,8 @@ public sealed partial class ExistingLocalAiInspector(
                 WithoutPointer(Path.Combine(localAppData, "LocalAi"), binRoot),
                 null,
                 null,
-                null);
+                null,
+                fileSystem.DirectoryExists(binRoot) || fileSystem.FileExists(binRoot));
         }
 
         string? detectedVersion = null;
