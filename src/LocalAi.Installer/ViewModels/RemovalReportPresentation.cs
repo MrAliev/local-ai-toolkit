@@ -16,7 +16,24 @@ public static class RemovalReportPresentation
         }, Title(entry), Wording(entry));
 
     public static string Line(RemovalReportEntry entry) =>
-        WhatStays(entry)?.Line ?? Prefix(entry) + Target(entry) + Suffix(entry);
+        WhatStays(entry)?.Line ??
+        (Deleted(entry) is { Length: > 0 } deleted ? Disconnection(entry, deleted) : Prefix(entry) + Target(entry)) +
+        Suffix(entry);
+
+    // A completed client step that deleted a file says so, in the verb the review page used for it.
+    private static RemovalReportFile[] Deleted(RemovalReportEntry entry) =>
+        entry is { State: RemovalReportState.Completed, Kind: RemovalReportKind.Configuration, Files: { } files }
+            ? files.Where(file => file.Deletes).ToArray()
+            : [];
+
+    private static string Disconnection(RemovalReportEntry entry, RemovalReportFile[] deleted)
+    {
+        var rewritten = string.Join(", ", entry.Files!.Where(file => !file.Deletes).Select(file => file.Path));
+        var removed = string.Join(", ", deleted.Select(file => file.Path));
+        return rewritten.Length > 0
+            ? string.Format(InstallerCulture.Pick("Updated {0}; removed {1}", "Обновлено {0}; удалено {1}"), rewritten, removed)
+            : string.Format(InstallerCulture.Pick("Removed {0}", "Удалено {0}"), removed);
+    }
 
     // A row's title names what the step was about; the line under it says what happened.
     private static string Title(RemovalReportEntry entry) => entry.Kind switch
@@ -93,6 +110,12 @@ public static class RemovalReportPresentation
     {
         (RemovalReportState.Completed, RemovalReportKind.ProcessStop) => InstallerCulture.Pick("Stopped", "Остановлены"),
         (RemovalReportState.Completed, RemovalReportKind.Hooks) => InstallerCulture.Pick("LocalAi hooks removed", "Хуки LocalAi удалены"),
+        // The title carries the full paths already, and names only removed files when nothing was rewritten.
+        _ when Deleted(entry) is { Length: > 0 } deleted => deleted.Length == entry.Files!.Count
+            ? InstallerCulture.Pick("Removed", "Удалено")
+            : string.Format(
+                InstallerCulture.Pick("Updated; removed {0}", "Обновлено; удалено {0}"),
+                string.Join(", ", deleted.Select(file => System.IO.Path.GetFileName(file.Path)))),
         _ => Prefix(entry).TrimEnd(' ', ':'),
     } + Suffix(entry);
 

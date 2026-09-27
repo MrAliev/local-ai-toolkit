@@ -960,7 +960,7 @@ public sealed class UninstallWizardViewModel : ObservableObject
                     "Не удалось удалить: {0}; удалено: {1}."),
                 outcome.Failures.Count,
                 outcome.RemovedPaths.Count));
-            return AppendClientAndHookCounts(summary, outcome);
+            return AppendClientsAndHooks(summary, outcome);
         }
 
         summary.Append(outcome.RuntimeRootRemoved
@@ -973,21 +973,21 @@ public sealed class UninstallWizardViewModel : ObservableObject
                     "Удалено путей из {1}: {0}."),
                 outcome.RemovedPaths.Count,
                 layout.Root));
-        return AppendClientAndHookCounts(summary, outcome);
+        return AppendClientsAndHooks(summary, outcome);
     }
 
     /// <summary>
-    /// Both outcomes: a run that failed on a path has usually rewritten these already.
+    /// Both outcomes: a run that failed on a path has usually rewritten these already. The client
+    /// plans are named by the review page's headings rather than counted by their files.
     /// </summary>
-    private static string AppendClientAndHookCounts(StringBuilder summary, UninstallOutcome outcome)
+    private static string AppendClientsAndHooks(StringBuilder summary, UninstallOutcome outcome)
     {
-        if (outcome.RewrittenConfigurations.Count > 0)
+        var disconnected = UninstallPlan.Headings(outcome.DisconnectedConfigurations);
+        if (disconnected.Count > 0)
         {
             summary.Append(' ').Append(string.Format(
-                InstallerCulture.Pick(
-                    "Client configurations updated: {0}.",
-                    "Обновлено конфигураций клиентов: {0}."),
-                outcome.RewrittenConfigurations.Count));
+                InstallerCulture.Pick("Disconnected: {0}.", "Отключено: {0}."),
+                string.Join(", ", disconnected)));
         }
 
         if (outcome.RemovedHooks.Count > 0)

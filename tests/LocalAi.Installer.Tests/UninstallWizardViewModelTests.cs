@@ -390,10 +390,10 @@ public sealed class UninstallWizardViewModelTests : IDisposable
 
     /// <summary>
     /// By then the run has usually rewritten client configurations and deleted dispatchers, so
-    /// a partial failure counts those as the success summary does rather than denying them.
+    /// a partial failure reports those as the success summary does rather than denying them.
     /// </summary>
     [Fact]
-    public async Task A_partial_removal_counts_the_configurations_and_hooks_it_changed()
+    public async Task A_partial_removal_reports_the_configurations_and_hooks_it_changed()
     {
         var held = Path.Combine(machine.Runtime, "jobs", "job.json");
         using var handle = new FileStream(held, FileMode.Open, FileAccess.Read, FileShare.None);
@@ -404,7 +404,7 @@ public sealed class UninstallWizardViewModelTests : IDisposable
         Assert.False(await wizard.RunAsync(TestContext.Current.CancellationToken));
 
         Assert.StartsWith("Could not be removed: 1; removed: ", wizard.Summary, StringComparison.Ordinal);
-        Assert.Contains(" Client configurations updated: ", wizard.Summary, StringComparison.Ordinal);
+        Assert.Contains(" Disconnected: Claude integration, Codex integration.", wizard.Summary, StringComparison.Ordinal);
         Assert.Contains(" Git hook dispatchers removed: ", wizard.Summary, StringComparison.Ordinal);
         Assert.DoesNotContain("Nothing else was touched", wizard.Summary, StringComparison.Ordinal);
     }
