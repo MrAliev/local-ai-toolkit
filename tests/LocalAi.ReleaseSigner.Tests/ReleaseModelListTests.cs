@@ -140,10 +140,11 @@ public sealed class ReleaseModelListTests
 
     private sealed class FixedSizeSource(long size, string? unknownTag = null) : IModelSizeSource
     {
-        public Task<long?> GetDownloadSizeBytesAsync(
+        public Task<ModelSizeAnswer> GetDownloadSizeAsync(
             string tag,
             CancellationToken cancellationToken) =>
-            Task.FromResult<long?>(
-                string.Equals(tag, unknownTag, StringComparison.Ordinal) ? null : size);
+            Task.FromResult(new ModelSizeAnswer(
+                true,
+                string.Equals(tag, unknownTag, StringComparison.Ordinal) ? null : size));
     }
 }

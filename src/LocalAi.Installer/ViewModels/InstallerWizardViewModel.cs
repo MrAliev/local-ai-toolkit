@@ -2507,7 +2507,11 @@ public sealed class InstallerWizardViewModel : ObservableObject
         var diagnosis = await detectEnvironment(cancellationToken);
         environmentDiagnosis = diagnosis;
 
-        diagnose.Load(diagnosis);
+        // The network row and the models default both say whether the registry answers.
+        await RefreshRecommendationAsync(diagnosis, cancellationToken);
+        var registryAnswered = registryAnswer?.RegistryAnswered == true;
+
+        diagnose.Load(diagnosis, registryAnswered);
         residency.HasUsableAdapter = diagnose.HasUsableAdapter;
         // The card the rule is about, named the way the machine reports it. The one the
         // recommendation weighs against is the one with the most dedicated video memory, so
@@ -2517,8 +2521,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             .OrderByDescending(adapter => adapter.DedicatedLocalBytes)
             .FirstOrDefault();
         agents.ApplyDetection(diagnosis.Agents);
-        models.IsOffline = diagnosis.Network.State == ObservationState.Unavailable;
-        await RefreshRecommendationAsync(diagnosis, cancellationToken);
+        models.Offline = ModelsPageViewModel.OfflineFor(diagnosis.Network.State, registryAnswered);
 
         // Detection records presence only; it must not grant consent on the user's behalf.
         dependencies.SetInstalled("Git", diagnosis.Git.State == DependencyState.Detected);

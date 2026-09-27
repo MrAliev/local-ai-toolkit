@@ -78,8 +78,8 @@ public sealed class AnUpdateOffersTheModelSetupItRanWithTests
 
         wizard.RevealSettings();
         wizard.Models.IsAutomatic = true;
-        wizard.Models.IsOffline = true;
-        wizard.Models.IsOffline = false;
+        wizard.Models.Offline = ModelsOffline.NoNetworkConnection;
+        wizard.Models.Offline = ModelsOffline.None;
         wizard.ApplyPackageResult(Installed(temp));
         wizard.RecordModelSetup(new StringBuilder());
 
@@ -115,8 +115,8 @@ public sealed class AnUpdateOffersTheModelSetupItRanWithTests
         page.StartOnSkip();
         Assert.True(page.IsSkip);
 
-        page.IsOffline = true;
-        page.IsOffline = false;
+        page.Offline = ModelsOffline.NoNetworkConnection;
+        page.Offline = ModelsOffline.None;
         Assert.True(page.IsSkip);
     }
 
@@ -267,7 +267,7 @@ public sealed class AnUpdateOffersTheModelSetupItRanWithTests
                     offline ? ObservationState.Unavailable : ObservationState.Available,
                     null))))
         {
-            ModelSizeSource = new OfflineSizesComeFromTheReleaseTests.FixedRegistry(null),
+            ModelSizeSource = new OfflineSizesComeFromTheReleaseTests.FixedRegistry(null, answers: () => !offline),
             LogDirectory = temp.Combine("logs"),
             RuntimeRoot = Runtime(temp),
             ScratchRoot = temp.Combine("scratch"),

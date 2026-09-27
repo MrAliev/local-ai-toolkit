@@ -19,7 +19,8 @@ public sealed class ACommandThatDidNotAnswerIsAWarningTests
             DependencyState.Failed,
             @"C:\tools\git.exe",
             null,
-            "Version probe timed out.")));
+            "Version probe timed out.")),
+            registryAnswered: true);
 
         var row = page.Checks.Single(check => check.Name == "Git");
         Assert.Equal(CheckStatus.Warning, row.Status);
@@ -43,7 +44,8 @@ public sealed class ACommandThatDidNotAnswerIsAWarningTests
                 DependencyState.Failed,
                 @"C:\tools\git.exe",
                 null,
-                "Version probe failed.")));
+                "Version probe failed.")),
+                registryAnswered: true);
 
             Assert.Equal(
                 @"Найден в C:\tools\git.exe, но не сообщил версию (Version probe failed.). " +
@@ -66,7 +68,8 @@ public sealed class ACommandThatDidNotAnswerIsAWarningTests
             DependencyState.NotFound,
             null,
             null,
-            null)));
+            null)),
+            registryAnswered: true);
 
         var row = page.Checks.Single(check => check.Name == "Git");
         Assert.Equal(CheckStatus.Missing, row.Status);

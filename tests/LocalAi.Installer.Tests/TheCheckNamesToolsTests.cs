@@ -20,7 +20,8 @@ public sealed class TheCheckNamesToolsTests
         page.Load(HermeticDiagnosis.Supported(
             winGet: Missing("WinGet"),
             git: Missing("Git"),
-            gitHubCli: Missing("GitHubCli")));
+            gitHubCli: Missing("GitHubCli")),
+            registryAnswered: true);
 
         Assert.Equal(
             ["WinGet", Title("Git"), Title("GitHubCli")],
@@ -35,7 +36,8 @@ public sealed class TheCheckNamesToolsTests
         page.Load(HermeticDiagnosis.Supported(
             winGet: Missing("detector-id"),
             git: Missing("detector-id"),
-            gitHubCli: Missing("detector-id")));
+            gitHubCli: Missing("detector-id")),
+            registryAnswered: true);
 
         Assert.DoesNotContain(page.Checks, check => check.Name == "detector-id");
     }

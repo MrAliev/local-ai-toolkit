@@ -117,7 +117,7 @@ public sealed class PagesSpeakRussianTests : IDisposable
         var network = await new SystemNetworkProbe(() => false)
             .ObserveAsync(TestContext.Current.CancellationToken);
         var page = new DiagnosePageViewModel();
-        page.Load(HermeticDiagnosis.Supported(network: network));
+        page.Load(HermeticDiagnosis.Supported(network: network), registryAnswered: false);
 
         InstallerCulture.Current = InstallerLanguage.Russian;
         page.Relabel();
@@ -134,15 +134,23 @@ public sealed class PagesSpeakRussianTests : IDisposable
     /// </summary>
     [Theory]
     [InlineData(ObservationState.Unavailable, "No active network interface was reported.", "подключения к сети нет")]
-    [InlineData(ObservationState.Failed, "Сетевая подсистема не ответила.", "Сетевая подсистема не ответила.")]
-    [InlineData(ObservationState.Failed, null, "неизвестно")]
+    [InlineData(
+        ObservationState.Failed,
+        "Сетевая подсистема не ответила.",
+        "реестр Ollama не отвечает, а сетевые адаптеры прочитать не удалось: Сетевая подсистема не ответила.")]
+    [InlineData(
+        ObservationState.Failed,
+        null,
+        "реестр Ollama не отвечает, а сетевые адаптеры прочитать не удалось: неизвестно")]
     public void Only_an_unavailable_network_is_called_disconnected(
         ObservationState state,
         string? reason,
         string expected)
     {
         var page = new DiagnosePageViewModel();
-        page.Load(HermeticDiagnosis.Supported(network: new NetworkSnapshot(state, reason)));
+        page.Load(
+            HermeticDiagnosis.Supported(network: new NetworkSnapshot(state, reason)),
+            registryAnswered: false);
 
         InstallerCulture.Current = InstallerLanguage.Russian;
         page.Relabel();

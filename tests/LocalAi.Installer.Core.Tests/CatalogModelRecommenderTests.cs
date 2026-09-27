@@ -25,16 +25,17 @@ public sealed class CatalogModelRecommenderTests
             [new GpuAdapterSnapshot("adapter-1", "Test Adapter", dedicatedBytes, false)],
             null);
 
-    private sealed class FixedSizes(long? size) : IModelSizeSource
+    /// <summary><paramref name="answered"/> defaults to whether there is a size to give.</summary>
+    private sealed class FixedSizes(long? size, bool? answered = null) : IModelSizeSource
     {
         public List<string> Requested { get; } = [];
 
-        public Task<long?> GetDownloadSizeBytesAsync(
+        public Task<ModelSizeAnswer> GetDownloadSizeAsync(
             string tag,
             CancellationToken cancellationToken)
         {
             Requested.Add(tag);
-            return Task.FromResult(size);
+            return Task.FromResult(new ModelSizeAnswer(answered ?? size is not null, size));
         }
     }
 
@@ -52,6 +53,37 @@ public sealed class CatalogModelRecommenderTests
         Assert.False(result.SizesKnown);
         Assert.Empty(result.Fits);
         Assert.Contains("could not be retrieved", result.AdapterExplanation, StringComparison.Ordinal);
+    }
+
+    /// <summary>Offline for models is the registry not answering, not the registry having no size.</summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task A_registry_that_answers_without_sizes_is_told_from_one_that_does_not_answer(bool answered)
+    {
+        var recommender = new CatalogModelRecommender(new FixedSizes(null, answered));
+
+        var result = await recommender.RecommendAsync(
+            Gpu(16UL * 1024 * 1024 * 1024),
+            [Entry("test:1", 2048)],
+            TestContext.Current.CancellationToken);
+
+        Assert.False(result.SizesKnown);
+        Assert.Equal(answered, result.RegistryAnswered);
+    }
+
+    [Fact]
+    public async Task A_registry_that_gives_sizes_has_answered()
+    {
+        var recommender = new CatalogModelRecommender(new FixedSizes(TwoGb));
+
+        var result = await recommender.RecommendAsync(
+            Gpu(16UL * 1024 * 1024 * 1024),
+            [Entry("test:1", 2048)],
+            TestContext.Current.CancellationToken);
+
+        Assert.True(result.SizesKnown);
+        Assert.True(result.RegistryAnswered);
     }
 
     [Fact]
