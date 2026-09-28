@@ -616,6 +616,57 @@ public sealed class InstallerWizardViewModelTests
         }
     }
 
+    /// <summary>A rollback runs launcher processes; the page says it is under way until it ends.</summary>
+    [Fact]
+    public async Task Rolling_back_says_so_while_it_runs_and_stops_saying_so_when_it_ends()
+    {
+        var logDirectory = TestLogDirectory();
+        try
+        {
+            var createdFile = Path.Combine(logDirectory, "runtime", "ollama-launch.json");
+            Directory.CreateDirectory(Path.GetDirectoryName(createdFile)!);
+            var written = "{\"path\":\"C:/ollama.exe\"}"u8.ToArray();
+            File.WriteAllBytes(createdFile, written);
+            var journal = InstallerRunJournal.Start(logDirectory);
+            var step = journal.BeginStep(InstallerRunEffectKind.OllamaLaunchRecord, "Ollama start-on-demand record");
+            journal.CompleteStep(
+                step,
+                "written",
+                isReversible: true,
+                new InstallerRunUndoData(Files:
+                [
+                    new InstallerRunFileUndo(
+                        createdFile,
+                        false,
+                        InstallerRunJournal.Sha256Hex([]),
+                        null,
+                        null,
+                        InstallerRunJournal.Sha256Hex(written)),
+                ]));
+            journal.Dispose();
+            var wizard = SupportedWizard();
+            wizard.LogDirectory = logDirectory;
+            wizard.LoadInterruptedRunJournal();
+            var seen = new List<bool>();
+            wizard.PropertyChanged += (_, change) =>
+            {
+                if (change.PropertyName == nameof(InstallerWizardViewModel.IsRollingBack))
+                {
+                    seen.Add(wizard.IsRollingBack);
+                }
+            };
+
+            await wizard.RollbackPreviousRunAsync();
+
+            Assert.Contains(true, seen);
+            Assert.False(wizard.IsRollingBack);
+        }
+        finally
+        {
+            DeleteDirectory(logDirectory);
+        }
+    }
+
     [Fact]
     public void Relabeling_an_interrupted_run_preserves_recorded_effects_and_unknown_states()
     {
