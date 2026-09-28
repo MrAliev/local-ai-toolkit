@@ -446,7 +446,7 @@ public sealed partial class PdfReadingTests : IDisposable
         var client = new RecordingClient
         {
             Answer = (number, hasImage) => hasImage
-                ? number == 1 ? "Local AI RC18 PDF test\nMarker ALPHA-7319\nRepeated line\nRepeated line"
+                ? number == 1 ? "LocalAi RC18 PDF test\nMarker ALPHA-7319\nRepeated line\nRepeated line"
                     : "Second page\nMarker BETA-4826"
                 : "PDF page 3:\nThird page\nMarker CUBE-4826"
         };

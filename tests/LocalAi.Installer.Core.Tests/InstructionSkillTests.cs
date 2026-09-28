@@ -139,7 +139,7 @@ public sealed class InstructionSkillTests
     {
         var description = ManagedInstructionBlock.SkillDescription;
 
-        Assert.Contains("LocalAi", description, StringComparison.Ordinal);
+        Assert.Contains("Local AI", description, StringComparison.Ordinal);
         Assert.InRange(description.Length, 120, 1_536);
     }
 
