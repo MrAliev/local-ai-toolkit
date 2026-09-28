@@ -109,6 +109,23 @@ public sealed class PartialRemovalReportTests : IDisposable
         Assert.DoesNotContain(wizard.Results, row => row.Mark == RunMark.Done);
     }
 
+    /// <summary>#813: the refusal read "…runtime LocalAi.. Скопируйте…" in the RC32 sandbox.</summary>
+    [Theory]
+    [InlineData(InstallerLanguage.English,
+        "Could not save the report: Choose a report folder outside the LocalAi runtime being removed. Copy the details below.")]
+    [InlineData(InstallerLanguage.Russian,
+        "Не удалось сохранить отчёт: Выберите папку отчётов вне удаляемого рантайма LocalAi. Скопируйте сведения ниже.")]
+    public async Task The_refused_report_folder_reads_as_one_clean_sentence(InstallerLanguage language, string expected)
+    {
+        InstallerCulture.Current = language;
+        var wizard = await Create();
+        wizard.LogDirectory = Path.Combine(machine.Runtime, "report");
+
+        Assert.False(await wizard.RunAsync(TestContext.Current.CancellationToken));
+
+        Assert.Equal(expected, wizard.ReportSaveError);
+    }
+
     private static void Remove(string path)
     {
         if (Directory.Exists(path)) Directory.Delete(path, recursive: true);
