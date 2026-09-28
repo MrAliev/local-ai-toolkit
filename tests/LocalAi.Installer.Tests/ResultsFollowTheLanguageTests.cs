@@ -150,13 +150,13 @@ public sealed class ResultsFollowTheLanguageTests : IDisposable
         Assert.True(await wizard.MoveNextAsync(TestContext.Current.CancellationToken));
         wizard.IsConfirmed = true;
         Assert.False(await wizard.RunAsync(TestContext.Current.CancellationToken));
-        Assert.StartsWith("Nothing was removed.", wizard.Report, StringComparison.Ordinal);
+        Assert.StartsWith("Nothing was removed.", wizard.ReportText, StringComparison.Ordinal);
         Assert.True(wizard.HasReportPath);
         var refusal = wizard.Summary;
 
         presentation.ChooseLanguage(InstallerLanguage.Russian);
 
-        Assert.StartsWith("Ничего не удалено.", wizard.Report, StringComparison.Ordinal);
+        Assert.StartsWith("Ничего не удалено.", wizard.ReportText, StringComparison.Ordinal);
         Assert.Equal("Отказано", wizard.ProgressText);
         Assert.NotEqual(refusal, wizard.Summary);
         Assert.StartsWith("Ничего не удалено.", wizard.Summary, StringComparison.Ordinal);
