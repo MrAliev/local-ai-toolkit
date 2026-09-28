@@ -1999,3 +1999,8 @@ generative task was started. The original OCR invocation metadata arrays are pre
 ## Licence
 
 MIT. See [LICENSE](LICENSE).
+
+- [Code signing policy](docs/code-signing-policy.md): what is signed, by whom, and how.
+- [Privacy](docs/privacy.md): every connection LocalAi makes to another computer.
+- [Security policy](SECURITY.md): how to report a vulnerability.
+- [Contributing](CONTRIBUTING.md): how work gets into `main`.
