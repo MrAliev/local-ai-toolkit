@@ -30,15 +30,19 @@ public sealed class ReviewApplyPageViewModel : ObservableObject
     /// <summary>Every group that changed since the last tick, until the box is ticked again.</summary>
     private IReadOnlyList<ReviewSection> changed = [];
 
+    /// <summary>Set when the button found another run holding its lock; cleared by the next tick.</summary>
+    private bool anotherRun;
+
     public bool IsConfirmed
     {
         get => isConfirmed;
         set
         {
             SetProperty(ref isConfirmed, value);
-            if (value && changed.Count > 0)
+            if (value && (changed.Count > 0 || anotherRun))
             {
                 changed = [];
+                anotherRun = false;
                 AnnounceChanged();
             }
 
@@ -54,8 +58,16 @@ public sealed class ReviewApplyPageViewModel : ObservableObject
         AnnounceChanged();
     }
 
+    /// <summary>Clears the box because another installer or uninstaller holds its lock right now.</summary>
+    internal void RefuseForAnotherRun()
+    {
+        anotherRun = true;
+        IsConfirmed = false;
+        AnnounceChanged();
+    }
+
     /// <summary>Whether the wizard cleared the box and it has not been ticked since.</summary>
-    internal bool IsWithdrawn => changed.Count > 0;
+    internal bool IsWithdrawn => changed.Count > 0 || anotherRun;
 
     /// <summary>
     /// The line under a box the wizard cleared; empty once it is ticked again, and while a check
@@ -63,12 +75,17 @@ public sealed class ReviewApplyPageViewModel : ObservableObject
     /// </summary>
     public string ChangedNotice => !HasChangedNotice
         ? string.Empty
-        : string.Format(
-            InstallerCulture.Pick(
-                "The list above changed after you confirmed it ({0}). Read it again, then confirm.",
-                "Список выше изменился после вашего подтверждения ({0}). Прочитайте его снова и " +
-                "подтвердите."),
-            string.Join(", ", changed.Select(Title)));
+        : anotherRun
+            // The removal wizard's own sentence for the same situation (UninstallWizardViewModel).
+            ? InstallerCulture.Pick(
+                "Another LocalAi installer or uninstaller is running on this computer. Finish it first, then start this one again.",
+                "На этом компьютере уже работает установщик или деинсталлятор LocalAi. Сначала завершите его, потом запустите этот заново.")
+            : string.Format(
+                InstallerCulture.Pick(
+                    "The list above changed after you confirmed it ({0}). Read it again, then confirm.",
+                    "Список выше изменился после вашего подтверждения ({0}). Прочитайте его снова и " +
+                    "подтвердите."),
+                string.Join(", ", changed.Select(Title)));
 
     public bool HasChangedNotice => IsWithdrawn && CanConfirm;
 
