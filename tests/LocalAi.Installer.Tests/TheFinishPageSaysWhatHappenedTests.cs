@@ -256,6 +256,29 @@ public sealed class TheFinishPageSaysWhatHappenedTests
     }
 
     /// <summary>
+    /// The run checks the computer again before it installs anything, and the line beside the
+    /// gears says so; it used to read "Ready" at 0 % for as long as that took.
+    /// </summary>
+    [Fact]
+    public async Task The_run_says_it_is_checking_the_computer_again_rather_than_ready()
+    {
+        using var root = new TemporaryDirectory("LocalAi-run-lines");
+        var wizard = RunOver(root.Combine("runtime"), root.Combine("logs"));
+        var lines = new List<string>();
+        wizard.PropertyChanged += (_, change) =>
+        {
+            if (change.PropertyName == nameof(InstallerWizardViewModel.ProgressText))
+            {
+                lines.Add(wizard.ProgressText);
+            }
+        };
+
+        await wizard.RunAsync(TestContext.Current.CancellationToken);
+
+        Assert.Contains("Checking this computer again…", lines);
+    }
+
+    /// <summary>
     /// A package-less run over a runtime root the test owns, its answers given before the box is
     /// ticked: an answer changed after the tick takes the tick back.
     /// </summary>
