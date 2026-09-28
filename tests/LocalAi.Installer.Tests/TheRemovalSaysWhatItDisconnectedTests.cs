@@ -21,20 +21,29 @@ public sealed class TheRemovalSaysWhatItDisconnectedTests : IDisposable
 
     public void Dispose() => machine.Dispose();
 
+    /// <summary>
+    /// Disconnecting removes nothing from the runtime, and the summary used to open with
+    /// "Paths removed from {root}: 0." (RC31 sandbox run 20260928-144300-remove-presets): what was
+    /// disconnected comes first, the hook dispatchers next, and the runtime is said to be
+    /// untouched last.
+    /// </summary>
     [Theory]
     [InlineData(InstallerLanguage.English,
-        " Disconnected: Claude integration, Codex integration, Claude Code hooks.")]
+        "Disconnected: Claude integration, Codex integration, Claude Code hooks. Git hook dispatchers removed: ",
+        " Nothing in {0} was removed.")]
     [InlineData(InstallerLanguage.Russian,
-        " Отключено: Интеграция с Claude, Интеграция с Codex, Хуки Claude Code.")]
+        "Отключено: Интеграция с Claude, Интеграция с Codex, Хуки Claude Code. Удалено диспетчеров хуков Git: ",
+        " В {0} ничего не удалено.")]
     public async Task The_summary_names_what_was_disconnected_in_the_review_pages_order(
-        InstallerLanguage language, string sentence)
+        InstallerLanguage language, string opening, string closing)
     {
         await ConnectSkillsAndHooks();
         var wizard = await Run(RemovalPreset.DisconnectClients);
 
         wizard.Presentation.ChooseLanguage(language);
 
-        Assert.Contains(sentence, wizard.Summary, StringComparison.Ordinal);
+        Assert.StartsWith(opening, wizard.Summary, StringComparison.Ordinal);
+        Assert.EndsWith(string.Format(closing, machine.Layout.Root), wizard.Summary, StringComparison.Ordinal);
     }
 
     /// <summary>

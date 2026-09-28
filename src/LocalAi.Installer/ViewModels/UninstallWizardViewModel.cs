@@ -974,6 +974,16 @@ public sealed class UninstallWizardViewModel : ObservableObject
             return AppendClientsAndHooks(summary, outcome);
         }
 
+        // A run that removed nothing from the runtime - a disconnect - says what it did first and
+        // that the runtime was left after it, rather than opening with a count of zero.
+        if (!outcome.RuntimeRootRemoved && outcome.RemovedPaths.Count == 0)
+        {
+            AppendClientsAndHooks(summary, outcome);
+            return summary.Append(summary.Length > 0 ? " " : string.Empty).Append(string.Format(
+                InstallerCulture.Pick("Nothing in {0} was removed.", "В {0} ничего не удалено."),
+                layout.Root)).ToString();
+        }
+
         summary.Append(outcome.RuntimeRootRemoved
             ? InstallerCulture.Pick(
                 "LocalAi was removed from this computer.",
@@ -996,14 +1006,14 @@ public sealed class UninstallWizardViewModel : ObservableObject
         var disconnected = UninstallPlan.Headings(outcome.DisconnectedConfigurations);
         if (disconnected.Count > 0)
         {
-            summary.Append(' ').Append(string.Format(
+            summary.Append(summary.Length > 0 ? " " : string.Empty).Append(string.Format(
                 InstallerCulture.Pick("Disconnected: {0}.", "Отключено: {0}."),
                 string.Join(", ", disconnected)));
         }
 
         if (outcome.RemovedHooks.Count > 0)
         {
-            summary.Append(' ').Append(string.Format(
+            summary.Append(summary.Length > 0 ? " " : string.Empty).Append(string.Format(
                 InstallerCulture.Pick(
                     "Git hook dispatchers removed: {0}.",
                     "Удалено диспетчеров хуков Git: {0}."),
