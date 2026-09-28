@@ -1070,6 +1070,22 @@ public sealed class InstallerWizardViewModel : ObservableObject
             return false;
         }
 
+        if (EnableDependencyActions)
+        {
+            // This window's previous run is over, and its lock is not another run's.
+            runJournal?.Dispose();
+            runJournal = null;
+            // A removal running in another window must not meet this run in the middle: the two
+            // left LocalAi installed with no Apps & features entry and no PATH, reported as fine.
+            if (InstallerRunJournal.IsRunActive(LogDirectory))
+            {
+                review.RefuseForAnotherRun();
+                confirmedList = null;
+                RefreshAll();
+                return false;
+            }
+        }
+
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         runCancellation = linked;
         var token = linked.Token;
