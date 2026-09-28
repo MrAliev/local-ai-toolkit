@@ -640,6 +640,79 @@ public sealed class UninstallWizardViewModelTests : IDisposable
         });
     }
 
+    /// <summary>
+    /// The scan reads Git in every connected repository, and the page is not ready until it has:
+    /// it says so while it lasts, and Next waits, as the installer's first page waits for its check.
+    /// </summary>
+    [Fact]
+    public async Task The_scan_says_it_is_running_and_holds_next_until_it_ends()
+    {
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var reached = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var wizard = Held(async () =>
+        {
+            reached.TrySetResult();
+            await gate.Task;
+        });
+
+        var scan = wizard.InitializeAsync(TestContext.Current.CancellationToken);
+        await Task.WhenAny(reached.Task, scan);
+
+        Assert.True(reached.Task.IsCompleted, "The scan never asked Git anything, so it could not be held.");
+        Assert.True(wizard.IsScanning);
+        Assert.False(wizard.CanMoveNext);
+        gate.SetResult();
+        await scan;
+        Assert.False(wizard.IsScanning);
+        Assert.True(wizard.CanMoveNext);
+    }
+
+    [Fact]
+    public async Task Building_the_plan_says_it_is_running_until_the_review_opens()
+    {
+        TaskCompletionSource? gate = null;
+        var reached = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var wizard = Held(async () =>
+        {
+            if (gate is { } held)
+            {
+                reached.TrySetResult();
+                await held.Task;
+            }
+        });
+        await wizard.InitializeAsync(TestContext.Current.CancellationToken);
+        gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var next = wizard.MoveNextAsync(TestContext.Current.CancellationToken);
+        await Task.WhenAny(reached.Task, next);
+
+        Assert.True(reached.Task.IsCompleted, "Building the plan never asked Git anything, so it could not be held.");
+        Assert.True(wizard.IsPlanning);
+        Assert.False(wizard.CanMoveNext);
+        gate.SetResult();
+        Assert.True(await next);
+        Assert.False(wizard.IsPlanning);
+        Assert.Equal(UninstallPage.Confirm, wizard.CurrentPage);
+    }
+
+    /// <summary>A wizard whose every read of core.hooksPath first waits on <paramref name="hold"/>.</summary>
+    private UninstallWizardViewModel Held(Func<Task> hold) =>
+        new(
+            RemovalPreset.FullUninstall,
+            false,
+            machine.Layout,
+            machine.Home,
+            new StubProcessRunner(),
+            async (directory, cancellationToken) =>
+            {
+                await hold();
+                return await machine.HooksPathReader(directory, cancellationToken);
+            },
+            inspector: new ExistingLocalAiInspector(new SystemFileSystemProbe(), () => null))
+        {
+            LogDirectory = journalDirectory,
+        };
+
     private static RemovalRow Row(UninstallWizardViewModel wizard, RemovalItem item) =>
         wizard.Rows.Single(row => row.Item == item);
 

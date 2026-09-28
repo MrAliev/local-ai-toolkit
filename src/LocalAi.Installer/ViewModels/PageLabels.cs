@@ -40,7 +40,24 @@ public static class PageLabels
         "Roll back previous run",
         "Откатить предыдущий запуск");
 
+    public static string RollingBack => InstallerCulture.Pick(
+        "Rolling back the changes…",
+        "Откатываю изменения…");
+
     // --- Prerequisites ------------------------------------------------------------------
+    public static string CheckingPrerequisites => InstallerCulture.Pick(
+        "Checking which of these are installed…",
+        "Проверяю, какие из них уже установлены…");
+
+    // --- Removal ------------------------------------------------------------------------
+    public static string LookingForRepositories => InstallerCulture.Pick(
+        "Looking for connected repositories…",
+        "Ищу подключённые репозитории…");
+
+    public static string ListingRemoval => InstallerCulture.Pick(
+        "Listing what will be removed and what stays…",
+        "Составляю список: что будет удалено, а что останется…");
+
     public static string NoAutomatedInstaller => InstallerCulture.Pick(
         "No automated installer is available; install it yourself.",
         "Автоматической установки нет; установите его вручную.");

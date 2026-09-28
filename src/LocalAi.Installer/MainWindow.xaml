@@ -206,14 +206,19 @@
                                 </Style.Triggers>
                             </Style>
                         </StackPanel.Style>
-                        <StackPanel Margin="0,4,0,0"
-                                    Visibility="{Binding Diagnose.IsChecking, Converter={StaticResource BoolToVisibility}}">
-                            <!-- The lead above already says what is happening; this is the
-                                 detail line under the spinner. -->
-                            <TextBlock Text="{vm:Label Probing}"
-                                       Style="{StaticResource Muted}" Margin="0,0,0,10" />
-                            <ProgressBar IsIndeterminate="True" Height="4" Width="280" HorizontalAlignment="Left" />
-                        </StackPanel>
+                        <!-- The lead above already says what is happening; this is the detail line
+                             beside the gears. -->
+                        <Grid Margin="0,4,0,10"
+                              Visibility="{Binding Diagnose.IsChecking, Converter={StaticResource BoolToVisibility}}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Control Style="{StaticResource BusyGears}"
+                                     Visibility="{Binding Diagnose.IsChecking, Converter={StaticResource BoolToVisibility}}" />
+                            <TextBlock Grid.Column="1" Text="{vm:Label Probing}"
+                                       Style="{StaticResource Muted}" TextWrapping="Wrap" />
+                        </Grid>
                         <!-- A shared size scope, because this reads as a table and was not one:
                              each row had its own Grid, so Auto sized every row on its own and
                              «Свободное место на диске» pushed its OK right of the eight above. -->
@@ -275,6 +280,17 @@
                                     Command="{Binding RollbackPreviousRunCommand}"
                                     HorizontalAlignment="Left" Margin="0,8,0,0" Padding="12,4"
                                     Visibility="{Binding CanRollbackPreviousRun, Converter={StaticResource BoolToVisibility}}" />
+                            <Grid Margin="0,8,0,0"
+                                  Visibility="{Binding IsRollingBack, Converter={StaticResource BoolToVisibility}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Control Style="{StaticResource BusyGears}"
+                                         Visibility="{Binding IsRollingBack, Converter={StaticResource BoolToVisibility}}" />
+                                <local:LiveStatusText Grid.Column="1" Text="{vm:Label RollingBack}"
+                                                      Style="{StaticResource Muted}" TextWrapping="Wrap" />
+                            </Grid>
                         </StackPanel>
                     </StackPanel>
 
@@ -367,6 +383,19 @@
                         <Button Content="{vm:Label CheckAgain}" MinWidth="140" Padding="12,0" MinHeight="32" HorizontalAlignment="Left"
                                 Command="{Binding CheckPrerequisitesAgainCommand}"
                                 Visibility="{Binding Dependencies.NeedsCheckAgain, Converter={StaticResource BoolToVisibility}}" />
+                        <!-- On this page the check runs only after the button above: Next from the
+                             first page waits for the first one. -->
+                        <Grid Margin="0,10,0,0"
+                              Visibility="{Binding Diagnose.IsChecking, Converter={StaticResource BoolToVisibility}}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Control Style="{StaticResource BusyGears}"
+                                     Visibility="{Binding Diagnose.IsChecking, Converter={StaticResource BoolToVisibility}}" />
+                            <local:LiveStatusText Grid.Column="1" Text="{vm:Label CheckingPrerequisites}"
+                                                  Style="{StaticResource Muted}" TextWrapping="Wrap" />
+                        </Grid>
                     </StackPanel>
 
                     <!-- LocalAi package -->
@@ -413,7 +442,14 @@
                                 Click="OnPackageCheckRelease" />
                         <!-- The one line saying why Next leads to a run without the package: warning
                              colour when there is no release, normal weight for three lines. -->
-                        <TextBlock Text="{Binding Package.StatusText}" Margin="0,10,0,0">
+                        <Grid Margin="0,10,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Control Style="{StaticResource BusyGears}"
+                                     Visibility="{Binding Package.IsResolving, Converter={StaticResource BoolToVisibility}}" />
+                        <TextBlock Grid.Column="1" Text="{Binding Package.StatusText}" TextWrapping="Wrap">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock" BasedOn="{StaticResource Muted}">
                                     <Style.Triggers>
@@ -427,6 +463,7 @@
                                 </Style>
                             </TextBlock.Style>
                         </TextBlock>
+                        </Grid>
                     </StackPanel>
 
                     <!-- Models and memory: the rule for how models may run, above the list of
@@ -737,9 +774,17 @@
                             <TextBlock Text="{Binding ConsentText}" TextWrapping="Wrap" />
                         </CheckBox>
                         <!-- One line at a time, each spoken when it appears. -->
-                        <local:LiveStatusText Text="{Binding Review.StillChecking, Mode=OneWay}"
-                                              Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="24,4,0,0"
-                                              Visibility="{Binding Review.IsStillChecking, Mode=OneWay, Converter={StaticResource BoolToVisibility}}" />
+                        <Grid Margin="24,4,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Control Style="{StaticResource BusyGears}"
+                                     Visibility="{Binding Review.IsStillChecking, Mode=OneWay, Converter={StaticResource BoolToVisibility}}" />
+                            <local:LiveStatusText Grid.Column="1" Text="{Binding Review.StillChecking, Mode=OneWay}"
+                                                  Style="{StaticResource Muted}" TextWrapping="Wrap"
+                                                  Visibility="{Binding Review.IsStillChecking, Mode=OneWay, Converter={StaticResource BoolToVisibility}}" />
+                        </Grid>
                         <!-- Why a box ticked earlier is clear now; gone at the next tick. -->
                         <local:LiveStatusText Text="{Binding Review.ChangedNotice, Mode=OneWay}"
                                               Style="{StaticResource WarningText}" TextWrapping="Wrap" Margin="24,4,0,0"
@@ -758,7 +803,15 @@
                                 </Style.Triggers>
                             </Style>
                         </StackPanel.Style>
-                        <TextBlock Text="{Binding ProgressText}" TextWrapping="Wrap" Margin="0,0,0,8" />
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Control Style="{StaticResource BusyGears}"
+                                     Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}" />
+                            <TextBlock Grid.Column="1" Text="{Binding ProgressText}" TextWrapping="Wrap" />
+                        </Grid>
                         <ProgressBar Value="{Binding Progress, Mode=OneWay}" Maximum="100" Height="8" />
 
                         <!-- A row per model, because six of them take tens of minutes and one
@@ -871,6 +924,18 @@
                                 Command="{Binding RollbackCommand}"
                                 HorizontalAlignment="Left" Margin="0,10,0,0" Padding="12,4"
                                 Visibility="{Binding CanRollback, Converter={StaticResource BoolToVisibility}}" />
+                        <!-- In the button's place while it runs: the button hides itself then. -->
+                        <Grid Margin="0,10,0,0"
+                              Visibility="{Binding IsRollingBack, Converter={StaticResource BoolToVisibility}}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Control Style="{StaticResource BusyGears}"
+                                     Visibility="{Binding IsRollingBack, Converter={StaticResource BoolToVisibility}}" />
+                            <local:LiveStatusText Grid.Column="1" Text="{vm:Label RollingBack}"
+                                                  Style="{StaticResource Muted}" TextWrapping="Wrap" />
+                        </Grid>
                         <StackPanel Visibility="{Binding Finish.HasRollbackReport, Converter={StaticResource BoolToVisibility}}">
                             <TextBlock Text="{vm:Label Rollback}" Margin="0,12,0,4" FontWeight="SemiBold" />
                             <TextBox Text="{Binding Finish.RollbackReport, Mode=OneWay}"
