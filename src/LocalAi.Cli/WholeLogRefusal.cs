@@ -253,7 +253,7 @@ internal static class WholeLogRefusal
     /// restated, and that block is one English constant with no translated pair.
     /// </summary>
     private const string WholeLogRefused =
-        "`{0}` reads a whole log into this conversation, which LocalAi routes to a local "
+        "`{0}` reads a whole log into this conversation, which Local AI routes to a local "
         + "model: triage_log for a short one, `localai triage <file>` on the command line "
         + "for a whole log. The command line is the one for a big file because it prints "
         + "where it has got to while it runs — an MCP call says nothing between the call "

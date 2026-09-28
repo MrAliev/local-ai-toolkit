@@ -38,7 +38,7 @@ public sealed class VersionResolver
         {
             throw new LauncherException(
                 "tool_not_allowed",
-                $"LocalAi tool '{tool}' is not allowlisted.");
+                $"Local AI tool '{tool}' is not allowlisted.");
         }
 
         var pointer = ReadPointer();
@@ -60,7 +60,7 @@ public sealed class VersionResolver
         {
             throw new LauncherException(
                 "version_incomplete",
-                $"LocalAi version '{version}' does not exist.");
+                $"Local AI version '{version}' does not exist.");
         }
 
         var physicalVersionsRoot = _resolvePhysicalPath(_versionsRoot);
@@ -76,7 +76,7 @@ public sealed class VersionResolver
             {
                 throw new LauncherException(
                     "version_incomplete",
-                    $"LocalAi version '{version}' is missing '{fileName}'.");
+                    $"Local AI version '{version}' is missing '{fileName}'.");
             }
 
             EnsureBelow(
@@ -95,7 +95,7 @@ public sealed class VersionResolver
         {
             throw new LauncherException(
                 "current_pointer_missing",
-                $"LocalAi current-version pointer is missing: {path}");
+                $"Local AI current-version pointer is missing: {path}");
         }
 
         try
@@ -109,7 +109,7 @@ public sealed class VersionResolver
             {
                 throw new LauncherException(
                     "current_pointer_invalid",
-                    "LocalAi current-version pointer is invalid.");
+                    "Local AI current-version pointer is invalid.");
             }
 
             return pointer;
@@ -118,7 +118,7 @@ public sealed class VersionResolver
         {
             throw new LauncherException(
                 "current_pointer_invalid",
-                $"LocalAi current-version pointer is invalid: {exception.Message}");
+                $"Local AI current-version pointer is invalid: {exception.Message}");
         }
     }
 
@@ -128,7 +128,7 @@ public sealed class VersionResolver
         {
             throw new LauncherException(
                 "version_path_invalid",
-                "The LocalAi version name is invalid.");
+                "The Local AI version name is invalid.");
         }
     }
 
@@ -140,7 +140,7 @@ public sealed class VersionResolver
         {
             throw new LauncherException(
                 code,
-                $"Resolved path is outside the LocalAi versions directory: {path}");
+                $"Resolved path is outside the Local AI versions directory: {path}");
         }
     }
 

@@ -5,7 +5,7 @@ namespace LocalAi.Installer.Core.Tests;
 public sealed class InstallationFailureAdviceTests
 {
     private const string LayoutRefusal =
-        "The LocalAi installation layout is unsafe (check: ValidateAcl): the directory still " +
+        "The Local AI installation layout is unsafe (check: ValidateAcl): the directory still " +
         "inherits access rules.";
 
     [Fact]
@@ -41,7 +41,7 @@ public sealed class InstallationFailureAdviceTests
     }
 
     [Theory]
-    [InlineData("Another LocalAi installation is already in progress.")]
+    [InlineData("Another Local AI installation is already in progress.")]
     [InlineData("")]
     [InlineData(null)]
     public void Stays_silent_about_every_other_failure(string? message)

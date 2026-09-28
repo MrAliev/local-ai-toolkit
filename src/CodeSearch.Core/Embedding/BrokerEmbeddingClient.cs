@@ -74,7 +74,7 @@ public sealed class BrokerEmbeddingClient(
         catch (TimeoutException exception)
         {
             throw new EmbeddingUnavailableException(
-                "The LocalAi broker did not answer in time.",
+                "The Local AI broker did not answer in time.",
                 exception);
         }
         // A backend that is not there is not a chunk that cannot be embedded. The two stable

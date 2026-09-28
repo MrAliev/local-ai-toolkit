@@ -20,11 +20,11 @@ public sealed class ARemovalThatStoppedCanBeFinishedTests : IDisposable
         "until you confirm it on the next page.";
 
     private const string NotInstalled =
-        "LocalAi is not installed here; these rows apply to what is left of it, and the next " +
+        "Local AI is not installed here; these rows apply to what is left of it, and the next " +
         "page lists every path found.";
 
     private const string NotWorking =
-        "This is not a working LocalAi installation; these rows apply to what is there, and the " +
+        "This is not a working Local AI installation; these rows apply to what is there, and the " +
         "next page lists every path found.";
 
     private const string AfterAnError =
@@ -68,7 +68,7 @@ public sealed class ARemovalThatStoppedCanBeFinishedTests : IDisposable
         InstallerCulture.Current = InstallerLanguage.Russian;
 
         Assert.Equal(
-            "LocalAi здесь не установлен; эти строки относятся к тому, что от него осталось, а " +
+            "Local AI здесь не установлен; эти строки относятся к тому, что от него осталось, а " +
             "на следующей странице перечислены все найденные пути. Начните с одного из трёх " +
             "наборов и меняйте любые строки. Ничего не будет удалено, пока вы не подтвердите " +
             "это на следующей странице.",
@@ -95,7 +95,7 @@ public sealed class ARemovalThatStoppedCanBeFinishedTests : IDisposable
         InstallerCulture.Current = InstallerLanguage.Russian;
 
         Assert.Equal(
-            "Это не рабочая установка LocalAi; эти строки относятся к тому, что здесь есть, а на " +
+            "Это не рабочая установка Local AI; эти строки относятся к тому, что здесь есть, а на " +
             "следующей странице перечислены все найденные пути. Начните с одного из трёх наборов " +
             "и меняйте любые строки. Ничего не будет удалено, пока вы не подтвердите это на " +
             "следующей странице.",

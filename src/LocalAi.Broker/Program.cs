@@ -69,7 +69,7 @@ internal static class BrokerProgram
             if (policy.ModelResidency != ModelResidencyPolicy.RequireFullVram)
             {
                 Console.Error.WriteLine(
-                    "LocalAi broker: model residency policy is relaxed to " +
+                    "Local AI broker: model residency policy is relaxed to " +
                     $"{policy.ModelResidency}. Responses may be substantially slower than a " +
                     "fully resident load.");
             }
@@ -86,7 +86,7 @@ internal static class BrokerProgram
                 // and until now nothing read the field. This is what reads it.
                 (request, selection, result) =>
                     OutputValidation.For(catalog, request, selection, result),
-                diagnostic: message => Console.Error.WriteLine("LocalAi broker: " + message));
+                diagnostic: message => Console.Error.WriteLine("Local AI broker: " + message));
             var control = new ModelControlService(
                 catalog,
                 transport,
@@ -107,7 +107,7 @@ internal static class BrokerProgram
             var backendStarter = new BackendStarter(
                 ollamaUri,
                 new OllamaLaunchRecordStore(runtimeRoot),
-                message => Console.Error.WriteLine("LocalAi broker: " + message));
+                message => Console.Error.WriteLine("Local AI broker: " + message));
             // Standard error is where these went, and the broker runs detached, so nothing
             // read them: when a queue stalled for two hours the line naming the exception was
             // written to a stream with no reader (#335). It still goes there — a person running
@@ -164,7 +164,7 @@ internal static class BrokerProgram
                 diagnostic: diagnostic =>
                 {
                     Console.Error.WriteLine(
-                        $"LocalAi broker diagnostic: job={diagnostic.JobId:N} " +
+                        $"Local AI broker diagnostic: job={diagnostic.JobId:N} " +
                         $"operation={diagnostic.Operation} " +
                         $"exception={diagnostic.ExceptionType}.");
                     diagnosticLog.Write(
@@ -228,7 +228,7 @@ internal static class BrokerProgram
             // scheduling path no longer throws it, but a broker that dies must still say why and
             // leave a non-zero code behind for whoever started it.
             Console.Error.WriteLine(
-                $"LocalAi broker stopped: {exception.GetType().Name}: {exception.Message}");
+                $"Local AI broker stopped: {exception.GetType().Name}: {exception.Message}");
             return 70;
         }
         finally

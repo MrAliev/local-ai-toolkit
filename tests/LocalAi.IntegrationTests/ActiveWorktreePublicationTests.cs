@@ -26,7 +26,7 @@ public sealed class ActiveWorktreePublicationTests : IDisposable
         Directory.CreateDirectory(Root);
         Git("init", "-b", "main");
         Git("config", "user.email", "tests@local.invalid");
-        Git("config", "user.name", "LocalAi Tests");
+        Git("config", "user.name", "Local AI Tests");
         File.WriteAllText(Path.Combine(Root, "notes.md"), "OldSymbol\n");
         Git("add", ".");
         Git("commit", "-m", "Old source");

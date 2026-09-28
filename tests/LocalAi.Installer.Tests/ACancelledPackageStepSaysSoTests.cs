@@ -37,9 +37,9 @@ public sealed class ACancelledPackageStepSaysSoTests : IDisposable
         AssertFollows(
             wizard,
             fromFolder
-                ? $"LocalAi package 0.1.51: copying from {root.Path} and verifying..."
-                : "LocalAi package 0.1.51: downloading and verifying...",
-            "LocalAi package 0.1.51: cancelled before activation; not installed.");
+                ? $"Local AI package 0.1.51: copying from {root.Path} and verifying..."
+                : "Local AI package 0.1.51: downloading and verifying...",
+            "Local AI package 0.1.51: cancelled before activation; not installed.");
 
         wizard.Presentation.ChooseLanguage(InstallerLanguage.Russian);
 
@@ -62,8 +62,8 @@ public sealed class ACancelledPackageStepSaysSoTests : IDisposable
         Assert.Equal("not installed: the run was cancelled; 0.2.1-RC19 is still installed", package.Detail);
         AssertFollows(
             wizard,
-            $"LocalAi package 0.1.51: copying from {root.Path} and verifying...",
-            "LocalAi package 0.1.51: cancelled before activation; not installed. 0.2.1-RC19 is still the active version.");
+            $"Local AI package 0.1.51: copying from {root.Path} and verifying...",
+            "Local AI package 0.1.51: cancelled before activation; not installed. 0.2.1-RC19 is still the active version.");
 
         wizard.Presentation.ChooseLanguage(InstallerLanguage.Russian);
 
@@ -82,8 +82,8 @@ public sealed class ACancelledPackageStepSaysSoTests : IDisposable
         Assert.Equal("not installed: the run was cancelled", wizard.Finish.Results[0].Detail);
         AssertFollows(
             wizard,
-            "LocalAi package 0.1.51: downloading and verifying...",
-            "LocalAi package 0.1.51: cancelled before activation; not installed.");
+            "Local AI package 0.1.51: downloading and verifying...",
+            "Local AI package 0.1.51: cancelled before activation; not installed.");
     }
 
     /// <summary>Stopped before the package step began, the row still says it was not attempted.</summary>

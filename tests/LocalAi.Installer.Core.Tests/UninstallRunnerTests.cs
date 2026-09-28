@@ -181,7 +181,7 @@ public sealed class UninstallRunnerTests : IDisposable
         var runner = new RecordingProcessRunner
         {
             Answer = arguments => arguments is ["stop"]
-                ? Exit(1, "current_pointer_invalid: LocalAi current-version pointer is invalid.")
+                ? Exit(1, "current_pointer_invalid: Local AI current-version pointer is invalid.")
                 : Exit(0),
         };
         using var journal = InstallerRunJournal.Start(journalDirectory);
@@ -208,7 +208,7 @@ public sealed class UninstallRunnerTests : IDisposable
             recursive: true);
         var runner = new RecordingProcessRunner
         {
-            Answer = _ => Exit(1, "version_incomplete: LocalAi version '0.1.50' does not exist."),
+            Answer = _ => Exit(1, "version_incomplete: Local AI version '0.1.50' does not exist."),
         };
 
         var outcome = await Apply(
@@ -230,7 +230,7 @@ public sealed class UninstallRunnerTests : IDisposable
         var before = RemovalFixture.Snapshot(machine.Runtime);
         var runner = new RecordingProcessRunner
         {
-            Answer = _ => Exit(1, "version_incomplete: LocalAi version '0.1.50' is missing 'x.exe'."),
+            Answer = _ => Exit(1, "version_incomplete: Local AI version '0.1.50' is missing 'x.exe'."),
         };
         using var journal = InstallerRunJournal.Start(journalDirectory);
         var plan = await Plan(RemovalSelection.FromPreset(RemovalPreset.FullUninstall));

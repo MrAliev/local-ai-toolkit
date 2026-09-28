@@ -37,8 +37,8 @@ public static class InstallationFailureAdvice
         }
 
         return holdsInstalledVersions
-            ? $"{root} holds installed LocalAi versions, so it must not simply be deleted — " +
-                "it also holds this machine's repository indexes. Close every LocalAi process " +
+            ? $"{root} holds installed Local AI versions, so it must not simply be deleted — " +
+                "it also holds this machine's repository indexes. Close every Local AI process " +
                 "(clients registering the MCP servers included) and run the installer again; " +
                 "if it still refuses, report this message together with the directory's " +
                 "security settings."

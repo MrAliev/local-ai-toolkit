@@ -9,7 +9,7 @@ Please do not open a public issue. Report it privately instead: on the repositor
 
 A useful report says:
 
-- which LocalAi version you ran — **Apps & features** shows it beside **Local AI Toolkit**;
+- which Local AI version you ran — **Apps & features** shows it beside **Local AI Toolkit**;
 - what you did, what happened, and what you expected;
 - what an attacker gains, and what they need first.
 
@@ -23,7 +23,7 @@ The newest release. Older releases do not get fixes: update instead.
 ## What is in scope
 
 - the installer and the uninstaller, including how they verify a release;
-- the programs LocalAi installs: the launcher, the command lines, the MCP servers and the
+- the programs Local AI installs: the launcher, the command lines, the MCP servers and the
   broker;
 - anything that sends data off the computer contrary to [Privacy](docs/privacy.md).
 

@@ -34,7 +34,7 @@ public sealed class SyntheticTypeScriptProjectIntegrationTests : IDisposable
         await File.WriteAllTextAsync(
             source,
             "export function greet(name) { return `Hello ${name}`; }\n" +
-            "export const message = greet('LocalAi');\n",
+            "export const message = greet('Local AI');\n",
             TestContext.Current.CancellationToken);
         var workspace = CodeSearchSyncCommand.CreateSyntheticTypeScriptWorkspace(
             root,

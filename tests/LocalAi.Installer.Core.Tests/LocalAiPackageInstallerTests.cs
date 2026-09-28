@@ -184,7 +184,7 @@ public sealed class LocalAiPackageInstallerTests : IDisposable
             TestContext.Current.CancellationToken);
 
         Assert.Equal(LocalAiPackageInstallStatus.Busy, result.Status);
-        Assert.Equal("Another LocalAi installation is already in progress.", result.Reason);
+        Assert.Equal("Another Local AI installation is already in progress.", result.Reason);
         Assert.Equal(0, inspector.CallCount);
         Assert.False(Directory.Exists(layout.Root));
     }
@@ -204,7 +204,7 @@ public sealed class LocalAiPackageInstallerTests : IDisposable
                 CancellationToken.None,
                 factory));
 
-        Assert.Equal("Another LocalAi installation is already in progress.", error.Message);
+        Assert.Equal("Another Local AI installation is already in progress.", error.Message);
         Assert.DoesNotContain("hostile", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 

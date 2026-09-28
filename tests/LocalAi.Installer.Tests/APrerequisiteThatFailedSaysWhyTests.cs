@@ -108,7 +108,7 @@ public sealed class APrerequisiteThatFailedSaysWhyTests
         Assert.Equal(cause, StepDetail(logs, "Prerequisite SCIP TypeScript (@sourcegraph/scip-typescript)"));
         Assert.Contains(runner.Started, arguments => arguments.Contains("@sourcegraph/scip-python@0.6.6"));
         Assert.Contains(
-            "LocalAi package: no verified release was selected",
+            "Local AI package: no verified release was selected",
             wizard.Finish.Progress,
             StringComparison.Ordinal);
         var rows = PrerequisiteRows(wizard);
@@ -146,7 +146,7 @@ public sealed class APrerequisiteThatFailedSaysWhyTests
             wizard.Finish.Progress,
             StringComparison.Ordinal);
         Assert.Contains("Failed: Process tree 42 did not confirm exit.", wizard.Finish.Progress, StringComparison.Ordinal);
-        Assert.DoesNotContain("LocalAi package:", wizard.Finish.Progress, StringComparison.Ordinal);
+        Assert.DoesNotContain("Local AI package:", wizard.Finish.Progress, StringComparison.Ordinal);
         var rows = PrerequisiteRows(wizard);
         Assert.Contains(
             (RunMark.Warned, "SCIP TypeScript",
@@ -188,7 +188,7 @@ public sealed class APrerequisiteThatFailedSaysWhyTests
             StringComparison.Ordinal);
         Assert.Equal(cause, StepDetail(logs, "Prerequisite SCIP Python (@sourcegraph/scip-python)"));
         Assert.Contains(
-            "LocalAi package: no verified release was selected",
+            "Local AI package: no verified release was selected",
             wizard.Finish.Progress,
             StringComparison.Ordinal);
         Assert.Contains(
@@ -230,7 +230,7 @@ public sealed class APrerequisiteThatFailedSaysWhyTests
             wizard.Finish.Progress,
             StringComparison.Ordinal);
         Assert.Contains("Failed: Process tree 42 did not confirm exit.", wizard.Finish.Progress, StringComparison.Ordinal);
-        Assert.DoesNotContain("LocalAi package:", wizard.Finish.Progress, StringComparison.Ordinal);
+        Assert.DoesNotContain("Local AI package:", wizard.Finish.Progress, StringComparison.Ordinal);
         Assert.Contains(
             (RunMark.Warned, "SCIP Python",
                 "outcome unknown: npm installed it, but a check afterwards could not be stopped and may still " +

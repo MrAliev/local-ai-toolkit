@@ -2,11 +2,11 @@
 
 [Русская версия](privacy.ru.md)
 
-LocalAi runs its models on your computer. Your code, prompts, logs, images and the answers
+Local AI runs its models on your computer. Your code, prompts, logs, images and the answers
 about them go to Ollama on this computer and nowhere else. The program collects nothing
 about you and sends nothing about you anywhere.
 
-This page lists every connection LocalAi makes to another computer, what starts it, and what
+This page lists every connection Local AI makes to another computer, what starts it, and what
 it sends.
 
 ## What stays on this computer
@@ -31,7 +31,7 @@ it sends.
 | Models | the model registry Ollama uses | when you choose models in the installer, run `localai model pull`, or approve the `local_models_sync` tool | whatever Ollama sends |
 | GitHub CLI fallback | `github.com`, signed in as you | only when the anonymous download failed and the GitHub CLI is installed | whatever `gh` sends |
 
-The update check sends no identifier, no account and nothing about how you use LocalAi. It
+The update check sends no identifier, no account and nothing about how you use Local AI. It
 never downloads or installs anything by itself.
 
 ## Your choices
@@ -41,7 +41,7 @@ never downloads or installs anything by itself.
 - Install from a release folder instead of GitHub: the installer then reads the release from
   the folder.
 - Skip prerequisites and models in the installer and install them yourself.
-- Clear local data with `localai prune`, or remove LocalAi from **Apps & features**.
+- Clear local data with `localai prune`, or remove Local AI from **Apps & features**.
 
 ## Changes
 

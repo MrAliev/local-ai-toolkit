@@ -105,7 +105,7 @@ internal sealed class ActiveVersionBatchLease : IActiveVersionBatchLease
                 StringComparison.Ordinal))
         {
             throw new CurrentPointerChangedException(
-                "The active LocalAi version does not match the verified release.");
+                "The active Local AI version does not match the verified release.");
         }
     }
 }

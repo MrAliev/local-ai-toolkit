@@ -54,7 +54,7 @@ public sealed class RemovalTextsSpeakRussianTests : IDisposable
 
         Assert.Equal("Binaries, launcher, version pointer", RemovalMatrix.Title(RemovalItem.Binaries));
         Assert.Equal(
-            "Removing these is the uninstall. The hooks LocalAi wrote into Claude Code point " +
+            "Removing these is the uninstall. The hooks Local AI wrote into Claude Code point " +
             "at the launcher, so they go with them.",
             RemovalMatrix.Note(RemovalItem.Binaries));
         Assert.Equal("Full uninstall", RemovalMatrix.Title(RemovalPreset.FullUninstall));

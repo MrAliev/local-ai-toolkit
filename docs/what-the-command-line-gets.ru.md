@@ -19,7 +19,7 @@
 | `codesearch get-chunk --id …` | забрать фрагмент целиком |
 | `codesearch status` | где лежит индекс, отстал ли, подключён ли репозиторий |
 | `codesearch scan` | что вообще попадёт в индекс |
-| `codesearch index` / `overlay` | собрать индекс вручную, вне управления LocalAi |
+| `codesearch index` / `overlay` | собрать индекс вручную, вне управления Local AI |
 | `codesearch evaluate --cases …` | прогнать корпус оценки качества поиска |
 | `localai semantic definition` / `references` / `implementations` / `relationships` | навигация по объявлениям |
 | `localai semantic impact --path src/Type.cs --line 12 --json` | прямые ссылки и входящие связи C# из индекса |
@@ -134,7 +134,7 @@ SHA-256 корпуса, уточнённые аннотации, парамет�
 - `codesearch scan` — что вообще попадёт в индекс. Смотрят при настройке репозитория, чтобы
   понять объём работы, а не при ответе на вопрос о коде.
 - `codesearch evaluate` — прогон корпуса качества поиска. Инструмент разработки самого
-  LocalAi, а не работы с Вашим кодом.
+  Local AI, а не работы с Вашим кодом.
 
 ---
 

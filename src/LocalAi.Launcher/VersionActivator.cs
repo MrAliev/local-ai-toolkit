@@ -91,7 +91,7 @@ public sealed class VersionActivator
                 {
                     throw new LauncherException(
                         "version_in_use",
-                        "The active LocalAi version is currently in use.");
+                        "The active Local AI version is currently in use.");
                 }
             }
 
@@ -120,7 +120,7 @@ public sealed class VersionActivator
             {
                 throw new LauncherException(
                     "current_pointer_invalid",
-                    "Committed LocalAi current-version pointer did not read back.");
+                    "Committed Local AI current-version pointer did not read back.");
             }
         }
         catch (ActivationCoordinationException exception)
@@ -132,14 +132,14 @@ public sealed class VersionActivator
         {
             throw new LauncherException(
                 "current_pointer_invalid",
-                "The LocalAi current-version pointer is invalid.");
+                "The Local AI current-version pointer is invalid.");
         }
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException or Win32Exception)
         {
             throw new LauncherException(
                 "activation_failed",
-                "LocalAi activation failed.");
+                "Local AI activation failed.");
         }
         finally
         {

@@ -16,7 +16,7 @@ namespace LocalAi.Installer.Tests;
 /// </summary>
 public sealed class ARunRefusesToMeetAnotherTests : IDisposable
 {
-    private const string AnotherRun = "Another LocalAi installer or uninstaller is running on this computer.";
+    private const string AnotherRun = "Another Local AI installer or uninstaller is running on this computer.";
 
     public ARunRefusesToMeetAnotherTests() => InstallerCulture.Current = InstallerLanguage.English;
 

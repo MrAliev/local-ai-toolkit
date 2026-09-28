@@ -141,7 +141,7 @@ public sealed class RollingBackAnUpdateNamesThePriorReleaseTests : IDisposable
         using var journal = InstallerRunJournal.Start(Path.Combine(root, "logs"));
         var step = journal.BeginStep(
             InstallerRunEffectKind.PackageActivation,
-            "LocalAi package 0.2.0");
+            "Local AI package 0.2.0");
         journal.CompleteStep(step, "Activated v2; v1 was active before.", isReversible: true, undo);
         journal.Finish(InstallerRunOutcome.Failed);
         return InstallerRunJournal.Load(journal.JournalPath);

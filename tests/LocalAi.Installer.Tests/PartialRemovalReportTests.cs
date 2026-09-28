@@ -112,9 +112,9 @@ public sealed class PartialRemovalReportTests : IDisposable
     /// <summary>#813: the refusal read "…runtime LocalAi.. Скопируйте…" in the RC32 sandbox.</summary>
     [Theory]
     [InlineData(InstallerLanguage.English,
-        "Could not save the report: Choose a report folder outside the LocalAi runtime being removed. Copy the details below.")]
+        "Could not save the report: Choose a report folder outside the Local AI runtime being removed. Copy the details below.")]
     [InlineData(InstallerLanguage.Russian,
-        "Не удалось сохранить отчёт: Выберите папку отчётов вне удаляемого рантайма LocalAi. Скопируйте сведения ниже.")]
+        "Не удалось сохранить отчёт: Выберите папку отчётов вне удаляемого рантайма Local AI. Скопируйте сведения ниже.")]
     public async Task The_refused_report_folder_reads_as_one_clean_sentence(InstallerLanguage language, string expected)
     {
         InstallerCulture.Current = language;

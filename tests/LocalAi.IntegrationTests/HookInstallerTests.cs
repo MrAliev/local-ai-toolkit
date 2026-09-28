@@ -237,7 +237,7 @@ public sealed class HookInstallerTests : IDisposable
         };
         startInfo.Environment.Remove("LOCALAI_LAUNCHER_PATH");
         using var process = Process.Start(startInfo)
-            ?? throw new InvalidOperationException("Could not start LocalAi CLI.");
+            ?? throw new InvalidOperationException("Could not start Local AI CLI.");
 
         await process.WaitForExitAsync(TestContext.Current.CancellationToken);
         var error = await process.StandardError.ReadToEndAsync(

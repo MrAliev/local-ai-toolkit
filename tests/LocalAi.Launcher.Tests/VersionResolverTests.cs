@@ -105,7 +105,7 @@ public sealed class VersionResolverTests
             new VersionResolver(install.BinRoot).ValidateVersion(version));
 
         Assert.Equal("version_path_invalid", error.Code);
-        Assert.Equal("The LocalAi version name is invalid.", error.Message);
+        Assert.Equal("The Local AI version name is invalid.", error.Message);
     }
 
     [Fact]

@@ -28,7 +28,7 @@ public sealed class RuntimeIndexLayoutTests
             File.WriteAllText(Path.Combine(repository, "A.cs"), "class A {}\r\n");
             Git(repository, "init", "-b", "main");
             Git(repository, "config", "user.email", "tests@local.invalid");
-            Git(repository, "config", "user.name", "LocalAi Tests");
+            Git(repository, "config", "user.name", "Local AI Tests");
             Git(repository, "add", "A.cs");
             Git(repository, "commit", "-m", "Initial");
 
@@ -250,7 +250,7 @@ public sealed class RuntimeIndexLayoutTests
             File.WriteAllText(Path.Combine(repository, "README.md"), "# Notes\r\n");
             Git(repository, "init", "-b", "main");
             Git(repository, "config", "user.email", "tests@local.invalid");
-            Git(repository, "config", "user.name", "LocalAi Tests");
+            Git(repository, "config", "user.name", "Local AI Tests");
             Git(repository, "add", ".");
             Git(repository, "commit", "-m", "Initial");
 
@@ -298,7 +298,7 @@ public sealed class RuntimeIndexLayoutTests
             File.WriteAllText(Path.Combine(repository, "README.md"), "# Notes\r\n");
             Git(repository, "init", "-b", "main");
             Git(repository, "config", "user.email", "tests@local.invalid");
-            Git(repository, "config", "user.name", "LocalAi Tests");
+            Git(repository, "config", "user.name", "Local AI Tests");
             Git(repository, "add", ".");
             Git(repository, "commit", "-m", "Initial");
 

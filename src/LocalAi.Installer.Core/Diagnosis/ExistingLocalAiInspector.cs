@@ -204,7 +204,7 @@ public sealed partial class ExistingLocalAiInspector(
         if (!Path.GetFullPath(path).StartsWith(prefix, comparison))
         {
             throw new IOException(
-                $"Resolved path '{path}' is outside the LocalAi versions directory.");
+                $"Resolved path '{path}' is outside the Local AI versions directory.");
         }
     }
 

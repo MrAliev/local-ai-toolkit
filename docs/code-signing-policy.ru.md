@@ -2,7 +2,7 @@
 
 [English version](code-signing-policy.md)
 
-Программы LocalAi для Windows должны подписываться через бесплатную подпись кода SignPath
+Программы Local AI для Windows должны подписываться через бесплатную подпись кода SignPath
 Foundation для проектов с открытым исходным кодом. **Пока в заметках к релизу не сказано, что
 он подписан, его установщик не подписан Authenticode.** Сегодня релиз защищает его манифест:
 он подписан ECDSA P-256, и установщик принимает пакет, только если манифест сходится с ключом,
@@ -23,7 +23,7 @@ Free code signing provided by [SignPath.io](https://signpath.io), certificate by
 
 | Файл | Что это |
 | --- | --- |
-| `LocalAi.Installer.exe` | установщик; он же удаляет LocalAi |
+| `LocalAi.Installer.exe` | установщик; он же удаляет Local AI |
 | `localai-launcher.exe` | постоянная точка входа, на которую зарегистрированы все клиенты |
 | `localai.exe` | командная строка |
 | `codesearch.exe` | командная строка поиска по коду |
@@ -54,7 +54,7 @@ Free code signing provided by [SignPath.io](https://signpath.io), certificate by
 
 ## Конфиденциальность
 
-Страница [«Конфиденциальность»](privacy.ru.md) перечисляет каждое соединение LocalAi с другим
+Страница [«Конфиденциальность»](privacy.ru.md) перечисляет каждое соединение Local AI с другим
 компьютером и что его запускает.
 
 ## Как сообщить о проблеме

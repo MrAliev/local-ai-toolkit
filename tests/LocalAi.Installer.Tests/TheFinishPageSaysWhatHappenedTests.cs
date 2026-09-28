@@ -86,18 +86,18 @@ public sealed class TheFinishPageSaysWhatHappenedTests
         Assert.Equal(3, rows.Length);
         Assert.All(rows, row =>
         {
-            Assert.Equal("skipped: this run did not install the LocalAi package", row.Detail);
+            Assert.Equal("skipped: this run did not install the Local AI package", row.Detail);
             Assert.Equal(RunMark.None, row.Mark);
         });
         Assert.Contains(
-            "Client applications: skipped, because this run did not install the LocalAi package.",
+            "Client applications: skipped, because this run did not install the Local AI package.",
             wizard.Finish.Progress,
             StringComparison.Ordinal);
         Assert.DoesNotContain("not there", wizard.Finish.Progress, StringComparison.Ordinal);
 
         InstallerCulture.Current = InstallerLanguage.Russian;
         Assert.Equal(
-            "пропущено: этот запуск не установил пакет LocalAi",
+            "пропущено: этот запуск не установил пакет Local AI",
             RunResults.Client(new ClientRunOutcome("Codex", ClientRunState.Skipped)).Detail);
     }
 
@@ -106,10 +106,10 @@ public sealed class TheFinishPageSaysWhatHappenedTests
     /// check throws, so the type alone does not make it a refusal.
     /// </summary>
     [Theory]
-    [InlineData("LocalAi package installation failed.", PackageOutcomeKind.Failed)]
+    [InlineData("Local AI package installation failed.", PackageOutcomeKind.Failed)]
     [InlineData("An installed file failed identity verification.", PackageOutcomeKind.Failed)]
     [InlineData(
-        "The LocalAi installation layout is unsafe (check: ValidateAcl).",
+        "The Local AI installation layout is unsafe (check: ValidateAcl).",
         PackageOutcomeKind.Refused)]
     [InlineData("The installation layout is unsafe.", PackageOutcomeKind.Refused)]
     public void Only_a_layout_refusal_is_reported_as_one(string message, PackageOutcomeKind expected)
@@ -122,9 +122,9 @@ public sealed class TheFinishPageSaysWhatHappenedTests
     {
         Assert.Equal(
             "not installed: the installation stopped with an error. Technical details: " +
-            "LocalAi package installation failed.",
+            "Local AI package installation failed.",
             RunResults.PackageDetail(
-                new PackageOutcome(PackageOutcomeKind.Failed, Reason: "LocalAi package installation failed."),
+                new PackageOutcome(PackageOutcomeKind.Failed, Reason: "Local AI package installation failed."),
                 installed: false));
     }
 

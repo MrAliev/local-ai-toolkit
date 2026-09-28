@@ -33,7 +33,7 @@ public sealed class InstallerRunRollbackTests : IDisposable
         using var journal = InstallerRunJournal.Start(journalDirectory);
         var step = journal.BeginStep(
             InstallerRunEffectKind.PackageActivation,
-            "LocalAi package v2");
+            "Local AI package v2");
         journal.CompleteStep(
             step,
             "Activated v2; v1 was active before.",
@@ -327,7 +327,7 @@ public sealed class InstallerRunRollbackTests : IDisposable
         var journal = InstallerRunJournal.Start(journalDirectory);
         var step = journal.BeginStep(
             InstallerRunEffectKind.PackageActivation,
-            $"LocalAi package {activated}");
+            $"Local AI package {activated}");
         journal.CompleteStep(
             step,
             $"Activated {activated}; {prior} was active before.",

@@ -159,14 +159,14 @@ public sealed class ThePackagePageSaysWhyTests : IDisposable
             "Release 0.9.0 is signed correctly but is not compatible with this installer. Use " +
             "the installer published with release 0.9.0.",
             page.StatusText);
-        Assert.Equal("LocalAi package: 0.9.0 is not compatible — it will not be installed", page.ReviewText);
+        Assert.Equal("Local AI package: 0.9.0 is not compatible — it will not be installed", page.ReviewText);
 
         InstallerCulture.Current = InstallerLanguage.Russian;
         Assert.Equal(
             "Релиз 0.9.0 подписан верно, но несовместим с этим установщиком. Используйте " +
             "установщик, опубликованный вместе с релизом 0.9.0.",
             page.StatusText);
-        Assert.Equal("Пакет LocalAi: 0.9.0 несовместим — он не будет установлен", page.ReviewText);
+        Assert.Equal("Пакет Local AI: 0.9.0 несовместим — он не будет установлен", page.ReviewText);
     }
 
     /// <summary>What the page shows is what the run log is given, and nothing about an older question.</summary>
@@ -255,7 +255,7 @@ public sealed class ThePackagePageSaysWhyTests : IDisposable
             refusal: new(ReleaseRefusalKind.NoPublishedRelease, Repository: "owner/name"))));
 
         Assert.Contains(
-            "LocalAi package: no verified release was selected, so nothing was installed. The " +
+            "Local AI package: no verified release was selected, so nothing was installed. The " +
             "last check of the release said: " + Said + " Return to the package step and check " +
             "the release before continuing.",
             log,
@@ -270,7 +270,7 @@ public sealed class ThePackagePageSaysWhyTests : IDisposable
             resolve: false);
 
         Assert.Contains(
-            "LocalAi package: no verified release was selected, so nothing was installed. " +
+            "Local AI package: no verified release was selected, so nothing was installed. " +
             "Return to the package step and check the release before continuing.",
             log,
             StringComparison.Ordinal);
@@ -334,10 +334,10 @@ public sealed class ThePackagePageSaysWhyTests : IDisposable
         "ManifestRejectedInFolder" => (
             new(ReleaseRefusalKind.ManifestRejectedInFolder),
             "The release manifest in the folder failed its signature check: it is damaged, " +
-            "altered or not signed with the LocalAi release key. Copy the three files again from " +
+            "altered or not signed with the Local AI release key. Copy the three files again from " +
             "the release.",
             "Манифест релиза в папке не прошёл проверку подписи: он повреждён, изменён или " +
-            "подписан не ключом релизов LocalAi. Скопируйте три файла релиза заново."),
+            "подписан не ключом релизов Local AI. Скопируйте три файла релиза заново."),
         "ManifestRejectedOnGitHub" => (
             new(ReleaseRefusalKind.ManifestRejectedOnGitHub, Release: "0.1.45"),
             "The manifest of release 0.1.45 on GitHub failed its signature check and was not used.",

@@ -94,13 +94,13 @@ public static class AgentChoiceMapping
         choice switch
         {
             AgentChoice.McpOnly => InstallerCulture.Pick(
-                "Adds the LocalAi code search and local model servers to this client.",
+                "Adds the Local AI code search and local model servers to this client.",
                 "Добавляет этому клиенту серверы поиска по коду и локальных " +
-                "моделей LocalAi."),
+                "моделей Local AI."),
             AgentChoice.InstructionsOnly => InstallerCulture.Pick(
-                "Adds the managed LocalAi instructions block, without touching server " +
+                "Adds the managed Local AI instructions block, without touching server " +
                 "registrations.",
-                "Добавляет управляемый блок инструкций LocalAi, не трогая " +
+                "Добавляет управляемый блок инструкций Local AI, не трогая " +
                 "регистрации серверов."),
             AgentChoice.McpAndInstructions => InstallerCulture.Pick(
                 "Both of the above. This is what a first-time setup normally wants.",

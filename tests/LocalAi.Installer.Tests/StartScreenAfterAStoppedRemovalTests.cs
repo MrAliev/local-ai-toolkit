@@ -27,7 +27,7 @@ public sealed class StartScreenAfterAStoppedRemovalTests : IDisposable
         var start = Start(ExistingLocalAiState.Leftovers);
 
         Assert.Equal(
-            "LocalAi is not installed, but some of its files are still on this computer.",
+            "Local AI is not installed, but some of its files are still on this computer.",
             start.Headline);
         Assert.Equal(
             "You can install it again, or remove what is left. Nothing is changed until you " +
@@ -41,11 +41,11 @@ public sealed class StartScreenAfterAStoppedRemovalTests : IDisposable
     {
         var start = Start(ExistingLocalAiState.SigningKeysOnly);
 
-        Assert.Equal("LocalAi is not installed on this computer.", start.Headline);
+        Assert.Equal("Local AI is not installed on this computer.", start.Headline);
         Assert.Equal(
             "Install it to give your assistants local code search and local models. The " +
             "release signing keys from an earlier installation are still here; removing " +
-            "LocalAi can take them too.",
+            "Local AI can take them too.",
             start.Detail);
         AssertInstallAndRemoveOnly(start);
     }
@@ -58,7 +58,7 @@ public sealed class StartScreenAfterAStoppedRemovalTests : IDisposable
         var start = Start(ExistingLocalAiState.Leftovers);
 
         Assert.Equal(
-            "LocalAi не установлен, но часть его файлов ещё на этом компьютере.",
+            "Local AI не установлен, но часть его файлов ещё на этом компьютере.",
             start.Headline);
         Assert.Equal(
             "Можно установить его заново или удалить то, что осталось. Ничего не изменится, " +
@@ -79,10 +79,10 @@ public sealed class StartScreenAfterAStoppedRemovalTests : IDisposable
 
         var start = Start(ExistingLocalAiState.SigningKeysOnly);
 
-        Assert.Equal("LocalAi не установлен на этом компьютере.", start.Headline);
+        Assert.Equal("Local AI не установлен на этом компьютере.", start.Headline);
         Assert.Equal(
             "Установите его, чтобы дать вашим ассистентам локальный поиск по коду и локальные " +
-            "модели. Ключи подписи релизов от прежней установки ещё здесь; удаление LocalAi " +
+            "модели. Ключи подписи релизов от прежней установки ещё здесь; удаление Local AI " +
             "может убрать и их.",
             start.Detail);
     }
@@ -119,7 +119,7 @@ public sealed class StartScreenAfterAStoppedRemovalTests : IDisposable
 
         page.Load(HermeticDiagnosis.Supported(existingLocalAi: state), registryAnswered: true);
 
-        var row = page.Checks.Single(check => check.Name == "Existing LocalAi");
+        var row = page.Checks.Single(check => check.Name == "Existing Local AI");
         Assert.Equal(CheckStatus.Ok, row.Status);
         Assert.Equal(detail, row.Detail);
     }

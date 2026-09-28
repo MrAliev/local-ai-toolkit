@@ -58,7 +58,7 @@
     <value>{0}, коммит {1}</value>
   </data>
   <data name="CliUnavailable" xml:space="preserve">
-    <value>LocalAi CLI недоступен. Ожидался: {0}</value>
+    <value>Local AI CLI недоступен. Ожидался: {0}</value>
   </data>
   <data name="Days" xml:space="preserve">
     <value>{0} д</value>
@@ -243,7 +243,7 @@
     <comment>Printed once, on the first answer after the phase reaches Completed. Having told a caller that answers come from the last published index, the product owes it the moment that stops being true. Lower case: it follows the literal 'Sync: ' prefix.</comment>
   </data>
   <data name="SyncFailed" xml:space="preserve">
-    <value>Сбой синхронизации LocalAi, код {0}: {1}</value>
+    <value>Сбой синхронизации Local AI, код {0}: {1}</value>
   </data>
   <data name="SyncNotSearchableYet" xml:space="preserve">
     <value>Пока сборка не закончится, ответы приходят из последнего опубликованного индекса.</value>
@@ -264,7 +264,7 @@
     <value>Выгружено из памяти: {0}</value>
   </data>
   <data name="UpdateAvailable" xml:space="preserve">
-    <value>Доступна LocalAi {0} (установлена {1}). {2}</value>
+    <value>Доступна Local AI {0} (установлена {1}). {2}</value>
     <comment>The `Update:` label and its padding stay literal, aligned to the same column as the rest.</comment>
   </data>
   <data name="WhileItRuns" xml:space="preserve">

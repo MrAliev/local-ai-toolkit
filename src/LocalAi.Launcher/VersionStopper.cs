@@ -51,7 +51,7 @@ public sealed class VersionStopper
         var canonicalBinRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(binRoot));
         runtimeRoot = Path.GetDirectoryName(canonicalBinRoot)
             ?? throw new ArgumentException(
-                "The LocalAi bin directory has no runtime root.",
+                "The Local AI bin directory has no runtime root.",
                 nameof(binRoot));
         resolver = new VersionResolver(canonicalBinRoot);
         this.processController = processController

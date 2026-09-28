@@ -724,7 +724,7 @@ static async Task<int> RunAsync(string[] args, bool machineReadable, CommandStre
 
         var result = await CodeSearchSyncCommand.ExecuteAsync(root, streams.Error);
         streams.Error.WriteLine(
-            $"LocalAi index synchronized: generation={result.GenerationId}, " +
+            $"Local AI index synchronized: generation={result.GenerationId}, " +
             $"overlays={result.OverlaysBuilt}" +
             (result.WorktreesSkipped > 0
                 ? $", skipped={result.WorktreesSkipped}"

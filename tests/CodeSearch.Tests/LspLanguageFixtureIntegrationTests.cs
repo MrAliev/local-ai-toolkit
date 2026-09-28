@@ -52,7 +52,7 @@ public sealed class LspLanguageFixtureIntegrationTests : IDisposable
         var usageText = Write("src/usage.ts", """
             import { greet } from "./definition";
 
-            export const message = greet("LocalAi");
+            export const message = greet("Local AI");
             """);
 
         await using var manager = Manager(
@@ -93,7 +93,7 @@ public sealed class LspLanguageFixtureIntegrationTests : IDisposable
         var usageText = Write("usage.py", """
             from definition import greet
 
-            message = greet("LocalAi")
+            message = greet("Local AI")
             """);
 
         await using var manager = Manager(executable, ["--stdio"]);
