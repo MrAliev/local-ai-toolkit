@@ -74,6 +74,15 @@ public sealed class TheProductIsCalledLocalAITests
         Assert.True(offenders.Length == 0, Message("markup", offenders));
     }
 
+    /// <summary>Read as its letter, the escape made "LocalAi\r\n" into "LocalAir", which is no word.</summary>
+    [Fact]
+    public void A_line_break_escaped_after_the_name_leaves_it_a_word()
+    {
+        var literal = Assert.Single(StringLiterals("var s = \"shared LocalAi\\r\\nbroker\";"));
+
+        Assert.Matches(Word, literal.Value);
+    }
+
     /// <summary>Prose only: code spans, code blocks and link targets carry commands and paths.</summary>
     [Fact]
     public void No_document_spells_the_name_as_one_word_in_its_prose()
@@ -197,7 +206,8 @@ public sealed class TheProductIsCalledLocalAITests
                         }
                         else if (!verbatim && d == '\\')
                         {
-                            value.Append(Next(code, index) == 'n' ? '\n' : Next(code, index));
+                            var escaped = Next(code, index);
+                            value.Append(escaped switch { 'n' => '\n', 'r' => '\r', 't' => '\t', _ => escaped });
                             index += 2;
                         }
                         else
