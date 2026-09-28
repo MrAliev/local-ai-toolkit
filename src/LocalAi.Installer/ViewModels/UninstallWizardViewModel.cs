@@ -387,9 +387,10 @@ public sealed class UninstallWizardViewModel : ObservableObject
     public bool HasReportPath => reportPath is not null && File.Exists(reportPath);
     public bool HasReport => runEnd != RunEnd.NotRun;
     public bool HasReportSaveError => reportSaveError is not null;
+    // The reason is a sentence of its own, usually ending in its own full stop.
     public string ReportSaveError => reportSaveError is null ? string.Empty : string.Format(
         InstallerCulture.Pick("Could not save the report: {0}. Copy the details below.",
-            "Не удалось сохранить отчёт: {0}. Скопируйте сведения ниже."), reportSaveError);
+            "Не удалось сохранить отчёт: {0}. Скопируйте сведения ниже."), reportSaveError.TrimEnd('.'));
     public string ReportText => string.Join(
         Environment.NewLine + Environment.NewLine,
         new[]
@@ -869,7 +870,7 @@ public sealed class UninstallWizardViewModel : ObservableObject
         {
             throw new IOException(InstallerCulture.Pick(
                 "Choose a report folder outside the LocalAi runtime being removed.",
-                "Выберите папку отчётов вне удаляемого runtime LocalAi."));
+                "Выберите папку отчётов вне удаляемого рантайма LocalAi."));
         }
 
         for (var ancestor = new DirectoryInfo(full); ancestor is not null; ancestor = ancestor.Parent)
