@@ -20,8 +20,8 @@
 | | Зачем |
 | --- | --- |
 | **.NET SDK 10** | семантический индекс C#, на котором стоит точная навигация, строится загрузкой решения через установленный SDK. Нарезке C# на типы и члены он не нужен: её Roslyn делает внутри LocalAi |
-| **Node.js 20** + **SCIP TypeScript** | нарезка TypeScript и JavaScript по символам |
-| **Python 3.10+** + **SCIP Python** | нарезка Python по символам |
+| **Node.js 20** + **SCIP TypeScript** | нарезка TypeScript и JavaScript по объявлениям |
+| **Python 3.10+** + **SCIP Python** | нарезка Python по объявлениям |
 
 **Необязательно:**
 
@@ -36,6 +36,6 @@
 
 ---
 
-← [Из консоли: не про токены, а про время](from-the-command-line-not-tokens-but-time.ru.md) · [Оглавление](README.ru.md#оглавление) · [Как установить](installing.ru.md) →
+← [Как это устроено](how-it-works.ru.md) · [Оглавление](README.ru.md#оглавление) · [Как установить](installing.ru.md) →
 
 <!-- Generated from the README by DocumentationSiteTests. -->

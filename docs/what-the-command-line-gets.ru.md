@@ -21,7 +21,7 @@
 | `codesearch scan` | что вообще попадёт в индекс |
 | `codesearch index` / `overlay` | собрать индекс вручную, вне управления LocalAi |
 | `codesearch evaluate --cases …` | прогнать корпус оценки качества поиска |
-| `localai semantic definition` / `references` / `implementations` / `relationships` | навигация по символу |
+| `localai semantic definition` / `references` / `implementations` / `relationships` | навигация по объявлениям |
 | `localai semantic impact --path src/Type.cs --line 12 --json` | прямые ссылки и входящие связи C# из индекса |
 | `localai ask "…" <file> …` | механическая работа по файлам |
 | `localai triage <log>` | разобрать лог |
@@ -50,7 +50,7 @@
 копии доступными и допускает повторный запуск. Сам по себе таймаут ожидания MCP не
 доказывает сбой синхронизации: следите через `localai repo status --follow`.
 
-`codesearch evaluate --cases …` перед поиском сопоставляет эталонные символы C# с их
+`codesearch evaluate --cases …` перед поиском сопоставляет эталонные имена C# с их
 объявлениями в исходниках. Части `[1/6]` и `[2/6]` относятся к одному эталону. Необязательные
 поля `signature` и `namespace` уточняют неоднозначные имена; если сигнатура всё ещё подходит
 к нескольким объявлениям, оценщик отклоняет такой эталон. Для эталона только с путём
