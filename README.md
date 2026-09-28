@@ -20,6 +20,40 @@ question answered from the local index brings back only the fragments that match
 A subscription to any cloud agent is optional: the same tools answer from the command line,
 if you would rather work on your own.
 
+<!-- contents:begin (generated, do not edit) -->
+**Contents**
+
+- [Two ways to use it](#two-ways-to-use-it)
+- [What a cloud agent gets](#what-a-cloud-agent-gets)
+- [What the command line gets](#what-the-command-line-gets)
+- [Code search is not text search](#code-search-is-not-text-search)
+- [With a cloud agent: what stops costing tokens](#with-a-cloud-agent-what-stops-costing-tokens)
+  - [It works by default, and you can see it](#it-works-by-default-and-you-can-see-it)
+  - [If something does not work the way you want](#if-something-does-not-work-the-way-you-want)
+- [From the command line: not tokens, but time](#from-the-command-line-not-tokens-but-time)
+- [Dependencies](#dependencies)
+- [Installing](#installing)
+  - [What it will compute on](#what-it-will-compute-on)
+- [Using it with a cloud agent](#using-it-with-a-cloud-agent)
+- [Using it from the command line](#using-it-from-the-command-line)
+  - [Step 1. How to run anything](#step-1-how-to-run-anything)
+  - [Step 2. Where to run it from](#step-2-where-to-run-it-from)
+  - [Step 3. Connect a repository](#step-3-connect-a-repository)
+  - [Step 4. Use it](#step-4-use-it)
+- [What language it answers in](#what-language-it-answers-in)
+- [Updating and removing](#updating-and-removing)
+  - [Update](#update)
+  - [Clear the index, keep the product](#clear-the-index-keep-the-product)
+  - [Remove it entirely](#remove-it-entirely)
+- [Impact evidence: C# pilot](#impact-evidence-c-pilot)
+- [Documentation packages](#documentation-packages)
+- [Building and testing](#building-and-testing)
+  - [Independent quality corpora](#independent-quality-corpora)
+- [Licence](#licence)
+
+[Read it page by page](docs/README.md) — the same text, one section per page.
+<!-- contents:end -->
+
 ---
 
 ## Two ways to use it
@@ -154,7 +188,7 @@ cases. With one annotated target for each of the 18 answerable queries, Precisio
 thresholds remain unchanged. Concurrent broker work and unavailable queue/residency
 telemetry make its timings unsuitable as an isolated performance benchmark. Independent
 corpora were built in [#601](https://github.com/MrAliev/local-ai-toolkit/issues/601), now closed;
-their baseline is under [Independent quality corpora](#independent-quality-corpora) below.
+their baseline is under [Independent quality corpora](#independent-quality-corpora).
 
 **Not on the command line.** `lsp_open_document` and `lsp_close_document` take the text of an
 unsaved buffer — and in a shell there is no such buffer, so there is nothing to hand over.
@@ -665,7 +699,7 @@ lai codesearch status --root C:\work\myapp
 ### Step 4. Use it
 
 The full list of commands is in the [What the command line gets](#what-the-command-line-gets)
-table above. Here is what they look like in use.
+table. Here is what they look like in use.
 
 #### Find code by meaning
 
@@ -673,8 +707,7 @@ table above. Here is what they look like in use.
 lai codesearch search --query "who is subscribed to a broker job finishing" --top 3
 ```
 
-What it printed on 2026-09-06, the run quoted above; line numbers and scores move as the code
-changes:
+What it printed on 2026-09-06; line numbers and scores move as the code changes:
 
 ```
 src\LocalAi.Broker.Core\DurableQueue.cs:1318-1323  [Method]  cos=0.616
