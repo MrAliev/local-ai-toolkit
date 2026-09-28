@@ -1,26 +1,44 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
-  <!-- LocalAi. An L with a seal in the corner it leaves empty: the product's initial, and
-       beside it the sealed generation of the index - an immutable ring around a fixed core.
+  <!-- LocalAi. An L, and in the corner it leaves empty an octagonal frame around the letters
+       AI: the product's name in its two parts.
 
-       One ink, #2D7FD3, and no tile. That is AccentFill from the installer's Themes/Dark.xaml,
-       and the only colour in the palette that clears 3:1 on a light taskbar (3.72) and a dark
-       one (3.95) alike; the light Accent #0067C0 gives 2.87 on dark and cannot carry a mark.
+       One ink, #2D7FD3, and no tile. That is MarkInk in the installer's Themes/Brand.xaml,
+       chosen because it clears 3:1 on a light surface and a dark one alike: 3.72 against
+       #F3F3F3, 3.95 against #202020. The light Accent #0067C0 gives 2.87 on #202020 and
+       cannot carry a mark.
 
-       The seal's middle ring is a hole rather than white: with no tile behind it, a white ring
-       is invisible on a light surface, while a hole is the same shape on every surface because
-       it is the surface.
+       Inside the frame is a hole rather than white: with no tile behind it, white is
+       invisible on a light surface, while a hole is the same shape on every surface because
+       it is the surface. The letters are ink on that hole, so they meet it at the ink's own
+       contrast with whatever is behind, and the A's counter is a hole again.
 
-       Geometry: the L is untouched, and its stroke of 80 is the module. The seal's right flat
-       sits on the L's right edge at x=232 and its apex on the L's top at y=16, so the mark's
-       bounding box is the L's own; the clearance below the seal is 80/2. Three pointy-top
-       hexagons share the centre (187,68) with circumradii 52, 38 and 24 - stepping by 14, so
-       the rim and the ring carry the same weight and neither dies first when reduced.
+       Geometry: the L is untouched, and its stroke of 80 is the module. The frame's top flat
+       is level with the L's top at y=16 and its right flat with the L's right edge at x=232;
+       it stands 32 clear of the stem and 32 clear of the foot. The corner the L leaves is 128
+       wide and 144 tall, so the frame is 96 by 112: every corner is cut by 28, which makes
+       the diagonals as long as the top and bottom flats (39.6 and 40) and leaves the extra
+       16 in the sides. The ring is 10 thick, an eighth of the module, and so are the letters'
+       stems. Its outer flats land on whole pixels in every frame reduced from here.
+
+       The letters are centred by eye, not by their box. The A is wide at the feet and narrow
+       at the top, the I a straight bar, so a pair centred on its box leaves more white beside
+       the A than beside the I and looks pushed to the right. The pair is set so the white
+       between frame and letters, averaged over the cap height, is the same on both sides to
+       within a unit - its box sits 3.5 left of the frame's centre line - and 2 above the
+       frame's centre, where it stops looking low. Cap height 48 on y=46..94; the A 39 wide
+       with a 15 flat apex and a crossbar 8 thick a third of the way up; the I 10 wide, 6 from
+       the A's foot.
+
+       Six subpaths under even-odd: the L; the frame's outside and inside; the A; its
+       counter; the I.
 
        assets/localai.ico is built from this by scripts/build-mark.py, which also carries the
-       16 and 24 frames that are set pixel by pixel and cannot be reduced from here. -->
+       16, 24 and 32 frames that are set pixel by pixel and cannot be reduced from here. -->
   <path fill="#2D7FD3" fill-rule="evenodd"
         d="M24,16 H104 V160 H232 V240 H24 Z
-           M187,16 L232,42 V94 L187,120 L142,94 V42 Z
-           M187,30 L220,49 V87 L187,106 L154,87 V49 Z
-           M187,44 L208,56 V80 L187,92 L166,80 V56 Z" />
+           M164,16 H204 L232,44 V100 L204,128 H164 L136,100 V44 Z
+           M168,26 H200 L222,48 V96 L200,118 H168 L146,96 V48 Z
+           M165,46 H180 L192,94 H181.5 L178.5,82 H166.5 L163.5,94 H153 Z
+           M172.5,58 L176.5,74 H168.5 Z
+           M198,46 H208 V94 H198 Z" />
 </svg>

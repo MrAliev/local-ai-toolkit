@@ -10,8 +10,8 @@
     followed the theme would agree with the window it sits in and disagree with the icon two
     inches above it.
 
-    MarkInk carries the same value as the dark palette's AccentFill and is kept apart from it on
-    purpose: sharing the key would let a palette decision repaint the product's mark. It is the
+    MarkInk was the dark palette's AccentFill until that moved to #2878C8; it is kept apart on
+    purpose, and that move is why: sharing the key would have repainted the product's mark. It is the
     one colour in the palette that clears 3:1 against a light taskbar and a dark one alike -
     3.72 and 3.95 - which is why the mark wears it on both rather than having a version for each.
     The light palette's Accent gives 2.87 on a dark taskbar and cannot be used here.

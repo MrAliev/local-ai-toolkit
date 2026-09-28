@@ -137,18 +137,20 @@
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <!-- The icon's own geometry, not a second drawing of it: the seal's
-                         ring is a hole, which an even-odd figure expresses, so the rail and
-                         assets/localai.ico cannot drift apart. MarkInk rather than AccentFill,
+                    <!-- The icon's own geometry, not a second drawing of it: the inside of the
+                         frame and the A's counter are holes, which an even-odd figure expresses,
+                         so the rail and assets/localai.ico cannot drift apart. MarkInk rather than AccentFill,
                          because the palette's accent is one colour in light and another in
                          dark, and a mark that changed with the theme would disagree with the
                          icon in the title bar above it. Themes/Brand.xaml says the rest. -->
                     <Path Grid.Column="0" Width="24" Height="24" Stretch="Uniform"
                           Fill="{StaticResource MarkInk}"
                           Data="F0 M0,0 H80 V144 H208 V224 H0 Z
-                                M163,0 L208,26 V78 L163,104 L118,78 V26 Z
-                                M163,14 L196,33 V71 L163,90 L130,71 V33 Z
-                                M163,28 L184,40 V64 L163,76 L142,64 V40 Z" />
+                                M140,0 H180 L208,28 V84 L180,112 H140 L112,84 V28 Z
+                                M144,10 H176 L198,32 V80 L176,102 H144 L122,80 V32 Z
+                                M141,30 H156 L168,78 H157.5 L154.5,66 H142.5 L139.5,78 H129 Z
+                                M148.5,42 L152.5,58 H144.5 Z
+                                M174,30 H184 V78 H174 Z" />
                     <!-- A picture cannot say "LocalAi", and this rail is the only place the
                          wizard names the product. The mark joins the wordmark; it does not
                          replace it. -->

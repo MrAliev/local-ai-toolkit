@@ -4,9 +4,10 @@ Run by hand, not by the build and not by CI:
 
     python scripts/build-mark.py
 
-It exists because two of the seven icon frames are set pixel by pixel and cannot be recovered
-from the master geometry. Reduce the master to 16 and the seal is a smudge; reduce it to 24 and
-the ring that makes a seal a seal goes soft. Those two frames live below as literal ASCII, which
+It exists because three of the seven icon frames are set pixel by pixel and cannot be recovered
+from the master geometry. Reduce the master to 16 and there is no room inside the frame for a
+letter; reduce it to 24 or 32 and the frame and the letters, a pixel wide at those sizes, go
+soft. Those three frames live below as literal ASCII, which
 is the only form in which the next person can see what was decided - inside a .ico they exist
 only as bytes, and the first rebuild that re-reduces all seven loses them without a word.
 
@@ -24,13 +25,19 @@ from PIL import Image, ImageDraw, ImageFont
 INK = "#2D7FD3"
 SUPERSAMPLE = 4
 
-# The mark on a 256 canvas, origin top-left, y down. The L is variant 9 unchanged; the seal is
-# three pointy-top hexagons on centre (187,68) with circumradii 52 / 38 / 24, its right flat
-# flush with the L's right edge at x=232 and its apex level with the L's top at y=16.
+# The mark on a 256 canvas, origin top-left, y down. The L is variant 9 unchanged; the frame is
+# an octagon 96 by 112 with every corner cut by 28, level with the L's top and right edges and 32
+# clear of the stem and the foot, its ring 10 thick. A and I stand in it in ink, centred by the
+# white beside them rather than by their box, and the A's counter is a hole.
 L_BLOCK = [(24, 16), (104, 16), (104, 160), (232, 160), (232, 240), (24, 240)]
-SEAL_OUTER = [(187, 16), (232, 42), (232, 94), (187, 120), (142, 94), (142, 42)]
-SEAL_RING = [(187, 30), (220, 49), (220, 87), (187, 106), (154, 87), (154, 49)]
-SEAL_CORE = [(187, 44), (208, 56), (208, 80), (187, 92), (166, 80), (166, 56)]
+FRAME_OUTER = [(164, 16), (204, 16), (232, 44), (232, 100),
+               (204, 128), (164, 128), (136, 100), (136, 44)]
+FRAME_INNER = [(168, 26), (200, 26), (222, 48), (222, 96),
+               (200, 118), (168, 118), (146, 96), (146, 48)]
+LETTER_A = [(165, 46), (180, 46), (192, 94), (181.5, 94),
+            (178.5, 82), (166.5, 82), (163.5, 94), (153, 94)]
+A_COUNTER = [(172.5, 58), (176.5, 74), (168.5, 74)]
+LETTER_I = [(198, 46), (208, 46), (208, 94), (198, 94)]
 
 # The 48 frame is drawn from the master shifted half a pixel left. Without it the L's three
 # vertical edges land on 4.5, 19.5 and 43.5, and every vertical edge in the mark becomes a soft
@@ -40,13 +47,13 @@ HALF_PIXEL_AT_48 = -256 / 48 / 2
 # Hand-set. Read them as pictures - that is the point of keeping them this way.
 GRID_16 = """
 ................
-.#####....##....
 .#####...####...
-.#####..######..
-.#####..######..
-.#####..######..
+.#####..#....#..
+.#####..#.##.#..
+.#####..#.##.#..
+.#####..#.##.#..
+.#####..#....#..
 .#####...####...
-.#####....##....
 .#####..........
 .#####..........
 .#############..
@@ -60,16 +67,16 @@ GRID_16 = """
 GRID_24 = """
 ........................
 ........................
-..########......###.....
-..########.....#...#....
-..########....#.###.#...
-..########...#.#####.#..
-..########...#.#####.#..
-..########...#.#####.#..
-..########...#.#####.#..
-..########....#.###.#...
-..########.....#...#....
-..########......###.....
+..########.....#####....
+..########....#.....#...
+..########...#..#..#.#..
+..########...#.#.#.#.#..
+..########...#.#.#.#.#..
+..########...#.###.#.#..
+..########...#.#.#.#.#..
+..########...#.#.#.#.#..
+..########....#.....#...
+..########.....#####....
 ..########..............
 ..########..............
 ..########..............
@@ -82,6 +89,41 @@ GRID_24 = """
 ..####################..
 ..####################..
 ........................
+"""
+
+GRID_32 = """
+................................
+................................
+...##########.......######......
+...##########......#......#.....
+...##########.....#........#....
+...##########....#..........#...
+...##########....#...#...#..#...
+...##########....#..#.#..#..#...
+...##########....#..#.#..#..#...
+...##########....#.#####.#..#...
+...##########....#.#...#.#..#...
+...##########....#.#...#.#..#...
+...##########....#..........#...
+...##########.....#........#....
+...##########......#......#.....
+...##########.......######......
+...##########...................
+...##########...................
+...##########...................
+...##########...................
+...##########################...
+...##########################...
+...##########################...
+...##########################...
+...##########################...
+...##########################...
+...##########################...
+...##########################...
+...##########################...
+...##########################...
+................................
+................................
 """
 
 
@@ -110,11 +152,13 @@ def master(dx=0.0):
         draw.polygon([((x + dx) * SUPERSAMPLE, y * SUPERSAMPLE) for x, y in points], fill=fill)
 
     polygon(L_BLOCK, INK)
-    polygon(SEAL_OUTER, INK)
-    # Knocked out rather than white: tile-less, a white ring is invisible on a light taskbar,
-    # and a hole is the same shape on every surface because it is the surface.
-    polygon(SEAL_RING, (0, 0, 0, 0))
-    polygon(SEAL_CORE, INK)
+    polygon(FRAME_OUTER, INK)
+    # Holes rather than white: tile-less, white is invisible on a light taskbar, and a hole is
+    # the same shape on every surface because it is the surface.
+    polygon(FRAME_INNER, (0, 0, 0, 0))
+    polygon(LETTER_A, INK)
+    polygon(A_COUNTER, (0, 0, 0, 0))
+    polygon(LETTER_I, INK)
     return image
 
 
@@ -127,7 +171,7 @@ def frames():
     return {
         16: from_grid(GRID_16),
         24: from_grid(GRID_24),
-        32: reduced(32),
+        32: from_grid(GRID_32),
         48: reduced(48, HALF_PIXEL_AT_48),
         64: reduced(64),
         128: reduced(128),
@@ -203,9 +247,10 @@ LOCKUP = (1008, 288)
 LOCKUP_MARK_ORIGIN = (48, 32)      # where the mark's ink box starts
 LOCKUP_FONT = r"C:\Windows\Fonts\seguisb.ttf"
 LOCKUP_FONT_SIZE = 200
-# 80 units from the mark's ink to the text's ink: twice the moat inside the mark, because a
-# lockup's join has to be visibly wider than the space within the mark or the seal reads as part
-# of the word spacing. The baseline centres the text's ink on the mark's ink centre.
+# 80 units from the mark's ink to the text's ink: the L's own stroke, two and a half times the 32
+# between the frame and the L, because a lockup's join has to be visibly wider than any space
+# within the mark or the frame reads as part of the word spacing. The baseline centres the
+# text's ink on the mark's ink centre.
 LOCKUP_BASELINE = (319, 217)
 
 
@@ -218,9 +263,11 @@ def lockup(scale=2):
         draw.polygon([((x + dx) * scale, (y + dy) * scale) for x, y in points], fill=fill)
 
     polygon(L_BLOCK, INK)
-    polygon(SEAL_OUTER, INK)
-    polygon(SEAL_RING, (0, 0, 0, 0))
-    polygon(SEAL_CORE, INK)
+    polygon(FRAME_OUTER, INK)
+    polygon(FRAME_INNER, (0, 0, 0, 0))
+    polygon(LETTER_A, INK)
+    polygon(A_COUNTER, (0, 0, 0, 0))
+    polygon(LETTER_I, INK)
 
     font = ImageFont.truetype(LOCKUP_FONT, LOCKUP_FONT_SIZE * scale)
     draw.text(
@@ -241,7 +288,7 @@ def main():
     lockup().save(root / "assets" / "localai-lockup.png", format="PNG")
 
     print("frames: " + ", ".join(str(size) for size in sorted(built)))
-    for size in (16, 24):
+    for size in (16, 24, 32):
         ink = built[size].getchannel("A").point(
             lambda a: 255 if a > 127 else 0).histogram()[255]
         print("hand-set %d: %d ink pixels" % (size, ink))
