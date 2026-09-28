@@ -354,6 +354,64 @@ public sealed class ModelControlServiceTests : IDisposable
         Assert.Equal(0, report.EstimatedNetCloudContextTokensSaved);
     }
 
+    /// <summary>
+    /// A translation returned to the caller costs the caller's context its own length, so one
+    /// longer than its source saves less than nothing — English to Russian usually is. Refusing
+    /// that figure failed the broker job and threw the finished translation away (#803).
+    /// </summary>
+    [Fact]
+    public async Task A_negative_net_context_saving_is_recorded_rather_than_refused()
+    {
+        var service = new ModelControlService(
+            ModelRoutingCatalog.LoadEmbedded(),
+            new FakeTransport(),
+            new ExperimentStateStore(_root),
+            new ModelTelemetryStore(_root));
+
+        await service.CompleteExperimentAsync(
+            Guid.NewGuid(),
+            LocalTaskProfile.TechnicalTranslation,
+            "translategemma:12b",
+            ModelExecutionOutcome.Success,
+            Metrics(netContextSaved: -40),
+            TestContext.Current.CancellationToken);
+
+        var report = await service.ReportAsync(
+            LocalTaskProfile.TechnicalTranslation,
+            "translategemma:12b",
+            TestContext.Current.CancellationToken);
+        Assert.Equal(-40, report.EstimatedNetCloudContextTokensSaved);
+    }
+
+    [Fact]
+    public async Task A_negative_count_is_still_refused()
+    {
+        var service = new ModelControlService(
+            ModelRoutingCatalog.LoadEmbedded(),
+            new FakeTransport(),
+            new ExperimentStateStore(_root),
+            new ModelTelemetryStore(_root));
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => service.CompleteExperimentAsync(
+            Guid.NewGuid(),
+            LocalTaskProfile.TechnicalTranslation,
+            "translategemma:12b",
+            ModelExecutionOutcome.Success,
+            Metrics(netContextSaved: 0) with { OutputTokens = -1 },
+            TestContext.Current.CancellationToken));
+    }
+
+    private static LocalExperimentTaskMetrics Metrics(int netContextSaved) => new(
+        InputTokens: 20,
+        OutputTokens: 60,
+        LocalTokensProcessed: 80,
+        EstimatedCloudGenerationTokensSaved: 60,
+        EstimatedNetCloudContextTokensSaved: netContextSaved,
+        TotalDuration: TimeSpan.FromSeconds(1),
+        ColdExecutions: 1,
+        WarmExecutions: 0,
+        UsedFallback: false);
+
     [Fact]
     public async Task Report_contains_only_the_current_ten_task_batch()
     {
