@@ -355,25 +355,33 @@ public sealed class UninstallWizardViewModel : ObservableObject
     public string Summary => runEnd switch
     {
         RunEnd.Finished => BuildSummary(outcome!),
+        // The journal is named once, by JournalLine: a path read out by the live region and
+        // unselectable in a TextBlock helped nobody, and the saved report said it twice.
         RunEnd.Cancelled => InstallerCulture.Pick(
-            "Removal stopped. Data already removed has not been restored. Check the journal before closing this window and running the installer again. Journal: ",
-            "Удаление остановлено. Уже удалённые данные не восстановлены. Проверьте журнал перед закрытием окна и повторным запуском установщика. Журнал: ") + removalJournalPath,
+            "Removal stopped. Data already removed has not been restored. Check the journal before closing this window and running the installer again.",
+            "Удаление остановлено. Уже удалённые данные не восстановлены. Проверьте журнал перед закрытием окна и повторным запуском установщика."),
         RunEnd.Refused => InstallerCulture.Pick(
             "Nothing was removed. Removal was refused before any changes. Address the reported cause, close this window and run the installer again. Technical details: ",
             "Ничего не удалено. Удаление отклонено до внесения изменений. Устраните указанную причину, закройте это окно и снова запустите установщик. Технические сведения: ") + refusal,
+        // No full stop after the details: an exception message ends in its own.
         RunEnd.Failed => string.Format(
             InstallerCulture.Pick(
-                "Removal failed; some changes may already have been made. Deleted data has not been restored. Keep the technical details and check the journal before retrying. Technical details: {0}. Journal: {1}",
-                "Удаление завершилось ошибкой; часть изменений могла быть выполнена. Удалённые данные не восстановлены. Сохраните технические сведения и проверьте журнал перед повторной попыткой. Технические сведения: {0}. Журнал: {1}"),
-            failure?.Message, removalJournalPath ?? InstallerCulture.Pick("unavailable", "недоступен")),
+                "Removal failed; some changes may already have been made. Deleted data has not been restored. Keep the technical details and check the journal before retrying. Technical details: {0}",
+                "Удаление завершилось ошибкой; часть изменений могла быть выполнена. Удалённые данные не восстановлены. Сохраните технические сведения и проверьте журнал перед повторной попыткой. Технические сведения: {0}"),
+            failure?.Message),
         _ => string.Empty,
     };
 
+    public string JournalLine => runEnd == RunEnd.NotRun
+        ? string.Empty
+        : string.Format(
+            InstallerCulture.Pick("Journal: {0}", "Журнал: {0}"),
+            removalJournalPath ?? InstallerCulture.Pick("unavailable", "недоступен"));
+
     public IReadOnlyList<RunResultRow> Results => reportEntries.Select(RemovalReportPresentation.Row).ToArray();
 
-    public string Report =>
-        (runEnd == RunEnd.Refused ? InstallerCulture.Pick("Nothing was removed.\n", "Ничего не удалено.\n") : string.Empty) +
-        string.Join(Environment.NewLine, reportEntries.Select(RemovalReportPresentation.Line));
+    // A refusal's summary already opens with "Nothing was removed.", and the report follows it.
+    public string Report => string.Join(Environment.NewLine, reportEntries.Select(RemovalReportPresentation.Line));
 
     public string? ReportPath => reportPath;
     public bool HasReportPath => reportPath is not null && File.Exists(reportPath);
@@ -382,15 +390,18 @@ public sealed class UninstallWizardViewModel : ObservableObject
     public string ReportSaveError => reportSaveError is null ? string.Empty : string.Format(
         InstallerCulture.Pick("Could not save the report: {0}. Copy the details below.",
             "Не удалось сохранить отчёт: {0}. Скопируйте сведения ниже."), reportSaveError);
-    public string ReportText => Summary + Environment.NewLine + Environment.NewLine + Report +
-        (removalJournalPath is null ? string.Empty : Environment.NewLine + string.Format(
-            InstallerCulture.Pick("Journal: {0}", "Журнал: {0}"),
-            removalJournalPath)) +
-        (journalError is null ? string.Empty : Environment.NewLine + string.Format(
-            InstallerCulture.Pick(
-                "The journal could not record how this run ended: {0}",
-                "Не удалось записать в журнал, чем закончился этот запуск: {0}"),
-            journalError));
+    public string ReportText => string.Join(
+        Environment.NewLine + Environment.NewLine,
+        new[]
+        {
+            Summary,
+            Report,
+            JournalLine + (journalError is null ? string.Empty : Environment.NewLine + string.Format(
+                InstallerCulture.Pick(
+                    "The journal could not record how this run ended: {0}",
+                    "Не удалось записать в журнал, чем закончился этот запуск: {0}"),
+                journalError)),
+        }.Where(block => block.Length > 0));
 
     public int Progress => progress;
 
@@ -1066,7 +1077,7 @@ public sealed class UninstallWizardViewModel : ObservableObject
                      nameof(HasRunError), nameof(CanMoveNext), nameof(CanMovePrevious),
                      nameof(CanRun), nameof(CanCancel), nameof(IsNextVisible),
                      nameof(IsUninstallVisible), nameof(CancelButtonText), nameof(Summary),
-                     nameof(Report), nameof(BlockingNotice), nameof(IsBlocked),
+                     nameof(JournalLine), nameof(Report), nameof(BlockingNotice), nameof(IsBlocked),
                      nameof(CanContinueToInstall), nameof(KeepNotice),
                      nameof(HasKeepNotice), nameof(PreviewText), nameof(ReviewGroups),
                      nameof(Results), nameof(ReportPath), nameof(HasReportPath), nameof(HasReport),
