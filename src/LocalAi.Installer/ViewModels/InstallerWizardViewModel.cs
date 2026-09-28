@@ -625,13 +625,15 @@ public sealed class InstallerWizardViewModel : ObservableObject
         : InstallerCulture.Pick("Install", "Установить");
 
     /// <summary>
-    /// True for the errands that change an existing installation rather than create one. Both
-    /// read as an update to the person running them, whatever the removal matrix does first.
+    /// True for the errand that changes an existing installation. A clean reinstall is not one:
+    /// its removal half has taken the installed version away before this wizard opens, and the
+    /// package is activated with no earlier version to return to.
     /// </summary>
-    private bool IsUpdate => Mode is StartChoice.UpdateOrRepair or StartChoice.CleanReinstall;
+    private bool IsUpdate => Mode is StartChoice.UpdateOrRepair;
 
     public string StepTitle =>
-        WizardText.Title(CurrentPage, IsUpdate, hasRunError, wasCancelled: wasCancelled);
+        WizardText.Title(CurrentPage, IsUpdate, hasRunError, wasCancelled: wasCancelled,
+            completesReinstall: Mode == StartChoice.CleanReinstall);
 
     public string StepDescription =>
         WizardText.Description(
