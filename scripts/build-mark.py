@@ -242,8 +242,9 @@ def write_ico(path, built):
 
 
 # The lockup: the mark, then the product's name. One artwork for both languages - the name is
-# Latin in the Russian documentation too, so only the alt text beside it ever changes.
-LOCKUP = (1008, 288)
+# Latin in the Russian documentation too, so only the alt text beside it ever changes. The name is
+# two words with AI in capitals, and the width keeps the 36 of air it always had after the text.
+LOCKUP = (1069, 288)
 LOCKUP_MARK_ORIGIN = (48, 32)      # where the mark's ink box starts
 LOCKUP_FONT = r"C:\Windows\Fonts\seguisb.ttf"
 LOCKUP_FONT_SIZE = 200
@@ -272,7 +273,7 @@ def lockup(scale=2):
     font = ImageFont.truetype(LOCKUP_FONT, LOCKUP_FONT_SIZE * scale)
     draw.text(
         (LOCKUP_BASELINE[0] * scale, LOCKUP_BASELINE[1] * scale),
-        "LocalAi",
+        "Local AI",
         font=font,
         fill=INK,
         anchor="ls")

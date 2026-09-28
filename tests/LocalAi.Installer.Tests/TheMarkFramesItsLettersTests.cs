@@ -76,6 +76,18 @@ public sealed class TheMarkFramesItsLettersTests
             Subpaths(rail.Replace("F0", "", StringComparison.Ordinal)).Select(shape => shape.ToArray()).ToArray());
     }
 
+    /// <summary>The product is written as two words, and AI in capitals, wherever a person reads its name.</summary>
+    [Fact]
+    public void The_rail_names_the_product_Local_AI()
+    {
+        var rail = XDocument.Parse(InstallerMarkup.Read("MainWindow.xaml"))
+            .Descendants(Presentation + "Path")
+            .Single(path => path.Attribute("Fill")?.Value == "{StaticResource MarkInk}");
+        var wordmark = rail.ElementsAfterSelf(Presentation + "TextBlock").First();
+
+        Assert.Equal("Local AI", wordmark.Attribute("Text")?.Value);
+    }
+
     private static string MarkData() =>
         XDocument.Load(Path.Combine(InstallerMarkup.Directory, "..", "..", "assets", "localai-mark.svg"))
             .Descendants(XNamespace.Get("http://www.w3.org/2000/svg") + "path")

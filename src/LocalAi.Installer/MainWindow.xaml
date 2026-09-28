@@ -151,10 +151,10 @@
                                 M141,30 H156 L168,78 H157.5 L154.5,66 H142.5 L139.5,78 H129 Z
                                 M148.5,42 L152.5,58 H144.5 Z
                                 M174,30 H184 V78 H174 Z" />
-                    <!-- A picture cannot say "LocalAi", and this rail is the only place the
+                    <!-- A picture cannot say "Local AI", and this rail is the only place the
                          wizard names the product. The mark joins the wordmark; it does not
                          replace it. -->
-                    <TextBlock Grid.Column="1" Text="LocalAi" FontSize="15" FontWeight="Bold"
+                    <TextBlock Grid.Column="1" Text="Local AI" FontSize="15" FontWeight="Bold"
                                VerticalAlignment="Center" Margin="8,0,0,0" />
                 </Grid>
                 <!-- The one place a version is a question. Every other page states it. -->

@@ -21,7 +21,7 @@ public sealed class MarkupCarriesNoProseTests
     /// Product names, the separator between the two autonyms, and the autonyms themselves. A
     /// language offers itself in its own words, so neither of those is ever translated.
     /// </summary>
-    private static readonly string[] NotProse = ["LocalAi", "English", "Русский", "·"];
+    private static readonly string[] NotProse = ["Local AI", "LocalAi", "English", "Русский", "·"];
 
     private static readonly Regex Literal = new(
         "(?<attribute>Title|Text|Content|Header|ToolTip)=\"(?<value>[^\"{][^\"]*)\"",
