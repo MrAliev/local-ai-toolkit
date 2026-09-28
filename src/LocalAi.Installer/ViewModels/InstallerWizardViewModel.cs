@@ -188,6 +188,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
     private CancellationTokenSource? runCancellation;
     private InstallerPage currentPage = InstallerPage.Diagnose;
     private bool isRunning;
+    private bool isRollingBack;
     private bool isComplete;
     private bool hasRunError;
 
@@ -657,6 +658,9 @@ public sealed class InstallerWizardViewModel : ObservableObject
     public bool IsProgressPage => CurrentPage == InstallerPage.Progress;
 
     public bool IsRunning => isRunning;
+
+    /// <summary>A rollback is running its launcher processes; the finish or check page says so.</summary>
+    public bool IsRollingBack => isRollingBack;
 
     public bool IsComplete => isComplete;
 
@@ -1182,6 +1186,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             var selected = dependencies.Dependencies
                 .Where(dependency => dependency.IsConsented)
                 .ToArray();
+            SetProgress(0, InstallerCulture.Pick("Checking this computer again…", "Ещё раз проверяю этот компьютер…"));
             await RefreshEnvironmentDiagnosticsAsync(token);
             requested = selected.Length;
             requestedPrerequisites.AddRange(selected);
@@ -1529,6 +1534,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
     private async Task<string> ExecuteRollbackAsync(InstallerRunJournal journal)
     {
         isRunning = true;
+        isRollingBack = true;
         RefreshAll();
         try
         {
@@ -1547,6 +1553,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         finally
         {
             isRunning = false;
+            isRollingBack = false;
             RefreshAll();
         }
     }
@@ -2385,6 +2392,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         OnPropertyChanged(nameof(IsFinishPage));
         OnPropertyChanged(nameof(IsProgressPage));
         OnPropertyChanged(nameof(IsRunning));
+        OnPropertyChanged(nameof(IsRollingBack));
         OnPropertyChanged(nameof(IsComplete));
         OnPropertyChanged(nameof(HasRunError));
         OnPropertyChanged(nameof(OpensTheLog));
@@ -2944,25 +2952,33 @@ public sealed class InstallerWizardViewModel : ObservableObject
     /// line in a list. It is said out loud, though, together with how to remove it by hand,
     /// because an uninstaller nobody can find is the problem this whole feature exists for.
     /// </summary>
-    private void RegisterUninstallEntry(StringBuilder report, string version)
+    private async Task RegisterUninstallEntryAsync(StringBuilder report, string version)
     {
         if (!OperatingSystem.IsWindows())
         {
             return;
         }
 
+        SetProgress(90, InstallerCulture.Pick(
+            "Registering Local AI with Windows: Apps & features and PATH…",
+            "Регистрирую Local AI в Windows: «Приложения и возможности» и PATH…"));
         var step = BeginRegistrationStep();
         try
         {
             var registration = new UninstallRegistration(InstallationLayout.CreateDefault());
-            registration.Register(
-                version,
-                Environment.ProcessPath ??
-                    throw new InvalidOperationException(
-                        "The running installer has no path to copy."));
+            // Off the UI thread: it copies this installer and sizes the runtime tree, which holds
+            // the indexes, so the gears beside the line would otherwise stand still meanwhile.
             // Read back, not recalled: the line used to be composed from the values just handed
             // to the registry, so it agreed with itself whatever the registry did.
-            var written = registration.Read();
+            var written = await Task.Run(() =>
+            {
+                registration.Register(
+                    version,
+                    Environment.ProcessPath ??
+                        throw new InvalidOperationException(
+                            "The running installer has no path to copy."));
+                return registration.Read();
+            });
             registrationOutcome = written is null ? RegistrationOutcome.Missing : RegistrationOutcome.Registered;
             AppendLog(
                 report,
@@ -3283,7 +3299,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
 
             AppendLog(report, $"Local models: {exception.Message}");
             hasRunError = true;
-            RegisterUninstallEntry(report, resolved.Manifest.ReleaseVersion);
+            await RegisterUninstallEntryAsync(report, resolved.Manifest.ReleaseVersion);
             await RegisterLauncherPathAsync(report);
             return;
         }
@@ -3355,7 +3371,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         {
             // The release version, not the version directory: Apps & features shows this
             // to a person, and "467ed5f0f9bf" is a commit id rather than a version (#255).
-            RegisterUninstallEntry(report, resolved.Manifest.ReleaseVersion);
+            await RegisterUninstallEntryAsync(report, resolved.Manifest.ReleaseVersion);
             await RegisterLauncherPathAsync(report);
         }
 
