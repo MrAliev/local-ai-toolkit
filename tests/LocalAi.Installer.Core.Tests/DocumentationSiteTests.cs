@@ -113,7 +113,9 @@ public sealed class DocumentationSiteTests
     [Fact]
     public void A_page_with_subsections_lists_them_and_one_with_a_single_one_does_not()
     {
-        var english = English.Replace("## Second part\n", "## Second part\n\n### Overview\n", StringComparison.Ordinal);
+        // The sample's line endings are the checkout's, so they are settled before a line is matched.
+        var english = English.ReplaceLineEndings("\n")
+            .Replace("## Second part\n", "## Second part\n\n### Overview\n", StringComparison.Ordinal);
 
         var site = DocumentationSite.Build(english, Russian, _ => false);
 
