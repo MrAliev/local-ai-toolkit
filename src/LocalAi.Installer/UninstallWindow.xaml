@@ -175,6 +175,19 @@
                         </ItemsControl>
 
                         <TextBlock Text="{vm:Label ConnectedRepositories}" FontWeight="SemiBold" Margin="0,10,0,6" />
+                        <!-- The scan asks Git in every connected repository; until it has, the list
+                             below is not whole and Next waits. -->
+                        <Grid Margin="0,2,0,8"
+                              Visibility="{Binding IsScanning, Converter={StaticResource BoolToVisibility}}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Control Style="{StaticResource BusyGears}"
+                                     Visibility="{Binding IsScanning, Converter={StaticResource BoolToVisibility}}" />
+                            <local:LiveStatusText Grid.Column="1" Text="{vm:Label LookingForRepositories}"
+                                                  Style="{StaticResource Muted}" TextWrapping="Wrap" />
+                        </Grid>
                         <ItemsControl ItemsSource="{Binding Repositories}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
@@ -253,7 +266,15 @@
                             </Style>
                         </StackPanel.Style>
                         <ProgressBar Height="6" Minimum="0" Maximum="100" Value="{Binding Progress, Mode=OneWay}" />
-                        <TextBlock Text="{Binding ProgressText}" Margin="0,8,0,0" />
+                        <Grid Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Control Style="{StaticResource BusyGears}"
+                                     Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}" />
+                            <TextBlock Grid.Column="1" Text="{Binding ProgressText}" TextWrapping="Wrap" />
+                        </Grid>
                     </StackPanel>
 
                     <!-- Finish -->
@@ -302,6 +323,19 @@
             </ScrollViewer>
 
             <Border Grid.Row="3" BorderBrush="{DynamicResource Divider}" BorderThickness="0,1,0,0" Padding="0,10,0,0" Margin="0,10,0,0">
+                <StackPanel>
+                <!-- Above the buttons, because Next is what started it. -->
+                <Grid Margin="0,0,0,8"
+                      Visibility="{Binding IsPlanning, Converter={StaticResource BoolToVisibility}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Control Style="{StaticResource BusyGears}"
+                             Visibility="{Binding IsPlanning, Converter={StaticResource BoolToVisibility}}" />
+                    <local:LiveStatusText Grid.Column="1" Text="{vm:Label ListingRemoval}"
+                                          Style="{StaticResource Muted}" TextWrapping="Wrap" />
+                </Grid>
                 <WrapPanel HorizontalAlignment="Right">
                     <Button Content="{vm:Label Back}" Style="{StaticResource NavButton}"
                             Command="{Binding BackCommand}" />
@@ -326,6 +360,7 @@
                     <Button Content="{Binding CancelButtonText}" Style="{StaticResource NavButton}" IsCancel="True"
                             Command="{Binding CancelCommand}" />
                 </WrapPanel>
+                </StackPanel>
             </Border>
         </Grid>
     </Grid>

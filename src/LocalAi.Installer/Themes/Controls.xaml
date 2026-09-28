@@ -516,8 +516,8 @@
                              here: WPF animates a glow rectangle its own template declares, and
                              this one replaces that template. A pulse rather than a sweep — a
                              travelling block needs the track's width, which this template has no
-                             way to reach, and a fixed one reads as a gap on the 280-wide bar the
-                             system check uses and as a crawl on a full-width one. -->
+                             way to reach. No window waits on one now (the gears do that), but a
+                             bar set indeterminate without it would look full, which reads as done. -->
                         <Trigger Property="IsIndeterminate" Value="True">
                             <Setter TargetName="PART_Indicator" Property="HorizontalAlignment"
                                     Value="Stretch" />
