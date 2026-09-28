@@ -35,6 +35,6 @@ memory is marked `[partial_offload]` or `[cpu]` beside its name in the call's re
 
 ---
 
-← [From the command line: not tokens, but time](from-the-command-line-not-tokens-but-time.md) · [Contents](README.md#contents) · [Installing](installing.md) →
+← [How it works](how-it-works.md) · [Contents](README.md#contents) · [Installing](installing.md) →
 
 <!-- Generated from the README by DocumentationSiteTests. -->
