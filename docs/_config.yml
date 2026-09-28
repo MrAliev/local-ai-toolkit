@@ -1,0 +1,7 @@
+# GitHub Pages builds this folder with Jekyll. The pages are plain markdown without front
+# matter, so they read the same on github.com; the plugins GitHub Pages turns on by default
+# give each one its title from its first heading and turn links to .md files into links to
+# the rendered pages.
+title: Local AI Toolkit
+description: Local models that do the reading — for you, and for your cloud agent.
+theme: jekyll-theme-cayman
