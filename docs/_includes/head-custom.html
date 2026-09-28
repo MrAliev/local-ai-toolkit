@@ -1,0 +1,17 @@
+<!-- github.com draws ```mermaid blocks itself; on the Pages site they arrive as code, so this draws them. -->
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+
+  const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  mermaid.initialize({ startOnLoad: false, theme: dark ? "dark" : "default" });
+  document.addEventListener("DOMContentLoaded", async () => {
+    for (const block of document.querySelectorAll("div.language-mermaid, pre > code.language-mermaid")) {
+      const holder = block.matches("code") ? block.parentElement : block;
+      const diagram = document.createElement("pre");
+      diagram.className = "mermaid";
+      diagram.textContent = block.textContent;
+      holder.replaceWith(diagram);
+    }
+    await mermaid.run();
+  });
+</script>
