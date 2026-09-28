@@ -206,6 +206,44 @@ public sealed class InstallerStartViewModelTests : IDisposable
         Assert.True(start.Option(StartChoice.Remove).IsAvailable);
     }
 
+    /// <summary>
+    /// The start screen is hidden while a wizard runs and shown again by Back, so it must read
+    /// the machine again: a removal stopped part-way and left by Back found it still calling
+    /// LocalAi installed, with Update or repair on offer (RC31 sandbox run
+    /// 20260928-145527-remove-cancel-partial).
+    /// </summary>
+    [Fact]
+    public void Read_again_it_says_what_a_stopped_removal_left()
+    {
+        var start = new InstallerStartViewModel(machine.LocalAppData);
+        start.Select(StartChoice.Remove);
+        Directory.Delete(Path.Combine(machine.Runtime, "bin"), recursive: true);
+
+        start.Reinspect();
+
+        Assert.Equal(ExistingLocalAiState.Leftovers, start.State);
+        Assert.Equal(
+            "LocalAi is not installed, but some of its files are still on this computer.",
+            start.Headline);
+        Assert.False(start.Option(StartChoice.UpdateOrRepair).IsAvailable);
+        Assert.Equal(StartChoice.Remove, start.Selected);
+        Assert.True(start.Option(StartChoice.Remove).IsSelected);
+    }
+
+    [Fact]
+    public void Read_again_it_does_not_keep_an_errand_the_machine_no_longer_allows()
+    {
+        var start = new InstallerStartViewModel(machine.LocalAppData);
+        start.Select(StartChoice.UpdateOrRepair);
+        Directory.Delete(Path.Combine(machine.Runtime, "bin"), recursive: true);
+
+        start.Reinspect();
+
+        Assert.Null(start.Selected);
+        Assert.False(start.HasSelection);
+        Assert.DoesNotContain(start.Actions, option => option.IsSelected);
+    }
+
     private sealed class UnreadableInspector(string reason) : IExistingLocalAiInspector
     {
         public ExistingLocalAiSnapshot Inspect(string localAppData) =>

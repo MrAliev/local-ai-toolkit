@@ -121,6 +121,8 @@ public partial class StartWindow : Window
             if (returning)
             {
                 Application.Current.MainWindow = this;
+                // The wizard may have removed part of what this screen found when it opened.
+                viewModel.Reinspect();
                 Show();
                 Activate();
                 // A language chosen in the wizard rebuilt the rows, and the one focus was on went
