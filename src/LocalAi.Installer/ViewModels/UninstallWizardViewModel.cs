@@ -48,6 +48,8 @@ public sealed class UninstallWizardViewModel : ObservableObject
     private bool isComplete;
     private bool hasRunError;
     private bool hasLoaded;
+    private bool isScanning;
+    private bool isPlanning;
 
     /// <summary>What the disk held when it was last read; null until then.</summary>
     private ExistingLocalAiState? found;
@@ -506,8 +508,15 @@ public sealed class UninstallWizardViewModel : ObservableObject
         (CurrentPage == UninstallPage.Confirm ||
             (CurrentPage == UninstallPage.Choose && canReturnToStart));
 
+    /// <summary>The machine is being read: Git in every connected repository, so it takes a while.</summary>
+    public bool IsScanning => isScanning;
+
+    /// <summary>The plan the review page will list is being built from the choices.</summary>
+    public bool IsPlanning => isPlanning;
+
+    /// <summary>Held while the scan runs, as the installer's first page waits for its check.</summary>
     public bool CanMoveNext =>
-        !isRunning && !IsBlocked && CurrentPage == UninstallPage.Choose;
+        !isRunning && !isScanning && !isPlanning && !IsBlocked && CurrentPage == UninstallPage.Choose;
 
     public bool CanRun =>
         CurrentPage == UninstallPage.Confirm &&
@@ -579,6 +588,21 @@ public sealed class UninstallWizardViewModel : ObservableObject
     /// </summary>
     private async Task ScanAsync(CancellationToken cancellationToken)
     {
+        isScanning = true;
+        RefreshAll();
+        try
+        {
+            await ReadMachineAsync(cancellationToken);
+        }
+        finally
+        {
+            isScanning = false;
+            RefreshAll();
+        }
+    }
+
+    private async Task ReadMachineAsync(CancellationToken cancellationToken)
+    {
         blocked = null;
         found = null;
         // Windows deletes neither a running executable nor its directory, so a removal from
@@ -612,9 +636,9 @@ public sealed class UninstallWizardViewModel : ObservableObject
         found = state;
         // Planned as a full uninstall purely to inventory the connected repositories: the
         // page has to list them before anybody has chosen anything. A repository left out
-        // before is left out again.
-        var inventory = await planner.PlanAsync(
-            RemovalSelection.FromPreset(RemovalPreset.FullUninstall),
+        // before is left out again. Off the UI thread, so the gears beside the wait turn.
+        var inventory = await Task.Run(
+            () => planner.PlanAsync(RemovalSelection.FromPreset(RemovalPreset.FullUninstall), cancellationToken),
             cancellationToken);
         var leftOut = Repositories
             .Where(repository => repository.CanChoose && !repository.IsSelected)
@@ -643,10 +667,21 @@ public sealed class UninstallWizardViewModel : ObservableObject
         // The preview is built from the current choices at the moment the person asks to see
         // it, and the plan they then confirm is the object apply is handed — so what the page
         // listed is what runs, not a second planning pass that could differ.
-        confirmedPlan = await planner.PlanAsync(
-            Selection(),
-            cancellationToken,
-            installationFollows: OffersInstallAfterwards);
+        var selection = Selection();
+        var installationFollows = OffersInstallAfterwards;
+        isPlanning = true;
+        RefreshAll();
+        try
+        {
+            confirmedPlan = await Task.Run(
+                () => planner.PlanAsync(selection, cancellationToken, installationFollows: installationFollows),
+                cancellationToken);
+        }
+        finally
+        {
+            isPlanning = false;
+        }
+
         OnPropertyChanged(nameof(PreviewText));
         OnPropertyChanged(nameof(KeepNotice));
         OnPropertyChanged(nameof(HasKeepNotice));
@@ -1106,7 +1141,7 @@ public sealed class UninstallWizardViewModel : ObservableObject
                      nameof(HasKeepNotice), nameof(PreviewText), nameof(ReviewGroups),
                      nameof(Results), nameof(ReportPath), nameof(HasReportPath), nameof(HasReport),
                      nameof(ReportSaveError), nameof(HasReportSaveError), nameof(ReportText),
-                     nameof(CanRemoveWhatIsLeft),
+                     nameof(CanRemoveWhatIsLeft), nameof(IsScanning), nameof(IsPlanning),
                  })
         {
             OnPropertyChanged(name);
