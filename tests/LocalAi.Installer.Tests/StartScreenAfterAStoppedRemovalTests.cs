@@ -104,13 +104,16 @@ public sealed class StartScreenAfterAStoppedRemovalTests : IDisposable
     }
 
     /// <summary>
-    /// The system check said "none — this will be a first installation" for this machine before
-    /// the inspector could tell leftovers apart, and it still is one: nothing is installed.
+    /// Nothing is installed either way, but "this will be a first installation" was untrue where
+    /// an earlier one left something: the install half of a clean reinstall, whose window says
+    /// "reinstall", read it over the kept indexes and settings (RC31 sandbox run
+    /// 20260928-153719-clean-reinstall, install-half\01-install.uia.txt).
     /// </summary>
     [Theory]
-    [InlineData(ExistingLocalAiState.Leftovers)]
-    [InlineData(ExistingLocalAiState.SigningKeysOnly)]
-    public void The_system_check_calls_it_a_first_installation(ExistingLocalAiState state)
+    [InlineData(ExistingLocalAiState.Absent, "none — this will be a first installation")]
+    [InlineData(ExistingLocalAiState.Leftovers, "none — parts of an earlier installation are still on this computer")]
+    [InlineData(ExistingLocalAiState.SigningKeysOnly, "none — the release signing keys from an earlier installation are still here")]
+    public void The_system_check_says_what_an_earlier_installation_left(ExistingLocalAiState state, string detail)
     {
         var page = new DiagnosePageViewModel();
 
@@ -118,7 +121,7 @@ public sealed class StartScreenAfterAStoppedRemovalTests : IDisposable
 
         var row = page.Checks.Single(check => check.Name == "Existing LocalAi");
         Assert.Equal(CheckStatus.Ok, row.Status);
-        Assert.Equal("none — this will be a first installation", row.Detail);
+        Assert.Equal(detail, row.Detail);
     }
 
     private static void AssertInstallAndRemoveOnly(InstallerStartViewModel start)

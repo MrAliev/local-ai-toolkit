@@ -221,7 +221,14 @@ public sealed class DiagnosePageViewModel : ObservableObject
             },
             diagnosis.ExistingLocalAi.State switch
             {
-                // What a stopped removal left is not an installation: this still is a first one.
+                // Nothing is installed in all three, but only a bare machine gets a first
+                // installation: the install half of a clean reinstall runs over kept leftovers.
+                ExistingLocalAiState.Leftovers => InstallerCulture.Pick(
+                    "none — parts of an earlier installation are still on this computer",
+                    "нет — на этом компьютере остались части прежней установки"),
+                ExistingLocalAiState.SigningKeysOnly => InstallerCulture.Pick(
+                    "none — the release signing keys from an earlier installation are still here",
+                    "нет — ключи подписи релизов от прежней установки ещё здесь"),
                 var state when state.NothingInstalled() => InstallerCulture.Pick(
                     "none — this will be a first installation",
                     "нет — это будет первая установка"),
