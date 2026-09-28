@@ -202,7 +202,7 @@
     <comment>No path hole: neither call site has a working root to name, and threading one through for a --root the reader may omit is not worth the parameter.</comment>
   </data>
   <data name="EmbeddingBrokerNotStarted" xml:space="preserve">
-    <value>Брокер LocalAi не запустился вовремя. {0}</value>
+    <value>Брокер Local AI не запустился вовремя. {0}</value>
     <comment>{0} is BrokerBootstrapException's own diagnostic - phase and last observation - which is English in every language because BrokerProcess has no catalogue of its own. It restates this sentence in English, and that duplication goes away when those messages are catalogued rather than by dropping this one: dropping it is the defect #393 names.</comment>
   </data>
   <data name="EmbeddingBackendUnavailable" xml:space="preserve">

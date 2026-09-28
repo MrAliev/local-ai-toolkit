@@ -27,7 +27,7 @@ public sealed class ClaudeConfigurationAdapterTests : IDisposable
         var skill = SinglePreview(
             Path.Combine(".claude", "skills", "localai", "SKILL.md"),
             plan);
-        Assert.Contains("LocalAi local models", core.AfterText, StringComparison.Ordinal);
+        Assert.Contains("Local AI local models", core.AfterText, StringComparison.Ordinal);
         Assert.Contains("description:", skill.AfterText, StringComparison.Ordinal);
         Assert.Contains("core.hooksPath", skill.AfterText, StringComparison.Ordinal);
     }

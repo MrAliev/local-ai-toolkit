@@ -116,7 +116,7 @@ public sealed class UpdateCommandTests : IDisposable
         var exit = await Run(new StubFeed("v0.1.51", "0.1.51", Directory51));
 
         Assert.Equal(1, exit);
-        Assert.Contains("no LocalAi installation", error.ToString(), StringComparison.Ordinal);
+        Assert.Contains("no Local AI installation", error.ToString(), StringComparison.Ordinal);
     }
 
     /// <summary>

@@ -18,7 +18,7 @@ public sealed class AReinstallInstallsRatherThanUpdatesTests
         var wizard = new InstallerWizardViewModel(StartChoice.CleanReinstall);
 
         Assert.Equal("Install", wizard.ActionText);
-        Assert.Equal("LocalAi — Reinstall", wizard.WindowTitle);
+        Assert.Equal("Local AI — Reinstall", wizard.WindowTitle);
     }
 
     [Theory]

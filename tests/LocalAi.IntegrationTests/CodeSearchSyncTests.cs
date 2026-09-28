@@ -32,7 +32,7 @@ public sealed class CodeSearchSyncTests : IDisposable
         Directory.CreateDirectory(_root);
         Git("init", "--initial-branch=main", ".");
         Git("config", "user.email", "localai-tests@example.invalid");
-        Git("config", "user.name", "LocalAi Tests");
+        Git("config", "user.name", "Local AI Tests");
         Git("commit", "--allow-empty", "-m", "main");
         if (createDev)
         {

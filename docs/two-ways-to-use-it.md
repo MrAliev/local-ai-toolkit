@@ -3,7 +3,7 @@
 [Contents](README.md#contents) · [Русская версия](two-ways-to-use-it.ru.md)
 
 **As subagents to a cloud agent.** Claude Code, Codex and any other MCP client can call
-LocalAi's tools directly. The agent hands them the simple, repetitive work and starts from
+Local AI's tools directly. The agent hands them the simple, repetitive work and starts from
 prepared results, instead of doing that drudgery itself on cloud tokens.
 
 **Without a cloud agent, from the command line.** The same capabilities, but as helpers for
@@ -11,7 +11,7 @@ you: search code by meaning, triage a log, read an image, translate a document. 
 same index and the same models either way, so nothing is lost by starting here and adding an
 agent later.
 
-![How LocalAi fits together: you reach its tools through a cloud agent over MCP or straight from the command line, and the tools use a broker for local models and a per-repository code index](images/how-it-works.svg)
+![How Local AI fits together: you reach its tools through a cloud agent over MCP or straight from the command line, and the tools use a broker for local models and a per-repository code index](images/how-it-works.svg)
 
 **Why there is a broker in the middle.** There is one per runtime directory —
 `%LOCALAPPDATA%\LocalAi`, so one per Windows user — and it holds the queue.

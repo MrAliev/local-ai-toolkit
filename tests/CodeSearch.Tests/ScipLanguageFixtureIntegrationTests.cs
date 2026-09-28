@@ -47,7 +47,7 @@ public sealed class ScipLanguageFixtureIntegrationTests : IDisposable
         Write("src/usage.ts", """
             import { greet } from "./definition";
 
-            export const message = greet("LocalAi");
+            export const message = greet("Local AI");
             """);
 
         var result = await RunAsync(
@@ -96,7 +96,7 @@ public sealed class ScipLanguageFixtureIntegrationTests : IDisposable
         Write("usage.py", """
             from definition import greet
 
-            message = greet("LocalAi")
+            message = greet("Local AI")
             """);
 
         var result = await RunAsync(

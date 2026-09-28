@@ -563,12 +563,12 @@ public sealed class InstallerWizardViewModel : ObservableObject
     public string WindowTitle => Mode switch
     {
         StartChoice.UpdateOrRepair => InstallerCulture.Pick(
-            "LocalAi — Update or repair",
-            "LocalAi — обновление или восстановление"),
+            "Local AI — Update or repair",
+            "Local AI — обновление или восстановление"),
         StartChoice.CleanReinstall => InstallerCulture.Pick(
-            "LocalAi — Reinstall",
-            "LocalAi — переустановка"),
-        _ => InstallerCulture.Pick("LocalAi Setup", "Установка LocalAi"),
+            "Local AI — Reinstall",
+            "Local AI — переустановка"),
+        _ => InstallerCulture.Pick("Local AI Setup", "Установка Local AI"),
     };
 
     /// <summary>
@@ -1627,7 +1627,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         {
             AppendLog(
                 report,
-                "Claude Code hooks: skipped, because the LocalAi package was not installed " +
+                "Claude Code hooks: skipped, because the Local AI package was not installed " +
                 "and this run did not get far enough to change it.");
             hooksOutcome = new("Claude Code", ClientRunState.Skipped);
             hasRunError = true;
@@ -1721,7 +1721,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         {
             AppendLog(
                 report,
-                "Client applications: skipped, because this run did not install the LocalAi " +
+                "Client applications: skipped, because this run did not install the Local AI " +
                 "package.");
             for (var index = 0; index < clientOutcomes.Count; index++)
             {
@@ -1900,11 +1900,11 @@ public sealed class InstallerWizardViewModel : ObservableObject
             var outcome = ResidencyPolicyWriter.Apply(runtimeRoot, residency.Policy);
             if (outcome == ResidencyPolicyOutcome.SkippedWithoutInstallation)
             {
-                JournalFail(residencyStep, "Nothing was written: LocalAi is not installed.");
+                JournalFail(residencyStep, "Nothing was written: Local AI is not installed.");
                 AppendLog(
                     report,
-                    "Model residency policy: not stored, because LocalAi is not installed on " +
-                    "this computer. Storing it would create the LocalAi directory without the " +
+                    "Model residency policy: not stored, because Local AI is not installed on " +
+                    "this computer. Storing it would create the Local AI directory without the " +
                     "permissions an installation requires, and every later installation would " +
                     "then refuse it. The next run asks for this setting again.");
                 return;
@@ -1976,7 +1976,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             {
                 AppendLog(
                     report,
-                    "Update check: not stored, because LocalAi is not installed on this " +
+                    "Update check: not stored, because Local AI is not installed on this " +
                     "computer. Nothing will be looked up. Set it later with " +
                     "`localai policy set --update-check on`.");
                 return;
@@ -2330,10 +2330,10 @@ public sealed class InstallerWizardViewModel : ObservableObject
                     WizardText.Steps().First(step => step.Page == InstallerPage.Package).Title);
             builder.AppendLine(string.Format(
                 InstallerCulture.Pick(
-                    "Warning: no release has been verified, so LocalAi itself will not be " +
+                    "Warning: no release has been verified, so Local AI itself will not be " +
                     "installed, and no models, client applications or PATH entry will be set " +
                     "up. {0} {1}",
-                    "Внимание: ни один релиз не проверен, поэтому сам LocalAi установлен не " +
+                    "Внимание: ни один релиз не проверен, поэтому сам Local AI установлен не " +
                     "будет, а модели, клиентские приложения и запись в PATH настроены не " +
                     "будут. {0} {1}"),
                 remaining,
@@ -2917,9 +2917,9 @@ public sealed class InstallerWizardViewModel : ObservableObject
             AppendLog(
                 report,
                 feed is IReleasePackageCheck
-                    ? $"LocalAi package: the folder now holds {newest}, not the " +
+                    ? $"Local AI package: the folder now holds {newest}, not the " +
                       $"{package.ResolvedTag} checked on the package page; resolving it instead."
-                    : $"LocalAi package: {newest} was published after this release was checked; " +
+                    : $"Local AI package: {newest} was published after this release was checked; " +
                       "resolving it instead.");
             // Resolved first, then recorded: assigning the tag before this await left the
             // wizard pointing at a release whose manifest had failed to verify, so the run
@@ -2934,7 +2934,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             // now is a reason to install what was checked, not to abandon the run.
             AppendLog(
                 report,
-                "LocalAi package: the newest release could not be re-checked " +
+                "Local AI package: the newest release could not be re-checked " +
                 $"({exception.Message}); continuing with {package.ResolvedTag}.");
         }
     }
@@ -3030,8 +3030,8 @@ public sealed class InstallerWizardViewModel : ObservableObject
         if (!package.HasPackage)
         {
             return InstallerCulture.Pick(
-                "PATH: unchanged, because LocalAi will not be installed.",
-                "PATH: не меняется, потому что LocalAi не будет установлен.");
+                "PATH: unchanged, because Local AI will not be installed.",
+                "PATH: не меняется, потому что Local AI не будет установлен.");
         }
 
         var directory = Path.Combine(InstallationLayout.CreateDefault().BinRoot, "launcher");
@@ -3116,7 +3116,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             packageOutcome = new(PackageOutcomeKind.NoRelease);
             AppendLog(
                 report,
-                "LocalAi package: no verified release was selected, so nothing was installed. " +
+                "Local AI package: no verified release was selected, so nothing was installed. " +
                 (package.LastCheckFailure is { } said
                     ? $"The last check of the release said: {said} "
                     : string.Empty) +
@@ -3130,9 +3130,9 @@ public sealed class InstallerWizardViewModel : ObservableObject
         AppendLog(
             report,
             fromFolder
-                ? $"LocalAi package {resolved.Manifest.ReleaseVersion}: copying from " +
+                ? $"Local AI package {resolved.Manifest.ReleaseVersion}: copying from " +
                     $"{package.SourceFolder} and verifying..."
-                : $"LocalAi package {resolved.Manifest.ReleaseVersion}: downloading and verifying...");
+                : $"Local AI package {resolved.Manifest.ReleaseVersion}: downloading and verifying...");
 
         // Real byte progress: the expected size comes from the verified manifest, and the
         // downloaded bytes are observed as the file grows.
@@ -3154,11 +3154,11 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 string.Format(
                     fromFolder
                         ? InstallerCulture.Pick(
-                            "Copying the LocalAi package from the folder: {0:N0} of {1:N0} MB",
-                            "Копирую пакет LocalAi из папки: {0:N0} из {1:N0} МБ")
+                            "Copying the Local AI package from the folder: {0:N0} of {1:N0} MB",
+                            "Копирую пакет Local AI из папки: {0:N0} из {1:N0} МБ")
                         : InstallerCulture.Pick(
-                            "Downloading the LocalAi package: {0:N0} of {1:N0} MB",
-                            "Скачиваю пакет LocalAi: {0:N0} из {1:N0} МБ"),
+                            "Downloading the Local AI package: {0:N0} of {1:N0} MB",
+                            "Скачиваю пакет Local AI: {0:N0} из {1:N0} МБ"),
                     bytes / (1024d * 1024),
                     total / (1024d * 1024)));
         });
@@ -3166,11 +3166,11 @@ public sealed class InstallerWizardViewModel : ObservableObject
             40,
             fromFolder
                 ? InstallerCulture.Pick(
-                    "Copying the LocalAi package from the folder...",
-                    "Копирую пакет LocalAi из папки…")
+                    "Copying the Local AI package from the folder...",
+                    "Копирую пакет Local AI из папки…")
                 : InstallerCulture.Pick(
-                    "Downloading the LocalAi package...",
-                    "Скачиваю пакет LocalAi…"));
+                    "Downloading the Local AI package...",
+                    "Скачиваю пакет Local AI…"));
 
         var service = new ReleaseInstallService(
             CreateFeed(),
@@ -3234,7 +3234,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
         // rather than as "state unknown".
         var packageStep = JournalBegin(
             InstallerRunEffectKind.PackageActivation,
-            $"LocalAi package {resolved.Manifest.ReleaseVersion}");
+            $"Local AI package {resolved.Manifest.ReleaseVersion}");
         string? modelsStep = null;
         var modelSetupStarted = false;
         var activated = false;
@@ -3281,7 +3281,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 packageOutcome = new(PackageOutcomeKind.Cancelled, StillInstalled: still);
                 AppendLog(
                     report,
-                    $"LocalAi package {resolved.Manifest.ReleaseVersion}: cancelled before activation; not installed." +
+                    $"Local AI package {resolved.Manifest.ReleaseVersion}: cancelled before activation; not installed." +
                     (still is null ? string.Empty : $" {still} is still the active version."));
             }
 
@@ -3314,7 +3314,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             // in it, and so the run still finishes its own reporting instead of aborting.
             packageInstalled = false;
             packageOutcome = PackageOutcome.FromInstallationFailure(exception.Message);
-            AppendLog(report, $"LocalAi package: {exception.Message}");
+            AppendLog(report, $"Local AI package: {exception.Message}");
             var layout = InstallationLayout.CreateDefault();
             var advice = InstallationFailureAdvice.ForLayoutFailure(
                 exception.Message,
@@ -3355,7 +3355,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
             modelProgress.Dispose();
         }
 
-        SetProgress(90, InstallerCulture.Pick("Installing the LocalAi package...", "Устанавливаю пакет LocalAi…"));
+        SetProgress(90, InstallerCulture.Pick("Installing the Local AI package...", "Устанавливаю пакет Local AI…"));
 
         ApplyPackageResult(result);
         // result.Status is an enum name. It used to be printed straight into the summary a
@@ -3435,11 +3435,11 @@ public sealed class InstallerWizardViewModel : ObservableObject
     /// <summary>The package step's line in the run log.</summary>
     internal static string PackageLogLine(ReleaseInstallResult result) =>
         result.Installed
-            ? $"LocalAi package: {result.Status}, version {result.Version} at {result.VersionPath}." +
+            ? $"Local AI package: {result.Status}, version {result.Version} at {result.VersionPath}." +
                 (result.RestoredFiles is { Count: > 0 } restored
                     ? " Put back from the release: " + string.Join(", ", restored) + "."
                     : string.Empty)
-            : $"LocalAi package: {result.Status}. {result.Reason}".Trim() +
+            : $"Local AI package: {result.Status}. {result.Reason}".Trim() +
                 (result.RestoredFiles is { Count: > 0 } kept
                     ? " Put back from the release and kept: " + string.Join(", ", kept) + "."
                     : string.Empty);
@@ -3486,7 +3486,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
                     "before and can be reactivated."
                 : activation.PriorVersion is null
                     ? $"First installation of {activation.Version}: there is no previous " +
-                        "version to return to, and the LocalAi directory starts holding " +
+                        "version to return to, and the Local AI directory starts holding " +
                         "runtime data as soon as it is used."
                     : $"Version {activation.Version} was already active.",
             isReversible: isUpgrade,

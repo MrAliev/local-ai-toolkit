@@ -17,7 +17,7 @@ namespace LocalAi.Installer.Tests;
 public sealed class ABinLeftWithoutItsPointerTests : IDisposable
 {
     private const string NotInstalled =
-        "LocalAi is not installed here; these rows apply to what is left of it, and the next " +
+        "Local AI is not installed here; these rows apply to what is left of it, and the next " +
         "page lists every path found.";
 
     private const string Usual =
@@ -40,7 +40,7 @@ public sealed class ABinLeftWithoutItsPointerTests : IDisposable
 
         Assert.Equal(ExistingLocalAiState.Leftovers, start.State);
         Assert.Equal(
-            "LocalAi is not installed, but some of its files are still on this computer.",
+            "Local AI is not installed, but some of its files are still on this computer.",
             start.Headline);
         Assert.Equal(
             "A clean reinstall removes the binaries that are left and installs again; removing " +
@@ -50,7 +50,7 @@ public sealed class ABinLeftWithoutItsPointerTests : IDisposable
         var install = start.Option(StartChoice.Install);
         Assert.False(install.IsAvailable);
         Assert.Equal(
-            "There is already a LocalAi directory here — choose “Clean reinstall”, which " +
+            "There is already a Local AI directory here — choose “Clean reinstall”, which " +
             "removes its binaries first.",
             install.UnavailableReason);
         var repair = start.Option(StartChoice.UpdateOrRepair);
@@ -80,7 +80,7 @@ public sealed class ABinLeftWithoutItsPointerTests : IDisposable
         var start = Start();
 
         Assert.Equal(
-            "LocalAi не установлен, но часть его файлов ещё на этом компьютере.",
+            "Local AI не установлен, но часть его файлов ещё на этом компьютере.",
             start.Headline);
         Assert.Equal(
             "Чистая переустановка удалит оставшиеся бинарные файлы и установит заново; " +
@@ -88,7 +88,7 @@ public sealed class ABinLeftWithoutItsPointerTests : IDisposable
             "вы это не подтвердите на итоговой странице.",
             start.Detail);
         Assert.Equal(
-            "Каталог LocalAi здесь уже есть — выберите «Чистая переустановка»: этот вариант " +
+            "Каталог Local AI здесь уже есть — выберите «Чистая переустановка»: этот вариант " +
             "сначала удаляет его бинарные файлы.",
             start.Option(StartChoice.Install).UnavailableReason);
         Assert.Equal(

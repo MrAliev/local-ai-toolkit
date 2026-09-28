@@ -332,10 +332,10 @@ public sealed class ReleaseCommandTests : IDisposable
         Directory.CreateDirectory(Path.Combine(_root, "docs", "releases"));
         File.WriteAllText(
             Path.Combine(_root, "docs", "releases", $"{version}.md"),
-            $"# LocalAi {version}\n\n[Русская версия]({version}.ru.md)\n\nA real change.\n");
+            $"# Local AI {version}\n\n[Русская версия]({version}.ru.md)\n\nA real change.\n");
         File.WriteAllText(
             Path.Combine(_root, "docs", "releases", $"{version}.ru.md"),
-            $"# LocalAi {version}\n\n[English version]({version}.md)\n\nНастоящее изменение.\n");
+            $"# Local AI {version}\n\n[English version]({version}.md)\n\nНастоящее изменение.\n");
     }
 
     /// <summary>

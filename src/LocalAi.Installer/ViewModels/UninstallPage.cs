@@ -80,7 +80,7 @@ public sealed class RepositoryRow(
             InstallerCulture.Pick("skipped — {0}", "пропущен — {0}"),
             reason)
         : dispatcherCount == 0
-            ? InstallerCulture.Pick("no LocalAi hooks found", "хуков LocalAi не найдено")
+            ? InstallerCulture.Pick("no Local AI hooks found", "хуков Local AI не найдено")
             : string.Format(
                 InstallerCulture.Pick("hooks installed: {0}", "установлено хуков: {0}"),
                 dispatcherCount);

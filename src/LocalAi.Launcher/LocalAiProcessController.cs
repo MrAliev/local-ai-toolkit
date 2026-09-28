@@ -176,7 +176,7 @@ public sealed class LocalAiProcessController
                     snapshot.BrokerAssemblyPath is null
                         ? "activation_timeout"
                         : "broker_still_running",
-                    $"LocalAi process {snapshot.ProcessId} did not exit.");
+                    $"Local AI process {snapshot.ProcessId} did not exit.");
             }
         }
         catch (ArgumentException)
@@ -191,7 +191,7 @@ public sealed class LocalAiProcessController
                 snapshot.BrokerAssemblyPath is null
                     ? "activation_timeout"
                     : "broker_still_running",
-                $"Could not stop LocalAi process {snapshot.ProcessId}: {exception.Message}");
+                $"Could not stop Local AI process {snapshot.ProcessId}: {exception.Message}");
         }
     }
 

@@ -19,7 +19,7 @@ The set is **not the same**: some tools exist only here, some only over MCP.
 | `codesearch get-chunk --id …` | pull a match in full |
 | `codesearch status` | where the index is, whether it drifted, whether the repo is connected |
 | `codesearch scan` | what would go into the index at all |
-| `codesearch index` / `overlay` | build an index by hand, outside LocalAi's management |
+| `codesearch index` / `overlay` | build an index by hand, outside Local AI's management |
 | `codesearch evaluate --cases …` | run the search-quality corpus |
 | `localai semantic definition` / `references` / `implementations` / `relationships` | navigate by symbol |
 | `localai semantic impact --path src/Type.cs --line 12 --json` | direct indexed C# references and incoming relationships |
@@ -127,7 +127,7 @@ and `index_status` answers for the index. A person needs the wider picture:
   comparisons have separate totals and known/unknown coverage.
 - `codesearch scan` — what would be indexed at all. You look at it while setting a repository
   up, to see the size of the job, not while asking a question about code.
-- `codesearch evaluate` — the search-quality corpus. A tool for developing LocalAi itself,
+- `codesearch evaluate` — the search-quality corpus. A tool for developing Local AI itself,
   not for working with your code.
 
 ---

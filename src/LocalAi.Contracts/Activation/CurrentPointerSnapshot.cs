@@ -127,7 +127,7 @@ public sealed class CurrentPointerSnapshot
     {
         if (!LocalAiVersionName.IsSafe(version))
         {
-            throw new ArgumentException("The LocalAi version is unsafe.", nameof(version));
+            throw new ArgumentException("The Local AI version is unsafe.", nameof(version));
         }
 
         return JsonSerializer.SerializeToUtf8Bytes(new PointerDocument(1, version));

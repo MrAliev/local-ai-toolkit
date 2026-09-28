@@ -129,7 +129,7 @@ public sealed class BackendStarter
             Volatile.Write(ref _attempted, 1);
             _report(
                 "Ollama is not answering and no verified installation of it was recorded, so " +
-                "it will not be started. Run the LocalAi installer once to record one.");
+                "it will not be started. Run the Local AI installer once to record one.");
             return;
         }
 

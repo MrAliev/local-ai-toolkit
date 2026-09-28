@@ -93,7 +93,7 @@ public sealed class ResultsFollowTheLanguageTests : IDisposable
         presentation.ChooseLanguage(InstallerLanguage.Russian);
 
         Assert.True(wizard.IsBlocked);
-        Assert.Contains("нет установки LocalAi", wizard.BlockingNotice!, StringComparison.Ordinal);
+        Assert.Contains("нет установки Local AI", wizard.BlockingNotice!, StringComparison.Ordinal);
         Assert.DoesNotContain("документаци", wizard.BlockingNotice!, StringComparison.Ordinal);
         Assert.Equal("Готово", wizard.ProgressText);
     }
@@ -291,7 +291,7 @@ public sealed class ResultsFollowTheLanguageTests : IDisposable
             "не установлен: установка остановилась с ошибкой. Технические сведения: failed",
             RunResults.PackageDetail(new PackageOutcome(PackageOutcomeKind.Failed, Reason: "failed"), installed: false));
         Assert.Equal(
-            "пропущено: этот запуск не установил пакет LocalAi",
+            "пропущено: этот запуск не установил пакет Local AI",
             RunResults.Client(new("Codex", ClientRunState.Skipped)).Detail);
         Assert.Equal("добавлен для этой учётной записи", RunResults.PathDetail(PathOutcome.Added));
         Assert.Equal("уже был прописан", RunResults.PathDetail(PathOutcome.AlreadyThere));
@@ -429,7 +429,7 @@ public sealed class ResultsFollowTheLanguageTests : IDisposable
 
         Assert.Equal("Завершено", wizard.ProgressText);
         Assert.Equal(rows, wizard.Finish.Results.Count);
-        Assert.Equal("Пакет LocalAi", wizard.Finish.Results[0].Title);
+        Assert.Equal("Пакет Local AI", wizard.Finish.Results[0].Title);
         Assert.Equal("не выполнялось", wizard.Finish.Results[0].Detail);
         Assert.Equal("Необходимые компоненты", wizard.Finish.Results[1].Title);
         Assert.Equal("ничего не выбрано", wizard.Finish.Results[1].Detail);

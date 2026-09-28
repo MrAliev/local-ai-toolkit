@@ -35,7 +35,7 @@ public sealed class InstallerStartViewModelTests : IDisposable
         Assert.Equal(RemovalFixture.InstalledVersion, start.InstalledVersion);
         // The fixture writes no release record, so this machine cannot say which release
         // it is — the headline says what it knows, and the build id is named below it.
-        Assert.Equal("LocalAi is installed on this computer.", start.Headline);
+        Assert.Equal("Local AI is installed on this computer.", start.Headline);
         Assert.Contains(
             "Build " + RemovalFixture.InstalledVersion,
             start.Detail,
@@ -122,14 +122,14 @@ public sealed class InstallerStartViewModelTests : IDisposable
 
         Assert.Equal(ExistingLocalAiState.Compatible, start.State);
         Assert.False(start.HasProblem);
-        Assert.Equal("LocalAi is installed on this computer.", start.Headline);
+        Assert.Equal("Local AI is installed on this computer.", start.Headline);
         Assert.Contains(
             "Build " + RemovalFixture.InstalledVersion,
             start.Detail,
             StringComparison.Ordinal);
         Assert.True(start.Option(StartChoice.UpdateOrRepair).IsAvailable);
         Assert.Equal(
-            "LocalAi is already installed — choose “Update or repair”.",
+            "Local AI is already installed — choose “Update or repair”.",
             start.Option(StartChoice.Install).UnavailableReason);
         Assert.False(start.Option(StartChoice.Install).IsAvailable);
         Assert.True(start.Option(StartChoice.CleanReinstall).IsAvailable);
@@ -223,7 +223,7 @@ public sealed class InstallerStartViewModelTests : IDisposable
 
         Assert.Equal(ExistingLocalAiState.Leftovers, start.State);
         Assert.Equal(
-            "LocalAi is not installed, but some of its files are still on this computer.",
+            "Local AI is not installed, but some of its files are still on this computer.",
             start.Headline);
         Assert.False(start.Option(StartChoice.UpdateOrRepair).IsAvailable);
         Assert.Equal(StartChoice.Remove, start.Selected);

@@ -32,7 +32,7 @@ public sealed class NavigationNamesTheFileThatIsActuallyMissingTests : IDisposab
         Directory.CreateDirectory(_root);
         Git("init", "--initial-branch=main", ".");
         Git("config", "user.email", "localai-tests@example.invalid");
-        Git("config", "user.name", "LocalAi Tests");
+        Git("config", "user.name", "Local AI Tests");
         File.WriteAllText(Path.Combine(_root, "notes.md"), "hello\n");
         Git("add", ".");
         Git("commit", "-m", "first");

@@ -6,7 +6,7 @@
         Background="{DynamicResource WindowFill}"
         Foreground="{DynamicResource TextPrimary}"
         Icon="pack://application:,,,/Resources/localai.ico"
-        Title="LocalAi"
+        Title="Local AI"
         Width="640"
         Height="640"
         MinWidth="600"

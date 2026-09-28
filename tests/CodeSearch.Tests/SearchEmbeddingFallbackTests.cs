@@ -33,7 +33,7 @@ public sealed class SearchEmbeddingFallbackTests : IDisposable
             "other line\r\n");
         Git("init", "-b", "main");
         Git("config", "user.email", "tests@local.invalid");
-        Git("config", "user.name", "LocalAi Tests");
+        Git("config", "user.name", "Local AI Tests");
         Git("add", ".");
         Git("commit", "-m", "Initial");
 

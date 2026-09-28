@@ -224,9 +224,9 @@ public sealed class AgentIntegrationPageViewModel : ObservableObject
                 "Текстовый поиск в Claude Code: не трогается. Отказ в {0} не добавляется."),
             (false, true) => InstallerCulture.Pick(
                 "Text search in Claude Code: left alone (refused now — this run changes it). " +
-                "LocalAi's line is taken out of {0}; anything else in that file stays.",
+                "Local AI's line is taken out of {0}; anything else in that file stays.",
                 "Текстовый поиск в Claude Code: не трогается (сейчас отклоняется — этот " +
-                "запуск это меняет). Строка LocalAi убирается из {0}; всё остальное в этом " +
+                "запуск это меняет). Строка Local AI убирается из {0}; всё остальное в этом " +
                 "файле остаётся."),
         },
         SettingsPath);

@@ -21,7 +21,7 @@ public static class UninstallJournalDescriptions
     public static string Path(string path) => "Remove " + path;
     public static string Configuration(AgentConfigurationPlan configuration) =>
         "Disconnect " + configuration.AgentName + ": " + string.Join(", ", configuration.Files.Select(file => file.Path));
-    public static string Hooks(string commonDirectory) => "Remove the LocalAi hooks from " + commonDirectory;
+    public static string Hooks(string commonDirectory) => "Remove the Local AI hooks from " + commonDirectory;
     public static string LauncherPath(string directory) => "Take " + directory + " off the user PATH";
     public static string Registration(string directory) => "Remove the Apps & features entry and " + directory;
 

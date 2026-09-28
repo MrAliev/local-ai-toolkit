@@ -438,8 +438,8 @@ public static class RunResults
                 "Настройка прервана; итоговое состояние неизвестно. Проверьте конфигурацию клиента перед повторной настройкой."),
             // Marked None: the package row already carries the failure.
             ClientRunState.Skipped => InstallerCulture.Pick(
-                "skipped: this run did not install the LocalAi package",
-                "пропущено: этот запуск не установил пакет LocalAi"),
+                "skipped: this run did not install the Local AI package",
+                "пропущено: этот запуск не установил пакет Local AI"),
             _ => InstallerCulture.Pick(
                 "not attempted; the run stopped before client setup",
                 "не выполнялось; запуск остановился до настройки клиента"),
@@ -600,8 +600,8 @@ public static class RunResults
             "state could not be determined",
             "состояние определить не удалось"),
         LocalAiPackageInstallStatus.Busy => InstallerCulture.Pick(
-            "not installed: another LocalAi installation or activation was under way",
-            "не установлен: шла другая установка или активация LocalAi"),
+            "not installed: another Local AI installation or activation was under way",
+            "не установлен: шла другая установка или активация Local AI"),
         _ => outcome.Status.ToString(),
     };
 
@@ -615,7 +615,7 @@ public static class RunResults
     /// </summary>
     public static string AppsAndFeatures(UninstallEntry? readBack, string uninstallerPath) =>
         readBack is null
-            ? "Apps & features: the entry was written and is not there when read back. LocalAi " +
+            ? "Apps & features: the entry was written and is not there when read back. Local AI " +
                 "package installation completed; model and client results are reported separately. To remove it later, run this installer again and " +
                 "choose Remove."
             : $"Apps & features: listed as \"{readBack.DisplayName}\" " +

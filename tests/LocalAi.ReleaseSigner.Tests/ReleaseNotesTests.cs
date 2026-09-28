@@ -31,7 +31,7 @@ public sealed class ReleaseNotesTests : IDisposable
     {
         ReleaseNotes.Scaffold(_root, Version);
         var path = ReleaseNotes.EnglishPath(_root, Version);
-        File.WriteAllText(path, $"# LocalAi {Version}\n\n[Русская версия]({Version}.ru.md)\n\nReal.\n");
+        File.WriteAllText(path, $"# Local AI {Version}\n\n[Русская версия]({Version}.ru.md)\n\nReal.\n");
 
         var created = ReleaseNotes.Scaffold(_root, Version);
 
@@ -46,20 +46,20 @@ public sealed class ReleaseNotesTests : IDisposable
     [Fact]
     public void A_heading_copied_from_an_earlier_release_is_caught()
     {
-        Write($"# LocalAi 0.1.35\n\n[Русская версия]({Version}.ru.md)\n\nReal.\n", Russian());
+        Write($"# Local AI 0.1.35\n\n[Русская версия]({Version}.ru.md)\n\nReal.\n", Russian());
 
         var state = ReleaseNotes.Inspect(_root, Version);
 
         Assert.False(state.ReadyToPublish);
         Assert.Contains(
             state.Problems,
-            problem => problem.Contains("# LocalAi 0.1.35", StringComparison.Ordinal));
+            problem => problem.Contains("# Local AI 0.1.35", StringComparison.Ordinal));
     }
 
     [Fact]
     public void A_missing_link_to_the_Russian_notes_is_caught()
     {
-        Write($"# LocalAi {Version}\n\nReal.\n", Russian());
+        Write($"# Local AI {Version}\n\nReal.\n", Russian());
 
         var state = ReleaseNotes.Inspect(_root, Version);
 
@@ -72,7 +72,7 @@ public sealed class ReleaseNotesTests : IDisposable
     [Fact]
     public void Notes_written_in_both_languages_are_ready()
     {
-        Write($"# LocalAi {Version}\n\n[Русская версия]({Version}.ru.md)\n\nReal.\n", Russian());
+        Write($"# Local AI {Version}\n\n[Русская версия]({Version}.ru.md)\n\nReal.\n", Russian());
 
         Assert.True(ReleaseNotes.Inspect(_root, Version).ReadyToPublish);
     }
@@ -83,7 +83,7 @@ public sealed class ReleaseNotesTests : IDisposable
         Directory.CreateDirectory(Path.Combine(_root, "docs", "releases"));
         File.WriteAllText(
             ReleaseNotes.EnglishPath(_root, Version),
-            $"# LocalAi {Version}\n\n[Русская версия]({Version}.ru.md)\n\nReal.\n");
+            $"# Local AI {Version}\n\n[Русская версия]({Version}.ru.md)\n\nReal.\n");
 
         var state = ReleaseNotes.Inspect(_root, Version);
 
@@ -93,7 +93,7 @@ public sealed class ReleaseNotesTests : IDisposable
     }
 
     private static string Russian() =>
-        $"# LocalAi {Version}\n\n[English version]({Version}.md)\n\nНастоящее.\n";
+        $"# Local AI {Version}\n\n[English version]({Version}.md)\n\nНастоящее.\n";
 
     private void Write(string english, string russian)
     {

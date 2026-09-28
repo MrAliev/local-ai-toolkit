@@ -5,7 +5,7 @@
 MIT. See [LICENSE](https://github.com/MrAliev/local-ai-toolkit/blob/main/LICENSE).
 
 - [Code signing policy](code-signing-policy.md): what is signed, by whom, and how.
-- [Privacy](privacy.md): every connection LocalAi makes to another computer.
+- [Privacy](privacy.md): every connection Local AI makes to another computer.
 - [Security policy](https://github.com/MrAliev/local-ai-toolkit/blob/main/SECURITY.md): how to report a vulnerability.
 - [Contributing](https://github.com/MrAliev/local-ai-toolkit/blob/main/CONTRIBUTING.md): how work gets into `main`.
 

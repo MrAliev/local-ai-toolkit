@@ -156,8 +156,8 @@ public sealed class ThePackageStatusMatchesTheRunTests
             "back any of its files that are missing or differ from the release.",
             page.StatusText);
         Assert.Equal(
-            "LocalAi package: 0.1.51 is already installed — files that are missing or differ " +
-            "from the release are put back; if any are, LocalAi's running tools and broker are " +
+            "Local AI package: 0.1.51 is already installed — files that are missing or differ " +
+            "from the release are put back; if any are, Local AI's running tools and broker are " +
             "stopped",
             page.ReviewText);
 
@@ -165,9 +165,9 @@ public sealed class ThePackageStatusMatchesTheRunTests
         page.SelectResolvedRelease(Release("0.1.51"), "0.1.51");
 
         Assert.Equal(
-            "LocalAi package: 0.1.51 is already installed — unless a newer one is published " +
+            "Local AI package: 0.1.51 is already installed — unless a newer one is published " +
             "before you press Update, files that are missing or differ from the release are put " +
-            "back; if any are, LocalAi's running tools and broker are stopped",
+            "back; if any are, Local AI's running tools and broker are stopped",
             page.ReviewText);
     }
 
@@ -189,18 +189,18 @@ public sealed class ThePackageStatusMatchesTheRunTests
             "место те его файлы, которых нет или которые отличаются от релиза.",
             page.StatusText);
         Assert.Equal(
-            "Пакет LocalAi: 0.1.51 уже установлен — файлы, которых нет или которые отличаются " +
+            "Пакет Local AI: 0.1.51 уже установлен — файлы, которых нет или которые отличаются " +
             "от релиза, возвращаются на место; если такие нашлись, запущенные инструменты и " +
-            "брокер LocalAi останавливаются",
+            "брокер Local AI останавливаются",
             page.ReviewText);
 
         page.ReleaseVersion = PackagePageViewModel.LatestTag;
         page.SelectResolvedRelease(Release("0.1.51"), "0.1.51");
 
         Assert.Equal(
-            "Пакет LocalAi: 0.1.51 уже установлен — если до нажатия «Обновить» не выйдет более " +
+            "Пакет Local AI: 0.1.51 уже установлен — если до нажатия «Обновить» не выйдет более " +
             "новый, файлы, которых нет или которые отличаются от релиза, возвращаются на место; " +
-            "если такие нашлись, запущенные инструменты и брокер LocalAi останавливаются",
+            "если такие нашлись, запущенные инструменты и брокер Local AI останавливаются",
             page.ReviewText);
     }
 
@@ -226,7 +226,7 @@ public sealed class ThePackageStatusMatchesTheRunTests
             "codesearch.exe, pdfium.dll",
             RunResults.PackageDetail(outcome, installed: true));
         Assert.Equal(
-            @"LocalAi package: AlreadyInstalled, version 0123456789ab at C:\v\0123456789ab. " +
+            @"Local AI package: AlreadyInstalled, version 0123456789ab at C:\v\0123456789ab. " +
             "Put back from the release: codesearch.exe, pdfium.dll.",
             InstallerWizardViewModel.PackageLogLine(result));
 
@@ -252,7 +252,7 @@ public sealed class ThePackageStatusMatchesTheRunTests
             "already installed, version 0123456789ab",
             RunResults.PackageDetail(PackageOutcome.FromResult(result), installed: true));
         Assert.Equal(
-            @"LocalAi package: AlreadyInstalled, version 0123456789ab at C:\v\0123456789ab.",
+            @"Local AI package: AlreadyInstalled, version 0123456789ab at C:\v\0123456789ab.",
             InstallerWizardViewModel.PackageLogLine(result));
     }
 
@@ -278,7 +278,7 @@ public sealed class ThePackageStatusMatchesTheRunTests
             "put back from the release and kept: codesearch.exe, pdfium.dll",
             RunResults.PackageDetail(outcome, installed: false));
         Assert.Equal(
-            "LocalAi package: RolledBack. Activation failed and the prior version remained " +
+            "Local AI package: RolledBack. Activation failed and the prior version remained " +
             "selected. Put back from the release and kept: codesearch.exe, pdfium.dll.",
             InstallerWizardViewModel.PackageLogLine(result));
 
@@ -473,8 +473,8 @@ public sealed class ThePackageStatusMatchesTheRunTests
 
         Assert.False(await wizard.RunAsync(TestContext.Current.CancellationToken));
 
-        Assert.Contains("Copying the LocalAi package from the folder...", said);
-        Assert.Contains("Copying the LocalAi package from the folder: 100 of 200 MB", said);
+        Assert.Contains("Copying the Local AI package from the folder...", said);
+        Assert.Contains("Copying the Local AI package from the folder: 100 of 200 MB", said);
         Assert.DoesNotContain(said, line => line.StartsWith("Downloading", StringComparison.Ordinal));
     }
 
@@ -487,7 +487,7 @@ public sealed class ThePackageStatusMatchesTheRunTests
         var log = await LogOfARunFrom(logs, logs.Path);
 
         Assert.Contains(
-            $"LocalAi package 0.1.51: copying from {logs.Path} and verifying...",
+            $"Local AI package 0.1.51: copying from {logs.Path} and verifying...",
             log,
             StringComparison.Ordinal);
         Assert.DoesNotContain("downloading", log, StringComparison.Ordinal);
@@ -501,7 +501,7 @@ public sealed class ThePackageStatusMatchesTheRunTests
         var log = await LogOfARunFrom(logs, folder: null);
 
         Assert.Contains(
-            "LocalAi package 0.1.51: downloading and verifying...",
+            "Local AI package 0.1.51: downloading and verifying...",
             log,
             StringComparison.Ordinal);
         Assert.DoesNotContain("copying", log, StringComparison.Ordinal);

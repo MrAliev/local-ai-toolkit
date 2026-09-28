@@ -12,7 +12,7 @@
 - [How the saving is counted](#how-the-saving-is-counted)
 - [What the installer does](#what-the-installer-does)
 
-LocalAi is a few small programs around two things it keeps on your disk: one queue of work
+Local AI is a few small programs around two things it keeps on your disk: one queue of work
 for the local models, and one code index per repository. This section follows a request
 through them.
 
@@ -200,11 +200,11 @@ flowchart LR
 
 - The release manifest is signed with ECDSA P-256 and checked against the key built into the
   installer; the package has to match the manifest.
-- Prerequisites are installed machine-wide, only the ones you ticked, and LocalAi never
+- Prerequisites are installed machine-wide, only the ones you ticked, and Local AI never
   removes them: other programs may depend on them.
 - Every step goes into a run journal. A run cut off halfway is reported the next time the
   installer starts, with an offer to undo what can be undone, and two runs cannot overlap.
-- Removal takes LocalAi out in this order: its processes, its entries in the client
+- Removal takes Local AI out in this order: its processes, its entries in the client
   configurations, the Git hooks, its files, the PATH entry, the Apps & features entry, and
   the uninstaller's own copy last.
 

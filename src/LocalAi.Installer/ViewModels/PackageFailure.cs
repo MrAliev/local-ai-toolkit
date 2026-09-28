@@ -21,25 +21,25 @@ internal sealed record PackageFailure(PackageFailureKind Kind, string? Detail, s
         PackageVerificationException { Problem: PackageVerificationProblem.SizeMismatch } refused =>
             Mismatch(fromFolder, string.Format(
                 CultureInfo.InvariantCulture,
-                "LocalAi package: localai-package.zip is {0} bytes; the signed manifest says {1}.",
+                "Local AI package: localai-package.zip is {0} bytes; the signed manifest says {1}.",
                 refused.ActualSize,
                 refused.ExpectedSize)),
         PackageVerificationException { Problem: PackageVerificationProblem.LargerThanManifest } refused =>
             Mismatch(fromFolder, string.Format(
                 CultureInfo.InvariantCulture,
-                "LocalAi package: localai-package.zip is larger than the {0} bytes the signed manifest says.",
+                "Local AI package: localai-package.zip is larger than the {0} bytes the signed manifest says.",
                 refused.ExpectedSize)),
         PackageVerificationException { Problem: PackageVerificationProblem.HashMismatch } refused =>
             Mismatch(fromFolder, string.Format(
                 CultureInfo.InvariantCulture,
-                "LocalAi package: localai-package.zip does not match the SHA-256 in the signed manifest " +
+                "Local AI package: localai-package.zip does not match the SHA-256 in the signed manifest " +
                 "(manifest {0}, file {1}).",
                 refused.ExpectedSha256,
                 refused.ActualSha256)),
         PackageVerificationException { Problem: PackageVerificationProblem.ContentsRejected } => new(
             PackageFailureKind.ContentsRejected,
             null,
-            "LocalAi package: the package matches the signed manifest, but its contents failed the " +
+            "Local AI package: the package matches the signed manifest, but its contents failed the " +
             "installer's checks." + NotInstalled),
         PackageVerificationException { Problem: PackageVerificationProblem.NotWritten } refused =>
             NotWritten(refused.Path, refused.Reason),
@@ -58,12 +58,12 @@ internal sealed record PackageFailure(PackageFailureKind Kind, string? Detail, s
                 _ => PackageFailureKind.Unreadable,
             },
             file.InnerException?.Message ?? file.Message,
-            $"LocalAi package: {file.Message}" + NotInstalled),
+            $"Local AI package: {file.Message}" + NotInstalled),
         // Only a download raises this from the package step: the folder's failures are typed above.
         ReleaseResolutionException download when !fromFolder => new(
             PackageFailureKind.NotDownloaded,
             download.Message,
-            $"LocalAi package: {download.Message}" + NotInstalled),
+            $"Local AI package: {download.Message}" + NotInstalled),
         _ => null,
     };
 
@@ -76,5 +76,5 @@ internal sealed record PackageFailure(PackageFailureKind Kind, string? Detail, s
     private static PackageFailure NotWritten(string? path, string? reason) => new(
         PackageFailureKind.NotWritten,
         reason,
-        $"LocalAi package: could not write the package to {path}: {reason?.TrimEnd('.')}." + NotInstalled);
+        $"Local AI package: could not write the package to {path}: {reason?.TrimEnd('.')}." + NotInstalled);
 }

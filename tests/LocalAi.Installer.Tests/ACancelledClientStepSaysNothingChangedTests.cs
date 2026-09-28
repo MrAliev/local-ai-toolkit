@@ -33,9 +33,9 @@ public sealed class ACancelledClientStepSaysNothingChangedTests : IDisposable
     }
 
     [Theory]
-    [InlineData(InstallerLanguage.English, "Cancelled, unchanged: {0} — LocalAi still connected",
+    [InlineData(InstallerLanguage.English, "Cancelled, unchanged: {0} — Local AI still connected",
         "Kept: {0} — the copy used to restore {1}")]
-    [InlineData(InstallerLanguage.Russian, "Отменено, без изменений: {0} — LocalAi по-прежнему подключён",
+    [InlineData(InstallerLanguage.Russian, "Отменено, без изменений: {0} — Local AI по-прежнему подключён",
         "Оставлено: {0} — копия, из которой восстановлен файл {1}")]
     public async Task The_report_says_it_was_cancelled_and_nothing_changed(
         InstallerLanguage language, string stepLine, string backupLine)

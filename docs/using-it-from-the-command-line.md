@@ -85,7 +85,7 @@ watch the window: `localai repo status --follow` shows the phase and its figures
 runs.
 
 From then on the hooks keep the index current by themselves: after a commit, checkout, merge
-or rebase. Hooks you already had are not overwritten — LocalAi joins the chain and calls them
+or rebase. Hooks you already had are not overwritten — Local AI joins the chain and calls them
 first.
 
 Check:
@@ -601,7 +601,7 @@ There is no shell-script, package-manager or network fallback in the EXE/MSI com
 npm caches use the separate `offline install-npm` command below.
 The inventory hash trusts the supplied recipe and bytes, not their publisher or declared version.
 The external installer may access the network or make partial changes; network isolation, installed
-version and usability are not established here, and LocalAi cannot automatically roll changes back.
+version and usability are not established here, and Local AI cannot automatically roll changes back.
 
 Installer exits 0, 3010 and 1641 produce `state=completed`; the latter two set `rebootRequired=true`.
 Other failures return a nonzero CLI exit with `ok=false` while preserving result details. Cancellation
@@ -757,7 +757,7 @@ parents, outside the bundle and runtime installation. Existing run folders are n
 
 Before any dependency executes, a selected runtime passes the normal full signed-package, metadata
 and applicable Authenticode verification in protected staging. Its verified files remain retained
-through execution. Runtime activation uses the current user's default LocalAi installation and may
+through execution. Runtime activation uses the current user's default Local AI installation and may
 stop running tools and change the active version. PATH is changed only by the explicit schema-3
 option above. Windows uninstall registration is optional as described above; other wizard settings remain separate.
 Model-root setup is optional as described above; it does not change user/system `OLLAMA_MODELS`.

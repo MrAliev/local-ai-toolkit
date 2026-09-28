@@ -69,7 +69,7 @@ text of `localai policy`, which it prints for an argument it does not recognise.
 `localai policy show` names the current policy and, when it is relaxed, warns that responses
 may be substantially slower than a fully resident load.
 
-**The ceiling is one card, not the sum.** When LocalAi estimates whether a model fits in video
+**The ceiling is one card, not the sum.** When Local AI estimates whether a model fits in video
 memory — on the installer's models page and in `localai hardware plan` — it counts only the
 card with the most dedicated video memory and never adds cards together: two 4 GB cards are
 planned as one 4 GB card. After a model loads, the broker compares one figure Ollama reports,

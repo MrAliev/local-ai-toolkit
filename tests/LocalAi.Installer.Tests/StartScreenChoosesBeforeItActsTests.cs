@@ -131,7 +131,7 @@ public sealed class StartScreenChoosesBeforeItActsTests : IDisposable
         Assert.True(start.Option(StartChoice.CleanReinstall).IsAvailable);
         Assert.False(start.Option(StartChoice.UpdateOrRepair).IsAvailable);
         Assert.Equal(
-            "There is already a LocalAi directory here — choose “Clean reinstall”, which " +
+            "There is already a Local AI directory here — choose “Clean reinstall”, which " +
             "removes its binaries first.",
             start.Option(StartChoice.Install).UnavailableReason);
     }

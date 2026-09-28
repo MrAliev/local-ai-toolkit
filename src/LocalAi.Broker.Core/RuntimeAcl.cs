@@ -317,7 +317,7 @@ public sealed class RuntimeAcl
         new(
             $"Runtime ACL refused a reparse point at '{path}': the runtime tree must not " +
             "contain junctions or symlinks, because repairing ACLs through one would " +
-            "rewrite permissions outside the LocalAi runtime. Remove it and run again.");
+            "rewrite permissions outside the Local AI runtime. Remove it and run again.");
 
     private static bool IsDisappearanceCandidate(Exception exception) =>
         exception is IOException or InvalidOperationException;

@@ -60,8 +60,8 @@ public sealed class TheRemovalSaysWhatItDisconnectedTests : IDisposable
     }
 
     [Theory]
-    [InlineData(InstallerLanguage.English, "Updated {0}, {1}; removed {2} — LocalAi disconnected")]
-    [InlineData(InstallerLanguage.Russian, "Обновлено {0}, {1}; удалено {2} — LocalAi отключён")]
+    [InlineData(InstallerLanguage.English, "Updated {0}, {1}; removed {2} — Local AI disconnected")]
+    [InlineData(InstallerLanguage.Russian, "Обновлено {0}, {1}; удалено {2} — Local AI отключён")]
     public async Task The_report_file_says_which_client_files_were_removed(
         InstallerLanguage language, string line)
     {
@@ -74,8 +74,8 @@ public sealed class TheRemovalSaysWhatItDisconnectedTests : IDisposable
     }
 
     [Theory]
-    [InlineData(InstallerLanguage.English, "Removed {0} — LocalAi disconnected")]
-    [InlineData(InstallerLanguage.Russian, "Удалено {0} — LocalAi отключён")]
+    [InlineData(InstallerLanguage.English, "Removed {0} — Local AI disconnected")]
+    [InlineData(InstallerLanguage.Russian, "Удалено {0} — Local AI отключён")]
     public async Task A_plan_that_only_removed_a_file_does_not_say_updated(
         InstallerLanguage language, string line)
     {
@@ -93,8 +93,8 @@ public sealed class TheRemovalSaysWhatItDisconnectedTests : IDisposable
     /// nothing was rewritten for it to say "Updated".
     /// </summary>
     [Theory]
-    [InlineData(InstallerLanguage.English, "Removed — LocalAi disconnected")]
-    [InlineData(InstallerLanguage.Russian, "Удалено — LocalAi отключён")]
+    [InlineData(InstallerLanguage.English, "Removed — Local AI disconnected")]
+    [InlineData(InstallerLanguage.Russian, "Удалено — Local AI отключён")]
     public async Task The_finish_page_says_removed_when_the_plan_only_removed_files(
         InstallerLanguage language, string detail)
     {
@@ -111,9 +111,9 @@ public sealed class TheRemovalSaysWhatItDisconnectedTests : IDisposable
     /// went. Its backup is still reported as the previous version.
     /// </summary>
     [Theory]
-    [InlineData(InstallerLanguage.English, "Updated; removed SKILL.md — LocalAi disconnected",
+    [InlineData(InstallerLanguage.English, "Updated; removed SKILL.md — Local AI disconnected",
         "Kept — the previous version of {0}")]
-    [InlineData(InstallerLanguage.Russian, "Обновлено; удалено SKILL.md — LocalAi отключён",
+    [InlineData(InstallerLanguage.Russian, "Обновлено; удалено SKILL.md — Local AI отключён",
         "Оставлено — прежняя версия {0}")]
     public async Task The_finish_page_names_the_removed_file_under_the_full_paths(
         InstallerLanguage language, string detail, string backup)

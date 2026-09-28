@@ -319,7 +319,7 @@ public sealed class InstallationLayoutLease : IDisposable
         if (!OperatingSystem.IsWindows())
         {
             throw new PlatformNotSupportedException(
-                "Protected LocalAi installation layout is available only on Windows.");
+                "Protected Local AI installation layout is available only on Windows.");
         }
 
         var directories = new List<DirectoryEvidence>();
@@ -903,7 +903,7 @@ public sealed class InstallationLayoutLease : IDisposable
     /// </summary>
     private static LocalAiPackageInstallationException Failure(
         [System.Runtime.CompilerServices.CallerMemberName] string? check = null) =>
-        new($"The LocalAi installation layout is unsafe (check: {check ?? "unknown"}).");
+        new($"The Local AI installation layout is unsafe (check: {check ?? "unknown"}).");
 
     /// <summary>
     /// The same refusal, carrying which of the ACL conditions failed.
@@ -918,7 +918,7 @@ public sealed class InstallationLayoutLease : IDisposable
     private static LocalAiPackageInstallationException AclFailure(
         string reason,
         [System.Runtime.CompilerServices.CallerMemberName] string? check = null) =>
-        new($"The LocalAi installation layout is unsafe (check: {check ?? "unknown"}): {reason}.");
+        new($"The Local AI installation layout is unsafe (check: {check ?? "unknown"}): {reason}.");
 
     /// <summary>
     /// The refusal a directory open produces, naming the directory and the NTSTATUS.
@@ -933,7 +933,7 @@ public sealed class InstallationLayoutLease : IDisposable
         string path,
         int status,
         string check) =>
-        new($"The LocalAi installation layout is unsafe (check: {check}): " +
+        new($"The Local AI installation layout is unsafe (check: {check}): " +
             $"{path} could not be opened (NTSTATUS 0x{status:X8}).");
 
     private static void DisposeDirectories(

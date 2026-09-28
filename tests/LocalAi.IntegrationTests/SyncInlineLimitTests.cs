@@ -142,7 +142,7 @@ public sealed class SyncInlineLimitTests : IDisposable
         Directory.CreateDirectory(_root);
         Git("init", "--initial-branch=main", ".");
         Git("config", "user.email", "localai-tests@example.invalid");
-        Git("config", "user.name", "LocalAi Tests");
+        Git("config", "user.name", "Local AI Tests");
         for (var index = 0; index < 5; index++)
         {
             File.WriteAllText(

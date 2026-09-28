@@ -525,7 +525,7 @@ public sealed class ModelCommandTests
     {
         var failure = new BrokerBootstrapException(
             "broker_start_timeout",
-            "LocalAi broker did not become ready within 00:00:15; phase: startup observation.");
+            "Local AI broker did not become ready within 00:00:15; phase: startup observation.");
 
         var (exit, output, error) = await FailAsync(
             ["status"],

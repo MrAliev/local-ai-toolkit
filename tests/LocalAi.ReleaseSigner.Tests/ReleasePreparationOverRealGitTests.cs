@@ -39,7 +39,7 @@ public sealed class ReleasePreparationOverRealGitTests : IDisposable
         Git(origin, "init", "--bare", "-b", "main");
         Git(_repository, "init", "-b", "main");
         Git(_repository, "config", "user.email", "tests@local.invalid");
-        Git(_repository, "config", "user.name", "LocalAi Tests");
+        Git(_repository, "config", "user.name", "Local AI Tests");
         File.WriteAllText(Path.Combine(_repository, "README.md"), "# Fixture\r\n");
         Git(_repository, "add", "README.md");
         Git(_repository, "commit", "-m", "Initial");
@@ -160,10 +160,10 @@ public sealed class ReleasePreparationOverRealGitTests : IDisposable
     {
         File.WriteAllText(
             ReleaseNotes.EnglishPath(_repository, Version),
-            $"# LocalAi {Version}\r\n\r\n[Русская версия]({Version}.ru.md)\r\n\r\nA real change.\r\n");
+            $"# Local AI {Version}\r\n\r\n[Русская версия]({Version}.ru.md)\r\n\r\nA real change.\r\n");
         File.WriteAllText(
             ReleaseNotes.RussianPath(_repository, Version),
-            $"# LocalAi {Version}\r\n\r\n[English version]({Version}.md)\r\n\r\nНастоящее изменение.\r\n");
+            $"# Local AI {Version}\r\n\r\n[English version]({Version}.md)\r\n\r\nНастоящее изменение.\r\n");
     }
 
     private static string Git(string workingDirectory, params string[] arguments)

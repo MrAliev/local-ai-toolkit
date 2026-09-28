@@ -154,17 +154,17 @@ public sealed class InstallerStartViewModel : ObservableObject
     public string Headline => existing.State switch
     {
         ExistingLocalAiState.Compatible => InstallerCulture.Pick(
-            "LocalAi" + Release + " is installed on this computer.",
-            "LocalAi" + Release + " установлен на этом компьютере."),
+            "Local AI" + Release + " is installed on this computer.",
+            "Local AI" + Release + " установлен на этом компьютере."),
         ExistingLocalAiState.Unrecognized => InstallerCulture.Pick(
-            "There is a LocalAi directory here, but it is not a working installation.",
-            "Каталог LocalAi здесь есть, но рабочей установкой он не является."),
+            "There is a Local AI directory here, but it is not a working installation.",
+            "Каталог Local AI здесь есть, но рабочей установкой он не является."),
         ExistingLocalAiState.Leftovers => InstallerCulture.Pick(
-            "LocalAi is not installed, but some of its files are still on this computer.",
-            "LocalAi не установлен, но часть его файлов ещё на этом компьютере."),
+            "Local AI is not installed, but some of its files are still on this computer.",
+            "Local AI не установлен, но часть его файлов ещё на этом компьютере."),
         _ => InstallerCulture.Pick(
-            "LocalAi is not installed on this computer.",
-            "LocalAi не установлен на этом компьютере."),
+            "Local AI is not installed on this computer.",
+            "Local AI не установлен на этом компьютере."),
     };
 
     private void Repaint()
@@ -271,12 +271,12 @@ public sealed class InstallerStartViewModel : ObservableObject
             (existing.Reason is { Length: > 0 } englishReason
                 ? "Reason: " + englishReason
                 : "The installation could not be read.") +
-            "\nA clean reinstall replaces the binaries; removing takes LocalAi off this " +
+            "\nA clean reinstall replaces the binaries; removing takes Local AI off this " +
             "computer.",
             (existing.Reason is { Length: > 0 } reason
                 ? "Причина: " + reason
                 : "Установку не удалось прочитать.") +
-            "\nЧистая переустановка заменит бинарные файлы; удаление уберёт LocalAi с этого " +
+            "\nЧистая переустановка заменит бинарные файлы; удаление уберёт Local AI с этого " +
             "компьютера."),
         ExistingLocalAiState.Leftovers when existing.BinWithoutPointer => InstallerCulture.Pick(
             "A clean reinstall removes the binaries that are left and installs again; removing " +
@@ -293,9 +293,9 @@ public sealed class InstallerStartViewModel : ObservableObject
         ExistingLocalAiState.SigningKeysOnly => InstallerCulture.Pick(
             "Install it to give your assistants local code search and local models. The " +
             "release signing keys from an earlier installation are still here; removing " +
-            "LocalAi can take them too.",
+            "Local AI can take them too.",
             "Установите его, чтобы дать вашим ассистентам локальный поиск по коду и локальные " +
-            "модели. Ключи подписи релизов от прежней установки ещё здесь; удаление LocalAi " +
+            "модели. Ключи подписи релизов от прежней установки ещё здесь; удаление Local AI " +
             "может убрать и их."),
         _ => InstallerCulture.Pick(
             "Install it to give your assistants local code search and local models.",
@@ -332,7 +332,7 @@ public sealed class InstallerStartViewModel : ObservableObject
         var reinstallTitle = InstallerCulture.Pick("Clean reinstall", "Чистая переустановка");
         yield return new StartActionOption(
             StartChoice.Install,
-            InstallerCulture.Pick("Install LocalAi", "Установить LocalAi"),
+            InstallerCulture.Pick("Install Local AI", "Установить Local AI"),
             InstallerCulture.Pick(
                 "Sets up the prerequisites, the runtime and the client integrations.",
                 "Устанавливает необходимые компоненты, рантайм и интеграции с клиентскими " +
@@ -341,15 +341,15 @@ public sealed class InstallerStartViewModel : ObservableObject
             working
                 ? string.Format(
                     InstallerCulture.Pick(
-                        "LocalAi{0} is already installed — choose “{1}”.",
-                        "LocalAi{0} уже установлен — выберите «{1}»."),
+                        "Local AI{0} is already installed — choose “{1}”.",
+                        "Local AI{0} уже установлен — выберите «{1}»."),
                     version,
                     repairTitle)
                 : string.Format(
                     InstallerCulture.Pick(
-                        "There is already a LocalAi directory here — choose “{0}”, which " +
+                        "There is already a Local AI directory here — choose “{0}”, which " +
                         "removes its binaries first.",
-                        "Каталог LocalAi здесь уже есть — выберите «{0}»: этот вариант " +
+                        "Каталог Local AI здесь уже есть — выберите «{0}»: этот вариант " +
                         "сначала удаляет его бинарные файлы."),
                     reinstallTitle));
         yield return new StartActionOption(
@@ -386,7 +386,7 @@ public sealed class InstallerStartViewModel : ObservableObject
                 "Нечего переустанавливать — ничего не установлено."));
         yield return new StartActionOption(
             StartChoice.Remove,
-            InstallerCulture.Pick("Remove LocalAi", "Удалить LocalAi"),
+            InstallerCulture.Pick("Remove Local AI", "Удалить Local AI"),
             InstallerCulture.Pick(
                 "Choose what goes and what stays, then take it off this computer.",
                 "Выберите, что удалить, а что оставить, и уберите его с этого компьютера."),

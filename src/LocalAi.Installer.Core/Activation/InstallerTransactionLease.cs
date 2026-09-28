@@ -269,7 +269,7 @@ internal sealed class InstallerTransactionLease : IDisposable
 internal sealed class InstallerTransactionBusyException : Exception
 {
     public InstallerTransactionBusyException()
-        : base("Another LocalAi installation is already in progress.")
+        : base("Another Local AI installation is already in progress.")
     {
     }
 }

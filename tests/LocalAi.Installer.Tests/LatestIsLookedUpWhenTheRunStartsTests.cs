@@ -27,7 +27,7 @@ public sealed class LatestIsLookedUpWhenTheRunStartsTests : IDisposable
 
         Assert.Equal("0.1.52", seen.Rail);
         Assert.Contains(
-            "LocalAi package: 0.1.52 was published after this release was checked; resolving it instead.",
+            "Local AI package: 0.1.52 was published after this release was checked; resolving it instead.",
             seen.Log,
             StringComparison.Ordinal);
         Assert.Equal("0.1.52", feed.Fetched);
@@ -45,7 +45,7 @@ public sealed class LatestIsLookedUpWhenTheRunStartsTests : IDisposable
 
         Assert.Equal("0.1.51", seen.Rail);
         Assert.Contains(
-            "LocalAi package: the newest release could not be re-checked (the feed could not be " +
+            "Local AI package: the newest release could not be re-checked (the feed could not be " +
             "reached); continuing with 0.1.51.",
             seen.Log,
             StringComparison.Ordinal);
@@ -67,7 +67,7 @@ public sealed class LatestIsLookedUpWhenTheRunStartsTests : IDisposable
 
         Assert.Equal("0.1.52", seen.Rail);
         Assert.Contains(
-            "LocalAi package: the folder now holds 0.1.52, not the 0.1.51 checked on the package " +
+            "Local AI package: the folder now holds 0.1.52, not the 0.1.51 checked on the package " +
             "page; resolving it instead.",
             seen.Log,
             StringComparison.Ordinal);

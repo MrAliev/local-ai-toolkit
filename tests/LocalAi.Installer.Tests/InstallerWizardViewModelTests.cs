@@ -358,7 +358,7 @@ public sealed class InstallerWizardViewModelTests
 
         var review = wizard.ReviewText!;
 
-        Assert.Contains("LocalAi package", review, StringComparison.Ordinal);
+        Assert.Contains("Local AI package", review, StringComparison.Ordinal);
         Assert.Contains("Git", review, StringComparison.Ordinal);
         Assert.Contains("skipped", review, StringComparison.Ordinal);
         // The rule in the words the page offered it, not the enum: this list is read by
@@ -715,7 +715,7 @@ public sealed class InstallerWizardViewModelTests
         try
         {
             var journal = InstallerRunJournal.Start(logDirectory);
-            journal.BeginStep(InstallerRunEffectKind.PackageActivation, "LocalAi package 0.2.1-RC29");
+            journal.BeginStep(InstallerRunEffectKind.PackageActivation, "Local AI package 0.2.1-RC29");
             journal.Dispose();
 
             var wizard = SupportedWizard();
@@ -741,7 +741,7 @@ public sealed class InstallerWizardViewModelTests
         try
         {
             var journal = InstallerRunJournal.Start(logDirectory);
-            journal.BeginStep(InstallerRunEffectKind.PackageActivation, "LocalAi package 0.2.1-RC29");
+            journal.BeginStep(InstallerRunEffectKind.PackageActivation, "Local AI package 0.2.1-RC29");
             journal.Dispose();
             var recorded = File.ReadAllBytes(journal.JournalPath);
 

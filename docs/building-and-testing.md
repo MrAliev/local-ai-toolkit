@@ -23,7 +23,7 @@ Its 70 search cases are split 12/12/12/34; the mixed corpus repeats language-spe
 questions, so these are not 70 independent questions.
 
 Run from the repository root on Windows with PowerShell 7.4+, Git with a configured author
-identity, the .NET 10 SDK, and a working LocalAi broker. The configured embedding model and
+identity, the .NET 10 SDK, and a working Local AI broker. The configured embedding model and
 requested OCR model must be installed and satisfy the residency policy. Each invocation
 needs an output directory outside the repository that is empty or does not exist yet. Avoid concurrent broker work when
 comparing timings.

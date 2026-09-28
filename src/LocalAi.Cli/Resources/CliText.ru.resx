@@ -71,7 +71,7 @@
     <value>Зарегистрировать CodeSearch и LocalLm в Claude и Codex через стабильный launcher.</value>
   </data>
   <data name="BootstrapStepHooks" xml:space="preserve">
-    <value>Установить общие Git-хуки LocalAi. Уже имеющиеся хуки сохраняются и вызываются первыми.</value>
+    <value>Установить общие Git-хуки Local AI. Уже имеющиеся хуки сохраняются и вызываются первыми.</value>
     <comment>The old wording named a chained dispatcher and compatibility checks, neither of which this file explains. HooksInstalled and HooksChained already say it in both languages.</comment>
   </data>
   <data name="BootstrapStepInitializing" xml:space="preserve">
@@ -86,7 +86,7 @@
     <value>Синхронизировать рекомендованные модели инструментом MCP local_models_sync.</value>
   </data>
   <data name="BootstrapStepState" xml:space="preserve">
-    <value>Создать состояние LocalAi для репозитория {0} в рантайм-корне.</value>
+    <value>Создать состояние Local AI для репозитория {0} в рантайм-корне.</value>
     <comment>The bare identifier used to stand alone with nothing saying what it was.</comment>
   </data>
   <data name="BrokerAlive" xml:space="preserve">
@@ -96,7 +96,7 @@
     <value>Не запущен. Запускается по требованию, так что это просто к сведению.</value>
   </data>
   <data name="ModelOllamaNotAnswering" xml:space="preserve">
-    <value>Ollama не отвечает по адресу {0}, поэтому брокер не смог выполнить команду. Запустите Ollama (если на этом компьютере её нет, сначала установите) и повторите команду. Сам брокер запускает Ollama, только после того как установщик LocalAi найдёт её и запишет, где она.</value>
+    <value>Ollama не отвечает по адресу {0}, поэтому брокер не смог выполнить команду. Запустите Ollama (если на этом компьютере её нет, сначала установите) и повторите команду. Сам брокер запускает Ollama, только после того как установщик Local AI найдёт её и запишет, где она.</value>
     <comment>0 is the address the broker reaches Ollama at, as the broker publishes it. Said only when nothing answers there and no Ollama launch record exists.</comment>
   </data>
   <data name="ModelOllamaNotAnsweringStartsItself" xml:space="preserve">
@@ -108,7 +108,7 @@
     <comment>0 as in ModelOllamaNotAnswering; 1 is the models folder the launch record names. OLLAMA_MODELS is an environment variable and is never translated.</comment>
   </data>
   <data name="ModelBrokerNotStarted" xml:space="preserve">
-    <value>Брокер LocalAi не удалось запустить или использовать, поэтому к Ollama не обращались. Повторите команду; если ошибка повторится, проверьте установку командой localai doctor. Причина: {0}</value>
+    <value>Брокер Local AI не удалось запустить или использовать, поэтому к Ollama не обращались. Повторите команду; если ошибка повторится, проверьте установку командой localai doctor. Причина: {0}</value>
     <comment>0 is the broker client's own account, English whatever the reader's language, so it is quoted last. No closing period: the reason brings its own or ends in a path.</comment>
   </data>
   <data name="BrokerSilent" xml:space="preserve">
@@ -152,7 +152,7 @@
     <comment>The sibling message, the usage syntax and the installed list all say event, so this says event too. No trailing full stop: it would sit glued to a hook name somebody copies. True only since the dispatcher started asking the installed list rather than the enum.</comment>
   </data>
   <data name="HooksChainBlocked" xml:space="preserve">
-    <value>Ничего не установлено: '{0}' — хук, который LocalAi не писал, а рядом уже лежит сохранённый прежде '{1}'. Сохранить первый, не затерев второй, нельзя. Оставьте тот из двух, который должен работать, второй удалите и запустите снова: localai hooks install</value>
+    <value>Ничего не установлено: '{0}' — хук, который Local AI не писал, а рядом уже лежит сохранённый прежде '{1}'. Сохранить первый, не затерев второй, нельзя. Оставьте тот из двух, который должен работать, второй удалите и запустите снова: localai hooks install</value>
     <comment>{0} is the hook itself, which the old message never named; {1} is the backup beside it. Naming both is what makes the instruction actionable: only the reader knows which of the two should run.</comment>
   </data>
   <data name="HooksChained" xml:space="preserve">
@@ -168,7 +168,7 @@
     <comment>Noun-first: ResourceManager has no plural support, and a leading numeral forces an agreement it cannot make. каталог {1} echoes UpdateInstalled.</comment>
   </data>
   <data name="HooksLauncherRequired" xml:space="preserve">
-    <value>Хукам LocalAi нужна переменная LOCALAI_LAUNCHER_PATH — её задаёт стабильный launcher. Запускайте команду через launcher, а не через двоичный файл внутри каталога версии.</value>
+    <value>Хукам Local AI нужна переменная LOCALAI_LAUNCHER_PATH — её задаёт стабильный launcher. Запускайте команду через launcher, а не через двоичный файл внутри каталога версии.</value>
     <comment>Not LauncherMissing: that one is about a file that is not there and is printed by doctor. This is about a variable that was never set, and its fix is how the command was invoked. launcher stays Latin and indeclinable, as in the documentation.</comment>
   </data>
   <data name="JsonNotSupported" xml:space="preserve">
@@ -800,7 +800,7 @@
     <value>последний проверенный релиз — {0}; эта установка не хранит, из какого релиза она собрана, поэтому сравнивать не с чем. Следующая установка или обновление это запишет.</value>
   </data>
   <data name="UpdateInstalled" xml:space="preserve">
-    <value>Установлена LocalAi {0}, каталог {1}.</value>
+    <value>Установлена Local AI {0}, каталог {1}.</value>
     <comment>0 is the release version, not the version directory: the old code passed a commit id where the run had just announced a release number.</comment>
   </data>
   <data name="UpdateLookingForRelease" xml:space="preserve">
@@ -810,7 +810,7 @@
     <value>неизвестно — проверок ещё не было</value>
   </data>
   <data name="UpdateNoInstallation" xml:space="preserve">
-    <value>В {0} нет установки LocalAi, которую можно обновить. Запустите установщик, чтобы её создать.</value>
+    <value>В {0} нет установки Local AI, которую можно обновить. Запустите установщик, чтобы её создать.</value>
   </data>
   <data name="UpdateNothingToInstall" xml:space="preserve">
     <value>Устанавливать нечего: {0} — самый новый релиз, и эта установка от него не отстаёт.</value>
@@ -1208,7 +1208,7 @@
   <data name="OfflineVerificationFailed" xml:space="preserve"><value>Проверка комплекта не пройдена. Используйте отдельно сохранённый доверенный хеш манифеста и неизменённую копию комплекта.</value></data>
   <data name="OfflineApplyHelp" xml:space="preserve"><value>Подготовить установку одной зависимости из комплекта. По умолчанию используется --mode plan; --mode apply запускает её локальный EXE/MSI согласно offline-actions.json.</value></data>
   <data name="OfflineApplyPlan" xml:space="preserve"><value>Только план: установщик «{0}» не запущен. Версия компонента указана в описании; фактически установленная версия не проверена.</value></data>
-  <data name="OfflineApplyNotice" xml:space="preserve"><value>Команда использует локальный установщик без перехода к менеджерам пакетов или загрузке из сети. Работа установщика без сети и сетевая изоляция не проверены. Возможны частичные изменения; LocalAi не откатывает их автоматически.</value></data>
+  <data name="OfflineApplyNotice" xml:space="preserve"><value>Команда использует локальный установщик без перехода к менеджерам пакетов или загрузке из сети. Работа установщика без сети и сетевая изоляция не проверены. Возможны частичные изменения; Local AI не откатывает их автоматически.</value></data>
   <data name="OfflineApplyResult" xml:space="preserve"><value>Установщик «{0}» завершился с кодом {1}. Установленная версия и работоспособность без сети не проверены.</value></data>
   <data name="OfflineApplyRefused" xml:space="preserve"><value>Действие с зависимостью отклонено. Проверьте доверенный хеш манифеста, --component и offline-actions.json.</value></data>
   <data name="OfflineApplyFailed" xml:space="preserve"><value>Не удалось завершить установку зависимости. Если установщик успел внести изменения, они не откатывались автоматически.</value></data>
@@ -1224,9 +1224,9 @@
   <data name="OfflinePlanDiskCaveat" xml:space="preserve"><value>Известная часть оценки места относится к одному тому. Полные потребности в месте для установки зависимостей, временных файлов, резервных копий, индексов и накладных расходов файловой системы неизвестны. Даже если места хватает для известной части, результат остаётся incomplete.</value></data>
   <data name="OfflinePlanRefused" xml:space="preserve"><value>Не удалось составить план подготовки среды. Проверьте доверенный хеш манифеста, содержимое комплекта и описания компонентов.</value></data>
   <data name="OfflinePlanDiskPathInvalid" xml:space="preserve"><value>--disk должен указывать существующий локальный каталог для оценки места на диске.</value></data>
-  <data name="OfflineExecuteHelp" xml:space="preserve"><value>Составить план установки зависимостей, активации LocalAi и импорта моделей, выбранных в --request. По умолчанию используется --mode plan; --mode apply выполняет шаги и записывает результаты в новую папку --out.</value></data>
-  <data name="OfflineExecutePlan" xml:space="preserve"><value>Только план: установка зависимостей, активация LocalAi и импорт моделей не выполнялись.</value></data>
-  <data name="OfflineExecuteNotice" xml:space="preserve"><value>Если выбрана активация LocalAi, она выполняется для текущего пользователя и может остановить работающие инструменты LocalAi и изменить активную версию. Частичные изменения могут сохраниться. Автоматических повторов, возобновления или отката всего запуска нет.</value></data>
+  <data name="OfflineExecuteHelp" xml:space="preserve"><value>Составить план установки зависимостей, активации Local AI и импорта моделей, выбранных в --request. По умолчанию используется --mode plan; --mode apply выполняет шаги и записывает результаты в новую папку --out.</value></data>
+  <data name="OfflineExecutePlan" xml:space="preserve"><value>Только план: установка зависимостей, активация Local AI и импорт моделей не выполнялись.</value></data>
+  <data name="OfflineExecuteNotice" xml:space="preserve"><value>Если выбрана активация Local AI, она выполняется для текущего пользователя и может остановить работающие инструменты Local AI и изменить активную версию. Частичные изменения могут сохраниться. Автоматических повторов, возобновления или отката всего запуска нет.</value></data>
   <data name="OfflineExecuteApplied" xml:space="preserve"><value>Выбранные шаги выполнены; readyForUse=false. После изменения PATH откройте новый сеанс. Проверьте результат запуска и оставшиеся требования. Работоспособность без сети не проверена.</value></data>
   <data name="OfflineExecuteModelsNotice" xml:space="preserve"><value>При configureModels=true режим --mode apply записывает импортированный каталог моделей и проверенную установку Ollama для будущих запусков Ollama через брокер. Нужна поддержка схемы 2 файла ollama-launch.json; прежние версии среды отклоняют эту запись. Брокер задаёт OLLAMA_MODELS только дочернему процессу; пользовательское и системное значения не меняются. Уже работающий сервер не перезапускается и не перенастраивается. Этот шаг настройки не выполняет preflight и не вызывает модели.</value></data>
   <data name="OfflineExecutePathNotice" xml:space="preserve"><value>При registerPaths=true режим --mode apply добавляет запланированные каталоги в конец пользовательского PATH после успешного завершения предыдущих шагов. Существующие записи сохраняют порядок и приоритет. Обнаруженное изменение PATH или ошибка записи либо контрольного чтения останавливает выполнение; автоматических повторов и отката нет. Окружение уже запущенных процессов сохраняется. Откройте новый сеанс; регистрация PATH не проверяет совместимость или готовность моделей.</value></data>
