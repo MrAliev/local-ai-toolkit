@@ -77,7 +77,10 @@ public sealed class StartActionOption(
 /// </summary>
 public sealed class InstallerStartViewModel : ObservableObject
 {
-    private readonly ExistingLocalAiSnapshot existing;
+    private readonly string root;
+    private readonly IExistingLocalAiInspector inspector;
+    private readonly Func<InstalledVersion> readInstalledVersion;
+    private ExistingLocalAiSnapshot existing;
 
     /// <summary>
     /// Which release is installed, as opposed to which directory holds it. The inspector reports
@@ -85,7 +88,7 @@ public sealed class InstallerStartViewModel : ObservableObject
     /// "LocalAi 467ed5f0f9bf is installed" while the next window, doctor and update all said
     /// 0.1.51, each reading the release record this one did not.
     /// </summary>
-    private readonly InstalledVersion installed;
+    private InstalledVersion installed;
 
     public InstallerStartViewModel(
         string? localAppData = null,
@@ -94,7 +97,7 @@ public sealed class InstallerStartViewModel : ObservableObject
         InstallerPreferencesStore? preferencesStore = null,
         InstallerPresentation? presentation = null)
     {
-        var root = localAppData ??
+        root = localAppData ??
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         // Rooted where the caller said its state lives. Defaulting to the real profile even
         // when the rest of the view model was redirected let the test suite rewrite the
@@ -102,11 +105,11 @@ public sealed class InstallerStartViewModel : ObservableObject
         Presentation = presentation ?? new InstallerPresentation(
             preferencesStore ?? new InstallerPreferencesStore(
                 Path.Combine(root, RemovalMatrix.JournalDirectoryName)));
-        existing = (inspector ?? new ExistingLocalAiInspector(new SystemFileSystemProbe()))
-            .Inspect(root);
-        installed = readInstalledVersion is null
-            ? InstalledVersionReader.Read(Path.Combine(root, "LocalAi"))
-            : readInstalledVersion();
+        this.inspector = inspector ?? new ExistingLocalAiInspector(new SystemFileSystemProbe());
+        this.readInstalledVersion = readInstalledVersion ??
+            (() => InstalledVersionReader.Read(Path.Combine(root, "LocalAi")));
+        existing = this.inspector.Inspect(root);
+        installed = this.readInstalledVersion();
         foreach (var option in BuildOptions())
         {
             Actions.Add(option);
@@ -122,6 +125,17 @@ public sealed class InstallerStartViewModel : ObservableObject
     public void DetachPresentation() => Presentation.LanguageChanged -= OnLanguageChanged;
 
     private void OnLanguageChanged(object? sender, EventArgs e) => Repaint();
+
+    /// <summary>
+    /// For the window to call when Back brings it up again: it was hidden, not rebuilt, while a
+    /// wizard ran, and that wizard may have changed what is installed.
+    /// </summary>
+    public void Reinspect()
+    {
+        existing = inspector.Inspect(root);
+        installed = readInstalledVersion();
+        Repaint();
+    }
 
     public ObservableCollection<StartActionOption> Actions { get; } = [];
 
@@ -168,9 +182,11 @@ public sealed class InstallerStartViewModel : ObservableObject
 
         if (chosen is { } errand)
         {
+            // Refused when the machine read again no longer allows it.
             Select(errand);
         }
-        else
+
+        if (Selected is null)
         {
             SelectTheOnlyErrandIfThereIsOne();
         }
