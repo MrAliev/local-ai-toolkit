@@ -122,12 +122,16 @@ public static class RemovalReportPresentation
     private static string Suffix(RemovalReportEntry entry) =>
         Detail(entry) is { } detail && !string.IsNullOrWhiteSpace(detail) ? " — " + detail : string.Empty;
 
-    // "Updated" does not say what changed, so a configuration says it here.
-    private static string? Detail(RemovalReportEntry entry) => entry.State != RemovalReportState.Completed
-        ? entry.Detail
-        : entry.Kind == RemovalReportKind.Configuration
+    // "Updated" does not say what changed, so a configuration says it here. An undone step's
+    // own detail is the journal's English, so it is worded here instead.
+    private static string? Detail(RemovalReportEntry entry) => entry.State switch
+    {
+        RemovalReportState.Undone => InstallerCulture.Pick("LocalAi still connected", "LocalAi по-прежнему подключён"),
+        RemovalReportState.Completed => entry.Kind == RemovalReportKind.Configuration
             ? InstallerCulture.Pick("LocalAi disconnected", "LocalAi отключён")
-            : null;
+            : null,
+        _ => entry.Detail,
+    };
 
     // A journal step's target is the journal's English description: the stop's is replaced, and
     // one of a kind with no wording of its own is marked as the journal's.
@@ -148,6 +152,8 @@ public static class RemovalReportPresentation
         RemovalReportState.NotStarted => InstallerCulture.Pick("Not started: ", "Не начато: "),
         RemovalReportState.Retained => InstallerCulture.Pick("Kept: ", "Оставлено: "),
         RemovalReportState.Unknown => InstallerCulture.Pick("Outcome unknown: ", "Результат неизвестен: "),
+        // Not "restored": a cancel that came before the first file was replaced changed nothing.
+        RemovalReportState.Undone => InstallerCulture.Pick("Cancelled, unchanged: ", "Отменено, без изменений: "),
         // Neither the stop nor an unknown journal step is a removal. Other is the empty runtime
         // root and repeats of a configuration or hook failure whose own line already carries the
         // partial-changes caveat.
