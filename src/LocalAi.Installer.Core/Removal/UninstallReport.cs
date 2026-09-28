@@ -4,7 +4,8 @@ using LocalAi.Installer.Core.Transactions;
 
 namespace LocalAi.Installer.Core.Removal;
 
-public enum RemovalReportState { Completed, Failed, Unknown, NotStarted, Retained }
+/// <summary><see cref="Undone"/>: a step that Cancel interrupted put back what it had changed.</summary>
+public enum RemovalReportState { Completed, Failed, Unknown, NotStarted, Retained, Undone }
 public enum RemovalReportKind { Path, Configuration, Hooks, LauncherPath, Registration, ProcessStop, JournalStep, Other }
 
 /// <summary>A file a client step covers, and whether the step deletes it rather than rewrites it.</summary>
@@ -44,18 +45,23 @@ public static class UninstallReport
         var entries = new List<(RemovalReportEntry Entry, bool Planned, DateTimeOffset? Started)>();
         foreach (var configuration in plan.AgentConfigurations.Where(item => item.HasChanges))
         {
-            Add(string.Join(", ", configuration.Files.Select(file => file.Path)),
+            var step = Add(string.Join(", ", configuration.Files.Select(file => file.Path)),
                 RemovalReportKind.Configuration, UninstallJournalDescriptions.Configuration(configuration),
                 files: configuration.Files.Select(file => new RemovalReportFile(file.Path, file.Deletes)).ToArray());
             // Read from disk: a step that failed part-way rolled back from the backups it had
-            // made, and those stay, while the files it never reached have none.
+            // made, and those stay, while the files it never reached have none. After a cancel
+            // the file was put back from its backup, so the backup is no earlier version of it.
+            var undone = step?.Status == InstallerRunStepStatus.Undone;
             entries.AddRange(configuration.Files
                 .Where(file => File.Exists(file.BackupPath))
                 .Select(file => Unplanned(new RemovalReportEntry(
                     file.BackupPath,
                     RemovalReportKind.Configuration,
                     RemovalReportState.Retained,
-                    InstallerCulture.Pick("the previous version of ", "прежняя версия ") + file.Path))));
+                    undone
+                        ? string.Format(InstallerCulture.Pick(
+                            "the copy used to restore {0}", "копия, из которой восстановлен файл {0}"), file.Path)
+                        : InstallerCulture.Pick("the previous version of ", "прежняя версия ") + file.Path))));
         }
 
         foreach (var hook in plan.Hooks)
@@ -168,6 +174,7 @@ public static class UninstallReport
     {
         InstallerRunStepStatus.Completed => RemovalReportState.Completed,
         InstallerRunStepStatus.Failed => RemovalReportState.Failed,
+        InstallerRunStepStatus.Undone => RemovalReportState.Undone,
         _ => RemovalReportState.Unknown,
     };
 }

@@ -345,7 +345,15 @@ public sealed class UninstallRunner(
                 disconnected.Add(configuration.AgentName);
                 journal.CompleteStep(step, "Disconnected.", isReversible: false);
             }
-            catch (Exception exception) when (exception is not OperationCanceledException)
+            catch (OperationCanceledException)
+            {
+                // The apply puts back every file it had replaced before it lets a cancellation
+                // through; a file it could not put back surfaces as a failure instead.
+                journal.MarkUndoOutcome(step, InstallerRunStepStatus.Undone,
+                    "Cancelled before it finished; its files are as they were before it started.");
+                throw;
+            }
+            catch (Exception exception)
             {
                 journal.FailStep(step, exception.Message);
                 foreach (var file in configuration.Files)
