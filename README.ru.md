@@ -2046,3 +2046,8 @@ pwsh -NoProfile -File .\scripts\quality\run.ps1 `
 ## Лицензия
 
 MIT. См. [LICENSE](LICENSE).
+
+- [Политика подписи кода](docs/code-signing-policy.ru.md): что подписывается, кем и как.
+- [Конфиденциальность](docs/privacy.ru.md): каждое соединение LocalAi с другим компьютером.
+- [Политика безопасности](SECURITY.ru.md): как сообщить об уязвимости.
+- [Как внести вклад](CONTRIBUTING.ru.md): как работа попадает в `main`.
