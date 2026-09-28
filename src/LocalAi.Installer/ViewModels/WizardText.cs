@@ -32,7 +32,8 @@ public static class WizardText
         InstallerPage page,
         bool isUpdate,
         bool hasRunError,
-        bool wasCancelled = false) =>
+        bool wasCancelled = false,
+        bool completesReinstall = false) =>
         page switch
         {
             InstallerPage.Diagnose =>
@@ -63,8 +64,11 @@ public static class WizardText
                     InstallerCulture.Pick("Installation not completed", "Установка не завершена"),
                 (false, true) =>
                     InstallerCulture.Pick("Update complete", "Обновление завершено"),
-                (false, false) =>
-                    InstallerCulture.Pick("Installation complete", "Установка завершена"),
+                // Only success closes the errand the removal half's finish page handed over; an
+                // error or a cancel names the installation that did not happen.
+                (false, false) => completesReinstall
+                    ? InstallerCulture.Pick("Reinstall complete", "Переустановка завершена")
+                    : InstallerCulture.Pick("Installation complete", "Установка завершена"),
             },
         };
 
