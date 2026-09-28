@@ -365,8 +365,8 @@ public sealed class UninstallWizardViewModelTests : IDisposable
 
     /// <summary>
     /// The failed step of a refused run is the stop request, which removes nothing, so the
-    /// report calls it failed rather than a removal that may have left partial changes — on the
-    /// line after saying nothing was removed.
+    /// report calls it failed rather than a removal that may have left partial changes — under a
+    /// summary that says nothing was removed, and once (#614: the report used to say it twice).
     /// </summary>
     [Fact]
     public async Task A_refused_stop_is_reported_as_failed_rather_than_as_a_partial_removal()
@@ -380,9 +380,9 @@ public sealed class UninstallWizardViewModelTests : IDisposable
 
         Assert.False(await wizard.RunAsync(TestContext.Current.CancellationToken));
 
+        Assert.StartsWith("Nothing was removed.", wizard.Summary, StringComparison.Ordinal);
         Assert.StartsWith(
-            "Nothing was removed.\nFailed: stopping LocalAi's running tools and broker — broker_still_running" +
-                Environment.NewLine,
+            "Failed: stopping LocalAi's running tools and broker — broker_still_running" + Environment.NewLine,
             wizard.Report,
             StringComparison.Ordinal);
         Assert.DoesNotContain("partial changes", wizard.Report, StringComparison.Ordinal);
