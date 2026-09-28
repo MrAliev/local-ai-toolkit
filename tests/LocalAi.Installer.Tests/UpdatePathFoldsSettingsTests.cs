@@ -135,7 +135,7 @@ public sealed class UpdatePathFoldsSettingsTests
     /// wizard would be applying an effect it never listed.
     /// </summary>
     [Theory]
-    [InlineData("LocalAi package:")]
+    [InlineData("Local AI package:")]
     [InlineData("Dependencies:")]
     [InlineData("Models:")]
     [InlineData("Video memory:")]

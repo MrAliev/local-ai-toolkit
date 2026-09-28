@@ -550,10 +550,10 @@ public sealed class UninstallPlanner
                     "Другие хуки на WorktreeCreate и WorktreeRemove"),
                 string.Format(
                     InstallerCulture.Pick(
-                        "Entries on those events LocalAi did not write: {0}. They stay in {1} " +
+                        "Entries on those events Local AI did not write: {0}. They stay in {1} " +
                         "exactly as they are. If worktrees still appear somewhere unexpected " +
                         "after this, one of them is the reason and not a removal that failed.",
-                        "Записей на этих событиях, которые LocalAi не создавал: {0}. Они " +
+                        "Записей на этих событиях, которые Local AI не создавал: {0}. Они " +
                         "остаются в {1} ровно как есть. Если после удаления worktree всё ещё " +
                         "появляются в неожиданном месте, причина — одна из них, а не " +
                         "несработавшее удаление."),
@@ -569,10 +569,10 @@ public sealed class UninstallPlanner
                     "Другие хуки на PreToolUse"),
                 string.Format(
                     InstallerCulture.Pick(
-                        "Entries on that event LocalAi did not write: {0}. They stay in {1} " +
+                        "Entries on that event Local AI did not write: {0}. They stay in {1} " +
                         "exactly as they are. If a tool call is still refused after this, one " +
                         "of them is the reason and not a removal that failed.",
-                        "Записей на этом событии, которые LocalAi не создавал: {0}. Они " +
+                        "Записей на этом событии, которые Local AI не создавал: {0}. Они " +
                         "остаются в {1} ровно как есть. Если после удаления вызов инструмента " +
                         "всё ещё отклоняется, причина — одна из них, а не несработавшее " +
                         "удаление."),

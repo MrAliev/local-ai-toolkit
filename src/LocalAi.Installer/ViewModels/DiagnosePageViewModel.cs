@@ -212,7 +212,7 @@ public sealed class DiagnosePageViewModel : ObservableObject
                 }));
 
         rows.Add(new EnvironmentCheck(
-            InstallerCulture.Pick("Existing LocalAi", "Установленный LocalAi"),
+            InstallerCulture.Pick("Existing Local AI", "Установленный Local AI"),
             diagnosis.ExistingLocalAi.State switch
             {
                 var state when state.NothingInstalled() => CheckStatus.Ok,

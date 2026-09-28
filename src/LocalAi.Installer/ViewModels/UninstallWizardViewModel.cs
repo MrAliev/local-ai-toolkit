@@ -295,26 +295,26 @@ public sealed class UninstallWizardViewModel : ObservableObject
     public string? BlockingNotice => blocked switch
     {
         Blocked.AnotherRun => InstallerCulture.Pick(
-            "Another LocalAi installer or uninstaller is running on this computer. " +
+            "Another Local AI installer or uninstaller is running on this computer. " +
             "Finish it first, then start this one again.",
             "На этом компьютере уже работает установщик или деинсталлятор " +
-            "LocalAi. Сначала завершите его, потом запустите этот заново."),
+            "Local AI. Сначала завершите его, потом запустите этот заново."),
         Blocked.NothingInstalled => string.Format(
             InstallerCulture.Pick(
-                "There is no LocalAi installation at {0} to remove, so nothing else was " +
+                "There is no Local AI installation at {0} to remove, so nothing else was " +
                 "looked for: client registrations and Git hooks left behind, if any, stay " +
                 "as they are.",
-                "В {0} нет установки LocalAi, которую можно удалить, поэтому больше ничего " +
+                "В {0} нет установки Local AI, которую можно удалить, поэтому больше ничего " +
                 "не проверялось: регистрации клиентов и хуки Git, если что-то осталось, " +
                 "остаются как есть."),
             layout.Root),
         Blocked.InsideInstallation => string.Format(
             InstallerCulture.Pick(
                 "This installer is running from inside {0}, which removal deletes, so it " +
-                "cannot remove LocalAi from there. Copy {1} to a folder outside {0} and run " +
+                "cannot remove Local AI from there. Copy {1} to a folder outside {0} and run " +
                 "the copy.",
                 "Этот установщик запущен изнутри {0}, а удаление стирает эту папку, поэтому " +
-                "удалить LocalAi отсюда нельзя. Скопируйте {1} в папку вне {0} и запустите " +
+                "удалить Local AI отсюда нельзя. Скопируйте {1} в папку вне {0} и запустите " +
                 "копию."),
             layout.Root,
             executablePath),
@@ -443,14 +443,14 @@ public sealed class UninstallWizardViewModel : ObservableObject
             null or ExistingLocalAiState.Compatible => string.Empty,
             // What the start screen called it: a directory that is not a working installation.
             ExistingLocalAiState.Unrecognized => InstallerCulture.Pick(
-                "This is not a working LocalAi installation; these rows apply to what is there, " +
+                "This is not a working Local AI installation; these rows apply to what is there, " +
                 "and the next page lists every path found. ",
-                "Это не рабочая установка LocalAi; эти строки относятся к тому, что здесь есть, " +
+                "Это не рабочая установка Local AI; эти строки относятся к тому, что здесь есть, " +
                 "а на следующей странице перечислены все найденные пути. "),
             _ => InstallerCulture.Pick(
-                "LocalAi is not installed here; these rows apply to what is left of it, and " +
+                "Local AI is not installed here; these rows apply to what is left of it, and " +
                 "the next page lists every path found. ",
-                "LocalAi здесь не установлен; эти строки относятся к тому, что от него " +
+                "Local AI здесь не установлен; эти строки относятся к тому, что от него " +
                 "осталось, а на следующей странице перечислены все найденные пути. "),
         } + InstallerCulture.Pick(
             "Start from one of the three presets and change any row you like. Nothing is " +
@@ -904,8 +904,8 @@ public sealed class UninstallWizardViewModel : ObservableObject
             full.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
         {
             throw new IOException(InstallerCulture.Pick(
-                "Choose a report folder outside the LocalAi runtime being removed.",
-                "Выберите папку отчётов вне удаляемого рантайма LocalAi."));
+                "Choose a report folder outside the Local AI runtime being removed.",
+                "Выберите папку отчётов вне удаляемого рантайма Local AI."));
         }
 
         for (var ancestor = new DirectoryInfo(full); ancestor is not null; ancestor = ancestor.Parent)
@@ -977,10 +977,10 @@ public sealed class UninstallWizardViewModel : ObservableObject
                       // Not "puts them back": the installation writes what is chosen on its
                       // own page, seeded from a machine where the entries are gone by then.
                       ? InstallerCulture.Pick(
-                          " The hooks LocalAi wrote into Claude Code's settings.json are not " +
+                          " The hooks Local AI wrote into Claude Code's settings.json are not " +
                           "among them: they go with the launcher, and the installation that " +
                           "follows writes them again from what you choose there.",
-                          " Хуки, которые LocalAi записал в settings.json Claude Code, — не из " +
+                          " Хуки, которые Local AI записал в settings.json Claude Code, — не из " +
                           "их числа: они уходят вместе с launcher, а установка, которая пойдёт " +
                           "следом, запишет их заново по тому, что вы в ней выберете.")
                       : string.Empty)
@@ -997,9 +997,9 @@ public sealed class UninstallWizardViewModel : ObservableObject
                 "и отметьте их строки.") +
               (claudeHooksGoAnyway
                   ? InstallerCulture.Pick(
-                      " The hooks LocalAi wrote into Claude Code's settings.json still go: they " +
+                      " The hooks Local AI wrote into Claude Code's settings.json still go: they " +
                       "point at the launcher, which this run removes.",
-                      " Хуки, которые LocalAi записал в settings.json Claude Code, всё равно " +
+                      " Хуки, которые Local AI записал в settings.json Claude Code, всё равно " +
                       "уходят: они указывают на launcher, который этот запуск удаляет.")
                   : string.Empty)
             : string.Empty;
@@ -1035,8 +1035,8 @@ public sealed class UninstallWizardViewModel : ObservableObject
 
         summary.Append(outcome.RuntimeRootRemoved
             ? InstallerCulture.Pick(
-                "LocalAi was removed from this computer.",
-                "LocalAi удалён с этого компьютера.")
+                "Local AI was removed from this computer.",
+                "Local AI удалён с этого компьютера.")
             : string.Format(
                 InstallerCulture.Pick(
                     "Paths removed from {1}: {0}.",

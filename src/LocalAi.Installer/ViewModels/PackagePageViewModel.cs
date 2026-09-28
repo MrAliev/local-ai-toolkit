@@ -198,10 +198,10 @@ public sealed class PackagePageViewModel : ObservableObject
             "другую папку."),
         ReleaseRefusalKind.ManifestRejectedInFolder => InstallerCulture.Pick(
             "The release manifest in the folder failed its signature check: it is damaged, " +
-            "altered or not signed with the LocalAi release key. Copy the three files again from " +
+            "altered or not signed with the Local AI release key. Copy the three files again from " +
             "the release.",
             "Манифест релиза в папке не прошёл проверку подписи: он повреждён, изменён или " +
-            "подписан не ключом релизов LocalAi. Скопируйте три файла релиза заново."),
+            "подписан не ключом релизов Local AI. Скопируйте три файла релиза заново."),
         ReleaseRefusalKind.ManifestRejectedOnGitHub => string.Format(
             InstallerCulture.Pick(
                 "The manifest of release {0} on GitHub failed its signature check and was not used.",
@@ -362,54 +362,54 @@ public sealed class PackagePageViewModel : ObservableObject
     {
         // BeginResolving leaves the state unchecked, which would read as "will not be installed".
         _ when IsCheckingPackage => InstallerCulture.Pick(
-            "LocalAi package: checking the package in the folder…",
-            "Пакет LocalAi: проверяю пакет в папке…"),
+            "Local AI package: checking the package in the folder…",
+            "Пакет Local AI: проверяю пакет в папке…"),
         _ when IsResolving => InstallerCulture.Pick(
-            "LocalAi package: checking the release…",
-            "Пакет LocalAi: проверяю релиз…"),
+            "Local AI package: checking the release…",
+            "Пакет Local AI: проверяю релиз…"),
         // The package installer puts back the files of the installed version that are missing
         // or differ from the release, and activates only then. Activation stops everything the
         // version owns: its tools, the broker, any localai command still running.
         PackageSourceState.Selected when IsAlreadyInstalled && WantsLatest => string.Format(
             InstallerCulture.Pick(
-                "LocalAi package: {0} is already installed{1} — unless a newer one is published " +
+                "Local AI package: {0} is already installed{1} — unless a newer one is published " +
                 "before you press {2}, files that are missing or differ from the release are put " +
-                "back; if any are, LocalAi's running tools and broker are stopped",
-                "Пакет LocalAi: {0} уже установлен{1} — если до нажатия «{2}» не выйдет более " +
+                "back; if any are, Local AI's running tools and broker are stopped",
+                "Пакет Local AI: {0} уже установлен{1} — если до нажатия «{2}» не выйдет более " +
                 "новый, файлы, которых нет или которые отличаются от релиза, возвращаются на место; " +
-                "если такие нашлись, запущенные инструменты и брокер LocalAi останавливаются"),
+                "если такие нашлись, запущенные инструменты и брокер Local AI останавливаются"),
             ResolvedTag ?? ReleaseVersion,
             Source,
             ActionText),
         PackageSourceState.Selected when IsAlreadyInstalled => string.Format(
             InstallerCulture.Pick(
-                "LocalAi package: {0} is already installed{1} — files that are missing or differ " +
-                "from the release are put back; if any are, LocalAi's running tools and broker " +
+                "Local AI package: {0} is already installed{1} — files that are missing or differ " +
+                "from the release are put back; if any are, Local AI's running tools and broker " +
                 "are stopped",
-                "Пакет LocalAi: {0} уже установлен{1} — файлы, которых нет или которые отличаются " +
+                "Пакет Local AI: {0} уже установлен{1} — файлы, которых нет или которые отличаются " +
                 "от релиза, возвращаются на место; если такие нашлись, запущенные инструменты и " +
-                "брокер LocalAi останавливаются"),
+                "брокер Local AI останавливаются"),
             ResolvedTag ?? ReleaseVersion,
             Source),
         PackageSourceState.Selected when WantsLatest => string.Format(
             InstallerCulture.Pick(
-                "LocalAi package: {0}{1} — or whatever is newest when you press {2}",
-                "Пакет LocalAi: {0}{1} — или самый новый на момент нажатия «{2}»"),
+                "Local AI package: {0}{1} — or whatever is newest when you press {2}",
+                "Пакет Local AI: {0}{1} — или самый новый на момент нажатия «{2}»"),
             ResolvedTag ?? ReleaseVersion,
             Source,
             ActionText),
         PackageSourceState.Selected => string.Format(
-            InstallerCulture.Pick("LocalAi package: {0}{1}", "Пакет LocalAi: {0}{1}"),
+            InstallerCulture.Pick("Local AI package: {0}{1}", "Пакет Local AI: {0}{1}"),
             ResolvedTag ?? ReleaseVersion,
             Source),
         PackageSourceState.Incompatible => string.Format(
             InstallerCulture.Pick(
-                "LocalAi package: {0} is not compatible — it will not be installed",
-                "Пакет LocalAi: {0} несовместим — он не будет установлен"),
+                "Local AI package: {0} is not compatible — it will not be installed",
+                "Пакет Local AI: {0} несовместим — он не будет установлен"),
             IncompatibleRelease),
         _ => InstallerCulture.Pick(
-            "LocalAi package: not resolved — it will not be installed",
-            "Пакет LocalAi: релиз не определён — он не будет установлен"),
+            "Local AI package: not resolved — it will not be installed",
+            "Пакет Local AI: релиз не определён — он не будет установлен"),
     };
 
     /// <summary>

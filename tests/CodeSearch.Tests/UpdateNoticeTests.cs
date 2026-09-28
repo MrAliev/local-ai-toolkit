@@ -47,7 +47,7 @@ public sealed class UpdateNoticeTests : IDisposable
 
         var notice = UpdateNotice.ForStatus(root);
 
-        Assert.Contains("LocalAi 0.1.51 is available", notice, StringComparison.Ordinal);
+        Assert.Contains("Local AI 0.1.51 is available", notice, StringComparison.Ordinal);
         Assert.Contains("this installation is 0.1.50", notice, StringComparison.Ordinal);
         Assert.Contains("https://example.invalid", notice, StringComparison.Ordinal);
         // Trusted output: this is the installation talking about itself, not repository text.

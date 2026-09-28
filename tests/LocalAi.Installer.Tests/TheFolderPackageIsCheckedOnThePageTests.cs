@@ -161,7 +161,7 @@ public sealed class TheFolderPackageIsCheckedOnThePageTests : IDisposable
         var wizard = await RunAfterTheCheck(feed, matches: false);
 
         Assert.Contains(
-            "LocalAi package: no verified release was selected, so nothing was installed. The " +
+            "Local AI package: no verified release was selected, so nothing was installed. The " +
             "last check of the release said: The file localai-package.zip in the folder does not " +
             "match the release manifest beside it — it is incomplete, altered or from another " +
             "release. Copy all three files again from one release. Return to the package step and " +
@@ -190,7 +190,7 @@ public sealed class TheFolderPackageIsCheckedOnThePageTests : IDisposable
         await wizard.RefreshLatestBeforeInstallAsync(report, TestContext.Current.CancellationToken);
 
         Assert.Equal(
-            "LocalAi package: the folder now holds 0.1.52, not the 0.1.51 checked on the package " +
+            "Local AI package: the folder now holds 0.1.52, not the 0.1.51 checked on the package " +
             "page; resolving it instead.",
             report.ToString().TrimEnd());
         Assert.Equal("0.1.52", wizard.Package.ResolvedTag);

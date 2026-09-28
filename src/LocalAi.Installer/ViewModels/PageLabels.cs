@@ -234,8 +234,8 @@ public static class PageLabels
         "После этой установки");
 
     public static string EnableUpdateCheck => InstallerCulture.Pick(
-        "After it is installed, let LocalAi look up whether a newer release exists",
-        "После установки разрешить LocalAi проверять, вышел ли более новый релиз");
+        "After it is installed, let Local AI look up whether a newer release exists",
+        "После установки разрешить Local AI проверять, вышел ли более новый релиз");
 
     public static string UpdateCheckHint => InstallerCulture.Pick(
         "A newer version is then mentioned in localai doctor and in the index status your " +
@@ -279,8 +279,8 @@ public static class PageLabels
 
     // --- The removal wizard -------------------------------------------------------------
     public static string RemoveLocalAi => InstallerCulture.Pick(
-        "Remove LocalAi",
-        "Удаление LocalAi");
+        "Remove Local AI",
+        "Удаление Local AI");
 
     public static string StartFrom => InstallerCulture.Pick("Start from", "С чего начать");
 
@@ -362,8 +362,8 @@ public static class PageLabels
         "результат проверки неизвестен");
 
     public static string ResultPackage => InstallerCulture.Pick(
-        "LocalAi package",
-        "Пакет LocalAi");
+        "Local AI package",
+        "Пакет Local AI");
 
     public static string ResultPrerequisites => InstallerCulture.Pick(
         "Prerequisites",

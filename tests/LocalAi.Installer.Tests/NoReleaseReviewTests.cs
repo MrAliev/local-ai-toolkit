@@ -69,7 +69,7 @@ public sealed class NoReleaseReviewTests : IDisposable
         var review = new InstallerWizardViewModel(StartChoice.Install).ReviewText;
 
         Assert.Contains(
-            "Warning: no release has been verified, so LocalAi itself will not be installed, " +
+            "Warning: no release has been verified, so Local AI itself will not be installed, " +
             "and no models, client applications or PATH entry will be set up.",
             review,
             StringComparison.Ordinal);
@@ -85,7 +85,7 @@ public sealed class NoReleaseReviewTests : IDisposable
         var review = new InstallerWizardViewModel(StartChoice.Install).ReviewText;
 
         Assert.Contains(
-            "Go back to the LocalAi package step to choose a release or a folder holding one.",
+            "Go back to the Local AI package step to choose a release or a folder holding one.",
             review,
             StringComparison.Ordinal);
         Assert.DoesNotContain("Choose a release below", review, StringComparison.Ordinal);
@@ -111,7 +111,7 @@ public sealed class NoReleaseReviewTests : IDisposable
         wizard.RevealRelease();
 
         Assert.Contains(
-            "Go back to the LocalAi package step",
+            "Go back to the Local AI package step",
             wizard.ReviewText,
             StringComparison.Ordinal);
     }
@@ -126,7 +126,7 @@ public sealed class NoReleaseReviewTests : IDisposable
         var review = new InstallerWizardViewModel(StartChoice.Install).ReviewText;
 
         Assert.Contains(
-            "PATH: unchanged, because LocalAi will not be installed.",
+            "PATH: unchanged, because Local AI will not be installed.",
             review,
             StringComparison.Ordinal);
         Assert.DoesNotContain("will be added for this account", review, StringComparison.Ordinal);

@@ -118,7 +118,7 @@ public sealed class LauncherProgramTests
 
         Assert.Equal(1, exitCode);
         Assert.Equal(
-            "version_path_invalid: The LocalAi version name is invalid." +
+            "version_path_invalid: The Local AI version name is invalid." +
             Environment.NewLine,
             error.ToString());
         Assert.DoesNotContain(version, error.ToString(), StringComparison.Ordinal);
@@ -165,7 +165,7 @@ public sealed class LauncherProgramTests
 
         Assert.Equal(1, exitCode);
         Assert.Equal(
-            "current_pointer_invalid: The LocalAi current-version pointer is invalid." +
+            "current_pointer_invalid: The Local AI current-version pointer is invalid." +
             Environment.NewLine,
             error.ToString());
         Assert.DoesNotContain(install.CurrentPath, error.ToString(), StringComparison.OrdinalIgnoreCase);

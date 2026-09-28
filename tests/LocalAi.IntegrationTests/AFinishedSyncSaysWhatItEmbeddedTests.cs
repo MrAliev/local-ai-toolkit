@@ -34,7 +34,7 @@ public sealed class AFinishedSyncSaysWhatItEmbeddedTests : IDisposable
         Directory.CreateDirectory(_root);
         Git("init", "--initial-branch=main", ".");
         Git("config", "user.email", "localai-tests@example.invalid");
-        Git("config", "user.name", "LocalAi Tests");
+        Git("config", "user.name", "Local AI Tests");
         var notes = Path.Combine(_root, "notes.md");
         File.WriteAllLines(notes, Lines("committed", 150));
         Git("add", ".");

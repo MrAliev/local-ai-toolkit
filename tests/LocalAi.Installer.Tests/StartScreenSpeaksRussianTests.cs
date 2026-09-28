@@ -29,7 +29,7 @@ public sealed class StartScreenSpeaksRussianTests : IDisposable
         InstallerCulture.Current = InstallerLanguage.Russian;
 
         Assert.Equal(
-            "LocalAi 0.1.51 установлен на этом компьютере.",
+            "Local AI 0.1.51 установлен на этом компьютере.",
             Start("0.1.51").Headline);
     }
 
@@ -49,7 +49,7 @@ public sealed class StartScreenSpeaksRussianTests : IDisposable
 
         var start = Start(release: null);
 
-        Assert.Equal("LocalAi установлен на этом компьютере.", start.Headline);
+        Assert.Equal("Local AI установлен на этом компьютере.", start.Headline);
         Assert.StartsWith("Сборка 467ed5f0f9bf.", start.Detail, StringComparison.Ordinal);
     }
 
@@ -60,10 +60,10 @@ public sealed class StartScreenSpeaksRussianTests : IDisposable
 
         var start = Start("0.1.51");
 
-        Assert.Equal("Установить LocalAi", start.Option(StartChoice.Install).Title);
+        Assert.Equal("Установить Local AI", start.Option(StartChoice.Install).Title);
         Assert.Equal("Обновить или восстановить", start.Option(StartChoice.UpdateOrRepair).Title);
         Assert.Equal("Чистая переустановка", start.Option(StartChoice.CleanReinstall).Title);
-        Assert.Equal("Удалить LocalAi", start.Option(StartChoice.Remove).Title);
+        Assert.Equal("Удалить Local AI", start.Option(StartChoice.Remove).Title);
     }
 
     /// <summary>
@@ -105,7 +105,7 @@ public sealed class StartScreenSpeaksRussianTests : IDisposable
         Assert.Contains(announced, name => InstallerPresentationTests.Announces(
             name, nameof(InstallerStartViewModel.Headline)));
         Assert.Contains("установлен на этом компьютере.", start.Headline, StringComparison.Ordinal);
-        Assert.Equal("Установить LocalAi", start.Option(StartChoice.Install).Title);
+        Assert.Equal("Установить Local AI", start.Option(StartChoice.Install).Title);
     }
 
     /// <summary>

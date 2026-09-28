@@ -88,7 +88,7 @@ public sealed class LanguageSwitchKeepsTheRunTests : IDisposable
 
         presentation.ChooseLanguage(InstallerLanguage.Russian);
 
-        Assert.Equal("Установка LocalAi", wizard.WindowTitle);
+        Assert.Equal("Установка Local AI", wizard.WindowTitle);
         Assert.Equal("Проверка системы", wizard.StepList[0].Title);
         Assert.Equal("Шаг 1 из " + wizard.StepList.Count, wizard.StepStatus);
         foreach (var property in new[]
@@ -270,7 +270,7 @@ public sealed class LanguageSwitchKeepsTheRunTests : IDisposable
 
         presentation.ChooseLanguage(InstallerLanguage.Russian);
 
-        Assert.Equal("LocalAi 0.1.51 установлен на этом компьютере.", start.Headline);
+        Assert.Equal("Local AI 0.1.51 установлен на этом компьютере.", start.Headline);
         Assert.Equal(StartChoice.UpdateOrRepair, start.Selected);
         Assert.True(start.Option(StartChoice.UpdateOrRepair).IsSelected);
         Assert.Equal("Обновить или восстановить", start.Option(StartChoice.UpdateOrRepair).Title);

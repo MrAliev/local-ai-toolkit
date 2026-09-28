@@ -115,7 +115,7 @@ public static class ReleaseNotes
             .Split('\n')
             .Select(line => line.TrimEnd('\r'))
             .FirstOrDefault(line => line.TrimStart('﻿').StartsWith("# ", StringComparison.Ordinal));
-        var expected = $"# LocalAi {version}";
+        var expected = $"# Local AI {version}";
         if (heading?.TrimStart('﻿') != expected)
         {
             problems.Add(
@@ -126,7 +126,7 @@ public static class ReleaseNotes
 
     private static string English(ReleaseVersion version) =>
         $"""
-         # LocalAi {version}
+         # Local AI {version}
 
          [Русская версия]({version}.ru.md)
 
@@ -140,7 +140,7 @@ public static class ReleaseNotes
 
     private static string Russian(ReleaseVersion version) =>
         $"""
-         # LocalAi {version}
+         # Local AI {version}
 
          [English version]({version}.md)
 

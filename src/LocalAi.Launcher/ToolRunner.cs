@@ -77,13 +77,13 @@ public sealed class ToolRunner
             process = Process.Start(startInfo)
                 ?? throw new LauncherException(
                     "child_start_failed",
-                    $"Could not start LocalAi tool '{executablePath}'.");
+                    $"Could not start Local AI tool '{executablePath}'.");
         }
         catch (Win32Exception exception)
         {
             throw new LauncherException(
                 "child_start_failed",
-                $"Could not start LocalAi tool '{executablePath}': {exception.Message}");
+                $"Could not start Local AI tool '{executablePath}': {exception.Message}");
         }
 
         using (process)

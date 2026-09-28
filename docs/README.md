@@ -1,6 +1,6 @@
 # Local AI Toolkit
 
-![LocalAi logo](images/localai-mark.png)
+![Local AI logo](images/localai-mark.png)
 
 **Local models that do the reading — for you, and for your cloud agent. A real saving in
 cloud tokens, and in your own time.**
@@ -11,7 +11,7 @@ cloud tokens, and in your own time.**
 
 A cloud agent spends most of its tokens looking rather than thinking: opening candidate
 files, searching the code, walking dependencies, scrolling a build log, describing a
-screenshot, translating a page. LocalAi does that part on your own machine and hands back
+screenshot, translating a page. Local AI does that part on your own machine and hands back
 the answer, so the agent starts from a result instead of paying to find one.
 
 **A cloud agent that answers a question by reading files pays for every file it opens. A

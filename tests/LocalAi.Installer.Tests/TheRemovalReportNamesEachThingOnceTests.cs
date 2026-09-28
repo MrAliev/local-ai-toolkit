@@ -71,7 +71,7 @@ public sealed class TheRemovalReportNamesEachThingOnceTests : IDisposable
 
         Assert.StartsWith("Nothing was removed.", wizard.Summary, StringComparison.Ordinal);
         Assert.Equal(1, Mentions(wizard.ReportText, "Nothing was removed."));
-        Assert.StartsWith("Failed: stopping LocalAi's running tools and broker", wizard.Report, StringComparison.Ordinal);
+        Assert.StartsWith("Failed: stopping Local AI's running tools and broker", wizard.Report, StringComparison.Ordinal);
     }
 
     [Fact]

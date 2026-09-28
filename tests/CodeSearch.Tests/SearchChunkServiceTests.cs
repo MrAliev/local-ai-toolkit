@@ -34,7 +34,7 @@ public sealed class SearchChunkServiceTests : IDisposable
             "line one\r\nline two\r\nline three\r\nline four\r\nline five\r\n");
         Git("init", "-b", "main");
         Git("config", "user.email", "tests@local.invalid");
-        Git("config", "user.name", "LocalAi Tests");
+        Git("config", "user.name", "Local AI Tests");
         Git("add", "Example.cs");
         Git("commit", "-m", "Initial");
 

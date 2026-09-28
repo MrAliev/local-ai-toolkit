@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 424" width="1180" height="424" role="img" aria-label="You reach the LocalAi tools two ways: through a cloud agent over MCP, or straight from the command line. The tools use a broker, which runs local models on your GPU, and the code index at the heart of the project. The index answers by meaning and by exact name at once, cuts code into chunks by symbol, knows dependencies, and picks up uncommitted work in an overlay of its own.">
-  <title>How LocalAi fits together</title>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 424" width="1180" height="424" role="img" aria-label="You reach the Local AI tools two ways: through a cloud agent over MCP, or straight from the command line. The tools use a broker, which runs local models on your GPU, and the code index at the heart of the project. The index answers by meaning and by exact name at once, cuts code into chunks by symbol, knows dependencies, and picks up uncommitted work in an overlay of its own.">
+  <title>How Local AI fits together</title>
   <style>
     .box   { fill: #f6f8fa; stroke: #8c959f; stroke-width: 1.5; }
     .lead  { fill: #ddf4ff; stroke: #4493f8; stroke-width: 1.8; }
@@ -60,7 +60,7 @@
 
   <!-- localai tools -->
   <rect class="box lead" x="424" y="92" width="200" height="60" rx="10"/>
-  <text class="name" x="524" y="118" text-anchor="middle">LocalAi tools</text>
+  <text class="name" x="524" y="118" text-anchor="middle">Local AI tools</text>
   <text class="note" x="524" y="138" text-anchor="middle">23 over MCP</text>
 
   <!-- broker -->

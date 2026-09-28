@@ -31,74 +31,74 @@ public sealed class APackageThatFailedSaysWhyTests
     {
         {
             "size", true, FolderMismatch,
-            "LocalAi package: localai-package.zip is 100 bytes; the signed manifest says 209715200." + NotInstalled
+            "Local AI package: localai-package.zip is 100 bytes; the signed manifest says 209715200." + NotInstalled
         },
         {
             "overflow", true, FolderMismatch,
-            "LocalAi package: localai-package.zip is larger than the 209715200 bytes the signed manifest says." +
+            "Local AI package: localai-package.zip is larger than the 209715200 bytes the signed manifest says." +
             NotInstalled
         },
         {
             "hash", true, FolderMismatch,
-            $"LocalAi package: localai-package.zip does not match the SHA-256 in the signed manifest (manifest " +
+            $"Local AI package: localai-package.zip does not match the SHA-256 in the signed manifest (manifest " +
             $"{new string('A', 64)}, file {new string('B', 64)})." + NotInstalled
         },
         {
             "hash", false, DownloadMismatch,
-            $"LocalAi package: localai-package.zip does not match the SHA-256 in the signed manifest (manifest " +
+            $"Local AI package: localai-package.zip does not match the SHA-256 in the signed manifest (manifest " +
             $"{new string('A', 64)}, file {new string('B', 64)})." + NotInstalled
         },
         {
             "size", false, DownloadMismatch,
-            "LocalAi package: localai-package.zip is 100 bytes; the signed manifest says 209715200." + NotInstalled
+            "Local AI package: localai-package.zip is 100 bytes; the signed manifest says 209715200." + NotInstalled
         },
         {
             "contents", false,
             "not installed: the package matches its release manifest, but its contents failed the installer's safety checks",
-            "LocalAi package: the package matches the signed manifest, but its contents failed the installer's " +
+            "Local AI package: the package matches the signed manifest, but its contents failed the installer's " +
             "checks." + NotInstalled
         },
         {
             "missing", true,
             "not installed: localai-package.zip is not in the folder",
-            $"LocalAi package: '{Folder}' does not hold localai-package.zip." + NotInstalled
+            $"Local AI package: '{Folder}' does not hold localai-package.zip." + NotInstalled
         },
         {
             "no-access", true,
             "not installed: this account cannot read localai-package.zip in the folder",
-            $"LocalAi package: localai-package.zip in '{Folder}' could not be read: Access to the path is denied." +
+            $"Local AI package: localai-package.zip in '{Folder}' could not be read: Access to the path is denied." +
             NotInstalled
         },
         {
             "unreadable", true,
             "not installed: localai-package.zip in the folder could not be read. Technical details: The file is in use.",
-            $"LocalAi package: localai-package.zip in '{Folder}' could not be read: The file is in use." + NotInstalled
+            $"Local AI package: localai-package.zip in '{Folder}' could not be read: The file is in use." + NotInstalled
         },
         {
             "too-large", true,
             "not installed: localai-package.zip in the folder is larger than any release publishes",
-            $"LocalAi package: localai-package.zip in '{Folder}' is 5 bytes, which is larger than this installer " +
+            $"Local AI package: localai-package.zip in '{Folder}' is 5 bytes, which is larger than this installer " +
             "will read (4 bytes)." + NotInstalled
         },
         {
             "download", false,
             "not installed: the package could not be downloaded from GitHub. Technical details: Could not download " +
             "'localai-package.zip' from release '0.1.51': the server answered 503 Service Unavailable.",
-            "LocalAi package: Could not download 'localai-package.zip' from release '0.1.51': the server answered " +
+            "Local AI package: Could not download 'localai-package.zip' from release '0.1.51': the server answered " +
             "503 Service Unavailable." + NotInstalled
         },
         {
             "not-written", false,
             "not installed: the package could not be written to the installer's working folder. Technical details: " +
             "There is not enough space on the disk.",
-            @"LocalAi package: could not write the package to C:\scratch\.package.zip: There is not enough space " +
+            @"Local AI package: could not write the package to C:\scratch\.package.zip: There is not enough space " +
             "on the disk." + NotInstalled
         },
         {
             "copy-not-written", true,
             "not installed: the package could not be written to the installer's working folder. Technical details: " +
             "There is not enough space on the disk.",
-            @"LocalAi package: could not write the package to C:\scratch\localai-package.zip: There is not enough " +
+            @"Local AI package: could not write the package to C:\scratch\localai-package.zip: There is not enough " +
             "space on the disk." + NotInstalled
         },
     };

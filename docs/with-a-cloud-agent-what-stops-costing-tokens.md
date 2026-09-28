@@ -17,7 +17,7 @@ job finishing":
 - `search_code` returns `IBrokerQueue.CompleteAsync` and `BrokerJobPending` — neither of
   which contains the word "subscribe" anywhere. It matched by meaning.
 
-| Question | Without LocalAi: where the tokens go | With LocalAi: where the tokens go |
+| Question | Without Local AI: where the tokens go | With Local AI: where the tokens go |
 | --- | --- | --- |
 | "Who is subscribed to a job finishing?" | guess a keyword, open candidates whole — `DurableQueue.cs` alone is 52 KB, about **13 100** tokens at four bytes a token, and not the answer yet | three fragments, with paths and line ranges |
 | "How does the order pipeline work?" | read every file mentioning "Order" and assemble the picture yourself | a fragment per link in the chain, each with its place |
@@ -124,7 +124,7 @@ Edit `Candidates` and `Fallbacks` in the relevant `Routes` entry; declare any ad
 model in `Models`. This file replaces the complete catalog. Keep `SchemaVersion` at
 `1`, a non-empty `CatalogVersion`, and one route for every task profile.
 
-Without this file, LocalAi reads the built-in catalog. An invalid file reports an
+Without this file, Local AI reads the built-in catalog. An invalid file reports an
 error instead of falling back to defaults. Run `localai doctor` to check the file
 and see its calculated version: `custom-` followed by a content hash. Formatting
 changes do not change that version. Use `localai policy show` to inspect the other
@@ -137,7 +137,7 @@ or running a model. Apply the saved catalog as described below, then retry.
 
 To apply the saved catalog, let active local calls finish and run `localai doctor`.
 If its `model-catalog` check passes, run `localai-launcher.exe stop`. This stops
-the broker and all running LocalAi tools belonging to the active installed version,
+the broker and all running Local AI tools belonging to the active installed version,
 including its MCP servers. Reconnect the MCP servers in your client, or restart
 the client if needed. The next local task starts the broker with the saved catalog.
 

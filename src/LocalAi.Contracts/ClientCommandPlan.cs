@@ -161,7 +161,7 @@ public static class ClientCommandPlan
     public static IReadOnlyList<string> McpFallbackChoices() =>
     [
         "Diagnose or restart MCP.",
-        "Use the LocalAi CLI through the same broker.",
+        "Use the Local AI CLI through the same broker.",
         "Continue without local models using rg."
     ];
 

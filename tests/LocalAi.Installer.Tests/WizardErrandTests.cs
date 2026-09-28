@@ -36,9 +36,9 @@ public sealed class WizardErrandTests
     /// stop.
     /// </summary>
     [Theory]
-    [InlineData(StartChoice.Install, "LocalAi Setup")]
-    [InlineData(StartChoice.UpdateOrRepair, "LocalAi — Update or repair")]
-    [InlineData(StartChoice.CleanReinstall, "LocalAi — Reinstall")]
+    [InlineData(StartChoice.Install, "Local AI Setup")]
+    [InlineData(StartChoice.UpdateOrRepair, "Local AI — Update or repair")]
+    [InlineData(StartChoice.CleanReinstall, "Local AI — Reinstall")]
     public void The_title_says_what_this_run_is(StartChoice mode, string expected)
     {
         Assert.Equal(expected, new InstallerWizardViewModel(mode).WindowTitle);

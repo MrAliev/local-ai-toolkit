@@ -49,7 +49,7 @@ public sealed class ARefusedToolDoesNotLookBrokenTests
     public async Task A_broker_that_is_not_there_is_reported_rather_than_thrown()
     {
         var answer = await LocalLmTools.LocalModelsStatus(
-            new ModelManagementTasks(new RefusingClient("The LocalAi broker is not running.")),
+            new ModelManagementTasks(new RefusingClient("The Local AI broker is not running.")),
             TestContext.Current.CancellationToken);
 
         Assert.Contains("broker is not running", answer, StringComparison.Ordinal);

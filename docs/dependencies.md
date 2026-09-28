@@ -12,14 +12,14 @@ there; where WinGet is missing, it names each one's official download page inste
 | --- | --- |
 | **Windows** | Windows 10 or 11 on x64; the installer reports anything else as unsupported |
 | **Git** | a repository is identified by its git directory, and the hooks live there |
-| **Ollama** | every model runs on it; LocalAi only ever reaches it through the broker |
+| **Ollama** | every model runs on it; Local AI only ever reaches it through the broker |
 | **A GPU the model fits in** | under the default policy, `RequireFullVram`, a model that does not fit entirely in video memory is refused rather than run slowly. The policy can be relaxed — see below |
 
 **Needed per language — search works without them, but coarser:**
 
 | | Why |
 | --- | --- |
-| **.NET SDK 10** | the C# semantic index behind precise navigation is built by loading the solution through the installed SDK. Cutting C# into types and members does not need it: Roslyn does that inside LocalAi |
+| **.NET SDK 10** | the C# semantic index behind precise navigation is built by loading the solution through the installed SDK. Cutting C# into types and members does not need it: Roslyn does that inside Local AI |
 | **Node.js 20** + **SCIP TypeScript** | declaration-level chunking for TypeScript and JavaScript |
 | **Python 3.10+** + **SCIP Python** | declaration-level chunking for Python |
 

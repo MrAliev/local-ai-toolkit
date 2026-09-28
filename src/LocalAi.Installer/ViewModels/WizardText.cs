@@ -19,7 +19,7 @@ public static class WizardText
         (InstallerPage.Diagnose, InstallerCulture.Pick("System check", "Проверка системы")),
         (InstallerPage.Dependencies,
             InstallerCulture.Pick("Prerequisites", "Необходимые компоненты")),
-        (InstallerPage.Package, InstallerCulture.Pick("LocalAi package", "Пакет LocalAi")),
+        (InstallerPage.Package, InstallerCulture.Pick("Local AI package", "Пакет Local AI")),
         (InstallerPage.Models, InstallerCulture.Pick("Models and memory", "Модели и память")),
         (InstallerPage.Agents,
             InstallerCulture.Pick("Client apps", "Клиентские приложения")),
@@ -41,7 +41,7 @@ public static class WizardText
             InstallerPage.Dependencies =>
                 InstallerCulture.Pick("Prerequisites", "Необходимые компоненты"),
             InstallerPage.Package =>
-                InstallerCulture.Pick("LocalAi package", "Пакет LocalAi"),
+                InstallerCulture.Pick("Local AI package", "Пакет Local AI"),
             InstallerPage.Models => InstallerCulture.Pick(
                 "How models run on this computer",
                 "Как модели работают на этом компьютере"),
@@ -96,8 +96,8 @@ public static class WizardText
             // The shipped line stopped being true the moment results appeared, so it says one
             // thing while the probe runs and another once there is a table to read.
             InstallerPage.Diagnose when isChecking => InstallerCulture.Pick(
-                "Checking this computer and the programs LocalAi uses.",
-                "Проверяю этот компьютер и программы, которые использует LocalAi."),
+                "Checking this computer and the programs Local AI uses.",
+                "Проверяю этот компьютер и программы, которые использует Local AI."),
             InstallerPage.Diagnose => InstallerCulture.Pick(
                 "What was found on this computer. Items marked as a warning still allow " +
                 "installation.",
@@ -124,8 +124,8 @@ public static class WizardText
                     "Выберите, какие компоненты установить. За вас ничего не отмечено."),
             },
             InstallerPage.Package => InstallerCulture.Pick(
-                "Choose the LocalAi release to install.",
-                "Выберите релиз LocalAi для установки."),
+                "Choose the Local AI release to install.",
+                "Выберите релиз Local AI для установки."),
             InstallerPage.Models => InstallerCulture.Pick(
                 "Video memory decides which models are set up. The rule decides how they may run.",
                 "Какие модели будут установлены, решает видеопамять. Правило решает, как они " +

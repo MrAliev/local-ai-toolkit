@@ -32,7 +32,7 @@ public static class HookInstaller
         if (string.IsNullOrWhiteSpace(launcherPath))
         {
             throw new ArgumentException(
-                "A stable LocalAi launcher path is required.",
+                "A stable Local AI launcher path is required.",
                 nameof(launcherPath));
         }
         ArgumentNullException.ThrowIfNull(launcherArguments);
