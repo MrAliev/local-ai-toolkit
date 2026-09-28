@@ -28,4 +28,32 @@ internal static class WpfTestThread
         thread.Join();
         if (failure is not null) ExceptionDispatchInfo.Capture(failure).Throw();
     });
+
+    /// <summary>
+    /// Waits for a view model's work the way a window does: continuations come back to this
+    /// thread's dispatcher, which keeps pumping meanwhile. Blocking on the task instead lets a
+    /// continuation run on the pool, where the collections a window binds to refuse to change.
+    /// </summary>
+    public static void Wait(Func<Task> start)
+    {
+        var previous = SynchronizationContext.Current;
+        SynchronizationContext.SetSynchronizationContext(
+            new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));
+        try
+        {
+            var task = start();
+            var frame = new DispatcherFrame();
+            task.ContinueWith(
+                _ => frame.Continue = false,
+                CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default);
+            Dispatcher.PushFrame(frame);
+            task.GetAwaiter().GetResult();
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(previous);
+        }
+    }
 }

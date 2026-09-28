@@ -492,13 +492,13 @@ public sealed class AccessibleControlsTests
         var before = RemovalFixture.Snapshot(machine.Runtime);
         var wizard = new UninstallWizardViewModel(RemovalPreset.FullUninstall, false, machine.Layout, machine.Home,
             readHooksPath: machine.HooksPathReader, presentation: presentation);
-        wizard.InitializeAsync().GetAwaiter().GetResult();
+        WpfTestThread.Wait(() => wizard.InitializeAsync());
         var window = new UninstallWindow(presentation) { DataContext = wizard };
         try
         {
             Layout(window);
             CheckDefaultAction(window, wizard.NextCommand);
-            wizard.MoveNextAsync().GetAwaiter().GetResult();
+            WpfTestThread.Wait(() => wizard.MoveNextAsync());
             Layout(window);
             var remove = CheckDefaultAction(window, wizard.UninstallCommand);
             Assert.False(remove.IsEnabled);
