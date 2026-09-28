@@ -61,7 +61,7 @@
   <!-- localai tools -->
   <rect class="box lead" x="424" y="92" width="200" height="60" rx="10"/>
   <text class="name" x="524" y="118" text-anchor="middle">LocalAi tools</text>
-  <text class="note" x="524" y="138" text-anchor="middle">20 over MCP</text>
+  <text class="note" x="524" y="138" text-anchor="middle">23 over MCP</text>
 
   <!-- broker -->
   <rect class="box" x="666" y="24" width="216" height="60" rx="10"/>
