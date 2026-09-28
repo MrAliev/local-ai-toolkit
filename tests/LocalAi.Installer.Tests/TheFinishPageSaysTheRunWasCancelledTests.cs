@@ -20,21 +20,25 @@ public sealed class TheFinishPageSaysTheRunWasCancelledTests : IDisposable
 
     public void Dispose() => root.Dispose();
 
+    /// <summary>
+    /// A clean reinstall's install half installs: its removal half took the installed version
+    /// away, so a cancel there cancels an installation, not an update (#614).
+    /// </summary>
     [Theory]
-    [InlineData(StartChoice.UpdateOrRepair)]
-    [InlineData(StartChoice.CleanReinstall)]
-    public async Task A_cancelled_update_says_it_was_cancelled(StartChoice mode)
+    [InlineData(StartChoice.UpdateOrRepair, "Update cancelled", "Обновление отменено")]
+    [InlineData(StartChoice.CleanReinstall, "Installation cancelled", "Установка отменена")]
+    public async Task A_cancelled_update_says_it_was_cancelled(StartChoice mode, string title, string russianTitle)
     {
         var presentation = Presentation();
         var wizard = await RunEndedBy(mode, presentation, cancel: true);
 
-        Assert.Equal("Update cancelled", wizard.StepTitle);
+        Assert.Equal(title, wizard.StepTitle);
         Assert.Equal(HowFarItGot, wizard.StepDescription);
         Assert.Equal(StartOver + "\n\n" + NothingToRollBack, wizard.Finish.NextSteps);
 
         presentation.ChooseLanguage(InstallerLanguage.Russian);
 
-        Assert.Equal("Обновление отменено", wizard.StepTitle);
+        Assert.Equal(russianTitle, wizard.StepTitle);
         Assert.Equal("Список ниже показывает, докуда дошёл запуск до отмены.", wizard.StepDescription);
         Assert.Equal(
             "Чтобы начать заново, закройте это окно и снова запустите установщик.\n\n" +
