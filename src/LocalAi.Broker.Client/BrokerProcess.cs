@@ -101,7 +101,7 @@ public sealed class BrokerProcess : IBrokerProcess
         {
             throw new BrokerBootstrapException(
                 "broker_executable_missing",
-                "The LocalAi broker executable was not found next to the running component: " +
+                "The Local AI broker executable was not found next to the running component: " +
                 executable);
         }
 
@@ -441,7 +441,7 @@ public sealed class BrokerProcess : IBrokerProcess
         {
             throw new BrokerBootstrapException(
                 "broker_start_failed",
-                "LocalAi broker process " + startAttempt.ProcessId +
+                "Local AI broker process " + startAttempt.ProcessId +
                 " exited with code " + exitCode +
                 "; last observation: " + lastStateObservation.Detail);
         }
@@ -508,7 +508,7 @@ public sealed class BrokerProcess : IBrokerProcess
         Directory.CreateDirectory(workingDirectory);
         var process = Process.Start(
                 CreateStartInfo(executablePath, arguments, workingDirectory))
-            ?? throw new InvalidOperationException("Could not start the LocalAi broker.");
+            ?? throw new InvalidOperationException("Could not start the Local AI broker.");
         return new ProcessStartAttempt(process);
     }
 
@@ -584,7 +584,7 @@ public sealed class BrokerProcess : IBrokerProcess
                 {
                     throw new BrokerBootstrapException(
                         "broker_start_timeout",
-                        $"LocalAi broker did not acquire the startup semaphore within " +
+                        $"Local AI broker did not acquire the startup semaphore within " +
                         $"{_startupTimeout}; phase: startup semaphore; " +
                         "last observation: startup semaphore contention.");
                 }
@@ -616,7 +616,7 @@ public sealed class BrokerProcess : IBrokerProcess
 
         throw new BrokerBootstrapException(
             "broker_start_timeout",
-            $"LocalAi broker did not become ready within {_startupTimeout}; " +
+            $"Local AI broker did not become ready within {_startupTimeout}; " +
             $"phase: {phase}; " +
             $"last observation: {lastObservation}.");
     }

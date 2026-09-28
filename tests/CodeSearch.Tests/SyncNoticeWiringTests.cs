@@ -37,7 +37,7 @@ public sealed class SyncNoticeWiringTests : IDisposable
         File.WriteAllText(Path.Combine(_root, "Alpha.cs"), "class Alpha { }\r\n");
         Git("init", "-b", "main");
         Git("config", "user.email", "tests@local.invalid");
-        Git("config", "user.name", "LocalAi Tests");
+        Git("config", "user.name", "Local AI Tests");
         Git("add", ".");
         Git("commit", "-m", "Initial");
     }

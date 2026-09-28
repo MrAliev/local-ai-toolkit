@@ -604,7 +604,7 @@ public sealed class PruneCommandTests : IDisposable
         File.WriteAllText(Path.Combine(directory, "A.cs"), "class A { }");
         Git(directory, "init", "-b", "main");
         Git(directory, "config", "user.email", "tests@local.invalid");
-        Git(directory, "config", "user.name", "LocalAi Tests");
+        Git(directory, "config", "user.name", "Local AI Tests");
         Git(directory, "add", "A.cs");
         Git(directory, "commit", "-m", "Initial");
         return directory;

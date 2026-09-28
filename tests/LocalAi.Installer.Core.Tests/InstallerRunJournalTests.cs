@@ -39,7 +39,7 @@ public sealed class InstallerRunJournalTests : IDisposable
         using var journal = InstallerRunJournal.Start(directory);
         var stepId = journal.BeginStep(
             InstallerRunEffectKind.PackageActivation,
-            "LocalAi package 0.2.0");
+            "Local AI package 0.2.0");
         journal.CompleteStep(
             stepId,
             "Activated 0.2.0; 0.1.9 was active before.",
@@ -90,7 +90,7 @@ public sealed class InstallerRunJournalTests : IDisposable
         using var journal = InstallerRunJournal.Start(directory);
         journal.BeginStep(
             InstallerRunEffectKind.PackageActivation,
-            "LocalAi package 0.2.0");
+            "Local AI package 0.2.0");
 
         Assert.Null(InstallerRunJournal.FindInterrupted(directory));
 

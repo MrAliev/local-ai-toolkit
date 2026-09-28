@@ -78,8 +78,8 @@ public sealed class ReviewApplyPageViewModel : ObservableObject
         : anotherRun
             // The removal wizard's own sentence for the same situation (UninstallWizardViewModel).
             ? InstallerCulture.Pick(
-                "Another LocalAi installer or uninstaller is running on this computer. Finish it first, then start this one again.",
-                "На этом компьютере уже работает установщик или деинсталлятор LocalAi. Сначала завершите его, потом запустите этот заново.")
+                "Another Local AI installer or uninstaller is running on this computer. Finish it first, then start this one again.",
+                "На этом компьютере уже работает установщик или деинсталлятор Local AI. Сначала завершите его, потом запустите этот заново.")
             : string.Format(
                 InstallerCulture.Pick(
                     "The list above changed after you confirmed it ({0}). Read it again, then confirm.",

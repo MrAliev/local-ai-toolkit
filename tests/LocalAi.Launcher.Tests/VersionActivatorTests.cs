@@ -226,7 +226,7 @@ public sealed class VersionActivatorTests
         }
 
         Assert.Equal("version_path_invalid", error.Code);
-        Assert.Equal("The LocalAi version name is invalid.", error.Message);
+        Assert.Equal("The Local AI version name is invalid.", error.Message);
         Assert.Equal(0, stopCount);
         Assert.Equal(before, File.ReadAllBytes(install.CurrentPath));
     }

@@ -34,7 +34,7 @@ public sealed class StartScreenNamesTheReleaseTests : IDisposable
     {
         var start = Start(new InstalledVersion(BuildId, "0.1.51"));
 
-        Assert.Contains("LocalAi 0.1.51 is installed", start.Headline, StringComparison.Ordinal);
+        Assert.Contains("Local AI 0.1.51 is installed", start.Headline, StringComparison.Ordinal);
         Assert.DoesNotContain(BuildId, start.Headline, StringComparison.Ordinal);
     }
 
@@ -48,7 +48,7 @@ public sealed class StartScreenNamesTheReleaseTests : IDisposable
     {
         var start = Start(new InstalledVersion(BuildId, null));
 
-        Assert.Equal("LocalAi is installed on this computer.", start.Headline);
+        Assert.Equal("Local AI is installed on this computer.", start.Headline);
     }
 
     /// <summary>
@@ -80,8 +80,8 @@ public sealed class StartScreenNamesTheReleaseTests : IDisposable
 
     /// <summary>The row explaining why Install is off follows the same rule.</summary>
     [Theory]
-    [InlineData("0.1.51", "LocalAi 0.1.51 is already installed")]
-    [InlineData(null, "LocalAi is already installed")]
+    [InlineData("0.1.51", "Local AI 0.1.51 is already installed")]
+    [InlineData(null, "Local AI is already installed")]
     public void The_install_row_says_what_it_knows(string? release, string expected)
     {
         var start = Start(new InstalledVersion(BuildId, release));

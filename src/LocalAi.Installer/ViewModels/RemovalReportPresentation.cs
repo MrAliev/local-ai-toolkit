@@ -39,7 +39,7 @@ public static class RemovalReportPresentation
     private static string Title(RemovalReportEntry entry) => entry.Kind switch
     {
         RemovalReportKind.ProcessStop => InstallerCulture.Pick(
-            "LocalAi's running tools and broker", "Запущенные инструменты и брокер LocalAi"),
+            "Local AI's running tools and broker", "Запущенные инструменты и брокер Local AI"),
         RemovalReportKind.LauncherPath => "PATH: " + entry.Target,
         RemovalReportKind.Registration => InstallerCulture.Pick(
             "Apps & features entry", "Запись в «Приложениях и возможностях»"),
@@ -109,7 +109,7 @@ public static class RemovalReportPresentation
     private static string Wording(RemovalReportEntry entry) => WhatStays(entry)?.Wording ?? (entry.State, entry.Kind) switch
     {
         (RemovalReportState.Completed, RemovalReportKind.ProcessStop) => InstallerCulture.Pick("Stopped", "Остановлены"),
-        (RemovalReportState.Completed, RemovalReportKind.Hooks) => InstallerCulture.Pick("LocalAi hooks removed", "Хуки LocalAi удалены"),
+        (RemovalReportState.Completed, RemovalReportKind.Hooks) => InstallerCulture.Pick("Local AI hooks removed", "Хуки Local AI удалены"),
         // The title carries the full paths already, and names only removed files when nothing was rewritten.
         _ when Deleted(entry) is { Length: > 0 } deleted => deleted.Length == entry.Files!.Count
             ? InstallerCulture.Pick("Removed", "Удалено")
@@ -126,9 +126,9 @@ public static class RemovalReportPresentation
     // own detail is the journal's English, so it is worded here instead.
     private static string? Detail(RemovalReportEntry entry) => entry.State switch
     {
-        RemovalReportState.Undone => InstallerCulture.Pick("LocalAi still connected", "LocalAi по-прежнему подключён"),
+        RemovalReportState.Undone => InstallerCulture.Pick("Local AI still connected", "Local AI по-прежнему подключён"),
         RemovalReportState.Completed => entry.Kind == RemovalReportKind.Configuration
-            ? InstallerCulture.Pick("LocalAi disconnected", "LocalAi отключён")
+            ? InstallerCulture.Pick("Local AI disconnected", "Local AI отключён")
             : null,
         _ => entry.Detail,
     };
@@ -138,11 +138,11 @@ public static class RemovalReportPresentation
     private static string Target(RemovalReportEntry entry) => entry.Kind switch
     {
         RemovalReportKind.ProcessStop when entry.State == RemovalReportState.Completed => InstallerCulture.Pick(
-            "Stopped LocalAi's running tools and broker",
-            "Остановлены запущенные инструменты и брокер LocalAi"),
+            "Stopped Local AI's running tools and broker",
+            "Остановлены запущенные инструменты и брокер Local AI"),
         RemovalReportKind.ProcessStop => InstallerCulture.Pick(
-            "stopping LocalAi's running tools and broker",
-            "остановка запущенных инструментов и брокера LocalAi"),
+            "stopping Local AI's running tools and broker",
+            "остановка запущенных инструментов и брокера Local AI"),
         RemovalReportKind.JournalStep => entry.Target + InstallerCulture.Pick(" (journal step)", " (шаг журнала, на английском)"),
         _ => entry.Target,
     };
@@ -166,7 +166,7 @@ public static class RemovalReportPresentation
         {
             RemovalReportKind.Path => InstallerCulture.Pick("Removed ", "Удалено "),
             RemovalReportKind.Configuration => InstallerCulture.Pick("Updated ", "Обновлено "),
-            RemovalReportKind.Hooks => InstallerCulture.Pick("Removed LocalAi hooks from ", "Удалены хуки LocalAi из "),
+            RemovalReportKind.Hooks => InstallerCulture.Pick("Removed Local AI hooks from ", "Удалены хуки Local AI из "),
             RemovalReportKind.ProcessStop => string.Empty,
             _ => InstallerCulture.Pick("Completed: ", "Выполнено: "),
         },

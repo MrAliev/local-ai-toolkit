@@ -22,7 +22,7 @@ public sealed class TheRemovalReportSpeaksTheReadersLanguageTests : IDisposable
         "dispatcher(s) removed.",
         "Removed from the user PATH.",
         "Stopped.",
-        "Ask LocalAi to finish and exit",
+        "Ask Local AI to finish and exit",
     ];
 
     private readonly RemovalFixture machine = new();
@@ -34,11 +34,11 @@ public sealed class TheRemovalReportSpeaksTheReadersLanguageTests : IDisposable
     {
         var (plan, lines) = await RemoveEverything();
 
-        Assert.Equal("Stopped LocalAi's running tools and broker", lines[0]);
+        Assert.Equal("Stopped Local AI's running tools and broker", lines[0]);
         Assert.All(Configurations(plan), files =>
-            Assert.Contains("Updated " + files + " — LocalAi disconnected", lines));
+            Assert.Contains("Updated " + files + " — Local AI disconnected", lines));
         Assert.All(HookDirectories(plan), directory =>
-            Assert.Contains("Removed LocalAi hooks from " + directory, lines));
+            Assert.Contains("Removed Local AI hooks from " + directory, lines));
         Assert.All(plan.Paths, path => Assert.Contains("Removed " + path.Path, lines));
         Assert.Contains("Removed from PATH: " + machine.Layout.LauncherDirectory, lines);
         Assert.Contains(
@@ -52,11 +52,11 @@ public sealed class TheRemovalReportSpeaksTheReadersLanguageTests : IDisposable
     {
         var (plan, lines) = await RemoveEverything(InstallerLanguage.Russian);
 
-        Assert.Equal("Остановлены запущенные инструменты и брокер LocalAi", lines[0]);
+        Assert.Equal("Остановлены запущенные инструменты и брокер Local AI", lines[0]);
         Assert.All(Configurations(plan), files =>
-            Assert.Contains("Обновлено " + files + " — LocalAi отключён", lines));
+            Assert.Contains("Обновлено " + files + " — Local AI отключён", lines));
         Assert.All(HookDirectories(plan), directory =>
-            Assert.Contains("Удалены хуки LocalAi из " + directory, lines));
+            Assert.Contains("Удалены хуки Local AI из " + directory, lines));
         Assert.All(plan.Paths, path => Assert.Contains("Удалено " + path.Path, lines));
         Assert.Contains("Удалено из PATH: " + machine.Layout.LauncherDirectory, lines);
         Assert.Contains(
@@ -76,17 +76,17 @@ public sealed class TheRemovalReportSpeaksTheReadersLanguageTests : IDisposable
         journal.FailStep(step, "The stop request timed out.");
 
         Assert.Equal(
-            "Failed: stopping LocalAi's running tools and broker — The stop request timed out.",
+            "Failed: stopping Local AI's running tools and broker — The stop request timed out.",
             Lines(plan, journal)[0]);
         Assert.Equal(
-            new RunResultRow(RunMark.Failed, "LocalAi's running tools and broker", "Failed — The stop request timed out."),
+            new RunResultRow(RunMark.Failed, "Local AI's running tools and broker", "Failed — The stop request timed out."),
             Rows(plan, journal)[0]);
         InstallerCulture.Current = InstallerLanguage.Russian;
         Assert.Equal(
-            "Не выполнено: остановка запущенных инструментов и брокера LocalAi — The stop request timed out.",
+            "Не выполнено: остановка запущенных инструментов и брокера Local AI — The stop request timed out.",
             Lines(plan, journal)[0]);
         Assert.Equal(
-            new RunResultRow(RunMark.Failed, "Запущенные инструменты и брокер LocalAi", "Не выполнено — The stop request timed out."),
+            new RunResultRow(RunMark.Failed, "Запущенные инструменты и брокер Local AI", "Не выполнено — The stop request timed out."),
             Rows(plan, journal)[0]);
     }
 
@@ -97,16 +97,16 @@ public sealed class TheRemovalReportSpeaksTheReadersLanguageTests : IDisposable
         using var journal = InstallerRunJournal.Start(Path.Combine(machine.Root, "journal"));
         journal.BeginStep(InstallerRunEffectKind.ProcessStop, "Ask the broker to go");
 
-        Assert.Equal("Outcome unknown: stopping LocalAi's running tools and broker", Lines(plan, journal)[0]);
+        Assert.Equal("Outcome unknown: stopping Local AI's running tools and broker", Lines(plan, journal)[0]);
         Assert.Equal(
-            new RunResultRow(RunMark.Warned, "LocalAi's running tools and broker", "Outcome unknown"),
+            new RunResultRow(RunMark.Warned, "Local AI's running tools and broker", "Outcome unknown"),
             Rows(plan, journal)[0]);
         InstallerCulture.Current = InstallerLanguage.Russian;
         Assert.Equal(
-            "Результат неизвестен: остановка запущенных инструментов и брокера LocalAi",
+            "Результат неизвестен: остановка запущенных инструментов и брокера Local AI",
             Lines(plan, journal)[0]);
         Assert.Equal(
-            new RunResultRow(RunMark.Warned, "Запущенные инструменты и брокер LocalAi", "Результат неизвестен"),
+            new RunResultRow(RunMark.Warned, "Запущенные инструменты и брокер Local AI", "Результат неизвестен"),
             Rows(plan, journal)[0]);
     }
 
@@ -115,8 +115,8 @@ public sealed class TheRemovalReportSpeaksTheReadersLanguageTests : IDisposable
     /// happened, so neither the stop nor the hooks leave a line empty or a preposition hanging.
     /// </summary>
     [Theory]
-    [InlineData(InstallerLanguage.English, "LocalAi's running tools and broker", "Stopped", "LocalAi hooks removed")]
-    [InlineData(InstallerLanguage.Russian, "Запущенные инструменты и брокер LocalAi", "Остановлены", "Хуки LocalAi удалены")]
+    [InlineData(InstallerLanguage.English, "Local AI's running tools and broker", "Stopped", "Local AI hooks removed")]
+    [InlineData(InstallerLanguage.Russian, "Запущенные инструменты и брокер Local AI", "Остановлены", "Хуки Local AI удалены")]
     public async Task The_finish_page_titles_the_stop_and_the_hooks_and_says_below_what_happened(
         InstallerLanguage language, string stop, string stopped, string hooksRemoved)
     {
@@ -204,10 +204,10 @@ public sealed class TheRemovalReportSpeaksTheReadersLanguageTests : IDisposable
         wizard.Presentation.ChooseLanguage(InstallerLanguage.Russian);
 
         var lines = wizard.Report.Split(Environment.NewLine);
-        Assert.Equal("Остановлены запущенные инструменты и брокер LocalAi", lines[0]);
+        Assert.Equal("Остановлены запущенные инструменты и брокер Local AI", lines[0]);
         AssertNoJournalDetail(lines);
         Assert.Equal(
-            new RunResultRow(RunMark.Done, "Запущенные инструменты и брокер LocalAi", "Остановлены"),
+            new RunResultRow(RunMark.Done, "Запущенные инструменты и брокер Local AI", "Остановлены"),
             wizard.Results[0]);
     }
 

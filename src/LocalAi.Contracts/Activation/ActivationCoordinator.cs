@@ -89,7 +89,7 @@ public static class ActivationCoordinator
             {
                 throw new ActivationCoordinationException(
                     "activation_timeout",
-                    "Timed out waiting for another LocalAi activation.");
+                    "Timed out waiting for another Local AI activation.");
             }
 
             var result = new ActivationStartupGateLease(canonicalRoot, mutex);
@@ -106,7 +106,7 @@ public static class ActivationCoordinator
         {
             throw new ActivationCoordinationException(
                 "activation_unavailable",
-                "The LocalAi activation gate is unavailable.",
+                "The Local AI activation gate is unavailable.",
                 exception);
         }
         finally
@@ -166,7 +166,7 @@ public static class ActivationCoordinator
             {
                 throw new ActivationCoordinationException(
                     "version_in_use",
-                    "The active LocalAi version is currently in use.",
+                    "The active Local AI version is currently in use.",
                     exception);
             }
         }
@@ -234,7 +234,7 @@ public static class ActivationCoordinator
             {
                 throw new ActivationCoordinationException(
                     "version_in_use",
-                    "The active LocalAi version is currently in use.",
+                    "The active Local AI version is currently in use.",
                     exception);
             }
         }

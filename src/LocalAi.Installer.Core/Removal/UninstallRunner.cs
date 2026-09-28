@@ -242,11 +242,11 @@ public sealed class UninstallRunner(
         }
 
         progress?.Report(new(0, InstallerCulture.Pick(
-            "Asking LocalAi to stop…",
-            "Прошу LocalAi остановиться…")));
+            "Asking Local AI to stop…",
+            "Прошу Local AI остановиться…")));
         var step = journal.BeginStep(
             InstallerRunEffectKind.ProcessStop,
-            "Ask LocalAi to finish and exit: " + layout.LauncherPath + " stop");
+            "Ask Local AI to finish and exit: " + layout.LauncherPath + " stop");
         try
         {
             var result = await processRunner.RunAsync(
@@ -267,8 +267,8 @@ public sealed class UninstallRunner(
                 // it is prose rather than machine text. The detail after it is the launcher's.
                 throw new UninstallRefusedException(
                     InstallerCulture.Pick(
-                        "Stopping LocalAi failed, so nothing was removed. ",
-                        "Остановить LocalAi не удалось, поэтому ничего не удалено. ") +
+                        "Stopping Local AI failed, so nothing was removed. ",
+                        "Остановить Local AI не удалось, поэтому ничего не удалено. ") +
                     detail);
             }
 
@@ -281,8 +281,8 @@ public sealed class UninstallRunner(
             journal.FailStep(step, exception.Message);
             throw new UninstallRefusedException(
                 InstallerCulture.Pick(
-                    "LocalAi could not be asked to stop, so nothing was removed. ",
-                    "LocalAi не удалось попросить остановиться, поэтому ничего не " +
+                    "Local AI could not be asked to stop, so nothing was removed. ",
+                    "Local AI не удалось попросить остановиться, поэтому ничего не " +
                     "удалено. ") +
                 exception.Message,
                 exception);

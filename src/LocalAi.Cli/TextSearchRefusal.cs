@@ -152,7 +152,7 @@ internal static class TextSearchRefusal
     /// person debugging their <c>settings.json</c>, not by an assistant acting on the rule.
     /// </summary>
     private const string ContentRefused =
-        "`{0}` searches this tree for a string, which LocalAi routes to the codesearch MCP "
+        "`{0}` searches this tree for a string, which Local AI routes to the codesearch MCP "
         + "tools: search_code for \"where does X live\", find_references / go_to_definition / "
         + "find_implementations for a symbol, get_code_chunk to fetch a hit. They answer by "
         + "position rather than by string match, so they do not also match the same name on "
@@ -161,7 +161,7 @@ internal static class TextSearchRefusal
         + "first and say what for.";
 
     private const string PathsRefused =
-        "`{0}` matches file paths across this tree, which LocalAi routes to search_code: it finds "
+        "`{0}` matches file paths across this tree, which Local AI routes to search_code: it finds "
         + "code by meaning and by symbol name and prints `path:start-end` for each hit, so there "
         + "is no list of files to open first. What is simply on disk is answered by listing the "
         + "directory, which is not refused. The call is refused whatever its pattern says. If "

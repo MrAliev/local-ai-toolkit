@@ -2,7 +2,7 @@
 
 [Русская версия](code-signing-policy.ru.md)
 
-LocalAi's Windows programs are to be signed through the SignPath Foundation's free code
+Local AI's Windows programs are to be signed through the SignPath Foundation's free code
 signing for open-source projects. **Until a release says in its notes that it is signed, its
 installer is not Authenticode-signed.** What protects a release today is the release manifest:
 it is signed with ECDSA P-256, and the installer accepts a package only when the manifest
@@ -22,7 +22,7 @@ Only programs built from this repository's source by the project's own release b
 
 | File | What it is |
 | --- | --- |
-| `LocalAi.Installer.exe` | the installer, which also removes LocalAi |
+| `LocalAi.Installer.exe` | the installer, which also removes Local AI |
 | `localai-launcher.exe` | the stable entry point every client is registered against |
 | `localai.exe` | the command line |
 | `codesearch.exe` | the code-search command line |
@@ -54,7 +54,7 @@ Every change reaches `main` through a pull request.
 
 ## Privacy
 
-[Privacy](privacy.md) lists every connection LocalAi makes to another computer and what
+[Privacy](privacy.md) lists every connection Local AI makes to another computer and what
 starts it.
 
 ## Reporting a problem

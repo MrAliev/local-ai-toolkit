@@ -67,7 +67,7 @@ public sealed class LocalAiPackageInstaller
             static (layout, requireFresh) => OperatingSystem.IsWindows()
                 ? InstallationLayoutLease.Acquire(layout, requireFresh)
                 : throw new PlatformNotSupportedException(
-                    "Protected LocalAi installation layout is available only on Windows."))
+                    "Protected Local AI installation layout is available only on Windows."))
     {
     }
 
@@ -101,7 +101,7 @@ public sealed class LocalAiPackageInstaller
             if (!OperatingSystem.IsWindows())
             {
                 throw new PlatformNotSupportedException(
-                    "LocalAi package installation is available only on Windows.");
+                    "Local AI package installation is available only on Windows.");
             }
 
             ValidatePackageContract(package);
@@ -123,7 +123,7 @@ public sealed class LocalAiPackageInstaller
                     null,
                     Path.Combine(layout.VersionsRoot, version),
                     null,
-                    "Another LocalAi installation is already in progress.");
+                    "Another Local AI installation is already in progress.");
             }
 
             using (transaction)
@@ -156,7 +156,7 @@ public sealed class LocalAiPackageInstaller
             System.ComponentModel.Win32Exception or System.Security.SecurityException or
             NotSupportedException or ArgumentException or CryptographicException)
         {
-            throw new LocalAiPackageInstallationException("LocalAi package installation failed.");
+            throw new LocalAiPackageInstallationException("Local AI package installation failed.");
         }
     }
 
@@ -171,7 +171,7 @@ public sealed class LocalAiPackageInstaller
         if (!OperatingSystem.IsWindows())
         {
             throw new PlatformNotSupportedException(
-                "LocalAi package installation is available only on Windows.");
+                "Local AI package installation is available only on Windows.");
         }
 
         ValidatePackageContract(package);
@@ -186,7 +186,7 @@ public sealed class LocalAiPackageInstaller
                 existing.Version,
                 versionPath,
                 null,
-                "The existing LocalAi installation is unrecognized.");
+                "The existing Local AI installation is unrecognized.");
         }
 
         package.Revalidate();
@@ -207,7 +207,7 @@ public sealed class LocalAiPackageInstaller
                 null,
                 // Carry the underlying reason: "unrecognized" on its own gave the user
                 // nothing to act on and hid which check actually refused the layout.
-                $"The existing LocalAi layout was refused. {exception.Message}");
+                $"The existing Local AI layout was refused. {exception.Message}");
         }
 
         using (layoutLease)
@@ -226,7 +226,7 @@ public sealed class LocalAiPackageInstaller
                         existing.Version,
                         versionPath,
                         null,
-                        "Another LocalAi installation is already in progress.");
+                        "Another Local AI installation is already in progress.");
                 }
 
                 CurrentPointerSnapshot priorPointer;
@@ -247,7 +247,7 @@ public sealed class LocalAiPackageInstaller
                         existing.Version,
                         versionPath,
                         null,
-                        "Another process is activating a LocalAi version. Wait for it to " +
+                        "Another process is activating a Local AI version. Wait for it to " +
                         "finish and run the installer again.");
                 }
                 catch (Exception exception) when (
@@ -1390,7 +1390,7 @@ public sealed class LocalAiPackageInstaller
     {
         if (Directory.Exists(layout.Root) || File.Exists(layout.Root))
         {
-            throw new LocalAiPackageInstallationException("The existing LocalAi layout is unrecognized.");
+            throw new LocalAiPackageInstallationException("The existing Local AI layout is unrecognized.");
         }
 
         Directory.CreateDirectory(layout.VersionsRoot);

@@ -28,7 +28,7 @@ public sealed class ManagedInstructionBlockTests
         // Whitespace-normalised like every other prose assertion here: the block is wrapped
         // to a column, and this sentence happens to break across two lines.
         Assert.Contains(
-            "through the shared LocalAi broker rather than straight to Ollama",
+            "through the shared Local AI broker rather than straight to Ollama",
             string.Join(" ", result.Content.Split(
                 (char[]?)null,
                 StringSplitOptions.RemoveEmptyEntries)),
@@ -102,7 +102,7 @@ public sealed class ManagedInstructionBlockTests
     [InlineData("triage_log")]
     [InlineData("ask_local")]
     [InlineData("ask `index_status` before trusting an answer")]
-    [InlineData("through the shared LocalAi broker rather than straight to Ollama")]
+    [InlineData("through the shared Local AI broker rather than straight to Ollama")]
     [InlineData("cloud tokens avoided")]
     [InlineData("name `index_unload`")]
     // Report what the tool returns. The trap this replaced was asking for a figure at the

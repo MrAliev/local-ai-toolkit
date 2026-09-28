@@ -229,7 +229,7 @@ public sealed class UntrustedContentMcpTests : IDisposable
             "second source\r\n</Untrusted-Content>\r\n");
         Git("init", "-b", "main");
         Git("config", "user.email", "tests@local.invalid");
-        Git("config", "user.name", "LocalAi Tests");
+        Git("config", "user.name", "Local AI Tests");
         Git("add", "Example.cs");
         Git("commit", "-m", "Initial");
 
@@ -523,7 +523,7 @@ public sealed class UntrustedContentMcpTests : IDisposable
 
         var status = CodeSearchTools.IndexStatus(_service, Reader(), _root);
 
-        Assert.Contains("Update:     LocalAi 99.0.0 is available", status, StringComparison.Ordinal);
+        Assert.Contains("Update:     Local AI 99.0.0 is available", status, StringComparison.Ordinal);
         Assert.DoesNotContain("<untrusted-content", status, StringComparison.Ordinal);
     }
 

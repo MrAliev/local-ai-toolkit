@@ -45,7 +45,7 @@ record alone.
 
 ## Remove it entirely
 
-LocalAi registers in **Apps & features** as `Local AI Toolkit` — remove it from
+Local AI registers in **Apps & features** as `Local AI Toolkit` — remove it from
 there like any program. A wizard opens, and each part is decided **separately**, not with one
 "yes":
 
@@ -61,11 +61,11 @@ there like any program. A wizard opens, and each part is decided **separately**,
 | Release signing keys | **always asked** — never removed by default under any preset |
 
 There are ready-made presets: remove everything except the signing keys; remove the binaries,
-the transient state and anything unrecognised, keeping the indexes and settings; take LocalAi
+the transient state and anything unrecognised, keeping the indexes and settings; take Local AI
 out of Claude, Codex and the Git hooks without touching the runtime. A preset is just a set of boxes
 already ticked, and any of them can be changed.
 
-**Models stay.** They belong to Ollama rather than to LocalAi, and you may want them for
+**Models stay.** They belong to Ollama rather than to Local AI, and you may want them for
 something else. Remove those through Ollama.
 
 **The installation record stays too** — deliberately, outside the runtime directory. It is

@@ -40,7 +40,7 @@ public sealed class TheReviewWaitsForItsChecksTests : IDisposable
         Assert.False(wizard.Review.CanConfirm);
         Assert.True(wizard.Review.IsStillChecking);
         Assert.Equal("Still checking the release." + Waiting, wizard.Review.StillChecking);
-        Assert.Contains("LocalAi package: checking the release…", wizard.ReviewText, StringComparison.Ordinal);
+        Assert.Contains("Local AI package: checking the release…", wizard.ReviewText, StringComparison.Ordinal);
         Assert.DoesNotContain("not resolved", wizard.ReviewText, StringComparison.Ordinal);
 
         feed.Manifest.Open();
@@ -49,7 +49,7 @@ public sealed class TheReviewWaitsForItsChecksTests : IDisposable
         Assert.True(wizard.Review.CanConfirm);
         Assert.False(wizard.Review.IsStillChecking);
         Assert.Equal(string.Empty, wizard.Review.StillChecking);
-        Assert.Contains("LocalAi package: 0.1.51", wizard.ReviewText, StringComparison.Ordinal);
+        Assert.Contains("Local AI package: 0.1.51", wizard.ReviewText, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -80,7 +80,7 @@ public sealed class TheReviewWaitsForItsChecksTests : IDisposable
         Assert.Equal(line, wizard.Review.StillChecking);
         Assert.Contains(line, announced);
         Assert.Contains(
-            "LocalAi package: checking the package in the folder…",
+            "Local AI package: checking the package in the folder…",
             wizard.ReviewText,
             StringComparison.Ordinal);
 
@@ -147,11 +147,11 @@ public sealed class TheReviewWaitsForItsChecksTests : IDisposable
 
         var resolving = wizard.ResolvePackageAsync(Token);
         await Reached(feed.Manifest, resolving);
-        Assert.Contains("Пакет LocalAi: проверяю релиз…", wizard.ReviewText, StringComparison.Ordinal);
+        Assert.Contains("Пакет Local AI: проверяю релиз…", wizard.ReviewText, StringComparison.Ordinal);
 
         feed.Manifest.Open();
         await Reached(feed.Hash, resolving);
-        Assert.Contains("Пакет LocalAi: проверяю пакет в папке…", wizard.ReviewText, StringComparison.Ordinal);
+        Assert.Contains("Пакет Local AI: проверяю пакет в папке…", wizard.ReviewText, StringComparison.Ordinal);
         Assert.Equal("Ещё идёт проверка пакета в папке." + WaitingRussian, wizard.Review.StillChecking);
 
         feed.Hash.Open();
@@ -374,12 +374,12 @@ public sealed class TheReviewWaitsForItsChecksTests : IDisposable
     [InlineData(
         InstallerLanguage.English,
         "Warning: no release has been verified",
-        "PATH: unchanged, because LocalAi will not be installed.",
+        "PATH: unchanged, because Local AI will not be installed.",
         "PATH: depends on the release, still being checked.")]
     [InlineData(
         InstallerLanguage.Russian,
         "Внимание: ни один релиз не проверен",
-        "PATH: не меняется, потому что LocalAi не будет установлен.",
+        "PATH: не меняется, потому что Local AI не будет установлен.",
         "PATH: зависит от релиза, который ещё проверяется.")]
     public async Task While_the_release_is_checked_its_absence_is_not_warned_of_yet(
         InstallerLanguage language,

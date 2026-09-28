@@ -140,7 +140,7 @@ public sealed class UninstallWizardViewModelTests : IDisposable
         Assert.True(await wizard.MoveNextAsync(TestContext.Current.CancellationToken));
 
         Assert.EndsWith(
-            " The hooks LocalAi wrote into Claude Code's settings.json are not among them: " +
+            " The hooks Local AI wrote into Claude Code's settings.json are not among them: " +
             "they go with the launcher, and the installation that follows writes them again " +
             "from what you choose there.",
             wizard.KeepNotice,
@@ -159,7 +159,7 @@ public sealed class UninstallWizardViewModelTests : IDisposable
         Assert.True(await wizard.MoveNextAsync(TestContext.Current.CancellationToken));
 
         Assert.EndsWith(
-            " The hooks LocalAi wrote into Claude Code's settings.json still go: they point at " +
+            " The hooks Local AI wrote into Claude Code's settings.json still go: they point at " +
             "the launcher, which this run removes.",
             wizard.KeepNotice,
             StringComparison.Ordinal);
@@ -382,7 +382,7 @@ public sealed class UninstallWizardViewModelTests : IDisposable
 
         Assert.StartsWith("Nothing was removed.", wizard.Summary, StringComparison.Ordinal);
         Assert.StartsWith(
-            "Failed: stopping LocalAi's running tools and broker — broker_still_running" + Environment.NewLine,
+            "Failed: stopping Local AI's running tools and broker — broker_still_running" + Environment.NewLine,
             wizard.Report,
             StringComparison.Ordinal);
         Assert.DoesNotContain("partial changes", wizard.Report, StringComparison.Ordinal);
@@ -421,7 +421,7 @@ public sealed class UninstallWizardViewModelTests : IDisposable
         var wizard = await Wizard();
 
         Assert.True(wizard.IsBlocked);
-        Assert.Contains("Another LocalAi installer", wizard.BlockingNotice!, StringComparison.Ordinal);
+        Assert.Contains("Another Local AI installer", wizard.BlockingNotice!, StringComparison.Ordinal);
         Assert.False(wizard.CanMoveNext);
         Assert.Empty(wizard.Repositories);
     }
@@ -448,7 +448,7 @@ public sealed class UninstallWizardViewModelTests : IDisposable
         var wizard = await Wizard();
 
         Assert.True(wizard.IsBlocked);
-        Assert.Contains("no LocalAi installation", wizard.BlockingNotice!, StringComparison.Ordinal);
+        Assert.Contains("no Local AI installation", wizard.BlockingNotice!, StringComparison.Ordinal);
         // The documentation that listed the leftovers was deleted; the notice cannot send anyone there.
         Assert.DoesNotContain("documentation", wizard.BlockingNotice!, StringComparison.Ordinal);
         Assert.False(wizard.CanMoveNext);

@@ -25,7 +25,7 @@ public sealed class SearchServiceStatusTests : IDisposable
         File.WriteAllText(sourcePath, "class A {}\r\n");
         Git("init", "-b", "main");
         Git("config", "user.email", "tests@local.invalid");
-        Git("config", "user.name", "LocalAi Tests");
+        Git("config", "user.name", "Local AI Tests");
         Git("add", "A.cs");
         Git("commit", "-m", "Initial");
         Git("branch", "dev");
@@ -105,7 +105,7 @@ public sealed class SearchServiceStatusTests : IDisposable
         File.WriteAllText(sourcePath, "class A {}\r\n");
         Git("init", "-b", "main");
         Git("config", "user.email", "tests@local.invalid");
-        Git("config", "user.name", "LocalAi Tests");
+        Git("config", "user.name", "Local AI Tests");
         Git("add", "A.cs");
         Git("commit", "-m", "Initial");
 

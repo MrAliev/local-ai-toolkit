@@ -1,4 +1,4 @@
-![LocalAi logo](docs/images/localai-mark.png)
+![Local AI logo](docs/images/localai-mark.png)
 
 # Local AI Toolkit
 
@@ -11,7 +11,7 @@ cloud tokens, and in your own time.**
 
 A cloud agent spends most of its tokens looking rather than thinking: opening candidate
 files, searching the code, walking dependencies, scrolling a build log, describing a
-screenshot, translating a page. LocalAi does that part on your own machine and hands back
+screenshot, translating a page. Local AI does that part on your own machine and hands back
 the answer, so the agent starts from a result instead of paying to find one.
 
 **A cloud agent that answers a question by reading files pays for every file it opens. A
@@ -67,7 +67,7 @@ if you would rather work on your own.
 ## Two ways to use it
 
 **As subagents to a cloud agent.** Claude Code, Codex and any other MCP client can call
-LocalAi's tools directly. The agent hands them the simple, repetitive work and starts from
+Local AI's tools directly. The agent hands them the simple, repetitive work and starts from
 prepared results, instead of doing that drudgery itself on cloud tokens.
 
 **Without a cloud agent, from the command line.** The same capabilities, but as helpers for
@@ -75,7 +75,7 @@ you: search code by meaning, triage a log, read an image, translate a document. 
 same index and the same models either way, so nothing is lost by starting here and adding an
 agent later.
 
-![How LocalAi fits together: you reach its tools through a cloud agent over MCP or straight from the command line, and the tools use a broker for local models and a per-repository code index](docs/images/how-it-works.svg)
+![How Local AI fits together: you reach its tools through a cloud agent over MCP or straight from the command line, and the tools use a broker for local models and a per-repository code index](docs/images/how-it-works.svg)
 
 **Why there is a broker in the middle.** There is one per runtime directory —
 `%LOCALAPPDATA%\LocalAi`, so one per Windows user — and it holds the queue.
@@ -139,7 +139,7 @@ The set is **not the same**: some tools exist only here, some only over MCP.
 | `codesearch get-chunk --id …` | pull a match in full |
 | `codesearch status` | where the index is, whether it drifted, whether the repo is connected |
 | `codesearch scan` | what would go into the index at all |
-| `codesearch index` / `overlay` | build an index by hand, outside LocalAi's management |
+| `codesearch index` / `overlay` | build an index by hand, outside Local AI's management |
 | `codesearch evaluate --cases …` | run the search-quality corpus |
 | `localai semantic definition` / `references` / `implementations` / `relationships` | navigate by symbol |
 | `localai semantic impact --path src/Type.cs --line 12 --json` | direct indexed C# references and incoming relationships |
@@ -247,7 +247,7 @@ and `index_status` answers for the index. A person needs the wider picture:
   comparisons have separate totals and known/unknown coverage.
 - `codesearch scan` — what would be indexed at all. You look at it while setting a repository
   up, to see the size of the job, not while asking a question about code.
-- `codesearch evaluate` — the search-quality corpus. A tool for developing LocalAi itself,
+- `codesearch evaluate` — the search-quality corpus. A tool for developing Local AI itself,
   not for working with your code.
 
 ---
@@ -293,7 +293,7 @@ job finishing":
 - `search_code` returns `IBrokerQueue.CompleteAsync` and `BrokerJobPending` — neither of
   which contains the word "subscribe" anywhere. It matched by meaning.
 
-| Question | Without LocalAi: where the tokens go | With LocalAi: where the tokens go |
+| Question | Without Local AI: where the tokens go | With Local AI: where the tokens go |
 | --- | --- | --- |
 | "Who is subscribed to a job finishing?" | guess a keyword, open candidates whole — `DurableQueue.cs` alone is 52 KB, about **13 100** tokens at four bytes a token, and not the answer yet | three fragments, with paths and line ranges |
 | "How does the order pipeline work?" | read every file mentioning "Order" and assemble the picture yourself | a fragment per link in the chain, each with its place |
@@ -400,7 +400,7 @@ Edit `Candidates` and `Fallbacks` in the relevant `Routes` entry; declare any ad
 model in `Models`. This file replaces the complete catalog. Keep `SchemaVersion` at
 `1`, a non-empty `CatalogVersion`, and one route for every task profile.
 
-Without this file, LocalAi reads the built-in catalog. An invalid file reports an
+Without this file, Local AI reads the built-in catalog. An invalid file reports an
 error instead of falling back to defaults. Run `localai doctor` to check the file
 and see its calculated version: `custom-` followed by a content hash. Formatting
 changes do not change that version. Use `localai policy show` to inspect the other
@@ -413,7 +413,7 @@ or running a model. Apply the saved catalog as described below, then retry.
 
 To apply the saved catalog, let active local calls finish and run `localai doctor`.
 If its `model-catalog` check passes, run `localai-launcher.exe stop`. This stops
-the broker and all running LocalAi tools belonging to the active installed version,
+the broker and all running Local AI tools belonging to the active installed version,
 including its MCP servers. Reconnect the MCP servers in your client, or restart
 the client if needed. The next local task starts the broker with the saved catalog.
 
@@ -457,7 +457,7 @@ disk.
 
 ## How it works
 
-LocalAi is a few small programs around two things it keeps on your disk: one queue of work
+Local AI is a few small programs around two things it keeps on your disk: one queue of work
 for the local models, and one code index per repository. This section follows a request
 through them.
 
@@ -645,11 +645,11 @@ flowchart LR
 
 - The release manifest is signed with ECDSA P-256 and checked against the key built into the
   installer; the package has to match the manifest.
-- Prerequisites are installed machine-wide, only the ones you ticked, and LocalAi never
+- Prerequisites are installed machine-wide, only the ones you ticked, and Local AI never
   removes them: other programs may depend on them.
 - Every step goes into a run journal. A run cut off halfway is reported the next time the
   installer starts, with an offer to undo what can be undone, and two runs cannot overlap.
-- Removal takes LocalAi out in this order: its processes, its entries in the client
+- Removal takes Local AI out in this order: its processes, its entries in the client
   configurations, the Git hooks, its files, the PATH entry, the Apps & features entry, and
   the uninstaller's own copy last.
 
@@ -667,14 +667,14 @@ there; where WinGet is missing, it names each one's official download page inste
 | --- | --- |
 | **Windows** | Windows 10 or 11 on x64; the installer reports anything else as unsupported |
 | **Git** | a repository is identified by its git directory, and the hooks live there |
-| **Ollama** | every model runs on it; LocalAi only ever reaches it through the broker |
+| **Ollama** | every model runs on it; Local AI only ever reaches it through the broker |
 | **A GPU the model fits in** | under the default policy, `RequireFullVram`, a model that does not fit entirely in video memory is refused rather than run slowly. The policy can be relaxed — see below |
 
 **Needed per language — search works without them, but coarser:**
 
 | | Why |
 | --- | --- |
-| **.NET SDK 10** | the C# semantic index behind precise navigation is built by loading the solution through the installed SDK. Cutting C# into types and members does not need it: Roslyn does that inside LocalAi |
+| **.NET SDK 10** | the C# semantic index behind precise navigation is built by loading the solution through the installed SDK. Cutting C# into types and members does not need it: Roslyn does that inside Local AI |
 | **Node.js 20** + **SCIP TypeScript** | declaration-level chunking for TypeScript and JavaScript |
 | **Python 3.10+** + **SCIP Python** | declaration-level chunking for Python |
 
@@ -759,7 +759,7 @@ text of `localai policy`, which it prints for an argument it does not recognise.
 `localai policy show` names the current policy and, when it is relaxed, warns that responses
 may be substantially slower than a fully resident load.
 
-**The ceiling is one card, not the sum.** When LocalAi estimates whether a model fits in video
+**The ceiling is one card, not the sum.** When Local AI estimates whether a model fits in video
 memory — on the installer's models page and in `localai hardware plan` — it counts only the
 card with the most dedicated video memory and never adds cards together: two 4 GB cards are
 planned as one 4 GB card. After a model loads, the broker compares one figure Ollama reports,
@@ -895,7 +895,7 @@ watch the window: `localai repo status --follow` shows the phase and its figures
 runs.
 
 From then on the hooks keep the index current by themselves: after a commit, checkout, merge
-or rebase. Hooks you already had are not overwritten — LocalAi joins the chain and calls them
+or rebase. Hooks you already had are not overwritten — Local AI joins the chain and calls them
 first.
 
 Check:
@@ -1411,7 +1411,7 @@ There is no shell-script, package-manager or network fallback in the EXE/MSI com
 npm caches use the separate `offline install-npm` command below.
 The inventory hash trusts the supplied recipe and bytes, not their publisher or declared version.
 The external installer may access the network or make partial changes; network isolation, installed
-version and usability are not established here, and LocalAi cannot automatically roll changes back.
+version and usability are not established here, and Local AI cannot automatically roll changes back.
 
 Installer exits 0, 3010 and 1641 produce `state=completed`; the latter two set `rebootRequired=true`.
 Other failures return a nonzero CLI exit with `ok=false` while preserving result details. Cancellation
@@ -1567,7 +1567,7 @@ parents, outside the bundle and runtime installation. Existing run folders are n
 
 Before any dependency executes, a selected runtime passes the normal full signed-package, metadata
 and applicable Authenticode verification in protected staging. Its verified files remain retained
-through execution. Runtime activation uses the current user's default LocalAi installation and may
+through execution. Runtime activation uses the current user's default Local AI installation and may
 stop running tools and change the active version. PATH is changed only by the explicit schema-3
 option above. Windows uninstall registration is optional as described above; other wizard settings remain separate.
 Model-root setup is optional as described above; it does not change user/system `OLLAMA_MODELS`.
@@ -1731,7 +1731,7 @@ record alone.
 
 ### Remove it entirely
 
-LocalAi registers in **Apps & features** as `Local AI Toolkit` — remove it from
+Local AI registers in **Apps & features** as `Local AI Toolkit` — remove it from
 there like any program. A wizard opens, and each part is decided **separately**, not with one
 "yes":
 
@@ -1747,11 +1747,11 @@ there like any program. A wizard opens, and each part is decided **separately**,
 | Release signing keys | **always asked** — never removed by default under any preset |
 
 There are ready-made presets: remove everything except the signing keys; remove the binaries,
-the transient state and anything unrecognised, keeping the indexes and settings; take LocalAi
+the transient state and anything unrecognised, keeping the indexes and settings; take Local AI
 out of Claude, Codex and the Git hooks without touching the runtime. A preset is just a set of boxes
 already ticked, and any of them can be changed.
 
-**Models stay.** They belong to Ollama rather than to LocalAi, and you may want them for
+**Models stay.** They belong to Ollama rather than to Local AI, and you may want them for
 something else. Remove those through Ollama.
 
 **The installation record stays too** — deliberately, outside the runtime directory. It is
@@ -1933,7 +1933,7 @@ Its 70 search cases are split 12/12/12/34; the mixed corpus repeats language-spe
 questions, so these are not 70 independent questions.
 
 Run from the repository root on Windows with PowerShell 7.4+, Git with a configured author
-identity, the .NET 10 SDK, and a working LocalAi broker. The configured embedding model and
+identity, the .NET 10 SDK, and a working Local AI broker. The configured embedding model and
 requested OCR model must be installed and satisfy the residency policy. Each invocation
 needs an output directory outside the repository that is empty or does not exist yet. Avoid concurrent broker work when
 comparing timings.
@@ -2001,6 +2001,6 @@ generative task was started. The original OCR invocation metadata arrays are pre
 MIT. See [LICENSE](LICENSE).
 
 - [Code signing policy](docs/code-signing-policy.md): what is signed, by whom, and how.
-- [Privacy](docs/privacy.md): every connection LocalAi makes to another computer.
+- [Privacy](docs/privacy.md): every connection Local AI makes to another computer.
 - [Security policy](SECURITY.md): how to report a vulnerability.
 - [Contributing](CONTRIBUTING.md): how work gets into `main`.

@@ -185,9 +185,9 @@ public static class RemovalMatrix
         item switch
         {
             RemovalItem.Binaries => InstallerCulture.Pick(
-                "Removing these is the uninstall. The hooks LocalAi wrote into Claude Code " +
+                "Removing these is the uninstall. The hooks Local AI wrote into Claude Code " +
                 "point at the launcher, so they go with them.",
-                "Их удаление и есть деинсталляция. Хуки, которые LocalAi записал в Claude Code, " +
+                "Их удаление и есть деинсталляция. Хуки, которые Local AI записал в Claude Code, " +
                 "указывают на launcher, поэтому уходят вместе с ними."),
             RemovalItem.RepositoryIndexes => InstallerCulture.Pick(
                 "Hours of embedding to rebuild; keeping them makes a reinstall pick the " +
@@ -212,9 +212,9 @@ public static class RemovalMatrix
             // keeps it.
             RemovalItem.ClaudeIntegration => InstallerCulture.Pick(
                 "Server registrations and the managed block; your own text is untouched. The " +
-                "hooks LocalAi wrote into settings.json go with this row or with the binaries.",
+                "hooks Local AI wrote into settings.json go with this row or with the binaries.",
                 "Регистрации серверов и управляемый блок; ваш собственный текст не трогается. " +
-                "Хуки, которые LocalAi записал в settings.json, уходят с этой строкой или с " +
+                "Хуки, которые Local AI записал в settings.json, уходят с этой строкой или с " +
                 "бинарными файлами."),
             RemovalItem.CodexIntegration => InstallerCulture.Pick(
                 "Server registrations, their tool sub-tables, and the managed block.",
@@ -257,8 +257,8 @@ public static class RemovalMatrix
                 "подписи — только с отдельным подтверждением; всё, что останется, перечислено " +
                 "на следующей странице."),
             RemovalPreset.DisconnectClients => InstallerCulture.Pick(
-                "The agents stop using LocalAi; the runtime stays exactly as it is.",
-                "Агенты перестают пользоваться LocalAi; рантайм остаётся ровно как есть."),
+                "The agents stop using Local AI; the runtime stays exactly as it is.",
+                "Агенты перестают пользоваться Local AI; рантайм остаётся ровно как есть."),
             RemovalPreset.ReinstallFriendly => InstallerCulture.Pick(
                 "The binaries go; the indexes and settings a reinstall would honour stay.",
                 "Бинарные файлы уходят; индексы и настройки, которые учтёт " +

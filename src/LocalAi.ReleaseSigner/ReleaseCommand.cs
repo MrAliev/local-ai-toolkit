@@ -256,7 +256,7 @@ public sealed class ReleaseCommand
             [
                 "release", "create", version.ToString(),
                 "--target", head,
-                "--title", $"LocalAi {version}",
+                "--title", $"Local AI {version}",
                 "--notes-file", await ReleaseBodyAsync(version, hash, cancellationToken),
                 Path.Combine(releaseDirectory, "localai-package.zip"),
                 Path.Combine(releaseDirectory, "release-manifest.json"),
