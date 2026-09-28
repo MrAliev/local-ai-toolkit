@@ -135,11 +135,12 @@ public sealed class ModelControlService(
 
         _catalog.Model(model);
         ArgumentNullException.ThrowIfNull(metrics);
+        // The net context saving is a difference and goes below zero whenever the answer is
+        // longer than what it replaced; only the counts are refused when negative.
         if (metrics.InputTokens < 0 ||
             metrics.OutputTokens < 0 ||
             metrics.LocalTokensProcessed < 0 ||
             metrics.EstimatedCloudGenerationTokensSaved < 0 ||
-            metrics.EstimatedNetCloudContextTokensSaved < 0 ||
             metrics.TotalDuration < TimeSpan.Zero ||
             metrics.ColdExecutions < 0 ||
             metrics.WarmExecutions < 0)
