@@ -21,6 +21,6 @@ disk.
 
 ---
 
-← [With a cloud agent: what stops costing tokens](with-a-cloud-agent-what-stops-costing-tokens.md) · [Contents](README.md#contents) · [Dependencies](dependencies.md) →
+← [With a cloud agent: what stops costing tokens](with-a-cloud-agent-what-stops-costing-tokens.md) · [Contents](README.md#contents) · [How it works](how-it-works.md) →
 
 <!-- Generated from the README by DocumentationSiteTests. -->
