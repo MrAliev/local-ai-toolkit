@@ -268,7 +268,10 @@
                                 </Style.Triggers>
                             </Style>
                         </StackPanel.Style>
-                        <local:LiveStatusText Text="{Binding Summary}" TextWrapping="Wrap" Margin="0,0,0,12" />
+                        <local:LiveStatusText Text="{Binding Summary}" TextWrapping="Wrap" Margin="0,0,0,4" />
+                        <TextBox Text="{Binding JournalLine, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap"
+                                 BorderThickness="0" Background="Transparent" Margin="0,0,0,12"
+                                 Visibility="{Binding HasReport, Converter={StaticResource BoolToVisibility}}" />
                         <WrapPanel Margin="0,0,0,12">
                             <Button Content="{vm:Label CopyRemovalReport}" Click="OnCopyReport" Margin="0,0,8,4" Padding="12,4" />
                             <Button Content="{vm:Label SaveRemovalReport}" Click="OnSaveReport" Margin="0,0,8,4" Padding="12,4" />
