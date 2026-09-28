@@ -511,6 +511,7 @@ public sealed class UninstallWizardViewModel : ObservableObject
     public bool CanRun =>
         CurrentPage == UninstallPage.Confirm &&
         !isRunning &&
+        !IsBlocked &&
         isConfirmed &&
         confirmedPlan is { HasWork: true };
 
@@ -694,6 +695,18 @@ public sealed class UninstallWizardViewModel : ObservableObject
     {
         if (!CanRun || confirmedPlan is not { } plan)
         {
+            return false;
+        }
+
+        // Asked again at the button: a repair started after this window opened holds its lock
+        // by now, and a removal meeting it in the middle left LocalAi installed with no entry
+        // and no PATH, reported as fine by the repair.
+        if (InstallerRunJournal.IsRunActive(LogDirectory))
+        {
+            blocked = Blocked.AnotherRun;
+            isConfirmed = false;
+            OnPropertyChanged(nameof(IsConfirmed));
+            RefreshAll();
             return false;
         }
 
