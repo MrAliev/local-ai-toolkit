@@ -66,6 +66,6 @@ public sealed class DiagnosticCommandTests
         Assert.Equal(5, data.GetProperty("contents").EnumerateObject().Count());
         Assert.Contains("prompts", data.GetProperty("manifest").GetProperty("excluded").EnumerateArray().Select(item => item.GetString()));
         Assert.Contains("No model call", await error);
-        Assert.Contains("administrative_operation", await error);
+        Assert.Contains("Token savings do not apply to this operation.", await error);
     }
 }

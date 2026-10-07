@@ -101,8 +101,7 @@ public sealed class TheAnalysisSaysHowFarItIsTests : IDisposable
     }
 
     /// <summary>
-    /// An analysis too quick to have anything to report along the way still names its step, once.
-    /// That single write is what stops a fast phase from being described by the phase before it.
+    /// Even when the last projects finish inside the throttle, the final count must be recorded.
     /// </summary>
     [Fact]
     public async Task An_analysis_with_nothing_to_report_still_names_its_step()
@@ -117,7 +116,9 @@ public sealed class TheAnalysisSaysHowFarItIsTests : IDisposable
             (step, done, total) => steps.Add((step, done, total)),
             TestContext.Current.CancellationToken);
 
-        Assert.Equal((IndexBuildStep.AnalysingProjects, 0, 2), Assert.Single(steps));
+        Assert.Equal(
+            [(IndexBuildStep.AnalysingProjects, 0, 2), (IndexBuildStep.AnalysingProjects, 2, 2)],
+            steps);
     }
 
     /// <summary>A build that is not asked to report says nothing and costs nothing.</summary>

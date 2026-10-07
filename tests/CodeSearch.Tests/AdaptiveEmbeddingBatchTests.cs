@@ -125,6 +125,55 @@ public sealed class AdaptiveEmbeddingBatchTests : IDisposable
     }
 
     [Fact]
+    public void A_refused_size_is_not_probed_again_during_the_same_build()
+    {
+        var policy = new AdaptiveEmbeddingBatchPolicy("test-embedding-model", store: null);
+        foreach (var size in new[] { 4, 8, 16, 32, 64, 128 })
+        {
+            for (var success = 0; success < 3; success++)
+            {
+                policy.RecordSuccess(size);
+            }
+        }
+
+        Assert.True(policy.TryStepBack(256, out var retryItems));
+        Assert.Equal(128, retryItems);
+        for (var success = 0; success < 30; success++)
+        {
+            Assert.Null(policy.RecordSuccess(128));
+        }
+
+        Assert.Equal(128, policy.CurrentItems);
+    }
+
+    [Theory]
+    [InlineData(239)]
+    [InlineData(128)]
+    public void A_short_batch_refusal_also_limits_subsequent_growth(int failedItems)
+    {
+        var store = new EmbeddingBatchProfileStore(Path.Combine(_root, "runtime"));
+        Assert.True(store.TryWrite("test-embedding-model", 256));
+        var policy = new AdaptiveEmbeddingBatchPolicy("test-embedding-model", store);
+
+        Assert.True(policy.TryStepBack(failedItems, out var retryItems));
+        Assert.True(retryItems < failedItems);
+        for (var success = 0; success < 12; success++)
+        {
+            Assert.Null(policy.RecordSuccess(retryItems));
+        }
+
+        Assert.Equal(retryItems, policy.CurrentItems);
+        Assert.True(policy.TryStepBack(256, out var prefetchedRetry));
+        Assert.Equal(retryItems, prefetchedRetry);
+
+        var nextBuild = new AdaptiveEmbeddingBatchPolicy("test-embedding-model", store);
+        Assert.Equal(retryItems, nextBuild.CurrentItems);
+        nextBuild.RecordSuccess(retryItems);
+        nextBuild.RecordSuccess(retryItems);
+        Assert.NotNull(nextBuild.RecordSuccess(retryItems));
+    }
+
+    [Fact]
     public async Task A_runner_refusal_steps_back_and_retries_the_failed_batch()
     {
         var store = new EmbeddingBatchProfileStore(Path.Combine(_root, "runtime"));
@@ -132,13 +181,14 @@ public sealed class AdaptiveEmbeddingBatchTests : IDisposable
         var embedder = new RefusesMoreThan(8);
 
         await new IndexBuilder(embedder, batchProfiles: store).BuildAsync(
-            SourceTree("backoff", 48),
+            SourceTree("backoff", 160),
             Path.Combine(_root, "backoff.cidx"),
             ct: TestContext.Current.CancellationToken);
 
         var refused = embedder.BatchSizes.IndexOf(16);
         Assert.True(refused >= 0, "the fixture must reach the failing candidate of 16 inputs");
         Assert.Equal(8, embedder.BatchSizes[refused + 1]);
+        Assert.Single(embedder.BatchSizes, size => size > 8);
         Assert.Equal(8, store.Read(embedder.Model));
     }
 

@@ -1,4 +1,4 @@
-﻿using CodeSearch.Core.Chunking;
+using CodeSearch.Core.Chunking;
 using CodeSearch.Core.Embedding;
 using CodeSearch.Core.Indexing;
 using CodeSearch.Core.Resources;
@@ -122,6 +122,8 @@ public static class CodeSearchSyncCommand
             requested.RepositoryRuntimeRoot);
         var manifestStore = new RepositoryManifestStore(
             requested.RepositoryRuntimeRoot);
+        error = TextWriter.Synchronized(error);
+        using var reporter = new SyncProgressReporter(progressStore.Save, error);
         var lastProgress = new RepositoryIndexProgress(
             requested.RepositoryId,
             RepositoryIndexProgressPhase.Planning,
@@ -135,7 +137,7 @@ public static class CodeSearchSyncCommand
             // Planning is one piece of work — listing what is in the tree and hashing every
             // candidate — and it is the first thing a reader ever sees said about a build.
             Step: IndexBuildStep.ReadingRepository);
-        progressStore.Save(lastProgress);
+        reporter.Report(lastProgress);
         // Every embedding record this run writes, where a follow loop sees one an interval (#774).
         var embedded = EmbeddedChunks.None;
 
@@ -189,7 +191,7 @@ public static class CodeSearchSyncCommand
                 DateTimeOffset.UtcNow,
                 progress.Pause);
             embedded = embedded.After(lastProgress);
-            progressStore.Save(lastProgress);
+            reporter.Report(lastProgress);
         }
 
         // Phases that do not count chunks still have to be announced, or the last embedding
@@ -227,7 +229,7 @@ public static class CodeSearchSyncCommand
                 StepDone = done,
                 StepTotal = total,
             };
-            progressStore.Save(lastProgress);
+            reporter.Report(lastProgress);
         }
 
         // A step that is still running, said by moving the timestamp and nothing else.
@@ -240,7 +242,7 @@ public static class CodeSearchSyncCommand
         void Touch()
         {
             lastProgress = lastProgress with { UpdatedAtUtc = DateTimeOffset.UtcNow };
-            progressStore.Save(lastProgress);
+            reporter.Report(lastProgress);
         }
 
         try
@@ -507,6 +509,8 @@ public static class CodeSearchSyncCommand
                         : semanticBuild.Index.Documents
                             .Select(document => document.RelPath)
                             .Concat(plan.ChangedPaths);
+                    ReportStep(RepositoryIndexProgressPhase.SemanticOverlay,
+                        identity.WorkingRoot.Value, IndexBuildStep.CopyingGeneration, 0, 0);
                     var semanticOverlay = plan is null
                         // The dirty paths this layer can see, not every dirty path: feeding it
                         // the corpus list would record a saved `.md` as a document this overlay
@@ -556,6 +560,8 @@ public static class CodeSearchSyncCommand
 
                 if (!corpusOverlayPresent)
                 {
+                    ReportStep(RepositoryIndexProgressPhase.EmbeddingOverlay,
+                        identity.WorkingRoot.Value, IndexBuildStep.ReadingRepository, 0, 0);
                     // Only now, and only if the corpus overlay is actually being built: an
                     // up-to-date semantic overlay still has to be materialised against the base
                     // index to answer "what are this worktree's definitions", and that reads the
@@ -656,7 +662,7 @@ public static class CodeSearchSyncCommand
                 error,
                 ReachableOverlays(worktrees, runtimeRoot, error));
 
-            progressStore.Save(lastProgress = lastProgress with
+            reporter.Report(lastProgress = lastProgress with
             {
                 Phase = RepositoryIndexProgressPhase.Completed,
                 ProcessedChunks = lastProgress.TotalChunks,
@@ -683,7 +689,7 @@ public static class CodeSearchSyncCommand
             error.WriteLine(CliText.SyncStoppedAfter(Seconds(elapsed)));
             try
             {
-                progressStore.Save(lastProgress with
+                reporter.Report(lastProgress with
                 {
                     Phase = RepositoryIndexProgressPhase.Failed,
                     UpdatedAtUtc = DateTimeOffset.UtcNow
