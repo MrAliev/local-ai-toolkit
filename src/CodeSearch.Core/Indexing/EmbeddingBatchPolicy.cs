@@ -160,7 +160,7 @@ internal sealed class AdaptiveEmbeddingBatchPolicy
     private readonly object _gate = new();
     private readonly string _model;
     private readonly EmbeddingBatchProfileStore? _store;
-    private readonly int _ceiling;
+    private int _ceiling;
     private int _stableItems;
     private int _currentItems;
     private int _consecutiveFullSuccesses;
@@ -245,6 +245,10 @@ internal sealed class AdaptiveEmbeddingBatchPolicy
                 return false;
             }
 
+            // Do not probe the same failing size again after three successful retries.
+            // Keep this bound within this build: a runner outage is not evidence of a
+            // permanent machine limit, so the next build may learn upwards again.
+            _ceiling = Math.Min(_ceiling, retryItems);
             _currentItems = retryItems;
             _stableItems = Math.Min(_stableItems, retryItems);
             _consecutiveFullSuccesses = 0;

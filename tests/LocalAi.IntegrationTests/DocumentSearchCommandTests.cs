@@ -41,8 +41,10 @@ public sealed class DocumentSearchCommandTests
             Assert.Equal("docx-text", hit.GetProperty("textKind").GetString());
             Assert.Equal(1, hit.GetProperty("docxSource").GetProperty("paragraph").GetInt32());
             Assert.Equal(JsonValueKind.Null, hit.GetProperty("page").ValueKind);
-            Assert.Contains("INPUT", searched.Error);
-            Assert.Contains("OUTPUT", searched.Error);
+            Assert.DoesNotContain("INPUT", searched.Error);
+            Assert.DoesNotContain("OUTPUT", searched.Error);
+            Assert.Contains("No token savings; approximately", searched.Error);
+            Assert.Contains("additional cloud tokens.", searched.Error);
             Assert.Contains("No model call", searched.Error);
         }
         finally { Directory.Delete(root, true); }
@@ -118,12 +120,12 @@ public sealed class DocumentSearchCommandTests
             Assert.Equal(0, created.Exit);
             using var response = JsonDocument.Parse(created.Output);
             Assert.Equal(0, response.RootElement.GetProperty("data").GetProperty("documents").GetInt32());
-            Assert.Contains("administrative_operation", created.Error);
+            Assert.Contains("Token savings do not apply to this operation.", created.Error);
             var searched = await Run(["documents", "search", "--index", index, "--query", "hello", "--json"]);
             Assert.Equal(0, searched.Exit);
             using var found = JsonDocument.Parse(searched.Output);
             Assert.Empty(found.RootElement.GetProperty("data").GetProperty("hits").EnumerateArray());
-            Assert.Contains("cloud token savings", searched.Error);
+            Assert.Contains("Token savings cannot be estimated.", searched.Error);
             Assert.Contains("No model call", searched.Error);
         }
         finally { Directory.Delete(root, true); }

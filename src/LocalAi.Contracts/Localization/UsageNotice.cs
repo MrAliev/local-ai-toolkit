@@ -20,8 +20,27 @@ public static class UsageNotice
         report.Timings[UsageTiming.ElapsedMilliseconds] is { Value: { } ms }
             ? (ms / 1000d).ToString("0.###", CultureInfo.InvariantCulture) + " s"
             : Value(report.Timings[UsageTiming.ElapsedMilliseconds]),
-        Value(report.CloudTokens[UsageCloudTokens.InputSaved], report.Comparison.VisionProfile is null ? report.Comparison.TokenizerProfile : null),
-        Value(report.CloudTokens[UsageCloudTokens.OutputSaved], report.Comparison.TokenizerProfile)) + Scenario(report);
+        Savings(report)) + Scenario(report);
+
+    private static string Savings(UsageReport report)
+    {
+        var input = report.CloudTokens[UsageCloudTokens.InputSaved];
+        var output = report.CloudTokens[UsageCloudTokens.OutputSaved];
+        if (input.Status == UsageValueStatus.NotApplicable && output.Status == UsageValueStatus.NotApplicable)
+            return Catalogue.Get("UsageSavingsNotApplicable");
+        if (input.Status is not (UsageValueStatus.Measured or UsageValueStatus.Estimated)
+            || output.Status is not (UsageValueStatus.Measured or UsageValueStatus.Estimated)
+            || input.Value is null || output.Value is null)
+            return Catalogue.Get("UsageSavingsUnknown");
+
+        // Input and generated output are distinct token categories in one comparison.
+        // Decimal avoids overflow when combining signed long counts or taking their magnitude.
+        var saved = (decimal)input.Value.Value + output.Value.Value;
+        var amount = Math.Abs(saved).ToString("0", CultureInfo.InvariantCulture);
+        return saved > 0 ? Catalogue.Format("UsageSavingsPositive", amount)
+            : saved < 0 ? Catalogue.Format("UsageSavingsAdditional", amount)
+            : Catalogue.Get("UsageSavingsZero");
+    }
 
     private static string Models(UsageReport report) =>
         string.Join(", ", report.Models.Actual.Select(model => model.Model + (model.Offload switch
