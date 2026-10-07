@@ -76,6 +76,7 @@ public sealed class RoslynSemanticIndexer(TimeProvider? time = null)
         var started = _time.GetTimestamp();
         var lastReport = started;
         var analysed = 0;
+        var reported = 0;
         // Once before the first project, so the record stops naming the step that has just
         // finished. Zero of twenty-six is a fact — the total is known here, and none of them has
         // been through yet — where the console line deliberately says nothing until it has a
@@ -172,9 +173,13 @@ public sealed class RoslynSemanticIndexer(TimeProvider? time = null)
             {
                 log?.Invoke(IndexText.RoslynAnalysing(analysed, projects.Length));
                 step?.Invoke(IndexBuildStep.AnalysingProjects, analysed, projects.Length);
+                reported = analysed;
                 lastReport = _time.GetTimestamp();
             }
         }
+
+        if (reported != analysed)
+            step?.Invoke(IndexBuildStep.AnalysingProjects, analysed, projects.Length);
 
         log?.Invoke(IndexText.RoslynAnalysed(
             projects.Length,

@@ -34,12 +34,18 @@ first. From there the agent decides for itself: it sees a "where does this live"
 reaches for `search_code` instead of opening files.
 
 **Runtime token reports use one shared record per call.** MCP tools and both CLIs, except for
-`localai model` commands, emit a compact notice with separate signed cloud INPUT and OUTPUT
-savings. Without an explicit
-comparison scenario and supported profile, the value is `unknown`, not zero. Character-based
-values are explicitly marked as heuristic estimates; measured text counts identify their
-tokenizer profile. Legacy numeric JSON fields remain compatible and are not calibrated measurements.
+`localai model` commands, show one estimate: “Approximately N cloud tokens saved.” It is the
+input savings plus output savings for the same call. If the result is negative, the notice
+says “No token savings; approximately N additional cloud tokens”, without a negative counter.
+If either part is unknown, the total cannot be estimated; administrative calls are inapplicable.
+For example, 1,000 fewer input tokens and 40 additional output tokens means about 960 saved.
+This is a comparison with doing the same work in the cloud, not account usage or a bill.
+The detailed signed counts and tokenizer/vision profiles remain in the JSON report.
 
+`localai sync` announces each indexing phase and repeats its current status every 15 seconds.
+Known work reports completed/total and a percentage for that phase; embeddings also report
+rate and ETA. Work with no known total reports its activity and elapsed time, without an
+invented percentage. `localai repo status --follow` uses the same phase descriptions.
 The shared method compares cloud input and output separately. It requires an explicit
 alternative reading scenario, source provenance, the complete returned payload, and a named
 tokenizer or vision profile. Previously retrieved text and overlapping chunks are not counted
