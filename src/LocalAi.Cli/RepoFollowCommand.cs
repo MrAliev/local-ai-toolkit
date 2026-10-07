@@ -99,36 +99,7 @@ public static class RepoFollowCommand
                 BuildDidNotFinish);
         }
 
-        return new(Working(progress), null);
-    }
-
-    /// <summary>
-    /// Figures where the phase counts them, words where it does not — the rule the skill already
-    /// states to a reader, and <see cref="RepositoryIndexProgressPhaseExtensions.CountsChunks"/>
-    /// is what decides it. Outside embedding the chunk counters are the frozen tally of the last
-    /// phase that had one, or zero before any of them ran, and printing those is how a build that
-    /// has barely started reads as one that stalled.
-    /// </summary>
-    private static string Working(RepositoryIndexProgress progress)
-    {
-        var phase = progress.Phase.ToString();
-        if (progress.Phase.CountsChunks() && progress.TotalChunks > 0)
-        {
-            return CliText.RepoFollowProgress(
-                phase,
-                Counted(progress.ProcessedChunks),
-                Counted(progress.TotalChunks),
-                progress.ChunksPerSecond.ToString("0.#", CultureInfo.InvariantCulture),
-                progress.EstimatedRemaining is { } left
-                    ? Counted((int)left.TotalSeconds)
-                    : "?");
-        }
-
-        var step = progress.Step?.ToString() ?? phase;
-        return progress.StepTotal > 0
-            ? CliText.RepoFollowStepProgress(
-                phase, step, Counted(progress.StepDone), Counted(progress.StepTotal))
-            : CliText.RepoFollowWorking(phase, step);
+        return new(SyncProgressReporter.Format(progress), null);
     }
 
     /// <summary>

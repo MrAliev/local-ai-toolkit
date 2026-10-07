@@ -145,7 +145,7 @@ public sealed class FollowingTheIndexBuildTests
         Assert.Null(step.ExitCode);
         Assert.DoesNotContain("0/0", step.Line, StringComparison.Ordinal);
         Assert.DoesNotContain("0/", step.Line, StringComparison.Ordinal);
-        Assert.Contains("ReadingRepository", step.Line, StringComparison.Ordinal);
+        Assert.Contains("Reading files and checksums", step.Line, StringComparison.Ordinal);
     }
 
     /// <summary>A step that does carry a figure of its own reports it rather than saying nothing.</summary>

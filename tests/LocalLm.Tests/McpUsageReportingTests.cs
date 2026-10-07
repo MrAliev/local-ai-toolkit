@@ -222,7 +222,7 @@ public sealed class McpUsageReportingTests : IDisposable
         var answer = string.Join("\n", result.Content.OfType<TextContentBlock>().Select(block => block.Text));
         Assert.Contains(body, answer, StringComparison.Ordinal);
         Assert.StartsWith("Call " + id, answer, StringComparison.Ordinal);
-        Assert.Contains("INPUT Unknown (comparison_scenario_unknown)", answer, StringComparison.Ordinal);
+        Assert.Contains("Token savings cannot be estimated.", answer, StringComparison.Ordinal);
         Assert.Equal(UsageDelivery.Delivered, report.Outcome.Delivery);
     }
 

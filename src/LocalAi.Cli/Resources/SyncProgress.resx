@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <data name="Planning" xml:space="preserve"><value>Preparing the index</value></data>
+  <data name="EmbeddingBase" xml:space="preserve"><value>Building base embeddings</value></data>
+  <data name="SemanticBase" xml:space="preserve"><value>Analysing base code</value></data>
+  <data name="PublishingGeneration" xml:space="preserve"><value>Saving the index</value></data>
+  <data name="EmbeddingOverlay" xml:space="preserve"><value>Updating embeddings</value></data>
+  <data name="SemanticOverlay" xml:space="preserve"><value>Analysing changed code</value></data>
+  <data name="Publishing" xml:space="preserve"><value>Activating the index</value></data>
+  <data name="Completed" xml:space="preserve"><value>Indexing completed</value></data>
+  <data name="Failed" xml:space="preserve"><value>Indexing failed</value></data>
+  <data name="ReadingRepository" xml:space="preserve"><value>Reading files and checksums</value></data>
+  <data name="RestoringDependencies" xml:space="preserve"><value>Restoring dependencies</value></data>
+  <data name="OpeningProjects" xml:space="preserve"><value>Opening projects</value></data>
+  <data name="AnalysingProjects" xml:space="preserve"><value>Analysing projects</value></data>
+  <data name="ScipTypeScript" xml:space="preserve"><value>Indexing TypeScript</value></data>
+  <data name="ScipPython" xml:space="preserve"><value>Indexing Python</value></data>
+  <data name="CopyingGeneration" xml:space="preserve"><value>Copying and verifying files</value></data>
+  <data name="SwitchingOver" xml:space="preserve"><value>Publishing the new index</value></data>
+  <data name="BackendUnavailable" xml:space="preserve"><value>Waiting for the model backend</value></data>
+  <data name="Elapsed" xml:space="preserve"><value>{0} | elapsed: {1}s</value></data>
+  <data name="Uncounted" xml:space="preserve"><value>{0}; running, total work not yet known</value></data>
+  <data name="Counted" xml:space="preserve"><value>{0}: {1}/{2} ({3}%)</value></data>
+  <data name="Rate" xml:space="preserve"><value>; {0} chunks/s, approximately {1}s remaining</value></data>
+</root>
