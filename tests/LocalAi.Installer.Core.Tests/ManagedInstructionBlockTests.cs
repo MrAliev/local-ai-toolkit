@@ -331,7 +331,8 @@ public sealed class ManagedInstructionBlockTests
     {
         // Larger than the core's: Codex carries the long form of the log-reader sentence,
         // because Claude has a `PreToolUse` gate refusing those calls and Codex has none.
-        const int budget = 7_400;
+        // Allow the explicit first-reading and redundant-delegation policy in the core.
+        const int budget = 8_400;
 
         var measured = ManagedInstructionBlock.CodexBlock.Length
             - ManagedInstructionBlock.CodexBlock.Count(character => character == (char)13);
@@ -377,7 +378,8 @@ public sealed class ManagedInstructionBlockTests
     [Fact]
     public void The_block_stays_within_its_budget()
     {
-        const int budget = 7_300;
+        // One bounded addition: avoid cloud rereads and local calls that cannot save work.
+        const int budget = 8_300;
 
         // Carriage returns are not counted, so the number is the same whether the file was
         // checked out with LF or CRLF.

@@ -213,7 +213,8 @@ public sealed class InstructionSkillTests
         var codex = WithoutCarriageReturns(
             ManagedInstructionBlock.CodexBlock + ManagedInstructionBlock.SkillFile());
 
-        Assert.InRange(core, 1_000, 7_300);
+        // Includes the first-reading and redundant-delegation policy in the shared core.
+        Assert.InRange(core, 1_000, 8_300);
         Assert.True(
             core * 2 < codex,
             $"the core is {core} characters against the Codex block's {codex}, so it is no " +
