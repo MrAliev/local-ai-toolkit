@@ -232,8 +232,23 @@ public static class ManagedInstructionBlock
         way to keep it, and it answers a different question: every same-named member of every
         other type matches, and so does the name in a comment. Grep keeps one job, a literal
         sweep for one exact token in a file already identified, and none of this lapses as a
-        session lengthens: the tenth question is routed like the first. Reading a file before
-        editing it is never delegated to anything.
+        session lengthens: the tenth question is routed like the first.
+
+        ### Minimize cloud reading and avoid redundant local calls
+
+        Delegate first reading and mechanical analysis to Local AI when its output is sufficient.
+        Send paths and a short task, not copied contents; request concise facts and source locations.
+        Read in the cloud only when needed to resolve ambiguity, verify a consequential claim or
+        obtain exact text for a safe edit, and only the necessary fragment. Use local findings
+        without routinely rereading sources. Do not read whole files just for a later edit.
+        Read governing instructions directly.
+
+        If relevant content was already read or created by the cloud agent, skip local calls
+        unless expected savings in remaining work outweigh the request and result overhead.
+        Use existing context. This overrides routine tool routing below, but not an explicit user
+        request for a local call. Keep sourceContext truthful: AlreadyPresent for seen content;
+        for partially seen sources, narrow the input or use Unknown. Never invent savings.
+        Code navigation, index freshness, verification, log and safety rules still apply.
 
         ### Keeping the index current
 
