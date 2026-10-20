@@ -1713,6 +1713,11 @@ the launcher, not at a version. It refuses while the broker has queued or runnin
 even when it is not newer than the installed one. Downloading and verification leave other
 sessions available. The final drain and activation temporarily pause new submissions; retry
 those calls after the update finishes. Failure or cancellation restores normal admission.
+The launcher runs the updater from a temporary copy outside the installed version, so it
+can switch versions without waiting for its own process to exit. The command keeps showing
+progress and returns the updater's final result; its temporary copy is removed when it exits.
+An older launcher without this handoff cannot update itself this way: use the installer
+from the published GitHub release for the first upgrade. Later upgrades can use `localai update`.
 
 The update check is **off** by default, so the installation never goes looking for new
 versions on its own. To turn it on and set how often:
