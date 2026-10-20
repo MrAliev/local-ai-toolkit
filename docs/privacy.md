@@ -41,7 +41,10 @@ never downloads or installs anything by itself.
 - Install from a release folder instead of GitHub: the installer then reads the release from
   the folder.
 - Skip prerequisites and models in the installer and install them yourself.
-- Clear local data with `localai prune`, or remove Local AI from **Apps & features**.
+- Remove expired local data with `localai prune`; use `--dry-run` to preview the retention
+  cleanup. This keeps current indexes of active repositories and usage reports and telemetry
+  still within their retention period. To remove retained data as well, open the Local AI
+  uninstaller from **Apps & features** and select the data categories to delete.
 
 ## Changes
 
