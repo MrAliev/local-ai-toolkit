@@ -74,7 +74,7 @@ public sealed class HeuristicCloudTokenProfile : ICloudTokenProfile
 
 public static class CloudTokenMethodology
 {
-    public const string Version = "cloud-comparison-v1";
+    public const string Version = "cloud-comparison-v2";
 
     /// <summary>
     /// Populates cloud comparisons and observed full-response sizes in the application-owned
@@ -83,6 +83,14 @@ public static class CloudTokenMethodology
     /// No grand total is produced, avoiding an extra sum of overlapping context/generation data.
     /// </summary>
     public static UsageReport Apply(UsageReport report, CloudTokenScenario? scenario, string? fullToolResponse, ICloudTokenProfile? profile)
+        => Apply(report, scenario, fullToolResponse, profile, fullToolResponse);
+
+    /// <summary>
+    /// Measures transport volumes separately from the text projected into the cloud context.
+    /// A null projection means its token cost is unknown, even if the transport size is known.
+    /// </summary>
+    public static UsageReport Apply(UsageReport report, CloudTokenScenario? scenario, string? fullToolResponse,
+        ICloudTokenProfile? profile, string? modelVisibleResponse)
     {
         ArgumentNullException.ThrowIfNull(report);
         var volumes = report.Volumes.ToDictionary();
@@ -103,9 +111,9 @@ public static class CloudTokenMethodology
             else
             {
                 tokens[UsageCloudTokens.InputWithoutDelegation] = CountSources(scenario.Sources, profile);
-                tokens[UsageCloudTokens.InputWithDelegation] = fullToolResponse is null
-                    ? UsageValue.Unknown("full_response_unknown")
-                    : Sum([Text(scenario.AdditionalInputWithDelegation, profile), Text(fullToolResponse, profile)]);
+                tokens[UsageCloudTokens.InputWithDelegation] = modelVisibleResponse is null
+                    ? UsageValue.Unknown(fullToolResponse is null ? "full_response_unknown" : "model_visible_response_unknown")
+                    : Sum([Text(scenario.AdditionalInputWithDelegation, profile), Text(modelVisibleResponse, profile)]);
                 tokens[UsageCloudTokens.OutputWithoutDelegation] = report.Outcome.Delivery != UsageDelivery.Delivered
                     ? UsageValue.Unknown("result_not_delivered")
                     : report.Outcome.Technical != UsageTechnicalOutcome.Succeeded
