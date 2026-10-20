@@ -6,7 +6,7 @@ using LocalAi.Contracts;
 
 namespace LocalAi.Broker;
 
-public sealed class DurableQueue : ISelectableBrokerQueue
+public sealed partial class DurableQueue : ISelectableBrokerQueue
 {
     private static JsonSerializerOptions JsonOptions => LocalAiJson.Strict;
 
@@ -60,6 +60,16 @@ public sealed class DurableQueue : ISelectableBrokerQueue
 
     public TimeSpan LeaseDuration { get; }
 
+    public Task<int> CountPendingAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        using var mutex = EnterMutex(cancellationToken);
+        MaintainActiveRoot(cancellationToken);
+        RecoverExpiredLeases(_timeProvider.GetUtcNow());
+        return Task.FromResult(ReadEntries().Count(entry =>
+            entry.State.State is LocalJobState.Queued or LocalJobState.Running));
+    }
+
     public Task<EnqueueResult> EnqueueAsync(
         LocalJobRequest request,
         CancellationToken cancellationToken = default)
@@ -67,7 +77,9 @@ public sealed class DurableQueue : ISelectableBrokerQueue
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
 
+        ThrowIfAdmissionPaused();
         using var mutex = EnterMutex(cancellationToken);
+        ThrowIfAdmissionPaused();
         MaintainActiveRoot(cancellationToken);
         foreach (var entry in ReadEntries())
         {
