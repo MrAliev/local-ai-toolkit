@@ -3,20 +3,23 @@ namespace LocalAi.Contracts;
 public sealed record UsagePayload<T>(UsageReport Report, T Value);
 
 /// <summary>
-/// Counts the complete surface payload, including the notice and embedded report. Render must
+/// Measures the complete surface payload, with an optional model-visible projection for tokens. Render must
 /// be pure: create nonces/body once before calling. A hard bound also handles discontinuous
 /// tokenizers; an unstable size is unknown, never the size of an earlier payload.
 /// </summary>
 public static class UsagePayload
 {
     public static UsagePayload<T> Finalize<T>(UsageReport report, Func<UsageReport, T> render, Func<T, string> serialize,
-        CloudTokenScenario? scenario = null, ICloudTokenProfile? profile = null)
+        CloudTokenScenario? scenario = null, ICloudTokenProfile? profile = null, Func<T, string?>? modelVisibleResponse = null)
     {
         report = RuntimeCloudComparison.MarkConditional(CloudTokenMethodology.Apply(report, scenario, null, profile));
         for (var iteration = 0; iteration < 16; iteration++)
         {
             var payload = render(report);
-            var measured = RuntimeCloudComparison.MarkConditional(CloudTokenMethodology.Apply(report, scenario, serialize(payload), profile));
+            var serialized = serialize(payload);
+            var visible = modelVisibleResponse is null ? serialized : modelVisibleResponse(payload);
+            var measured = RuntimeCloudComparison.MarkConditional(
+                CloudTokenMethodology.Apply(report, scenario, serialized, profile, visible));
             if (measured.Volumes[UsageVolume.ResponseBytes] == report.Volumes[UsageVolume.ResponseBytes]
                 && measured.Volumes[UsageVolume.ResponseCharacters] == report.Volumes[UsageVolume.ResponseCharacters]
                 && measured.CloudTokens.All(pair => pair.Value == report.CloudTokens[pair.Key]))
