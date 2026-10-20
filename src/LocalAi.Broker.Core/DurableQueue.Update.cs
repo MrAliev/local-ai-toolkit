@@ -106,7 +106,7 @@ public sealed partial class DurableQueue
         })
         {
             IsBackground = true,
-            Name = "LocalAi update admission",
+            Name = "Local AI update admission",
         };
         owner.Start();
         return acquired.Task;
