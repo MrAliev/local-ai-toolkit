@@ -28,8 +28,9 @@ lai localai policy set --update-check on
 lai localai policy set --update-check-interval-hours 24
 ```
 
-While there are no published releases, `update` has nothing to find — updating goes the same
-way installing does: build a package and run the installer over the top.
+`update` uses the published GitHub releases. To update client instructions as well, download
+the installer and package from the same release and run the installer with the relevant
+client selected. A runtime-only update preserves the existing client instructions.
 
 ## Clear the index, keep the product
 
