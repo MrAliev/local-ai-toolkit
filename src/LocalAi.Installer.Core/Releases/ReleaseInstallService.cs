@@ -45,7 +45,8 @@ public sealed record ReleaseInstallResult(
 public sealed class ReleaseInstallService(
     IReleaseFeed feed,
     IProcessRunner processRunner,
-    IFileSystemProbe fileSystemProbe)
+    IFileSystemProbe fileSystemProbe,
+    Func<CancellationToken, Task<IDisposable>>? acquireActivationLease = null)
 {
     private static readonly TimeSpan ActivationTimeout = TimeSpan.FromMinutes(5);
 
@@ -111,9 +112,18 @@ public sealed class ReleaseInstallService(
                 new ExistingLocalAiInspector(fileSystemProbe),
                 ActivationTimeout);
 
-            var result = await installer
-                .InstallAsync(verified, InstallationLayout.CreateDefault(), cancellationToken)
-                .ConfigureAwait(false);
+            LocalAiPackageInstallResult result;
+            // Downloading and verification leave the shared broker available. Only the
+            // transition that can stop its processes drains and excludes new work; the
+            // scope also covers a failed activation's rollback.
+            using (acquireActivationLease is null
+                       ? null
+                       : await acquireActivationLease(cancellationToken).ConfigureAwait(false))
+            {
+                result = await installer
+                    .InstallAsync(verified, InstallationLayout.CreateDefault(), cancellationToken)
+                    .ConfigureAwait(false);
+            }
 
             var modelReport = ReleaseModelInstallReport.NotRequested;
             var installed = result.Status is LocalAiPackageInstallStatus.Installed

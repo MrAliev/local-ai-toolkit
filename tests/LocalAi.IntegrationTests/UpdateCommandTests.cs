@@ -132,7 +132,7 @@ public sealed class UpdateCommandTests : IDisposable
         var exit = await Run(new StubFeed("v0.1.51", "0.1.51", Directory51));
 
         Assert.Equal(2, exit);
-        Assert.Contains("2 queued job(s)", error.ToString(), StringComparison.Ordinal);
+        Assert.Contains("2 pending job(s)", error.ToString(), StringComparison.Ordinal);
         Assert.Contains("localai update --wait", error.ToString(), StringComparison.Ordinal);
     }
 
@@ -225,6 +225,33 @@ public sealed class UpdateCommandTests : IDisposable
             feed,
             processRunner: null,
             TestContext.Current.CancellationToken);
+
+    [Fact]
+    public async Task A_running_job_refuses_the_update_even_when_nothing_is_queued()
+    {
+        Queue(1);
+        var queue = new LocalAi.Broker.DurableQueue(root);
+        var running = await queue.LeaseNextAsync(
+            "active-worker",
+            TestContext.Current.CancellationToken);
+        Assert.NotNull(running);
+        Assert.Empty(await queue.ListQueuedAsync(TestContext.Current.CancellationToken));
+        var downloaded = false;
+        var feed = new StubFeed("v0.1.51", "0.1.51", Directory51)
+        {
+            OnDownload = () =>
+            {
+                downloaded = true;
+                throw new ReleaseResolutionException("download should not start while work is running");
+            },
+        };
+
+        var exit = await Run(feed);
+
+        Assert.Equal(2, exit);
+        Assert.False(downloaded);
+        Assert.Contains("localai update --wait", error.ToString(), StringComparison.Ordinal);
+    }
 
     /// <summary>Real queued jobs, written by the queue the command asks.</summary>
     private void Queue(int count)
