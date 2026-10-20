@@ -7,6 +7,7 @@ using LocalAi.Installer.Core.Releases;
 using LocalAi.Installer.Core.Removal;
 using LocalAi.Installer.Core.Transactions;
 using LocalAi.TestFixtures;
+using LocalAi.Tests.Shared;
 using System.ComponentModel;
 using System.Runtime.Versioning;
 using System.Security;
@@ -2165,7 +2166,9 @@ public sealed class LocalAiPackageInstallerTests : IDisposable
     {
         if (Directory.Exists(localAppData))
         {
-            Directory.Delete(localAppData, recursive: true);
+            OwnedProcessDirectoryCleanup.Delete(localAppData, (exception, attempt) =>
+                TestContext.Current.TestOutputHelper?.WriteLine(
+                    $"Owned fixture cleanup retry {attempt}: 0x{exception.HResult:X8} {exception.Message}"));
         }
     }
 
