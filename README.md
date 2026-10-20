@@ -51,7 +51,7 @@ if you would rather work on your own.
 - [What language it answers in](#what-language-it-answers-in)
 - [Updating and removing](#updating-and-removing)
   - [Update](#update)
-  - [Clear the index, keep the product](#clear-the-index-keep-the-product)
+  - [Remove expired data, keep the product](#remove-expired-data-keep-the-product)
   - [Remove it entirely](#remove-it-entirely)
 - [Impact evidence: C# pilot](#impact-evidence-c-pilot)
 - [Documentation packages](#documentation-packages)
@@ -221,9 +221,9 @@ unsaved buffer — and in a shell there is no such buffer, so there is nothing t
 - `localai update` downloads the newest verified release, installs its binaries as a new
   version and switches the launcher to it. Models, prerequisites and client registrations are
   left as they are: clients reach the new version through the launcher they are already
-  registered on. That is an install over an install, not an everyday operation, and you do it when you see
-  fit. While there are no published releases it goes the same way the first install did:
-  build a package and run `LocalAi.Installer.exe` over the top.
+  registered on. Run it when you choose to update. If the release also changes client
+  instructions, run its `LocalAi.Installer.exe` with the relevant client selected: a
+  runtime-only update does not rewrite those instructions.
 
 **It is information for you, in a shape made for reading.**
 
@@ -698,16 +698,20 @@ memory is marked `[partial_offload]` or `[cpu]` beside its name in the call's re
 
 ## Installing
 
-There are no published releases at the moment, so there is one path: build a signed release
-from the repository and install from its folder. The installer accepts a folder only when it
-holds `release-manifest.json`, `release-manifest.sig` and `localai-package.zip`, and the
-manifest verifies against the release key built into the installer.
+Install a signed package from [GitHub Releases](https://github.com/MrAliev/local-ai-toolkit/releases/latest).
+Installing a published release requires neither a .NET SDK nor the private release signing key.
 
-**1. Build a package.** Needs `pwsh` 7, a .NET 10 SDK of version 10.0.302 or later
-(`global.json` pins it), and the release signing key.
+**1. Download the release.** From the same release, download `LocalAi.Installer.exe`,
+`release-manifest.json`, `release-manifest.sig` and `localai-package.zip`. Keep the three
+package files together and point the installer's package page at that folder. The installer
+verifies the manifest against its built-in release key before accepting the package.
+
+**Optional: build from source.** This is for maintainers with the release signing key.
+It needs `pwsh` 7 and a .NET 10 SDK of version 10.0.302 or later (`global.json` pins it).
+Choose the intended build version in place of this example:
 
 ```powershell
-pwsh scripts/publish-localai-release-win-x64-self-contained.ps1 -ReleaseVersion 0.1.0 -SignManifest
+pwsh scripts/publish-localai-release-win-x64-self-contained.ps1 -ReleaseVersion 0.2.2 -SignManifest
 ```
 
 You get the installer at `publish/LocalAi.Installer/LocalAi.Installer.exe` and the release
@@ -1727,15 +1731,21 @@ lai localai policy set --update-check on
 lai localai policy set --update-check-interval-hours 24
 ```
 
-While there are no published releases, `update` has nothing to find — updating goes the same
-way installing does: build a package and run the installer over the top.
+`update` uses the published GitHub releases. To update client instructions as well, download
+the installer and package from the same release and run the installer with the relevant
+client selected. A runtime-only update preserves the existing client instructions.
 
-### Clear the index, keep the product
+### Remove expired data, keep the product
 
 ```powershell
 lai localai prune            # drop stale generations, overlays, queue archive, old telemetry and old versions
 lai localai prune --dry-run  # see what would go first
 ```
+
+`prune` applies retention rules; it is not a complete data wipe. It keeps current indexes of
+active repositories and usage reports and telemetry still within their retention period.
+Preview the eligible data with `--dry-run`. To remove retained data as well, use the
+uninstaller below and select the data categories to delete.
 
 `prune` also removes the record of a repository whose Git directory is gone, and of one that
 never published a generation and has not been updated for longer than the archive retention.
