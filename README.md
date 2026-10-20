@@ -51,7 +51,7 @@ if you would rather work on your own.
 - [What language it answers in](#what-language-it-answers-in)
 - [Updating and removing](#updating-and-removing)
   - [Update](#update)
-  - [Clear the index, keep the product](#clear-the-index-keep-the-product)
+  - [Remove expired data, keep the product](#remove-expired-data-keep-the-product)
   - [Remove it entirely](#remove-it-entirely)
 - [Impact evidence: C# pilot](#impact-evidence-c-pilot)
 - [Documentation packages](#documentation-packages)
@@ -1723,12 +1723,17 @@ lai localai policy set --update-check-interval-hours 24
 While there are no published releases, `update` has nothing to find — updating goes the same
 way installing does: build a package and run the installer over the top.
 
-### Clear the index, keep the product
+### Remove expired data, keep the product
 
 ```powershell
 lai localai prune            # drop stale generations, overlays, queue archive, old telemetry and old versions
 lai localai prune --dry-run  # see what would go first
 ```
+
+`prune` applies retention rules; it is not a complete data wipe. It keeps current indexes of
+active repositories and usage reports and telemetry still within their retention period.
+Preview the eligible data with `--dry-run`. To remove retained data as well, use the
+uninstaller below and select the data categories to delete.
 
 `prune` also removes the record of a repository whose Git directory is gone, and of one that
 never published a generation and has not been updated for longer than the archive retention.
