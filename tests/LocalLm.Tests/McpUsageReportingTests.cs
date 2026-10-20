@@ -86,6 +86,55 @@ public sealed class McpUsageReportingTests : IDisposable
         public string Read(string[] paths) => throw new InvalidOperationException("Binding must refuse before invocation.");
     }
 
+    public sealed class ProjectionTool
+    {
+        [McpServerTool(Name = "ask_local")]
+        public string Ask(string prompt)
+        {
+            UsageCall.Current!.Comparison.NoSource();
+            UsageCall.Current.Comparison.GeneratedText(prompt);
+            return prompt;
+        }
+    }
+
+    [Fact]
+    public async Task The_sdk_pipeline_excludes_request_metadata_and_decodes_request_text_for_comparison()
+    {
+        var incoming = new Pipe(); var outgoing = new Pipe();
+        var builder = Host.CreateApplicationBuilder();
+        builder.Services.AddMcpServer().WithUsageReporting("locallm", root)
+            .WithStreamServerTransport(incoming.Reader.AsStream(), outgoing.Writer.AsStream())
+            .WithTools<ProjectionTool>();
+        using var host = builder.Build();
+        await host.StartAsync(TestContext.Current.CancellationToken);
+        try
+        {
+            await using var client = await McpClient.CreateAsync(
+                new StreamClientTransport(incoming.Writer.AsStream(), outgoing.Reader.AsStream()),
+                cancellationToken: TestContext.Current.CancellationToken);
+            var id = Guid.NewGuid();
+            var result = await client.CallToolAsync(new CallToolRequestParams
+            {
+                Name = "ask_local",
+                Arguments = new Dictionary<string, JsonElement> { ["prompt"] = JsonSerializer.SerializeToElement("Ответ") },
+                Meta = new JsonObject
+                {
+                    ["localai/callId"] = id.ToString(),
+                    ["localai/sourceContext"] = "AlreadyPresent",
+                    ["hidden"] = new string('x', 20000),
+                },
+            }, TestContext.Current.CancellationToken);
+            var report = await Report(id);
+            var profile = O200kCloudTokenProfile.Instance;
+            var requestCost = profile.CountText("""{"name":"ask_local","arguments":{"prompt":"Ответ"}}""").Value;
+            var visibleText = string.Join("\n", result.Content.OfType<TextContentBlock>().Select(block => block.Text));
+            Assert.Equal(requestCost, report.CloudTokens[UsageCloudTokens.OutputWithDelegation].Value);
+            Assert.Equal(requestCost + profile.CountText(visibleText).Value,
+                report.CloudTokens[UsageCloudTokens.InputWithDelegation].Value);
+        }
+        finally { await host.StopAsync(TestContext.Current.CancellationToken); }
+    }
+
     [Fact]
     public async Task An_unwritable_report_store_preserves_the_answer_and_marks_the_metadata()
     {
@@ -241,6 +290,73 @@ public sealed class McpUsageReportingTests : IDisposable
         using var lease = LocalAi.Installer.Core.Activation.InstallationLayoutLease.Acquire(
             layout, requireFreshInstallerTree: true);
         Assert.Equal(layout.Root, lease.Layout.Root);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(20000)]
+    public async Task Hidden_metadata_changes_wire_size_but_is_not_counted_as_model_input(int metadataLength)
+    {
+        const string request = """{"name":"ask_local","arguments":{"prompt":"Reply briefly"}}""";
+        const string answer = "Короткий ответ без экранирования кириллицы.";
+        var id = Guid.NewGuid();
+        var result = await new UsageReporting(root).InvokeAsync("locallm", "ask_local", id, _ =>
+        {
+            UsageCall.Current!.Comparison.NoSource();
+            UsageCall.Current.Comparison.GeneratedText(answer);
+            return ValueTask.FromResult(new CallToolResult
+            {
+                Content = [new TextContentBlock { Text = answer }],
+                Meta = new JsonObject { ["hidden"] = new string('x', metadataLength) },
+            });
+        }, TestContext.Current.CancellationToken, request, CloudContextPresence.AlreadyPresent);
+
+        var report = await Report(id);
+        var visibleText = string.Join("\n", result.Content.OfType<TextContentBlock>().Select(block => block.Text));
+        var profile = O200kCloudTokenProfile.Instance;
+        Assert.Equal(profile.CountText(request).Value + profile.CountText(visibleText).Value,
+            report.CloudTokens[UsageCloudTokens.InputWithDelegation].Value);
+        var wire = JsonSerializer.Serialize(result, McpJsonUtilities.DefaultOptions);
+        Assert.Equal(wire.Length, report.Volumes[UsageVolume.ResponseCharacters].Value);
+        Assert.Equal(Encoding.UTF8.GetByteCount(wire), report.Volumes[UsageVolume.ResponseBytes].Value);
+        Assert.True(wire.Length > metadataLength + visibleText.Length);
+    }
+
+    [Fact]
+    public async Task Structured_content_is_part_of_the_model_visible_estimate()
+    {
+        var id = Guid.NewGuid();
+        var result = await new UsageReporting(root).InvokeAsync("locallm", "ask_local", id, _ =>
+        {
+            UsageCall.Current!.Comparison.NoSource();
+            return ValueTask.FromResult(new CallToolResult
+            {
+                Content = [],
+                StructuredContent = JsonSerializer.SerializeToElement(new { answer = "Готово" }),
+            });
+        }, TestContext.Current.CancellationToken, string.Empty, CloudContextPresence.AlreadyPresent);
+        var report = await Report(id);
+        var notice = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Equal(O200kCloudTokenProfile.Instance.CountText(notice + "\n" + """{"answer":"Готово"}""").Value,
+            report.CloudTokens[UsageCloudTokens.InputWithDelegation].Value);
+    }
+
+    [Fact]
+    public async Task Unsupported_response_content_keeps_wire_volume_but_cannot_claim_text_token_cost()
+    {
+        var id = Guid.NewGuid();
+        var result = await new UsageReporting(root).InvokeAsync("locallm", "ask_local", id, _ =>
+        {
+            UsageCall.Current!.Comparison.NoSource();
+            return ValueTask.FromResult(new CallToolResult
+            {
+                Content = [new ImageContentBlock { Data = new byte[] { 0 }, MimeType = "image/png" }],
+            });
+        }, TestContext.Current.CancellationToken, string.Empty, CloudContextPresence.AlreadyPresent);
+        var report = await Report(id);
+        Assert.Equal(UsageValueStatus.Measured, report.Volumes[UsageVolume.ResponseBytes].Status);
+        Assert.Equal(UsageValueStatus.Unknown, report.CloudTokens[UsageCloudTokens.InputWithDelegation].Status);
+        Assert.Equal(UsageValueStatus.Unknown, report.CloudTokens[UsageCloudTokens.InputSaved].Status);
     }
 
     private async Task<UsageReport> Report(Guid id)

@@ -1,3 +1,4 @@
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using LocalAi.Broker;
@@ -11,6 +12,14 @@ namespace LocalAi.Mcp;
 
 public sealed class UsageReporting(string runtimeRoot)
 {
+    private static readonly JsonSerializerOptions VisibleJson = new(McpJsonUtilities.DefaultOptions)
+    {
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+    };
+
+    internal static string ModelVisibleRequest(CallToolRequestParams request) =>
+        JsonSerializer.Serialize(new { name = request.Name, arguments = request.Arguments }, VisibleJson);
+
     public string RuntimeRoot { get; } = runtimeRoot;
     public async ValueTask<CallToolResult> InvokeAsync(string component, string operation, Guid callId,
         Func<CancellationToken, ValueTask<CallToolResult>> next, CancellationToken cancellationToken,
@@ -72,12 +81,25 @@ public sealed class UsageReporting(string runtimeRoot)
                 StructuredContent = result.StructuredContent, IsError = result.IsError, Meta = meta,
             };
         }, payload => JsonSerializer.Serialize(payload, McpJsonUtilities.DefaultOptions),
-            scenario, call.Comparison.Profile);
+            scenario, call.Comparison.Profile, ModelVisibleResponse);
         var final = Render();
         try { await store.WriteAsync(final.Report, CancellationToken.None); }
         catch (Exception persistence) when (persistence is IOException or UnauthorizedAccessException)
         { final = Render(persistence.GetType().Name); }
         return final.Value;
+    }
+
+    private static string? ModelVisibleResponse(CallToolResult result)
+    {
+        // _meta belongs to the client, not the model. Count decoded text (including our
+        // notice) and structured data, never the escaped transport envelope. Client-specific
+        // framing/deduplication is unknown: this is a named comparison, not account billing.
+        // Do not pretend that images/audio/resources cost their base64/JSON length in tokens.
+        if (result.Content.Any(block => block is not TextContentBlock)) return null;
+        var parts = result.Content.OfType<TextContentBlock>().Select(block => block.Text).ToList();
+        if (result.StructuredContent is { } structured)
+            parts.Add(JsonSerializer.Serialize(structured, VisibleJson));
+        return string.Join("\n", parts);
     }
 }
 
@@ -97,6 +119,6 @@ public static class UsageReportingExtensions
                     ? CloudContextPresence.NotPresent : CloudContextPresence.Unknown;
             return new UsageReporting(runtimeRoot).InvokeAsync(component, context.Params!.Name, id,
                 token => next(context, token), cancellationToken,
-                JsonSerializer.Serialize(context.Params, McpJsonUtilities.DefaultOptions), presence);
+                UsageReporting.ModelVisibleRequest(context.Params), presence);
         }));
 }
