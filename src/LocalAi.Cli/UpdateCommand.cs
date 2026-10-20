@@ -250,6 +250,11 @@ public static class UpdateCommand
             {
                 queued = await queue.CountPendingAsync(cancellationToken).ConfigureAwait(false);
             }
+            catch (BrokerUpdateBusyException)
+            {
+                error.WriteLine(CliText.UpdateAlreadyRunning);
+                return false;
+            }
             catch (Exception exception) when (
                 exception is IOException or UnauthorizedAccessException)
             {

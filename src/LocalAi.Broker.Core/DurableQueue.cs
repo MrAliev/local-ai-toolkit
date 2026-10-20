@@ -63,7 +63,8 @@ public sealed partial class DurableQueue : ISelectableBrokerQueue
     public Task<int> CountPendingAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        using var mutex = EnterMutex(cancellationToken);
+        using var mutex = EnterMutex(cancellationToken, checkAdmission: true);
+        ThrowIfAdmissionPaused();
         MaintainActiveRoot(cancellationToken);
         RecoverExpiredLeases(_timeProvider.GetUtcNow());
         return Task.FromResult(ReadEntries().Count(entry =>
@@ -77,8 +78,7 @@ public sealed partial class DurableQueue : ISelectableBrokerQueue
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
 
-        ThrowIfAdmissionPaused();
-        using var mutex = EnterMutex(cancellationToken);
+        using var mutex = EnterMutex(cancellationToken, checkAdmission: true);
         ThrowIfAdmissionPaused();
         MaintainActiveRoot(cancellationToken);
         foreach (var entry in ReadEntries())
@@ -1191,7 +1191,9 @@ public sealed partial class DurableQueue : ISelectableBrokerQueue
     private static void AtomicWriteJson<T>(string destination, T value) =>
         AtomicFile.WriteJson(destination, value, JsonOptions, AtomicWrite.Irrecoverable);
 
-    private MutexLease EnterMutex(CancellationToken cancellationToken)
+    private MutexLease EnterMutex(
+        CancellationToken cancellationToken,
+        bool checkAdmission = false)
     {
         var mutex = new Mutex(initiallyOwned: false, _mutexName);
         try
@@ -1199,6 +1201,12 @@ public sealed partial class DurableQueue : ISelectableBrokerQueue
             while (true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                if (checkAdmission)
+                {
+                    // The updater may close admission between a caller's first check
+                    // and this mutex acquisition. Recheck while waiting as well.
+                    ThrowIfAdmissionPaused();
+                }
                 try
                 {
                     if (mutex.WaitOne(TimeSpan.FromMilliseconds(100)))
