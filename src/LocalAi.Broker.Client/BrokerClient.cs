@@ -14,11 +14,13 @@ public interface IBrokerClient
 
 public sealed class BrokerClient : IBrokerClient
 {
+    private static readonly TimeSpan ProcessCheckInterval = TimeSpan.FromSeconds(5);
     private readonly DurableQueue _queue;
     private readonly IBrokerProcess _process;
     private readonly Func<TimeSpan, CancellationToken, Task> _delay;
     private readonly TimeSpan _timeout;
     private readonly TimeSpan _pollInterval;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Told on every poll whether the job is still queued or already running. Only the
@@ -32,8 +34,10 @@ public sealed class BrokerClient : IBrokerClient
         Func<TimeSpan, CancellationToken, Task>? delay = null,
         TimeSpan? timeout = null,
         TimeSpan? pollInterval = null,
-        ILocalRunObserver? observer = null)
+        ILocalRunObserver? observer = null,
+        TimeProvider? timeProvider = null)
     {
+        _timeProvider = timeProvider ?? TimeProvider.System;
         _observer = observer;
         _queue = queue ?? throw new ArgumentNullException(nameof(queue));
         _process = process ?? throw new ArgumentNullException(nameof(process));
@@ -66,8 +70,8 @@ public sealed class BrokerClient : IBrokerClient
         if (inference) usage?.RegisterJobEvidence(_queue.RuntimeRoot, queued.JobId);
         LocalUsageReceipt? receipt = null;
 
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(_timeout);
+        using var deadline = new CancellationTokenSource(_timeout, _timeProvider);
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, deadline.Token);
         try
         {
             var result = await AwaitAsync<T>(queued.JobId, timeout.Token);
@@ -93,6 +97,7 @@ public sealed class BrokerClient : IBrokerClient
         Guid jobId,
         CancellationToken cancellationToken)
     {
+        var lastProcessCheck = _timeProvider.GetTimestamp();
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -144,6 +149,16 @@ public sealed class BrokerClient : IBrokerClient
 
                 case LocalJobState.Queued:
                 case LocalJobState.Running:
+                    if (_timeProvider.GetElapsedTime(lastProcessCheck) >= ProcessCheckInterval)
+                    {
+                        // A durable job survives its worker. Recover through the shared startup
+                        // coordinator, which serializes clients and leaves a healthy host alone.
+                        // The caller's existing deadline also bounds a recovery attempt.
+                        await _process.EnsureRunningAsync(cancellationToken);
+                        lastProcessCheck = _timeProvider.GetTimestamp();
+                        continue;
+                    }
+
                     // The one place that knows which of the two waits this is. Reported
                     // on every poll; whether any of them becomes a line is the console's
                     // decision, and it is the only caller that passes an observer.

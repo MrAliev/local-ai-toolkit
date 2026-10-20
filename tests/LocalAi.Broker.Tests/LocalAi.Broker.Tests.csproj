@@ -22,5 +22,7 @@
     <!-- The entry points pin the language and invariant formatting; a test calling a tool
          method directly never goes through one, so they are pinned here too. -->
     <Compile Include="..\Shared\TestCulture.cs" Link="TestCulture.cs" />
+    <Compile Include="..\Shared\OwnedProcessDirectoryCleanup.cs" Link="OwnedProcessDirectoryCleanup.cs" />
+    <Compile Include="..\Shared\OwnedProcessDirectoryCleanupTests.cs" Link="OwnedProcessDirectoryCleanupTests.cs" />
   </ItemGroup>
 </Project>

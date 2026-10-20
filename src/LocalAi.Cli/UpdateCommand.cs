@@ -138,7 +138,8 @@ public static class UpdateCommand
             var service = new ReleaseInstallService(
                 releases,
                 processRunner ?? new SystemProcessRunner(),
-                new SystemFileSystemProbe());
+                new SystemFileSystemProbe(),
+                token => AcquireActivationLeaseAsync(runtimeRoot, wait, output, token));
             var lastReported = -1L;
             var result = await service.InstallAsync(
                     resolved,
@@ -168,6 +169,16 @@ public static class UpdateCommand
             output.WriteLine(CliText.UpdateClientsPickItUp);
             return 0;
         }
+        catch (BrokerUpdateBusyException exception)
+        {
+            error.WriteLine(exception.PendingJobs > 0
+                ? exception.TimedOut
+                    ? CliText.UpdateQueueStillBusy(
+                        exception.PendingJobs, (int)MaximumWait.TotalMinutes)
+                    : CliText.UpdateQueueBusy(exception.PendingJobs)
+                : CliText.UpdateAlreadyRunning);
+            return 2;
+        }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             error.WriteLine(CliText.UpdateCancelled);
@@ -190,6 +201,27 @@ public static class UpdateCommand
     {
         error.WriteLine(CliText.UpdateUsage((int)MaximumWait.TotalMinutes));
         return 2;
+    }
+
+    private static Task<IDisposable> AcquireActivationLeaseAsync(
+        string runtimeRoot,
+        bool wait,
+        TextWriter output,
+        CancellationToken cancellationToken)
+    {
+        var announced = false;
+        return new DurableQueue(runtimeRoot).AcquireUpdateLeaseAsync(
+            wait,
+            MaximumWait,
+            count =>
+            {
+                if (!announced)
+                {
+                    output.WriteLine(CliText.UpdateQueueWaiting(count));
+                    announced = true;
+                }
+            },
+            cancellationToken);
     }
 
     /// <summary>
@@ -216,16 +248,19 @@ public static class UpdateCommand
             int queued;
             try
             {
-                queued = (await queue.ListQueuedAsync(cancellationToken).ConfigureAwait(false))
-                    .Count;
+                queued = await queue.CountPendingAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (BrokerUpdateBusyException)
+            {
+                error.WriteLine(CliText.UpdateAlreadyRunning);
+                return false;
             }
             catch (Exception exception) when (
                 exception is IOException or UnauthorizedAccessException)
             {
-                // A queue that cannot be read is not a queue holding work: the runtime may
-                // never have run. Refusing here would block an update on a directory that does
-                // not exist yet.
-                return true;
+                // An unreadable queue cannot prove that stopping the broker is safe.
+                error.WriteLine(CliText.UpdateFailed(exception.Message));
+                return false;
             }
 
             if (queued == 0)

@@ -51,7 +51,7 @@ if you would rather work on your own.
 - [What language it answers in](#what-language-it-answers-in)
 - [Updating and removing](#updating-and-removing)
   - [Update](#update)
-  - [Clear the index, keep the product](#clear-the-index-keep-the-product)
+  - [Remove expired data, keep the product](#remove-expired-data-keep-the-product)
   - [Remove it entirely](#remove-it-entirely)
 - [Impact evidence: C# pilot](#impact-evidence-c-pilot)
 - [Documentation packages](#documentation-packages)
@@ -82,11 +82,16 @@ agent later.
 That is how Claude, Codex and the command line all work at once without tripping over each
 other, and why one model sits in video memory rather than four fighting over it.
 
-**Nothing leaves the machine.** The broker sends your code and the prompts built from it to
-Ollama at `http://127.0.0.1:11434/`, on this machine. Which network interfaces Ollama itself
-listens on is Ollama's own setting. Left alone, the runtime makes no network calls at
-all: the update check is off by default. Models and missing prerequisites are downloaded
-when you ask for them.
+**Model processing is local by default.** The broker sends your code and the prompts built
+from it to Ollama at `http://127.0.0.1:11434/`, on this machine; a broker started with another
+address sends them to that address. Which network interfaces Ollama itself listens on is
+Ollama's own setting. The update check is off by default. Models and missing prerequisites
+are downloaded when you ask for them.
+
+Local tools return results to the client that called them, including model answers and
+selected source excerpts. A cloud agent can include those results in requests to its cloud
+provider. Local inference therefore does not guarantee that returned content stays on your
+computer; the client's configuration and data policy govern that transfer.
 
 ---
 
@@ -221,9 +226,9 @@ unsaved buffer — and in a shell there is no such buffer, so there is nothing t
 - `localai update` downloads the newest verified release, installs its binaries as a new
   version and switches the launcher to it. Models, prerequisites and client registrations are
   left as they are: clients reach the new version through the launcher they are already
-  registered on. That is an install over an install, not an everyday operation, and you do it when you see
-  fit. While there are no published releases it goes the same way the first install did:
-  build a package and run `LocalAi.Installer.exe` over the top.
+  registered on. Run it when you choose to update. If the release also changes client
+  instructions, run its `LocalAi.Installer.exe` with the relevant client selected: a
+  runtime-only update does not rewrite those instructions.
 
 **It is information for you, in a shape made for reading.**
 
@@ -698,16 +703,20 @@ memory is marked `[partial_offload]` or `[cpu]` beside its name in the call's re
 
 ## Installing
 
-There are no published releases at the moment, so there is one path: build a signed release
-from the repository and install from its folder. The installer accepts a folder only when it
-holds `release-manifest.json`, `release-manifest.sig` and `localai-package.zip`, and the
-manifest verifies against the release key built into the installer.
+Install a signed package from [GitHub Releases](https://github.com/MrAliev/local-ai-toolkit/releases/latest).
+Installing a published release requires neither a .NET SDK nor the private release signing key.
 
-**1. Build a package.** Needs `pwsh` 7, a .NET 10 SDK of version 10.0.302 or later
-(`global.json` pins it), and the release signing key.
+**1. Download the release.** From the same release, download `LocalAi.Installer.exe`,
+`release-manifest.json`, `release-manifest.sig` and `localai-package.zip`. Keep the three
+package files together and point the installer's package page at that folder. The installer
+verifies the manifest against its built-in release key before accepting the package.
+
+**Optional: build from source.** This is for maintainers with the release signing key.
+It needs `pwsh` 7 and a .NET 10 SDK of version 10.0.302 or later (`global.json` pins it).
+Choose the intended build version in place of this example:
 
 ```powershell
-pwsh scripts/publish-localai-release-win-x64-self-contained.ps1 -ReleaseVersion 0.1.0 -SignManifest
+pwsh scripts/publish-localai-release-win-x64-self-contained.ps1 -ReleaseVersion 0.2.2 -SignManifest
 ```
 
 You get the installer at `publish/LocalAi.Installer/LocalAi.Installer.exe` and the release
@@ -993,15 +1002,22 @@ requires an updated broker as well as the client. Full translation retains its o
 validator; a broker success does not replace it.
 
 The model's answer is written to stdout. A separate usage notice on stderr identifies the
-call and the models actually used, reports elapsed time, and shows cloud INPUT and OUTPUT
-token savings separately. Runtime calls use a **conditional first-read comparison**, not
-account billing: INPUT is the tokenized source units minus the arguments and full response;
+call and the models actually used, reports elapsed time, and shows one approximate token
+saving (or additional overhead). The underlying INPUT and OUTPUT values remain in the report.
+Runtime calls use a **conditional first-read comparison**, not account billing:
+INPUT is the tokenized source units minus the arguments and model-visible response;
 OUTPUT is the validated, delivered local answer minus the generated tool request. Either
 difference can be negative; an unsuccessful, invalid or undelivered result earns no savings
 estimate. A later cloud answer and transport framing outside that payload
-are excluded from both sides. MCP counts its serialized request/result, including metadata;
+are excluded from both sides. In methodology `cloud-comparison-v2`, MCP counts the tool name
+and arguments as JSON, decoded result text (including the usage notice), and structured result
+JSON, separated by newlines. JSON uses literal Unicode rather than transport escape sequences.
+Hidden `_meta` in requests and results is excluded. Transport byte/character volumes still
+measure the complete serialized result, including metadata. Non-text result blocks make the
+response token estimate unknown; their encoded bytes are not treated as text tokens.
 CLI counts serialized arguments and stdout followed by stderr, including the usage notice.
-These representations are explicit proxies, not a measurement of a client's model context.
+These representations are explicit proxies, not a measurement of a client's model context:
+client-specific framing and deduplication of text/structured results are unknown.
 
 Text uses the bundled `microsoft-ml-tokenizers-2.0.0:o200k_base` vocabulary, checked against
 independent reference counts. Images use `openai-gpt-4o-tiles-v1` at high detail; PDF comparisons
@@ -1708,9 +1724,16 @@ lai localai update
 
 It downloads a release, **verifies its signature**, installs a new version directory and
 points the launcher at it. The paths written into your clients do not change — they point at
-the launcher, not at a version. It refuses while the broker has queued work; `--wait` waits
-for the queue to drain (up to 30 minutes), and `--force` installs the newest release even when
-it is not newer than the installed one.
+the launcher, not at a version. It refuses while the broker has queued or running work;
+`--wait` waits for both to finish (up to 30 minutes), and `--force` installs the newest release
+even when it is not newer than the installed one. Downloading and verification leave other
+sessions available. The final drain and activation temporarily pause new submissions; retry
+those calls after the update finishes. Failure or cancellation restores normal admission.
+The launcher runs the updater from a temporary copy outside the installed version, so it
+can switch versions without waiting for its own process to exit. The command keeps showing
+progress and returns the updater's final result; its temporary copy is removed when it exits.
+An older launcher without this handoff cannot update itself this way: use the installer
+from the published GitHub release for the first upgrade. Later upgrades can use `localai update`.
 
 The update check is **off** by default, so the installation never goes looking for new
 versions on its own. To turn it on and set how often:
@@ -1720,15 +1743,21 @@ lai localai policy set --update-check on
 lai localai policy set --update-check-interval-hours 24
 ```
 
-While there are no published releases, `update` has nothing to find — updating goes the same
-way installing does: build a package and run the installer over the top.
+`update` uses the published GitHub releases. To update client instructions as well, download
+the installer and package from the same release and run the installer with the relevant
+client selected. A runtime-only update preserves the existing client instructions.
 
-### Clear the index, keep the product
+### Remove expired data, keep the product
 
 ```powershell
 lai localai prune            # drop stale generations, overlays, queue archive, old telemetry and old versions
 lai localai prune --dry-run  # see what would go first
 ```
+
+`prune` applies retention rules; it is not a complete data wipe. It keeps current indexes of
+active repositories and usage reports and telemetry still within their retention period.
+Preview the eligible data with `--dry-run`. To remove retained data as well, use the
+uninstaller below and select the data categories to delete.
 
 `prune` also removes the record of a repository whose Git directory is gone, and of one that
 never published a generation and has not been updated for longer than the archive retention.
