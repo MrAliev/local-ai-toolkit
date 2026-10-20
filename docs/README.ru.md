@@ -51,7 +51,7 @@
 - [На каком языке он отвечает](what-language-it-answers-in.ru.md)
 - [Обновление и удаление](updating-and-removing.ru.md)
   - [Обновить](updating-and-removing.ru.md#обновить)
-  - [Убрать индекс, но оставить продукт](updating-and-removing.ru.md#убрать-индекс-но-оставить-продукт)
+  - [Удалить устаревшие данные, но оставить продукт](updating-and-removing.ru.md#удалить-устаревшие-данные-но-оставить-продукт)
   - [Удалить целиком](updating-and-removing.ru.md#удалить-целиком)
 - [Данные для анализа влияния: пилот C#](impact-evidence-c-pilot.ru.md)
 - [Пакеты документации](documentation-packages.ru.md)
