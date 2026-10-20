@@ -1566,6 +1566,9 @@ public sealed class LocalAiPackageInstaller
 
     /// <summary>
     /// Puts the new launcher in place, stopping the running tools only if they are in the way.
+    /// Replacing an existing file atomically lets Windows retain its loaded image until the
+    /// last launcher exits. In particular, the launcher waiting for its own updater must stay
+    /// alive to forward output and return the final exit code.
     ///
     /// Deliberately reactive. Stopping a client's tools is disruptive, and on a machine where
     /// nothing is running the replacement simply succeeds, so asking first would cost every
@@ -1588,7 +1591,16 @@ public sealed class LocalAiPackageInstaller
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                File.Move(temporaryPath, launcherPath, overwrite: true);
+                if (mayNeedStop)
+                {
+                    // The rollback copy was already made by CreateLauncherBackup. A separate
+                    // ReplaceFile backup would keep another orphaned image after self-update.
+                    File.Replace(temporaryPath, launcherPath, destinationBackupFileName: null);
+                }
+                else
+                {
+                    File.Move(temporaryPath, launcherPath, overwrite: true);
+                }
                 return;
             }
             catch (Exception exception) when (

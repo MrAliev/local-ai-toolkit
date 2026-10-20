@@ -6,7 +6,7 @@ using LocalAi.Contracts;
 
 namespace LocalAi.Broker;
 
-public sealed class DurableQueue : ISelectableBrokerQueue
+public sealed partial class DurableQueue : ISelectableBrokerQueue
 {
     private static JsonSerializerOptions JsonOptions => LocalAiJson.Strict;
 
@@ -60,6 +60,17 @@ public sealed class DurableQueue : ISelectableBrokerQueue
 
     public TimeSpan LeaseDuration { get; }
 
+    public Task<int> CountPendingAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        using var mutex = EnterMutex(cancellationToken, checkAdmission: true);
+        ThrowIfAdmissionPaused();
+        MaintainActiveRoot(cancellationToken);
+        RecoverExpiredLeases(_timeProvider.GetUtcNow());
+        return Task.FromResult(ReadEntries().Count(entry =>
+            entry.State.State is LocalJobState.Queued or LocalJobState.Running));
+    }
+
     public Task<EnqueueResult> EnqueueAsync(
         LocalJobRequest request,
         CancellationToken cancellationToken = default)
@@ -67,7 +78,8 @@ public sealed class DurableQueue : ISelectableBrokerQueue
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
 
-        using var mutex = EnterMutex(cancellationToken);
+        using var mutex = EnterMutex(cancellationToken, checkAdmission: true);
+        ThrowIfAdmissionPaused();
         MaintainActiveRoot(cancellationToken);
         foreach (var entry in ReadEntries())
         {
@@ -1179,7 +1191,9 @@ public sealed class DurableQueue : ISelectableBrokerQueue
     private static void AtomicWriteJson<T>(string destination, T value) =>
         AtomicFile.WriteJson(destination, value, JsonOptions, AtomicWrite.Irrecoverable);
 
-    private MutexLease EnterMutex(CancellationToken cancellationToken)
+    private MutexLease EnterMutex(
+        CancellationToken cancellationToken,
+        bool checkAdmission = false)
     {
         var mutex = new Mutex(initiallyOwned: false, _mutexName);
         try
@@ -1187,6 +1201,12 @@ public sealed class DurableQueue : ISelectableBrokerQueue
             while (true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                if (checkAdmission)
+                {
+                    // The updater may close admission between a caller's first check
+                    // and this mutex acquisition. Recheck while waiting as well.
+                    ThrowIfAdmissionPaused();
+                }
                 try
                 {
                     if (mutex.WaitOne(TimeSpan.FromMilliseconds(100)))

@@ -292,6 +292,8 @@ public static class CliText
     public static string UpdateQueueWaiting(int queued) =>
         Catalogue.Format(nameof(UpdateQueueWaiting), queued);
 
+    public static string UpdateAlreadyRunning => Catalogue.Get(nameof(UpdateAlreadyRunning));
+
     public static string UpdateUnknownOption(string option) =>
         Catalogue.Format(nameof(UpdateUnknownOption), option);
 
