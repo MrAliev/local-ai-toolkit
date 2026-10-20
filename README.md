@@ -82,11 +82,16 @@ agent later.
 That is how Claude, Codex and the command line all work at once without tripping over each
 other, and why one model sits in video memory rather than four fighting over it.
 
-**Nothing leaves the machine.** The broker sends your code and the prompts built from it to
-Ollama at `http://127.0.0.1:11434/`, on this machine. Which network interfaces Ollama itself
-listens on is Ollama's own setting. Left alone, the runtime makes no network calls at
-all: the update check is off by default. Models and missing prerequisites are downloaded
-when you ask for them.
+**Model processing is local by default.** The broker sends your code and the prompts built
+from it to Ollama at `http://127.0.0.1:11434/`, on this machine; a broker started with another
+address sends them to that address. Which network interfaces Ollama itself listens on is
+Ollama's own setting. The update check is off by default. Models and missing prerequisites
+are downloaded when you ask for them.
+
+Local tools return results to the client that called them, including model answers and
+selected source excerpts. A cloud agent can include those results in requests to its cloud
+provider. Local inference therefore does not guarantee that returned content stays on your
+computer; the client's configuration and data policy govern that transfer.
 
 ---
 
