@@ -19,6 +19,31 @@ public sealed class LauncherApplication
         IReadOnlyList<string> arguments,
         CancellationToken cancellationToken)
     {
+        if (string.Equals(tool, "localai", StringComparison.Ordinal) &&
+            arguments.Count > 0 &&
+            string.Equals(arguments[0], "update", StringComparison.Ordinal))
+        {
+            ResolvedTool updater;
+            UpdateHandoff handoff;
+            using (VersionLease.AcquireShared(Path.Combine(_binRoot, "current.lock")))
+            {
+                updater = _resolver.Resolve(tool);
+                handoff = await UpdateHandoff.CreateAsync(
+                    updater.ExecutablePath, cancellationToken);
+            }
+
+            // The updater may stop the old version and take the exclusive activation lease.
+            // Neither it nor this waiting launcher may keep that version alive.
+            using (handoff)
+            {
+                return await _runner.RunAsync(
+                    handoff.ExecutablePath,
+                    arguments,
+                    updater.Version,
+                    cancellationToken);
+            }
+        }
+
         using var lease = VersionLease.AcquireShared(
             Path.Combine(_binRoot, "current.lock"));
         var resolved = _resolver.Resolve(tool);

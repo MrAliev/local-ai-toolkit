@@ -515,6 +515,83 @@ public sealed class LocalAiPackageInstallerTests : IDisposable
         }
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_running_stable_launcher_can_be_replaced_and_restored_after_activation_failure(
+        bool activationFails)
+    {
+        var priorLauncher = File.ReadAllBytes(Path.Combine(Environment.SystemDirectory, "cmd.exe"));
+        CreateExisting("v1", priorLauncher);
+        using var package = Package("v2");
+        var layout = InstallationLayout.FromLocalAppData(localAppData);
+        var startInfo = new System.Diagnostics.ProcessStartInfo(layout.LauncherPath)
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        startInfo.ArgumentList.Add("/d");
+        startInfo.ArgumentList.Add("/q");
+        startInfo.ArgumentList.Add("/c");
+        startInfo.ArgumentList.Add("echo READY& set /p _localai_test_wait=");
+        using var runningLauncher = System.Diagnostics.Process.Start(startInfo)!;
+        try
+        {
+            Assert.Equal(
+                "READY",
+                await runningLauncher.StandardOutput.ReadLineAsync(TestContext.Current.CancellationToken));
+            Assert.False(runningLauncher.HasExited);
+            var activationAttempts = 0;
+            var runner = new RecordingRunner((executable, arguments, _, _) =>
+            {
+                if (arguments is ["stop"])
+                {
+                    // The external stable launcher owns no version directory, so stopping
+                    // version-owned tools cannot release its mapped executable image.
+                    return Task.FromResult(new ProcessResult(0, "", "", false, false));
+                }
+
+                Assert.Equal(layout.LauncherPath, executable);
+                Assert.Equal("activate", arguments[0]);
+                Assert.False(runningLauncher.HasExited);
+                Assert.Equal(
+                    Content(LocalAiPackageLayout.StableLauncherFile),
+                    File.ReadAllBytes(layout.LauncherPath));
+                activationAttempts++;
+                WritePointer(arguments[1]);
+                return Task.FromResult(new ProcessResult(
+                    activationFails && activationAttempts == 1 ? 17 : 0,
+                    "", "", false, false));
+            });
+
+            var result = await Installer(runner).InstallAsync(
+                package, layout, TestContext.Current.CancellationToken);
+
+            Assert.Equal(activationFails ? 2 : 1, activationAttempts);
+            Assert.False(runningLauncher.HasExited);
+            Assert.Equal(
+                activationFails ? LocalAiPackageInstallStatus.RolledBack : LocalAiPackageInstallStatus.Installed,
+                result.Status);
+            Assert.Equal(
+                activationFails ? priorLauncher : Content(LocalAiPackageLayout.StableLauncherFile),
+                File.ReadAllBytes(layout.LauncherPath));
+            Assert.Equal(activationFails ? "v1" : "v2", ReadPointerVersion(layout.CurrentPointerPath));
+        }
+        finally
+        {
+            // This process is our own isolated executable, never a user's installed launcher.
+            if (!runningLauncher.HasExited)
+            {
+                runningLauncher.Kill(entireProcessTree: true);
+            }
+
+            await runningLauncher.WaitForExitAsync(CancellationToken.None);
+        }
+    }
+
     [Fact]
     public async Task Nothing_is_stopped_when_the_launcher_can_simply_be_replaced()
     {
