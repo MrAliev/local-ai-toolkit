@@ -2,16 +2,20 @@
 
 [Contents](README.md#contents) · [Русская версия](installing.ru.md)
 
-There are no published releases at the moment, so there is one path: build a signed release
-from the repository and install from its folder. The installer accepts a folder only when it
-holds `release-manifest.json`, `release-manifest.sig` and `localai-package.zip`, and the
-manifest verifies against the release key built into the installer.
+Install a signed package from [GitHub Releases](https://github.com/MrAliev/local-ai-toolkit/releases/latest).
+Installing a published release requires neither a .NET SDK nor the private release signing key.
 
-**1. Build a package.** Needs `pwsh` 7, a .NET 10 SDK of version 10.0.302 or later
-(`global.json` pins it), and the release signing key.
+**1. Download the release.** From the same release, download `LocalAi.Installer.exe`,
+`release-manifest.json`, `release-manifest.sig` and `localai-package.zip`. Keep the three
+package files together and point the installer's package page at that folder. The installer
+verifies the manifest against its built-in release key before accepting the package.
+
+**Optional: build from source.** This is for maintainers with the release signing key.
+It needs `pwsh` 7 and a .NET 10 SDK of version 10.0.302 or later (`global.json` pins it).
+Choose the intended build version in place of this example:
 
 ```powershell
-pwsh scripts/publish-localai-release-win-x64-self-contained.ps1 -ReleaseVersion 0.1.0 -SignManifest
+pwsh scripts/publish-localai-release-win-x64-self-contained.ps1 -ReleaseVersion 0.2.2 -SignManifest
 ```
 
 You get the installer at `publish/LocalAi.Installer/LocalAi.Installer.exe` and the release
