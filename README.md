@@ -997,15 +997,22 @@ requires an updated broker as well as the client. Full translation retains its o
 validator; a broker success does not replace it.
 
 The model's answer is written to stdout. A separate usage notice on stderr identifies the
-call and the models actually used, reports elapsed time, and shows cloud INPUT and OUTPUT
-token savings separately. Runtime calls use a **conditional first-read comparison**, not
-account billing: INPUT is the tokenized source units minus the arguments and full response;
+call and the models actually used, reports elapsed time, and shows one approximate token
+saving (or additional overhead). The underlying INPUT and OUTPUT values remain in the report.
+Runtime calls use a **conditional first-read comparison**, not account billing:
+INPUT is the tokenized source units minus the arguments and model-visible response;
 OUTPUT is the validated, delivered local answer minus the generated tool request. Either
 difference can be negative; an unsuccessful, invalid or undelivered result earns no savings
 estimate. A later cloud answer and transport framing outside that payload
-are excluded from both sides. MCP counts its serialized request/result, including metadata;
+are excluded from both sides. In methodology `cloud-comparison-v2`, MCP counts the tool name
+and arguments as JSON, decoded result text (including the usage notice), and structured result
+JSON, separated by newlines. JSON uses literal Unicode rather than transport escape sequences.
+Hidden `_meta` in requests and results is excluded. Transport byte/character volumes still
+measure the complete serialized result, including metadata. Non-text result blocks make the
+response token estimate unknown; their encoded bytes are not treated as text tokens.
 CLI counts serialized arguments and stdout followed by stderr, including the usage notice.
-These representations are explicit proxies, not a measurement of a client's model context.
+These representations are explicit proxies, not a measurement of a client's model context:
+client-specific framing and deduplication of text/structured results are unknown.
 
 Text uses the bundled `microsoft-ml-tokenizers-2.0.0:o200k_base` vocabulary, checked against
 independent reference counts. Images use `openai-gpt-4o-tiles-v1` at high detail; PDF comparisons
