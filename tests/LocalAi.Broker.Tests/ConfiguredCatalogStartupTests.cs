@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Xml.Linq;
 using LocalAi.Broker.Client;
 using LocalAi.Contracts;
+using LocalAi.Tests.Shared;
 
 namespace LocalAi.Broker.Tests;
 
@@ -207,7 +208,7 @@ public sealed class ConfiguredCatalogStartupTests
             Directory.Delete(unrelatedOutput);
             if (succeeded)
             {
-                try { Directory.Delete(consumer, recursive: true); }
+                try { OwnedProcessDirectoryCleanup.Delete(consumer, ReportCleanupRetry); }
                 catch (Exception exception)
                 {
                     PreserveCleanupFailure(consumer, diagnostics, sourceExecutable, executable, exception);
@@ -324,6 +325,10 @@ public sealed class ConfiguredCatalogStartupTests
             if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
         }
     }
+
+    private static void ReportCleanupRetry(Exception exception, int attempt) =>
+        TestContext.Current.TestOutputHelper?.WriteLine(
+            $"Owned fixture cleanup retry {attempt}: 0x{exception.HResult:X8} {exception.Message}");
 
     private static string NewRoot() =>
         Path.Combine(Path.GetTempPath(), "localai-catalog-startup-" + Guid.NewGuid().ToString("N"));
