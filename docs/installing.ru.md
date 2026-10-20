@@ -2,16 +2,20 @@
 
 [Оглавление](README.ru.md#оглавление) · [English version](installing.md)
 
-Опубликованных релизов сейчас нет, поэтому путь один: собрать из репозитория подписанный
-релиз и поставить из его папки. Установщик принимает папку, только если в ней лежат
-`release-manifest.json`, `release-manifest.sig` и `localai-package.zip`, а манифест проходит
-проверку встроенным в установщик ключом релизов.
+Установите подписанный пакет из [GitHub Releases](https://github.com/MrAliev/local-ai-toolkit/releases/latest).
+Для установки опубликованного релиза не нужны ни .NET SDK, ни закрытый ключ подписи релизов.
 
-**1. Собрать пакет.** Нужны `pwsh` 7, .NET 10 SDK версии 10.0.302 или новее (закреплено в
-`global.json`) и ключ подписи релизов.
+**1. Скачать релиз.** Из одного и того же релиза скачайте `LocalAi.Installer.exe`,
+`release-manifest.json`, `release-manifest.sig` и `localai-package.zip`. Положите три файла
+пакета в одну папку и укажите её на странице пакета в установщике. Прежде чем принять пакет,
+установщик проверяет манифест встроенным ключом релизов.
+
+**Необязательно: собрать из исходников.** Этот путь предназначен для сопровождающих проект,
+у которых есть ключ подписи релизов. Нужны `pwsh` 7 и .NET 10 SDK версии 10.0.302 или новее
+(закреплено в `global.json`). Вместо версии в примере укажите нужную версию:
 
 ```powershell
-pwsh scripts/publish-localai-release-win-x64-self-contained.ps1 -ReleaseVersion 0.1.0 -SignManifest
+pwsh scripts/publish-localai-release-win-x64-self-contained.ps1 -ReleaseVersion 0.2.2 -SignManifest
 ```
 
 Установщик окажется в `publish/LocalAi.Installer/LocalAi.Installer.exe`, а папка релиза — в

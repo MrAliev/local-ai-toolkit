@@ -101,9 +101,9 @@ unsaved buffer — and in a shell there is no such buffer, so there is nothing t
 - `localai update` downloads the newest verified release, installs its binaries as a new
   version and switches the launcher to it. Models, prerequisites and client registrations are
   left as they are: clients reach the new version through the launcher they are already
-  registered on. That is an install over an install, not an everyday operation, and you do it when you see
-  fit. While there are no published releases it goes the same way the first install did:
-  build a package and run `LocalAi.Installer.exe` over the top.
+  registered on. Run it when you choose to update. If the release also changes client
+  instructions, run its `LocalAi.Installer.exe` with the relevant client selected: a
+  runtime-only update does not rewrite those instructions.
 
 **It is information for you, in a shape made for reading.**
 
