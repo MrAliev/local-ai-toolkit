@@ -816,15 +816,18 @@ Everything named above is under {2}.</value>
     <comment>The old wording named the installation twice with two different identifiers, because DisplayName falls back to a version directory when no release version was recorded.</comment>
   </data>
   <data name="UpdateQueueBusy" xml:space="preserve">
-    <value>The broker has {0} queued job(s). Updating now would stop the tools running them. Run `localai update --wait` to update once they finish.</value>
+    <value>The broker has {0} pending job(s), queued or running. Updating now would stop the tools running them. Run `localai update --wait` to update once they finish.</value>
     <comment>Noun-first in Russian: genitive plural is correct for every count.</comment>
   </data>
   <data name="UpdateQueueStillBusy" xml:space="preserve">
-    <value>Still {0} queued job(s) after {1} minutes. Nothing was changed; try again when the queue is quieter.</value>
+    <value>Still {0} pending job(s), queued or running, after {1} minutes. Nothing was changed; try again when the broker is idle.</value>
     <comment>The Russian reorders the holes, which indexed string.Format allows: it is the only way to avoid opening on a numeral.</comment>
   </data>
   <data name="UpdateQueueWaiting" xml:space="preserve">
-    <value>Waiting for {0} queued job(s) to finish...</value>
+    <value>Waiting for {0} pending job(s), queued or running, to finish...</value>
+  </data>
+  <data name="UpdateAlreadyRunning" xml:space="preserve">
+    <value>Another update is activating a release. Try again after it finishes.</value>
   </data>
   <data name="UpdateStale" xml:space="preserve">
     <value>unknown; up to date at {0} as of {1} UTC, but more than two check intervals have passed since</value>
@@ -846,7 +849,7 @@ Everything named above is under {2}.</value>
   package against the manifest before anything is extracted, and the version
   pointer is swapped atomically once both check out.
 
-  --wait   Wait up to {0} minutes for queued broker jobs to finish instead of
+  --wait   Wait up to {0} minutes for queued and running broker jobs to finish instead of
            refusing.
   --force  Install the newest release even when it is not newer than this one.
 
