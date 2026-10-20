@@ -28,6 +28,23 @@ public sealed class CloudTokenMethodologyTests
     }
 
     [Fact]
+    public void Transport_metadata_does_not_change_the_same_model_visible_comparison()
+    {
+        const string visible = "answer\nusage notice";
+        var report = Report();
+        var scenario = Scenario(Unseen("source", "abcdefgh"));
+        var small = CloudTokenMethodology.Apply(report, scenario, """{"_meta":{},"content":"answer"}""",
+            new CharacterProfile(), visible);
+        var large = CloudTokenMethodology.Apply(report, scenario,
+            System.Text.Json.JsonSerializer.Serialize(new { _meta = new { hidden = new string('x', 20000) }, content = "answer" }),
+            new CharacterProfile(), visible);
+
+        Assert.Equal(small.CloudTokens.OrderBy(pair => pair.Key), large.CloudTokens.OrderBy(pair => pair.Key));
+        Assert.True(large.Volumes[UsageVolume.ResponseBytes].Value > small.Volumes[UsageVolume.ResponseBytes].Value);
+        Assert.Equal(visible.Length, small.CloudTokens[UsageCloudTokens.InputWithDelegation].Value);
+    }
+
+    [Fact]
     public void Already_transmitted_sources_cannot_be_credited_again()
     {
         var known = new CloudTextSource("file@revision", "abcdefgh", 0, CloudContextPresence.AlreadyPresent);
