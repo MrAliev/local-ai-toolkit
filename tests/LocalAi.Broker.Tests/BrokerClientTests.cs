@@ -98,6 +98,176 @@ public sealed class BrokerClientTests
             $"Ten polls allocated {small:N0} bytes for a small request and {large:N0} for an 8 MiB request.");
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Waiting_client_recovers_a_disappeared_worker_without_another_request(bool wasLeased)
+    {
+        using var root = new TemporaryRuntimeRoot();
+        var clock = new RecoveryClock();
+        var queue = new DurableQueue(root.Path, clock, TimeSpan.FromMinutes(1));
+        using var stop = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        var request = LocalJobRequestFactory.CreateListModels("recover-waiting-client", LocalJobPriority.Interactive);
+        var process = new RecoveryProcess(async (call, cancellationToken) =>
+        {
+            if (call == 1) return;
+            var lease = await queue.LeaseNextAsync("replacement-worker", cancellationToken);
+            Assert.NotNull(lease);
+            Assert.Equal(request.JobId, lease.Request.JobId);
+            var response = new BrokerResponseEnvelope(
+                JsonSerializer.SerializeToElement(new ListModelsJobOutput([]), LocalAiJson.Strict),
+                ReceiptFactory.Create(lease.Request, clock.GetUtcNow(), clock.GetUtcNow()));
+            await queue.CompleteAsync(lease.Request.JobId, lease.WorkerId, lease.LeaseId,
+                JsonSerializer.SerializeToElement(response, LocalAiJson.Strict), cancellationToken);
+        });
+        var polls = 0;
+        var client = new BrokerClient(queue, process, async (_, cancellationToken) =>
+        {
+            if (++polls == 1)
+            {
+                // A worker disappears either before leasing or after it acquired the job.
+                if (wasLeased) Assert.NotNull(await queue.LeaseNextAsync("disappeared-worker", cancellationToken));
+                clock.Advance(TimeSpan.FromMinutes(2));
+            }
+            else
+            {
+                // The next poll is the deterministic boundary: no wall-clock timeout is needed.
+                stop.Cancel();
+            }
+        }, timeProvider: clock);
+
+        var result = await client.ExecuteAsync<ListModelsJobOutput>(request, stop.Token);
+
+        Assert.Equal(request.JobId, result.Receipt.JobId);
+        Assert.Equal(2, process.EnsureCalls);
+        Assert.Equal(LocalJobState.Succeeded,
+            (await queue.GetStatusAsync(request.JobId, TestContext.Current.CancellationToken))!.State);
+    }
+
+    [Fact]
+    public async Task Frequent_polls_do_not_repeat_the_process_check_until_its_interval_elapsed()
+    {
+        using var root = new TemporaryRuntimeRoot();
+        using var stop = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        var clock = new RecoveryClock();
+        var queue = new DurableQueue(root.Path, clock);
+        var process = new RecoveryProcess((_, _) => Task.CompletedTask);
+        var polls = 0;
+        var client = new BrokerClient(queue, process, (_, _) =>
+        {
+            if (++polls == 20)
+            {
+                Assert.Equal(1, process.EnsureCalls);
+                clock.Advance(TimeSpan.FromSeconds(5));
+            }
+            if (polls == 40) stop.Cancel();
+            return Task.CompletedTask;
+        }, timeProvider: clock);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => client.ExecuteAsync<ListModelsJobOutput>(
+            LocalJobRequestFactory.CreateListModels("bounded-process-checks", LocalJobPriority.Interactive), stop.Token));
+
+        Assert.Equal(2, process.EnsureCalls);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Recovery_obeys_caller_cancellation_and_the_original_deadline(bool deadlineExpires)
+    {
+        using var root = new TemporaryRuntimeRoot();
+        using var stop = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        var clock = new RecoveryClock();
+        var queue = new DurableQueue(root.Path, clock);
+        var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var process = new RecoveryProcess(async (call, cancellationToken) =>
+        {
+            if (call == 1) return;
+            entered.TrySetResult(cancellationToken);
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+        });
+        var client = new BrokerClient(queue, process, (_, _) =>
+        {
+            clock.Advance(TimeSpan.FromSeconds(50));
+            return Task.CompletedTask;
+        }, timeout: TimeSpan.FromMinutes(1), timeProvider: clock);
+        var request = LocalJobRequestFactory.CreateListModels("bounded-recovery", LocalJobPriority.Interactive);
+        var pending = client.ExecuteAsync<ListModelsJobOutput>(request, stop.Token);
+        try
+        {
+            var recoveryToken = await entered.Task.WaitAsync(TestContext.Current.CancellationToken);
+            if (deadlineExpires)
+            {
+                // Only ten seconds remain, rather than a new minute granted by recovery.
+                clock.Advance(TimeSpan.FromSeconds(10));
+                Assert.True(recoveryToken.IsCancellationRequested);
+            }
+            else stop.Cancel();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pending);
+            Assert.Equal(LocalJobState.Queued,
+                (await queue.GetStatusAsync(request.JobId, TestContext.Current.CancellationToken))!.State);
+        }
+        finally
+        {
+            stop.Cancel();
+            try { await pending; }
+            catch (OperationCanceledException) { }
+        }
+    }
+
+    private sealed class RecoveryClock : TimeProvider
+    {
+        private long _ticks;
+        private readonly List<RecoveryTimer> _timers = [];
+        public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+        public override long GetTimestamp() => _ticks;
+        public override DateTimeOffset GetUtcNow() => DateTimeOffset.UnixEpoch.AddTicks(_ticks);
+        public void Advance(TimeSpan duration)
+        {
+            _ticks += duration.Ticks;
+            foreach (var timer in _timers.ToArray()) timer.FireIfDue();
+        }
+        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+        {
+            var timer = new RecoveryTimer(this, callback, state);
+            timer.Change(dueTime, period);
+            _timers.Add(timer);
+            return timer;
+        }
+
+        private sealed class RecoveryTimer(RecoveryClock clock, TimerCallback callback, object? state) : ITimer
+        {
+            private long _due = long.MaxValue;
+            private bool _disposed;
+            public bool Change(TimeSpan dueTime, TimeSpan period)
+            {
+                Assert.Equal(Timeout.InfiniteTimeSpan, period);
+                if (_disposed) return false;
+                _due = dueTime == Timeout.InfiniteTimeSpan ? long.MaxValue : clock._ticks + dueTime.Ticks;
+                return true;
+            }
+            public void FireIfDue()
+            {
+                if (_disposed || _due > clock._ticks) return;
+                _due = long.MaxValue;
+                callback(state);
+            }
+            public void Dispose() => _disposed = true;
+            public ValueTask DisposeAsync()
+            {
+                Dispose();
+                return ValueTask.CompletedTask;
+            }
+        }
+    }
+
+    private sealed class RecoveryProcess(Func<int, CancellationToken, Task> ensure) : IBrokerProcess
+    {
+        public int EnsureCalls { get; private set; }
+        public Task EnsureRunningAsync(CancellationToken cancellationToken = default) =>
+            ensure(++EnsureCalls, cancellationToken);
+    }
+
     private static async Task<long> MeasurePollingAllocations(int imageCharacters)
     {
         using var fixture = new BrokerClientFixture();
