@@ -113,31 +113,15 @@ public sealed class SystemEnvironmentProbeTests
                 Assert.Skip($"Install {command} to run the real version probe.");
             }
 
-            var result = await runner.RunAsync(
-                executable,
-                ["--version"],
-                TimeSpan.FromSeconds(5),
-                TestContext.Current.CancellationToken);
-
             // A tool that is installed and cannot run is a property of this machine, not of the
             // probe under test. scip-python 0.6.6 dies on load under Windows whenever it has to
             // build a virtual environment, so it answers its own --version with a crash on a
             // clean runner and works on a developer machine that already has an interpreter it
             // accepts. The exclusion is declared by name in LOCALAI_STRICT_FIXTURES_EXCEPT; what
             // this test owns is that the shim resolves and the probe reaches the tool at all.
-            if (result.ExitCode != 0 &&
-                FixturePrerequisite.IsExcused(command, FixturePrerequisite.Excused))
-            {
-                continue;
-            }
-
-            Assert.Equal(0, result.ExitCode);
-            Assert.False(result.TimedOut);
-            Assert.False(result.Cancelled);
-            Assert.Contains(
-                expectedVersion,
-                result.StandardOutput + result.StandardError,
-                StringComparison.Ordinal);
+            await ScipVersionProbe.VerifyAsync(
+                command, executable, expectedVersion, runner, FixturePrerequisite.Excused,
+                probe.ResolveExecutable, TestContext.Current.CancellationToken);
         }
     }
 }
