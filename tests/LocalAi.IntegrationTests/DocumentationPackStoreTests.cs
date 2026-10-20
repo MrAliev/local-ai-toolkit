@@ -485,11 +485,53 @@ public sealed class DocumentationPackStoreTests
         var external = Path.Combine(fixture.Runtime, "external"); Directory.CreateDirectory(external);
         var docs = Path.GetFullPath(Path.Combine(fixture.Worktree, relative));
         Directory.CreateDirectory(Path.GetDirectoryName(docs)!);
+        await CreateDirectoryLink(docs, external);
+        var error = Assert.Throws<DocumentationValidationException>(() => fixture.Store.Apply(fixture.Worktree, "tree"));
+        Assert.Equal(docs, error.Data["path"]);
+        Assert.Empty(Directory.GetFiles(external));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Apply_refuses_a_linked_baseline_directory_without_creating_or_overwriting_external_files(bool existingFile)
+    {
+        using var fixture = new Fixture();
+        await fixture.Build(units: []);
+        fixture.Store.Apply(fixture.Worktree, "tree");
+        var applied = Path.Combine(fixture.Runtime, "repositories", new string('a', 64), "documentation", "applied");
+        var baseline = Assert.Single(Directory.GetFiles(applied));
+        // Obtain the real baseline name without duplicating its path hashing algorithm.
+        File.Move(baseline, Path.Combine(fixture.Runtime, "original-baseline.json"));
+        Directory.Delete(applied);
+        var external = Path.Combine(fixture.Runtime, "external");
+        Directory.CreateDirectory(external);
+        var outsideBaseline = Path.Combine(external, Path.GetFileName(baseline));
+        const string original = "unrelated fixture data";
+        if (existingFile) File.WriteAllText(outsideBaseline, original);
+        await CreateDirectoryLink(applied, external);
+        try
+        {
+            var error = Assert.Throws<DocumentationValidationException>(() => fixture.Store.Apply(fixture.Worktree, "tree"));
+            Assert.Equal(applied, error.Data["path"]);
+            if (existingFile) Assert.Equal(original, File.ReadAllText(outsideBaseline));
+            else Assert.Empty(Directory.GetFiles(external));
+            Assert.Empty(Directory.GetFiles(fixture.Worktree, "*", SearchOption.AllDirectories));
+        }
+        finally
+        {
+            // Remove only the junction/link, leaving its external target untouched.
+            Directory.Delete(applied);
+        }
+    }
+
+    private static async Task CreateDirectoryLink(string path, string target)
+    {
         if (OperatingSystem.IsWindows())
         {
             // Directory junctions exercise the same reparse-point guard without the
             // elevated privilege needed to create a Windows symbolic link.
-            var start = new System.Diagnostics.ProcessStartInfo("cmd.exe", $"/d /c mklink /J \"{docs}\" \"{external}\"")
+            var start = new System.Diagnostics.ProcessStartInfo("cmd.exe", $"/d /c mklink /J \"{path}\" \"{target}\"")
             { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
             using var process = System.Diagnostics.Process.Start(start)!;
             var output = process.StandardOutput.ReadToEndAsync(TestContext.Current.CancellationToken);
@@ -497,10 +539,7 @@ public sealed class DocumentationPackStoreTests
             await process.WaitForExitAsync(TestContext.Current.CancellationToken);
             Assert.True(process.ExitCode == 0, await output + await failure);
         }
-        else Directory.CreateSymbolicLink(docs, external);
-        var error = Assert.Throws<DocumentationValidationException>(() => fixture.Store.Apply(fixture.Worktree, "tree"));
-        Assert.Equal(docs, error.Data["path"]);
-        Assert.Empty(Directory.GetFiles(external));
+        else Directory.CreateSymbolicLink(path, target);
     }
 
     private sealed class Fixture : IDisposable

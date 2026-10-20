@@ -153,6 +153,7 @@ public sealed partial class DocumentationPackStore(string runtimeRoot, string re
         var destination = Path.GetFullPath(Path.Combine(workingRoot, "docs", "generated"));
         RejectLinks(destination);
         var baselinePath = Path.Combine(Root, "applied", Hash(Encoding.UTF8.GetBytes(Normalize(workingRoot))) + ".json");
+        RejectLinks(baselinePath);
         var baseline = Read<Dictionary<string, string>>(baselinePath) ?? new(StringComparer.Ordinal);
         var provenancePath = Path.Combine(Root, "applied-origins", Path.GetFileName(baselinePath));
         var origins = Read<AppliedOrigins>(provenancePath) is { Schema: 1, Files: not null } existingOrigins ? existingOrigins.Files : new(StringComparer.Ordinal);
