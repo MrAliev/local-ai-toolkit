@@ -817,15 +817,18 @@
     <comment>The old wording named the installation twice with two different identifiers, because DisplayName falls back to a version directory when no release version was recorded.</comment>
   </data>
   <data name="UpdateQueueBusy" xml:space="preserve">
-    <value>В очереди брокера заданий {0}. Обновление сейчас остановит инструменты, которые их выполняют. Чтобы обновиться после их завершения — localai update --wait</value>
+    <value>У брокера незавершённых заданий {0}: они ожидают или выполняются. Обновление сейчас остановит инструменты, которые их выполняют. Чтобы обновиться после их завершения — localai update --wait</value>
     <comment>Noun-first in Russian: genitive plural is correct for every count.</comment>
   </data>
   <data name="UpdateQueueStillBusy" xml:space="preserve">
-    <value>Прошло {1} мин, а в очереди всё ещё заданий {0}. Ничего не изменено; попробуйте снова, когда очередь освободится.</value>
+    <value>Прошло {1} мин, а незавершённых заданий всё ещё {0}: они ожидают или выполняются. Ничего не изменено; попробуйте снова, когда брокер освободится.</value>
     <comment>The Russian reorders the holes, which indexed string.Format allows: it is the only way to avoid opening on a numeral.</comment>
   </data>
   <data name="UpdateQueueWaiting" xml:space="preserve">
-    <value>В очереди заданий {0}; ожидание их завершения...</value>
+    <value>Ожидающих или выполняющихся заданий {0}; ожидание их завершения...</value>
+  </data>
+  <data name="UpdateAlreadyRunning" xml:space="preserve">
+    <value>Другое обновление активирует релиз. Повторите попытку после его завершения.</value>
   </data>
   <data name="UpdateStale" xml:space="preserve">
     <value>неизвестно — на {1} UTC обновлений не было (установлена {0}), но с тех пор прошло больше двух интервалов проверки</value>
@@ -847,7 +850,7 @@
   манифесту до распаковки; указатель версии переключается атомарно, когда
   оба проверены.
 
-  --wait   Ждать завершения заданий в очереди брокера, не больше {0} мин,
+  --wait   Ждать завершения ожидающих и выполняющихся заданий брокера, не больше {0} мин,
            вместо отказа.
   --force  Ставить самый новый релиз, даже если он не новее текущего.
 
