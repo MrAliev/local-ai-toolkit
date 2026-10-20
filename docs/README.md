@@ -52,7 +52,7 @@ if you would rather work on your own.
 - [What language it answers in](what-language-it-answers-in.md)
 - [Updating and removing](updating-and-removing.md)
   - [Update](updating-and-removing.md#update)
-  - [Clear the index, keep the product](updating-and-removing.md#clear-the-index-keep-the-product)
+  - [Remove expired data, keep the product](updating-and-removing.md#remove-expired-data-keep-the-product)
   - [Remove it entirely](updating-and-removing.md#remove-it-entirely)
 - [Impact evidence: C# pilot](impact-evidence-c-pilot.md)
 - [Documentation packages](documentation-packages.md)
