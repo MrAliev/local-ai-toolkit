@@ -2,18 +2,21 @@
 
 [Русская версия](privacy.ru.md)
 
-Local AI runs its models on your computer. Your code, prompts, logs, images and the answers
-about them go to Ollama on this computer and nowhere else. The program collects nothing
-about you and sends nothing about you anywhere.
+Local AI runs model inference through Ollama on your computer by default. Local tools return
+results to the client that called them, including model answers and selected source excerpts.
+A cloud agent can include those results in requests to its cloud provider. Local inference
+does not guarantee that returned content stays on this computer; the client's configuration
+and data policy govern that transfer.
 
-This page lists every connection Local AI makes to another computer, what starts it, and what
-it sends.
+This page lists the connections Local AI itself makes to another computer, what starts them,
+and what they send. Connections made by a cloud client are controlled by that client.
 
-## What stays on this computer
+## Local processing and storage
 
-- **Everything a model reads or writes.** The broker is the only part that talks to a model,
-  and it talks to Ollama at `http://127.0.0.1:11434/`, on this computer. The one exception is
-  a broker you start by hand with another address.
+- **Model requests.** The broker is the only part that talks to a model, and by default it
+  talks to Ollama at `http://127.0.0.1:11434/`, on this computer. A broker you start by hand
+  with another address sends model requests to that address. Results returned to a client
+  can then be forwarded by that client, as described above.
 - **The code index.** It is built and kept under `%LOCALAPPDATA%\LocalAi\repositories`.
 - **Usage reports and model telemetry.** They are written under
   `%LOCALAPPDATA%\LocalAi\telemetry` and read only by `localai telemetry`. Model telemetry
