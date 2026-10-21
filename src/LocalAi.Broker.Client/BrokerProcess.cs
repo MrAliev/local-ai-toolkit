@@ -555,7 +555,27 @@ public sealed class BrokerProcess : IBrokerProcess
         return builder.ToString();
     }
 
-    private static string Quote(string value) => "\"" + value.Replace("\"", "\\\"") + "\"";
+    private static string Quote(string value)
+    {
+        var builder = new StringBuilder(value.Length + 2).Append('"');
+        var backslashes = 0;
+        foreach (var character in value)
+        {
+            if (character == '\\')
+            {
+                backslashes++;
+                continue;
+            }
+
+            // Windows argv parsing consumes pairs of backslashes immediately before a quote.
+            builder.Append('\\', character == '"' ? backslashes * 2 + 1 : backslashes);
+            builder.Append(character);
+            backslashes = 0;
+        }
+
+        builder.Append('\\', backslashes * 2);
+        return builder.Append('"').ToString();
+    }
 
     private SemaphoreLease EnterSemaphore(
         long startupTimestamp,
