@@ -277,4 +277,6 @@
   <data name="WorkingSetTrimmed" xml:space="preserve">
     <value>рабочий набор процесса сжат</value>
   </data>
+  <data name="NavigationUnknownHeader" xml:space="preserve"><value>Навигация: UNKNOWN (не удалось проверить заголовок семантического индекса или оверлея); выполните: {0}</value></data>
+  <data name="NavigationHeaderOnly" xml:space="preserve"><value>Навигация: HEADER ONLY (семантические заголовки совпадают; эта проверка состояния не подтверждает целостность всех данных и готовность навигации)</value></data>
 </root>

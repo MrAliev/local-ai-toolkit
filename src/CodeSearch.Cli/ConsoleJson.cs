@@ -161,9 +161,7 @@ public static class ConsoleJson
             connected ? "CONFIGURED" : "NOT_CONFIGURED",
             status.Exists,
             status.CommitDrifted,
-            status.SemanticIndexPresent && !status.SemanticIndexCoversNothing
-                ? "Precise"
-                : "Heuristic",
+            status.NavigationState,
             status.WorkingRoot,
             status.RepositoryRoot,
             status.IndexPath,

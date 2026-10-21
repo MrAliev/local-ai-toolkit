@@ -578,6 +578,24 @@ public sealed class UntrustedContentMcpTests : IDisposable
         Assert.Contains("sync --root", status, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void An_unreadable_semantic_header_is_unknown_in_MCP_and_CLI_without_pretending_the_file_is_missing()
+    {
+        PublishGenerationWithCoveringSemanticIndex();
+        var store = new GenerationStore(_identity.RepositoryRuntimeRoot);
+        var path = store.SemanticIndexPath(store.ReadCurrent()!.GenerationId);
+        File.WriteAllText(path, "corrupt semantic header");
+
+        var status = _service.Status(_root);
+        var response = CodeSearchTools.IndexStatus(_service, Reader(), _root);
+
+        Assert.True(status.SemanticIndexPresent);
+        Assert.False(status.SemanticIndexCoversNothing);
+        Assert.Contains("Navigation: UNKNOWN", response, StringComparison.Ordinal);
+        Assert.DoesNotContain(CodeSearchText.NavigationPrecise, response, StringComparison.Ordinal);
+        Assert.Equal("Unknown", CodeSearch.Cli.ConsoleJson.Describe(status, connected: true).Navigation);
+    }
+
     /// <summary>
     /// Precision is a property of this worktree, not of the generation. The gateway reaches for a
     /// semantic overlay whenever the head tree differs from the generation's or the tree is dirty,
@@ -594,7 +612,7 @@ public sealed class UntrustedContentMcpTests : IDisposable
     {
         PublishGenerationWithCoveringSemanticIndex();
         Assert.Contains(
-            CodeSearchText.NavigationPrecise,
+            CodeSearchText.NavigationHeaderOnly,
             CodeSearchTools.IndexStatus(_service, Reader(), _root),
             StringComparison.Ordinal);
 
@@ -603,7 +621,7 @@ public sealed class UntrustedContentMcpTests : IDisposable
         var status = CodeSearchTools.IndexStatus(_service, Reader(), _root);
 
         Assert.DoesNotContain(
-            CodeSearchText.NavigationPrecise,
+            CodeSearchText.NavigationHeaderOnly,
             status,
             StringComparison.Ordinal);
         // Not HEURISTIC either: two of the four navigation tools refuse in this state rather than

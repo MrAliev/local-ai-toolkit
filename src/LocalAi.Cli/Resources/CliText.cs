@@ -456,6 +456,15 @@ public static class CliText
     public static string RepositoryState(object state, string generation) =>
         Catalogue.Format(nameof(RepositoryState), state, generation);
 
+    public static string DoctorRepositoryScopes(string root, string state, string generation, string navigation,
+        object sharedState, string sharedGeneration) =>
+        Catalogue.Format(nameof(DoctorRepositoryScopes), root, state, generation, navigation, sharedState, sharedGeneration);
+    public static string DoctorRepositorySync(string status, string root, string progress, string updated) =>
+        Catalogue.Format(nameof(DoctorRepositorySync), status, root, progress, updated);
+    public static string DoctorRepositorySyncNone => Catalogue.Get(nameof(DoctorRepositorySyncNone));
+    public static string DoctorRepositorySyncUnknown => Catalogue.Get(nameof(DoctorRepositorySyncUnknown));
+    public static string DoctorNavigationHeaderOnly => Catalogue.Get(nameof(DoctorNavigationHeaderOnly));
+
     public static string GenerationNone => Catalogue.Get(nameof(GenerationNone));
 
     // What `localai sync` says while it works. The `SYNCED` and `REFUSED` lines are not

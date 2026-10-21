@@ -395,6 +395,37 @@ public sealed record SemanticIndexOverlay
             AtomicWrite.Recomputable);
     }
 
+    internal static bool StatusHeaderMatches(string path, string repositoryId, string generationId,
+        string baseGitTree, string gitTree, string? dirtyHash)
+    {
+        try
+        {
+            using var reader = SemanticIndex.OpenStatusHeader(path);
+            if (Encoding.ASCII.GetString(reader.ReadBytes(4)) != Magic || reader.ReadInt32() != CurrentVersion)
+                return false;
+            var actualRepository = SemanticIndex.ReadStatusHeaderString(reader);
+            var actualGeneration = SemanticIndex.ReadStatusHeaderString(reader);
+            var actualBaseTree = SemanticIndex.ReadStatusHeaderString(reader);
+            var actualTree = SemanticIndex.ReadStatusHeaderString(reader);
+            var dirtyFlag = reader.ReadByte();
+            if (dirtyFlag > 1) return false;
+            var actualDirty = dirtyFlag == 1 ? SemanticIndex.ReadStatusHeaderString(reader) : null;
+            var count = reader.ReadInt32();
+            if (count is < 0 or > MaximumTombstones || count > reader.BaseStream.Length - reader.BaseStream.Position)
+                return false;
+            for (var index = 0; index < count; index++) SemanticIndex.ReadStatusHeaderString(reader);
+            return actualRepository == repositoryId && actualGeneration == generationId &&
+                actualBaseTree == baseGitTree && actualTree == gitTree && actualDirty == dirtyHash &&
+                SemanticIndex.ReadStatusDocumentCount(reader, repositoryId, generationId, gitTree,
+                    dirtyHash, checkDirtyHash: true) is not null;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or
+            InvalidDataException or ArgumentException or FormatException)
+        {
+            return false;
+        }
+    }
+
     public static SemanticIndexOverlay Load(string path)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);

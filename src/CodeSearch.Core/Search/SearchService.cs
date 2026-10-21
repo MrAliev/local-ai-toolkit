@@ -76,6 +76,20 @@ public sealed record IndexStatus(
     // the question anybody actually asks.
     bool SemanticOverlayPresent = false)
 {
+    /// <summary>The generation stored in the index actually inspected, not a second pointer read.</summary>
+    public string GenerationId { get; init; } = string.Empty;
+    /// <summary>Null if absent/not checked; false includes a header exceeding the bounded read budget.</summary>
+    public bool? SemanticIndexHeaderReadable { get; init; }
+    /// <summary>Header evidence only; no whole-overlay or corpus integrity claim.</summary>
+    public bool? SemanticOverlayHeaderReadable { get; init; }
+
+    /// <summary>Read-only header evidence, not a full corpus integrity check.</summary>
+    public string NavigationState => !SemanticIndexPresent ? "Heuristic"
+        : SemanticIndexHeaderReadable != true ? "Unknown"
+        : SemanticIndexCoversNothing ? "Heuristic"
+        : SemanticOverlayMissing ? "NotReady"
+        : RequiresOverlay && SemanticOverlayHeaderReadable != true ? "Unknown" : "HeaderOnly";
+
     public bool CommitDrifted =>
         Exists && IndexedCommit.Length > 0 && CurrentCommit.Length > 0 && IndexedCommit != CurrentCommit;
 
@@ -486,6 +500,7 @@ public sealed class SearchService : IDisposable
             currentCommit,
             identity);
         var presence = SemanticIndexPresence(index, identity);
+        var semanticOverlay = SemanticOverlayPresence(index, identity);
 
         return new IndexStatus(
             workingRoot,
@@ -505,7 +520,12 @@ public sealed class SearchService : IDisposable
             overlay,
             presence.Present,
             presence.CoversNothing,
-            SemanticOverlayPresent(index, identity));
+            semanticOverlay.Present)
+        {
+            GenerationId = index.GenerationId,
+            SemanticIndexHeaderReadable = presence.Readable,
+            SemanticOverlayHeaderReadable = semanticOverlay.Readable,
+        };
     }
 
     /// <summary>
@@ -514,19 +534,21 @@ public sealed class SearchService : IDisposable
     /// needed the file is not there and the answer is false, which is why
     /// <see cref="IndexStatus.SemanticOverlayMissing"/> asks about need first.
     /// </summary>
-    private static bool SemanticOverlayPresent(
+    private static (bool Present, bool? Readable) SemanticOverlayPresence(
         CodeIndex index,
         WorkingIndexIdentity? identity)
     {
         if (identity is null || string.IsNullOrWhiteSpace(index.GenerationId))
         {
-            return false;
+            return (false, null);
         }
 
         try
         {
-            return File.Exists(
-                RuntimeIndexLayout.SemanticOverlayPath(identity, index.GenerationId));
+            var path = RuntimeIndexLayout.SemanticOverlayPath(identity, index.GenerationId);
+            return !File.Exists(path) ? (false, null)
+                : (true, SemanticIndexOverlay.StatusHeaderMatches(path, identity.RepositoryId,
+                    index.GenerationId, index.GitTree, identity.HeadTree, identity.DirtyHash));
         }
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException or ArgumentException)
@@ -534,7 +556,7 @@ public sealed class SearchService : IDisposable
             // Unreadable is reported as absent, and it costs the reader a line saying the overlay
             // is not built rather than a promise of precision. That is the safe direction: the
             // navigation call would refuse either way.
-            return false;
+            return (false, null);
         }
     }
 
@@ -545,13 +567,13 @@ public sealed class SearchService : IDisposable
     /// pay that. The document count sits just past a short fixed header, so the second question
     /// costs a few bytes rather than the whole index.
     /// </summary>
-    private static (bool Present, bool CoversNothing) SemanticIndexPresence(
+    private static (bool Present, bool CoversNothing, bool? Readable) SemanticIndexPresence(
         CodeIndex index,
         WorkingIndexIdentity? identity)
     {
         if (identity is null || string.IsNullOrWhiteSpace(index.GenerationId))
         {
-            return (false, false);
+            return (false, false, null);
         }
 
         try
@@ -560,18 +582,17 @@ public sealed class SearchService : IDisposable
                 .SemanticIndexPath(index.GenerationId);
             if (!File.Exists(path))
             {
-                return (false, false);
+                return (false, false, null);
             }
 
-            // Unreadable is reported as present and not empty: this line describes the index, and
-            // guessing that a file it could not parse holds nothing would be a louder claim than
-            // the evidence supports.
-            return (true, SemanticIndex.TryReadDocumentCount(path) == 0);
+            var count = SemanticIndex.TryReadDocumentCount(path, index.RepositoryId, index.GenerationId,
+                index.GitTree, index.DirtyHash, verifyDirtyHash: true);
+            return (true, count == 0, count is not null);
         }
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
-            return (false, false);
+            return (false, false, null);
         }
     }
 
