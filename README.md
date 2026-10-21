@@ -1050,6 +1050,16 @@ triage in route order — candidates, then fallbacks — and for each installed 
 context sizes from largest to smallest, up to the limit in `log-triage.json`, until the broker
 accepts a load (by default, only when the model loads entirely into video memory). It then
 works through the file in pieces sized to the accepted context.
+
+A streaming detector counts error diagnostic lines and occurrences by code independently of
+the model; repeated source lines are not deduplicated. MSBuild summary totals are reported
+separately. The report includes a source hash and original line numbers with bounded diagnostic
+and summary samples. Sample limits do not reduce counts; lines exceeding the parser limit
+explicitly mark the counts as potentially incomplete. Model-reported diagnostic counts are
+checked against the source. Incorrect counts, omitted errors or invented codes reject the model
+diagnosis and produce the deterministic source report. No recognized diagnostics does not mean
+that the build succeeded.
+
 It takes a stream too, so the log need not be saved at all:
 
 ```powershell

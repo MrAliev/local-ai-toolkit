@@ -114,6 +114,36 @@
   <data name="LogTextRead" xml:space="preserve">
     <value>Разобран текстовый лог ({0} символов), фрагментов: {1}, контекст: {2}</value>
   </data>
+  <data name="LogErrorLineCount" xml:space="preserve">
+    <value>Строк с ошибками в источнике: {0}</value>
+  </data>
+  <data name="LogErrorCodeCounts" xml:space="preserve">
+    <value>По кодам: {0}</value>
+  </data>
+  <data name="LogMsBuildSummary" xml:space="preserve">
+    <value>Сводка MSBuild: {0}</value>
+  </data>
+  <data name="LogErrorSamples" xml:space="preserve">
+    <value>Показано строк с ошибками: {0} из {1}. Ограничение числа показанных строк не влияет на подсчёт диагностических сообщений.</value>
+  </data>
+  <data name="LogDiagnosticLine" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="LogModelVerificationFailed" xml:space="preserve">
+    <value>Ответ модели не прошел сверку. Показан детерминированный отчёт по источнику.</value>
+  </data>
+  <data name="LogModelVerificationPassed" xml:space="preserve">
+    <value>Количество диагностических сообщений в ответе модели совпадает с источником.</value>
+  </data>
+  <data name="LogNoRecognizedErrors" xml:space="preserve">
+    <value>Распознаваемые сообщения об ошибках не найдены. Результат сборки не подтверждён.</value>
+  </data>
+  <data name="LogUnparsedLongLines" xml:space="preserve">
+    <value>Строк, превышающих предел разбора: {0}. Диагностические сообщения могут быть подсчитаны не полностью.</value>
+  </data>
+  <data name="LogOmittedBuildSummaries" xml:space="preserve">
+    <value>Не показано дополнительных сводок MSBuild: {0}</value>
+  </data>
   <data name="LogTriageNoReceipt" xml:space="preserve">
     <value>При разборе лога не получено ни одного ответа модели.</value>
   </data>
