@@ -76,6 +76,9 @@ public sealed record IndexStatus(
     // the question anybody actually asks.
     bool SemanticOverlayPresent = false)
 {
+    /// <summary>The generation stored in the index actually inspected, not a second pointer read.</summary>
+    public string GenerationId { get; init; } = string.Empty;
+
     public bool CommitDrifted =>
         Exists && IndexedCommit.Length > 0 && CurrentCommit.Length > 0 && IndexedCommit != CurrentCommit;
 
@@ -504,7 +507,7 @@ public sealed class SearchService : IDisposable
             overlay,
             presence.Present,
             presence.CoversNothing,
-            SemanticOverlayPresent(index, identity));
+            SemanticOverlayPresent(index, identity)) { GenerationId = index.GenerationId };
     }
 
     /// <summary>

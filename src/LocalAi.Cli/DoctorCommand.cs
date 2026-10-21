@@ -103,11 +103,11 @@ public static class DoctorCommand
         checks.AddRange(CheckPolicies(root, now ?? DateTimeOffset.UtcNow));
         if (!string.IsNullOrWhiteSpace(repositoryRoot))
         {
-            checks.Add(CheckRepository(root, repositoryRoot));
+            checks.Add(CheckRepository(root, repositoryRoot, now ?? DateTimeOffset.UtcNow));
         }
         else if (!string.IsNullOrWhiteSpace(workingDirectory))
         {
-            checks.Add(CheckRepositoryWhereWeStand(root, workingDirectory));
+            checks.Add(CheckRepositoryWhereWeStand(root, workingDirectory, now ?? DateTimeOffset.UtcNow));
         }
 
         return new DoctorReport(checks);
@@ -670,7 +670,8 @@ public static class DoctorCommand
     /// </summary>
     private static DoctorCheck CheckRepositoryWhereWeStand(
         string runtimeRoot,
-        string workingDirectory)
+        string workingDirectory,
+        DateTimeOffset now)
     {
         var examined = Path.GetFullPath(workingDirectory);
         var workingRoot = CodeSearch.Core.Indexing.RepoLocator.ResolveWorkingRoot(examined);
@@ -684,7 +685,7 @@ public static class DoctorCommand
                 Facts(("directory", examined)));
         }
 
-        var check = CheckRepository(runtimeRoot, workingRoot.Value);
+        var check = CheckRepository(runtimeRoot, workingRoot.Value, now);
         return check.Status == DoctorStatus.Failed
             ? new DoctorCheck(
                 "repository",
@@ -694,7 +695,7 @@ public static class DoctorCommand
             : check;
     }
 
-    private static DoctorCheck CheckRepository(string runtimeRoot, string? repositoryRoot)
+    private static DoctorCheck CheckRepository(string runtimeRoot, string? repositoryRoot, DateTimeOffset now)
     {
         try
         {
@@ -711,20 +712,62 @@ public static class DoctorCommand
                     Facts(
                         ("repositoryId", identity.RepositoryId),
                         ("repositoryRoot", identity.RepositoryRoot.Value),
+                        ("worktreeRoot", identity.WorkingRoot.Value),
                         ("state", nameof(RepositoryIndexState.NotConfigured))));
             }
 
+            // Resolve the same publication and freshness rules as CodeSearch. A completed
+            // worktree may already use a generation while the shared sync remains incomplete.
+            // Status never creates an embedding client, starts a broker or refreshes an index.
+            var index = new CodeSearch.Core.Search.SearchService(runtimeRoot: runtimeRoot)
+                .Status(identity.WorkingRoot.Value);
+            var usable = index.Exists && (!index.RequiresOverlay ||
+                index.Overlay.Exists && !index.Overlay.BaseDrifted(index.IndexedCommit));
+            var worktreeState = !index.Exists ? "Missing"
+                : !usable ? "NeedsOverlay"
+                : index.CommitDrifted ? "Stale" : "Current";
+            var navigation = !index.SemanticIndexPresent || index.SemanticIndexCoversNothing ? "Heuristic"
+                : index.SemanticOverlayMissing ? "NeedsOverlay" : "Precise";
+            var progress = new RepositoryIndexProgressStore(identity.RepositoryRuntimeRoot).Read();
+            var syncState = progress is null ? "None"
+                : progress.Phase == RepositoryIndexProgressPhase.Completed ? "Completed"
+                : progress.Phase == RepositoryIndexProgressPhase.Failed ? "Failed"
+                : manifest.State == RepositoryIndexState.Current && manifest.UpdatedAtUtc > progress.UpdatedAtUtc ? "Historical"
+                : now - progress.UpdatedAtUtc > RepoFollowCommand.DefaultStaleAfter ? "Interrupted" : "Recent";
             var repositoryFacts = Facts(
                 ("repositoryId", identity.RepositoryId),
                 ("repositoryRoot", identity.RepositoryRoot.Value),
+                ("worktreeRoot", identity.WorkingRoot.Value),
                 ("state", manifest.State.ToString()),
-                ("generationId", manifest.CurrentGenerationId));
+                ("generationId", manifest.CurrentGenerationId),
+                ("worktreeState", worktreeState),
+                ("worktreeUsable", usable),
+                ("worktreeGenerationId", index.GenerationId),
+                ("worktreeIndexPath", index.IndexPath),
+                ("worktreeRequiresOverlay", index.RequiresOverlay),
+                ("worktreeNavigation", navigation),
+                ("syncStatus", syncState),
+                ("syncWorkingRoot", progress?.WorkingRoot),
+                ("syncPhase", progress?.Phase.ToString()),
+                ("syncUpdatedAtUtc", progress?.UpdatedAtUtc),
+                ("syncStep", progress?.Step?.ToString()),
+                ("syncStepDone", progress?.Step is not null ? progress.StepDone : null),
+                ("syncStepTotal", progress?.Step is not null ? progress.StepTotal : null),
+                ("syncProcessedChunks", progress?.Phase.CountsChunks() == true ? progress.ProcessedChunks : null),
+                ("syncTotalChunks", progress?.Phase.CountsChunks() == true ? progress.TotalChunks : null));
+            var detail = CliText.DoctorRepositoryScopes(identity.WorkingRoot.Value, worktreeState,
+                Short(index.GenerationId), navigation, manifest.State, Short(manifest.CurrentGenerationId));
+            detail += " " + (progress is null ? CliText.DoctorRepositorySyncNone
+                : CliText.DoctorRepositorySync(syncState, progress.WorkingRoot,
+                    SyncProgressReporter.Format(progress), progress.UpdatedAtUtc.ToString("u", CultureInfo.InvariantCulture)));
             return new DoctorCheck(
                 "repository",
-                manifest.State == RepositoryIndexState.Current
+                manifest.State == RepositoryIndexState.Current && usable && !index.CommitDrifted &&
+                    navigation != "NeedsOverlay" &&
+                    syncState is not ("Failed" or "Interrupted")
                     ? DoctorStatus.Ok
                     : DoctorStatus.Warning,
-                CliText.RepositoryState(manifest.State, Short(manifest.CurrentGenerationId)),
+                detail,
                 repositoryFacts);
         }
         // JsonException belongs here beside InvalidDataException: the manifest is read by
