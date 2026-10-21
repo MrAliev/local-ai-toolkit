@@ -726,10 +726,28 @@ public static class DoctorCommand
             var worktreeState = !index.Exists ? "Missing"
                 : !usable ? "NeedsOverlay"
                 : index.CommitDrifted ? "Stale" : "Current";
-            var navigation = !index.SemanticIndexPresent || index.SemanticIndexCoversNothing ? "Heuristic"
-                : index.SemanticOverlayMissing ? "NeedsOverlay" : "Precise";
-            var progress = new RepositoryIndexProgressStore(identity.RepositoryRuntimeRoot).Read();
-            var syncState = progress is null ? "None"
+            var navigation = index.NavigationState;
+            RepositoryIndexProgress? progress = null;
+            var progressUnknown = false;
+            try
+            {
+                progress = new RepositoryIndexProgressStore(identity.RepositoryRuntimeRoot).Read();
+                if (progress is not null && (progress.RepositoryId != identity.RepositoryId ||
+                    !Enum.IsDefined(progress.Phase) ||
+                    progress.Step is { } step && !Enum.IsDefined(step) ||
+                    progress.Pause is { } pause && !Enum.IsDefined(pause)))
+                {
+                    progress = null;
+                    progressUnknown = true;
+                }
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or
+                InvalidDataException or ArgumentException)
+            {
+                // Optional shared progress cannot erase independently established worktree facts.
+                progressUnknown = true;
+            }
+            var syncState = progressUnknown ? "Unknown" : progress is null ? "None"
                 : progress.Phase == RepositoryIndexProgressPhase.Completed ? "Completed"
                 : progress.Phase == RepositoryIndexProgressPhase.Failed ? "Failed"
                 : manifest.State == RepositoryIndexState.Current && manifest.UpdatedAtUtc > progress.UpdatedAtUtc ? "Historical"
@@ -746,6 +764,10 @@ public static class DoctorCommand
                 ("worktreeIndexPath", index.IndexPath),
                 ("worktreeRequiresOverlay", index.RequiresOverlay),
                 ("worktreeNavigation", navigation),
+                ("worktreeSemanticIndexPresent", index.SemanticIndexPresent),
+                ("worktreeSemanticIndexHeaderReadable", index.SemanticIndexHeaderReadable),
+                ("worktreeSemanticOverlayPresent", index.SemanticOverlayPresent),
+                ("worktreeSemanticOverlayHeaderReadable", index.SemanticOverlayHeaderReadable),
                 ("syncStatus", syncState),
                 ("syncWorkingRoot", progress?.WorkingRoot),
                 ("syncPhase", progress?.Phase.ToString()),
@@ -756,16 +778,18 @@ public static class DoctorCommand
                 ("syncProcessedChunks", progress?.Phase.CountsChunks() == true ? progress.ProcessedChunks : null),
                 ("syncTotalChunks", progress?.Phase.CountsChunks() == true ? progress.TotalChunks : null));
             var detail = CliText.DoctorRepositoryScopes(identity.WorkingRoot.Value, worktreeState,
-                Short(index.GenerationId), navigation, manifest.State, Short(manifest.CurrentGenerationId));
-            detail += " " + (progress is null ? CliText.DoctorRepositorySyncNone
+                Short(index.GenerationId), navigation == "HeaderOnly" ? CliText.DoctorNavigationHeaderOnly : navigation,
+                manifest.State, Short(manifest.CurrentGenerationId));
+            detail += " " + (progressUnknown ? CliText.DoctorRepositorySyncUnknown
+                : progress is null ? CliText.DoctorRepositorySyncNone
                 : CliText.DoctorRepositorySync(syncState, progress.WorkingRoot,
                     SyncProgressReporter.Format(progress), progress.UpdatedAtUtc.ToString("u", CultureInfo.InvariantCulture)));
             return new DoctorCheck(
                 "repository",
                 manifest.State == RepositoryIndexState.Current && usable && !index.CommitDrifted &&
-                    navigation != "NeedsOverlay" &&
-                    syncState is not ("Failed" or "Interrupted")
-                    ? DoctorStatus.Ok
+                    navigation is not ("NotReady" or "Unknown") &&
+                    syncState is not ("Failed" or "Interrupted" or "Unknown")
+                    ? (navigation == "HeaderOnly" ? DoctorStatus.Unknown : DoctorStatus.Ok)
                     : DoctorStatus.Warning,
                 detail,
                 repositoryFacts);

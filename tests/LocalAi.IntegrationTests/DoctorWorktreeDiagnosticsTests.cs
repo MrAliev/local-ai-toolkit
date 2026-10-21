@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using CodeSearch.Core.Indexing;
+using CodeSearch.Core.Semantics;
 using LocalAi.Cli;
 using LocalAi.Contracts;
 using LocalAi.Repository;
@@ -130,6 +131,122 @@ public sealed class DoctorWorktreeDiagnosticsTests : IDisposable
         Assert.Equal(DoctorStatus.Warning, check.Status);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Unreadable_semantic_headers_cannot_claim_precise_navigation(bool unsupportedVersion)
+    {
+        var (_, worktree) = CreateRepository();
+        var runtime = Path.Combine(root, "runtime");
+        var identity = RuntimeIndexLayout.Inspect(worktree, runtime);
+        var store = new GenerationStore(identity.RepositoryRuntimeRoot);
+        var generation = Publish(identity, "ready-model", withSemantics: true);
+        store.SetCurrent(generation);
+        SaveCurrentManifest(identity, generation);
+        Assert.Equal("HeaderOnly", Fact(RepositoryCheck(runtime, worktree, DateTimeOffset.UtcNow), "worktreeNavigation"));
+        var path = store.SemanticIndexPath(generation.Identity.Id);
+        if (unsupportedVersion)
+        {
+            using var writer = new BinaryWriter(File.Create(path));
+            writer.Write(System.Text.Encoding.ASCII.GetBytes("SIDX"));
+            writer.Write(SemanticIndex.CurrentVersion + 1);
+        }
+        else File.WriteAllText(path, "not a semantic index");
+
+        var check = RepositoryCheck(runtime, worktree, DateTimeOffset.UtcNow);
+
+        Assert.Equal("Unknown", Fact(check, "worktreeNavigation"));
+        Assert.Equal(DoctorStatus.Warning, check.Status);
+        Assert.Equal(true, Fact(check, "worktreeUsable"));
+    }
+
+    [Fact]
+    public void A_corrupt_semantic_overlay_does_not_become_precise_merely_by_existing()
+    {
+        var (_, worktree) = CreateRepository();
+        var runtime = Path.Combine(root, "runtime");
+        var identity = RuntimeIndexLayout.Inspect(worktree, runtime);
+        var store = new GenerationStore(identity.RepositoryRuntimeRoot);
+        var generation = Publish(identity, "ready-model", withSemantics: true);
+        store.SetCurrent(generation);
+        SaveCurrentManifest(identity, generation);
+        File.WriteAllText(Path.Combine(worktree, "Changed.cs"), "class Changed {}\n");
+        var dirty = RuntimeIndexLayout.Inspect(worktree, runtime);
+        var overlayPath = RuntimeIndexLayout.OverlayPath(dirty, generation.Identity.Id);
+        Directory.CreateDirectory(Path.GetDirectoryName(overlayPath)!);
+        new CodeIndex
+        {
+            Root = worktree, Model = "ready-model", Dim = 2, GitCommit = dirty.HeadCommit,
+            GitTree = dirty.HeadTree, RepositoryId = dirty.RepositoryId, GenerationId = generation.Identity.Id,
+            DirtyHash = dirty.DirtyHash, BaseCommit = identity.HeadCommit,
+            IndexedAtUtc = DateTime.UtcNow, Files = [], Chunks = [], Vectors = [],
+        }.Save(overlayPath);
+        var semanticPath = RuntimeIndexLayout.SemanticOverlayPath(dirty, generation.Identity.Id);
+        Directory.CreateDirectory(Path.GetDirectoryName(semanticPath)!);
+        File.WriteAllText(semanticPath, "broken semantic overlay");
+
+        var check = RepositoryCheck(runtime, worktree, DateTimeOffset.UtcNow);
+
+        Assert.Equal("Unknown", Fact(check, "worktreeNavigation"));
+        Assert.Equal(DoctorStatus.Warning, check.Status);
+    }
+
+    [Fact]
+    public void A_valid_header_with_truncated_semantic_body_is_only_header_evidence_not_readiness()
+    {
+        var (_, worktree) = CreateRepository();
+        var runtime = Path.Combine(root, "runtime");
+        var identity = RuntimeIndexLayout.Inspect(worktree, runtime);
+        var store = new GenerationStore(identity.RepositoryRuntimeRoot);
+        var generation = Publish(identity, "ready-model", withSemantics: true);
+        store.SetCurrent(generation);
+        SaveCurrentManifest(identity, generation);
+        var path = store.SemanticIndexPath(generation.Identity.Id);
+        using (var stream = File.Open(path, FileMode.Open, FileAccess.ReadWrite))
+        using (var reader = new BinaryReader(stream, System.Text.Encoding.UTF8, leaveOpen: true))
+        {
+            reader.ReadBytes(4);
+            reader.ReadInt32();
+            for (var index = 0; index < 3; index++) reader.ReadString();
+            if (reader.ReadBoolean()) reader.ReadString();
+            reader.ReadString();
+            reader.ReadInt64();
+            reader.ReadInt32();
+            stream.SetLength(stream.Position);
+        }
+        Assert.Equal(1, SemanticIndex.TryReadDocumentCount(path));
+        Assert.ThrowsAny<IOException>(() => SemanticIndex.Load(path));
+
+        var check = RepositoryCheck(runtime, worktree, DateTimeOffset.UtcNow);
+
+        Assert.Equal("HeaderOnly", Fact(check, "worktreeNavigation"));
+        Assert.Equal("Current", Fact(check, "worktreeState"));
+        Assert.Equal(DoctorStatus.Unknown, check.Status);
+    }
+
+    [Theory]
+    [InlineData("{ invalid JSON")]
+    [InlineData("{\"SchemaVersion\":42,\"Progress\":null}")]
+    public void Unreadable_optional_progress_preserves_known_worktree_facts(string content)
+    {
+        var (_, worktree) = CreateRepository();
+        var runtime = Path.Combine(root, "runtime");
+        var identity = RuntimeIndexLayout.Inspect(worktree, runtime);
+        var store = new GenerationStore(identity.RepositoryRuntimeRoot);
+        var generation = Publish(identity, "ready-model");
+        store.SetCurrent(generation);
+        SaveCurrentManifest(identity, generation);
+        File.WriteAllText(Path.Combine(identity.RepositoryRuntimeRoot.Value, "progress.json"), content);
+
+        var check = RepositoryCheck(runtime, worktree, DateTimeOffset.UtcNow);
+
+        Assert.Equal(DoctorStatus.Warning, check.Status);
+        Assert.Equal("Unknown", Fact(check, "syncStatus"));
+        Assert.Equal("Current", Fact(check, "worktreeState"));
+        Assert.Equal(generation.Identity.Id, Fact(check, "worktreeGenerationId"));
+        Assert.Equal(worktree, Fact(check, "worktreeRoot"));
+    }
+
     private (string Repository, string Worktree) CreateRepository()
     {
         var repository = Path.Combine(root, "repository");
@@ -141,10 +258,10 @@ public sealed class DoctorWorktreeDiagnosticsTests : IDisposable
         return (repository, worktree);
     }
 
-    private GenerationManifest Publish(WorkingIndexIdentity identity, string model)
+    private GenerationManifest Publish(WorkingIndexIdentity identity, string model, bool withSemantics = false)
     {
         var generation = new GenerationIdentity(identity.RepositoryId, identity.HeadCommit, identity.HeadTree,
-            model, 2, 1, CodeIndex.CurrentVersion, 3, 1);
+            model, 2, 1, CodeIndex.CurrentVersion, 3, 1, withSemantics ? SemanticIndex.CurrentVersion : 0);
         var source = Path.Combine(root, generation.Id + ".cidx");
         new CodeIndex
         {
@@ -152,13 +269,34 @@ public sealed class DoctorWorktreeDiagnosticsTests : IDisposable
             GitTree = identity.HeadTree, RepositoryId = identity.RepositoryId, GenerationId = generation.Id,
             IndexedAtUtc = DateTime.UtcNow, Files = [], Chunks = [], Vectors = [],
         }.Save(source);
-        return new GenerationStore(identity.RepositoryRuntimeRoot).PublishIndex(source, generation);
+        string? semanticPath = null;
+        if (withSemantics)
+        {
+            semanticPath = Path.Combine(root, generation.Id + ".sidx");
+            new SemanticIndex
+            {
+                RepositoryId = identity.RepositoryId, GenerationId = generation.Id, GitTree = identity.HeadTree,
+                BaseCommit = identity.HeadCommit, IndexedAtUtc = DateTime.UtcNow,
+                Documents = [new SemanticDocument { RelPath = "Known.cs", Hash = new byte[32] }],
+                Symbols = [], Occurrences = [], Relationships = [],
+            }.Save(semanticPath);
+        }
+        return new GenerationStore(identity.RepositoryRuntimeRoot).PublishIndex(source, generation, semanticPath);
     }
 
     private static void SaveInitializingManifest(WorkingIndexIdentity identity) =>
         new RepositoryManifestStore(identity.RepositoryRuntimeRoot).Save(new RepositoryManifest(identity.RepositoryId,
-            identity.RepositoryRoot.Value, "refs/heads/main", null, null, "test-model", 2, 1, CodeIndex.CurrentVersion,
+            Git(identity.WorkingRoot.Value, "rev-parse", "--path-format=absolute", "--git-common-dir").Trim(),
+            "refs/heads/main", null, null, "test-model", 2, 1, CodeIndex.CurrentVersion,
             RepositoryIndexState.Initializing, [], DateTimeOffset.UtcNow));
+
+    private static void SaveCurrentManifest(WorkingIndexIdentity identity, GenerationManifest generation)
+    {
+        SaveInitializingManifest(identity);
+        var store = new RepositoryManifestStore(identity.RepositoryRuntimeRoot);
+        store.Save(store.Read()! with { State = RepositoryIndexState.Current,
+            CurrentGenerationId = generation.Identity.Id, PublishedGitTree = identity.HeadTree });
+    }
 
     private static DoctorCheck RepositoryCheck(string runtime, string worktree, DateTimeOffset now) =>
         Assert.Single(DoctorCommand.Inspect(runtime, repositoryRoot: worktree, now: now).Checks, check => check.Name == "repository");

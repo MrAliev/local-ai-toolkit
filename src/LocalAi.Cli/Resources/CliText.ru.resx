@@ -1250,4 +1250,6 @@
   <data name="DoctorRepositoryScopes" xml:space="preserve"><value>Рабочее дерево {0}: {1}; поколение {2}; навигация {3}. Общее состояние репозитория: {4}; поколение {5}.</value></data>
   <data name="DoctorRepositorySync" xml:space="preserve"><value>Общая синхронизация: {0}; затронутое рабочее дерево {1}; {2}; последний прогресс {3}. Недавний прогресс не подтверждает готовность всех рабочих деревьев.</value></data>
   <data name="DoctorRepositorySyncNone" xml:space="preserve"><value>Запись прогресса общей синхронизации отсутствует.</value></data>
+  <data name="DoctorRepositorySyncUnknown" xml:space="preserve"><value>Не удалось проверить прогресс общей синхронизации; сведения о рабочем дереве выше остаются доступными.</value></data>
+  <data name="DoctorNavigationHeaderOnly" xml:space="preserve"><value>HeaderOnly (заголовки совпадают; целостность всех данных и готовность навигации не проверены)</value></data>
 </root>

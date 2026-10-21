@@ -459,6 +459,8 @@ public static class CliText
     public static string DoctorRepositorySync(string status, string root, string progress, string updated) =>
         Catalogue.Format(nameof(DoctorRepositorySync), status, root, progress, updated);
     public static string DoctorRepositorySyncNone => Catalogue.Get(nameof(DoctorRepositorySyncNone));
+    public static string DoctorRepositorySyncUnknown => Catalogue.Get(nameof(DoctorRepositorySyncUnknown));
+    public static string DoctorNavigationHeaderOnly => Catalogue.Get(nameof(DoctorNavigationHeaderOnly));
 
     public static string GenerationNone => Catalogue.Get(nameof(GenerationNone));
 

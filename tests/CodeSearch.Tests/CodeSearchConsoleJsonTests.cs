@@ -55,7 +55,7 @@ public sealed class CodeSearchConsoleJsonTests
     /// diagnostically but not in remedy, and both are fixed by a re-sync.
     /// </summary>
     [Theory]
-    [InlineData(true, false, "Precise")]
+    [InlineData(true, false, "HeaderOnly")]
     [InlineData(false, false, "Heuristic")]
     [InlineData(true, true, "Heuristic")]
     public void The_status_says_whether_navigation_is_precise(
@@ -67,11 +67,29 @@ public sealed class CodeSearchConsoleJsonTests
             Sample() with
             {
                 SemanticIndexPresent = present,
+                SemanticIndexHeaderReadable = present,
                 SemanticIndexCoversNothing = coversNothing,
+                RequiresOverlay = false,
             },
             connected: true);
 
         Assert.Equal(expected, data.Navigation, StringComparer.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(false, null, "NotReady")]
+    [InlineData(true, false, "Unknown")]
+    [InlineData(true, true, "HeaderOnly")]
+    public void Navigation_includes_the_requested_worktrees_overlay_header_evidence(
+        bool present, bool? readable, string expected)
+    {
+        var status = Sample() with
+        {
+            SemanticIndexPresent = true, SemanticIndexHeaderReadable = true,
+            RequiresOverlay = true, SemanticOverlayPresent = present, SemanticOverlayHeaderReadable = readable,
+        };
+
+        Assert.Equal(expected, ConsoleJson.Describe(status, connected: true).Navigation);
     }
 
     /// <summary>

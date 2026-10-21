@@ -1248,4 +1248,6 @@ To keep a worktree whatever its branch: git worktree lock &lt;path&gt;</value>
   <data name="DoctorRepositoryScopes" xml:space="preserve"><value>Working tree {0}: {1}; generation {2}; navigation {3}. Repository-wide state: {4}; generation {5}.</value></data>
   <data name="DoctorRepositorySync" xml:space="preserve"><value>Repository-wide sync: {0}; affected working tree {1}; {2}; last progress {3}. Recent progress does not establish readiness of every worktree.</value></data>
   <data name="DoctorRepositorySyncNone" xml:space="preserve"><value>No repository-wide sync progress recorded.</value></data>
+  <data name="DoctorRepositorySyncUnknown" xml:space="preserve"><value>Repository-wide sync progress could not be verified; the worktree facts above remain available.</value></data>
+  <data name="DoctorNavigationHeaderOnly" xml:space="preserve"><value>HeaderOnly (headers match; full integrity and navigation readiness were not checked)</value></data>
 </root>

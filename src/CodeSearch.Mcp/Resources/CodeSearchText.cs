@@ -122,9 +122,14 @@ public static class CodeSearchText
     public static string NavigationHeuristicMissing(string command) =>
         Catalogue.Format(nameof(NavigationHeuristicMissing), command);
 
+    public static string NavigationUnknownHeader(string command) =>
+        Catalogue.Format(nameof(NavigationUnknownHeader), command);
+
+    public static string NavigationHeaderOnly => Catalogue.Get(nameof(NavigationHeaderOnly));
+
     /// <summary>
-    /// The third value of this field: the generation is sound and this worktree is not, because
-    /// the semantic overlay it needs has not been built. Neither of the two above it fits —
+    /// A worktree whose required semantic overlay has not been built. This differs from a
+    /// missing base or an unreadable header —
     /// HEURISTIC would say answers arrive and are merely worse, and two of the four tools refuse
     /// outright in this state.
     /// </summary>

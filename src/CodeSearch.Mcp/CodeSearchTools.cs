@@ -814,6 +814,8 @@ public static class CodeSearchTools
     /// </summary>
     private static string Navigation(IndexStatus status) => status switch
     {
+        { NavigationState: "Unknown" } =>
+            CodeSearchText.NavigationUnknownHeader(IndexCommand(status.RepositoryRoot)),
         // Covering nothing is not a milder version of precise. A semantic.sidx with no documents
         // answers definition queries exactly as a missing one does, and reporting it as precise
         // was how a broken C# workspace stayed invisible: the file is there, the checksum agrees,
@@ -829,12 +831,12 @@ public static class CodeSearchTools
         // reading as HEURISTIC rather than as a worktree waiting for something.
         { SemanticIndexPresent: false } =>
             CodeSearchText.NavigationHeuristicMissing(IndexCommand(status.RepositoryRoot)),
-        // The generation is sound and this checkout is not. SemanticNavigationGateway loads the
+        // The base header is recognized, but this checkout needs an overlay. The gateway loads the
         // base index alone only while the head tree matches the generation's and the tree is
         // clean; otherwise it reaches for an overlay that has not been built.
         { SemanticOverlayMissing: true } =>
             CodeSearchText.NavigationOverlayNotBuilt(IndexCommand(status.RepositoryRoot)),
-        _ => CodeSearchText.NavigationPrecise,
+        _ => CodeSearchText.NavigationHeaderOnly,
     };
 
     /// <summary>

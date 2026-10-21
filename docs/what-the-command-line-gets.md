@@ -119,6 +119,10 @@ and `index_status` answers for the index. A person needs the wider picture:
   worktree's sync is incomplete. `Recent` means recent recorded progress, not proof a process
   is running; unfinished progress older than five minutes is `Interrupted`. Neither means all
   worktrees are ready. The JSON facts keep both scopes and the affected worktree explicit.
+  Read-only semantic checks read at most 4 KiB: `HeaderOnly` confirms matching headers, not full
+  corpus integrity or navigation readiness. That uncertainty is `Unknown` in the doctor row;
+  actual navigation validates its snapshot before answering. An unreadable header or shared
+  progress record is reported explicitly without discarding known worktree facts.
   Each check ends `Ok`, `Warning`, `Unknown` or `Failed`. The verdict is `Failed` if any check
   failed, else `Warning` if any warned, else `Ok`; the exit code is 1 only for `Failed`.
   `Unknown` means this machine holds no trusted, current answer to what the check asks, and it
