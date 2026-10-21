@@ -2,7 +2,7 @@
 
 import contextlib
 import io
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import sys
 import tempfile
 import unittest
@@ -93,6 +93,19 @@ class SourceBoundaryTests(unittest.TestCase):
         for path in ("", ".", "nested/.."):
             with self.subTest(path=path), self.assertRaises(ValueError):
                 self.report(path)
+
+    def test_canonical_windows_components_preserve_case_boundaries(self):
+        # Windows path objects fold case even when NTFS treats these as siblings.
+        root = PureWindowsPath("C:/fixture/Source")
+        self.assertTrue(report_module.is_source_child(
+            PureWindowsPath("C:/fixture/Source/nested/inside.py"), root))
+        for source in (
+            PureWindowsPath("C:/fixture/source/outside.py"),
+            PureWindowsPath("C:/fixture/Source-neighbor/outside.py"),
+            root,
+        ):
+            with self.subTest(source=str(source)):
+                self.assertFalse(report_module.is_source_child(source, root))
 
     def test_file_symlink_escape_is_rejected(self):
         self.symlink(self.root / "linked.py", self.outside)

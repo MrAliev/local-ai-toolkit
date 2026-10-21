@@ -178,6 +178,13 @@ def contains(outer, inner):
            (inner[2], inner[3]) <= (outer[2], outer[3])
 
 
+def is_source_child(source, root):
+    # WindowsPath equality folds case even in case-sensitive NTFS directories.
+    # Both paths are already resolved; compare their component strings exactly.
+    return (len(source.parts) > len(root.parts)
+            and source.parts[:len(root.parts)] == root.parts)
+
+
 def source_path(source_root, document_path):
     """Keep document-derived reads within the canonical fixture source root."""
     relative = document_path.replace("\\", "/")
@@ -188,7 +195,7 @@ def source_path(source_root, document_path):
 
     root = Path(source_root).resolve()
     source = (root / relative).resolve()
-    if source == root or not source.is_relative_to(root):
+    if not is_source_child(source, root):
         raise ValueError(f"SCIP document path escapes the source root: {document_path!r}")
     return source
 
