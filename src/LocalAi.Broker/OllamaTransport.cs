@@ -8,7 +8,7 @@ using LocalAi.Contracts;
 
 namespace LocalAi.Broker;
 
-public sealed partial class OllamaTransport : IModelRuntimeTransport, IDisposable
+public sealed partial class OllamaTransport : IModelRuntimeTransport, IEmbeddingExecutionTransport, IDisposable
 {
     private const int MaxAttempts = 3;
 
@@ -167,7 +167,7 @@ public sealed partial class OllamaTransport : IModelRuntimeTransport, IDisposabl
             if (model is null ||
                 string.IsNullOrWhiteSpace(model.Name) ||
                 model.Size <= 0 ||
-                model.SizeVram <= 0 ||
+                model.SizeVram < 0 ||
                 model.ContextLength <= 0 ||
                 model.ExpiresAt == default)
             {
@@ -607,10 +607,24 @@ public sealed partial class OllamaTransport : IModelRuntimeTransport, IDisposabl
         }
     }
 
-    private async Task<BrokerExecutionResult> ExecuteEmbedAsync(
-        EmbedJobPayload payload,
+    public Task<BrokerExecutionResult> ExecuteEmbeddingAsync(LocalJobRequest request,
+        Func<EmbedJobPayload, CancellationToken, Task<ModelResidencyProof>> ensureReady,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(ensureReady);
+        if (request.Payload is not EmbedJobPayload payload) throw new ArgumentException("An embedding request is required.", nameof(request));
+        return request.Priority == LocalJobPriority.Interactive && payload.Inputs.Count == 1 &&
+            request.DeduplicationKey.StartsWith("codesearch:query:", StringComparison.Ordinal)
+            ? ExecuteSearchEmbeddingAsync(payload, cancellationToken, ensureReady)
+            : ExecuteEmbedAsync(payload, cancellationToken, ensureReady);
+    }
+
+    private async Task<BrokerExecutionResult> ExecuteEmbedAsync(
+        EmbedJobPayload payload,
+        CancellationToken cancellationToken,
+        Func<EmbedJobPayload, CancellationToken, Task<ModelResidencyProof>>? ensureReady = null)
+    {
+        var proof = ensureReady is null ? null : await ensureReady(payload, cancellationToken);
         TrackActiveModel(payload.Model);
         var body = JsonSerializer.Serialize(new EmbedRequest(
             payload.Model,
@@ -672,6 +686,8 @@ public sealed partial class OllamaTransport : IModelRuntimeTransport, IDisposabl
         var tokens = ReadTokenCount(document.RootElement, "prompt_eval_count");
         return Result(new EmbedJobOutput(response.Embeddings)) with
         {
+            Routing = proof is null ? null : EmbeddingExecution.Routing(proof),
+            InferenceExecuted = true,
             BackendInputTokens = tokens,
             EmbeddingTiming = new EmbeddingBackendTiming(false, total, load, evaluation, tokens),
         };

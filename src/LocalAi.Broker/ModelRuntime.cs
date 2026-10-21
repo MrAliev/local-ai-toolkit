@@ -104,6 +104,9 @@ public interface IModelRuntime
         string model,
         int contextTokens,
         CancellationToken cancellationToken = default);
+
+    Task<ModelResidencyProof> EnsureEmbeddingReadyAsync(string model, int contextTokens,
+        CancellationToken cancellationToken = default) => EnsureReadyAsync(model, contextTokens, cancellationToken);
 }
 
 public sealed class ModelPreflightException(
@@ -219,13 +222,21 @@ public sealed class ModelRuntime : IModelRuntime
             cancellationToken);
     }
 
-    public async Task<ModelResidencyProof> EnsureReadyAsync(
+    public Task<ModelResidencyProof> EnsureReadyAsync(
         string model,
         int contextTokens,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        EnsureReadyCoreAsync(model, contextTokens, embedding: false, cancellationToken);
+
+    public Task<ModelResidencyProof> EnsureEmbeddingReadyAsync(string model, int contextTokens,
+        CancellationToken cancellationToken = default) =>
+        EnsureReadyCoreAsync(model, contextTokens, embedding: true, cancellationToken);
+
+    private async Task<ModelResidencyProof> EnsureReadyCoreAsync(string model, int contextTokens,
+        bool embedding, CancellationToken cancellationToken)
     {
-        var entry = _catalog.Model(model);
-        if (!entry.ContextTokens.Contains(contextTokens))
+        var entry = embedding ? _catalog.Models.SingleOrDefault(candidate => candidate.Tag == model) : _catalog.Model(model);
+        if (entry is not null ? !entry.ContextTokens.Contains(contextTokens) : !LocalContextTiers.IsSupported(contextTokens))
         {
             throw new ArgumentOutOfRangeException(
                 nameof(contextTokens),
@@ -273,11 +284,14 @@ public sealed class ModelRuntime : IModelRuntime
             if (existing is not null &&
                 existing.ContextTokens != contextTokens)
             {
+                if (entry is null)
+                    throw new ModelPreflightException(model, contextTokens, ModelExecutionOutcome.ContextFailure,
+                        Resources.BrokerRuntimeText.ExternalContextMismatch(model, existing.ContextTokens));
                 await _transport.UnloadAsync(model, cancellationToken);
             }
 
-            if (entry.Capabilities.Contains(LocalAi.Contracts.LocalModelCapability.Embedding) &&
-                !entry.Capabilities.Contains(LocalAi.Contracts.LocalModelCapability.Text))
+            if (embedding || (entry!.Capabilities.Contains(LocalAi.Contracts.LocalModelCapability.Embedding) &&
+                !entry.Capabilities.Contains(LocalAi.Contracts.LocalModelCapability.Text)))
             {
                 await _transport.PreflightEmbeddingAsync(
                     model,
@@ -379,7 +393,7 @@ public sealed class ModelRuntime : IModelRuntime
 
             try
             {
-                await _transport.UnloadAsync(model, cancellationToken);
+                if (entry is not null) await _transport.UnloadAsync(model, cancellationToken);
             }
             catch (Exception unloadException) when (
                 unloadException is not OperationCanceledException ||

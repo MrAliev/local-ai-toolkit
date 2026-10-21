@@ -35,7 +35,12 @@ public static class UsageEvidence
                 }
                 if (job.Receipt is { } receipt)
                 {
-                    if (attempts.Length == 0)
+                    if (attempts.Length == 0 && receipt.InferenceExecuted is false)
+                    {
+                        call.NoInference(job.JobId);
+                        call.CacheHit("query_embedding");
+                    }
+                    else if (attempts.Length == 0)
                     {
                         var (offload, reason) = receipt.Routing switch
                         {

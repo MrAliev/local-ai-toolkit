@@ -682,7 +682,13 @@ public sealed record LocalUsageReceipt(
     string? RepositoryId,
     string? GenerationId,
     string? GitTree,
-    LocalRoutingReceipt? Routing = null);
+    LocalRoutingReceipt? Routing = null)
+{
+    // Omitted for older/nonembedding executions. False is a current-job cache hit, not
+    // evidence that the model from a previous execution remains resident now.
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? InferenceExecuted { get; init; }
+}
 
 public sealed record LocalRoutingReceipt(
     LocalTaskProfile? TaskProfile,

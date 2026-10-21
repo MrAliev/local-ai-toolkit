@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using LocalAi.Contracts;
+using LocalAi.Broker.Resources;
 
 namespace LocalAi.Broker;
 
@@ -131,8 +132,40 @@ public sealed class BrokerExecutionRouter
                 ExecuteMaintenanceAsync(maintenance, progress, cancellationToken),
             ModelControlJobPayload control =>
                 ExecuteControlAsync(control, cancellationToken),
+            EmbedJobPayload => ExecuteEmbeddingAsync(request, cancellationToken),
             _ => ExecuteDirectAsync(request, cancellationToken)
         };
+    }
+
+    private async Task<BrokerExecutionResult> ExecuteEmbeddingAsync(LocalJobRequest request, CancellationToken ct)
+    {
+        var payload = (EmbedJobPayload)request.Payload;
+        if (payload.RequestedContextTokens is null)
+        {
+            payload = new EmbedJobPayload(payload.Model, payload.Inputs, EmbeddingExecution.DefaultContextTokens);
+            request = new LocalJobRequest(request.JobId, request.DeduplicationKey, request.Priority,
+                payload, request.CreatedAtUtc);
+        }
+
+        async Task<ModelResidencyProof> Ready(EmbedJobPayload input, CancellationToken token)
+        {
+            var proof = await _runtime.EnsureEmbeddingReadyAsync(input.Model, input.RequestedContextTokens!.Value, token);
+            if (proof.Model != input.Model || proof.ContextTokens != input.RequestedContextTokens)
+                throw new InvalidOperationException(BrokerRuntimeText.EmbeddingProofMismatch);
+            return proof;
+        }
+
+        BrokerExecutionResult result;
+        if (_transport is IEmbeddingExecutionTransport embedding)
+            result = await embedding.ExecuteEmbeddingAsync(request, Ready, ct);
+        else
+        {
+            var proof = await Ready(payload, ct);
+            result = await _executeDirect(request, ct);
+            result = result with { Routing = EmbeddingExecution.Routing(proof), InferenceExecuted = true };
+        }
+        if (result.InferenceExecuted is not false) TrackResidentModel(payload.Model);
+        return result;
     }
 
     private async Task<BrokerExecutionResult> ExecuteDirectAsync(

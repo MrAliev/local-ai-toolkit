@@ -11,6 +11,7 @@ public sealed class UsageCall : IDisposable
     private readonly object gate = new();
     private readonly long started = Stopwatch.GetTimestamp();
     private readonly HashSet<Guid> jobs = [];
+    private readonly HashSet<Guid> inferenceJobs = [];
     private readonly HashSet<Guid> attempts = [];
     private readonly HashSet<Guid> workflows = [];
     private readonly List<(UsageModelUse Use, long? Input, long? Output)> models = [];
@@ -57,13 +58,14 @@ public sealed class UsageCall : IDisposable
     });
     public void CacheHit(string reason = "result_cache") => Change(() => { cache = UsageCache.Hit; cacheReason = reason; });
     public void UnknownInference() => Change(() => pendingInference = true);
-    public void NoInference() => Change(() => pendingInference = false);
+    public void NoInference() => Change(() => { pendingInference = false; inferenceJobs.Clear(); });
+    public void NoInference(Guid jobId) => Change(() => inferenceJobs.Remove(jobId));
     public void LinkJob(Guid jobId, Guid? workflowId = null, bool inference = true) => Change(() =>
     {
         if (jobId == Guid.Empty) throw new ArgumentException("A job ID is required.", nameof(jobId));
         jobs.Add(jobId);
         if (workflowId is { } id && id != Guid.Empty) workflows.Add(id);
-        pendingInference |= inference;
+        if (inference) inferenceJobs.Add(jobId);
     });
     public void ModelCalled(string model, UsageOffload offload, string? reason = null,
         long? inputTokens = null, long? outputTokens = null, Guid? attemptId = null) => Change(() =>
@@ -116,7 +118,7 @@ public sealed class UsageCall : IDisposable
             var observedModels = actual.Length > 0
                 ? new UsageModels(UsageModelState.Called, UsageValue.Measured(models.Count), actual, cache, null)
                 : loaded.Length > 0 ? new UsageModels(UsageModelState.Loaded, UsageValue.Measured(loads.Count), loaded, cache, null)
-                : pendingInference ? UsageModels.Unrecorded() : UsageModels.NoCall();
+                : pendingInference || inferenceJobs.Count > 0 ? UsageModels.Unrecorded() : UsageModels.NoCall();
             observedModels = observedModels with
             { Cache = cache, CacheReason = cacheReason };
             return completed = initial with
