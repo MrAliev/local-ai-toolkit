@@ -22,9 +22,12 @@ public static class UsageEvidence
                 {
                     // An attempt's own proof first; a record from an older broker has none, and only
                     // a receipt proven for that same model and context may stand in for it.
-                    var (offload, reason) = attempt.Residency is { } residency
+                    var (offload, reason) = !MatchesRequest(job, attempt.Model, attempt.ContextTokens)
+                        ? (UsageOffload.Unknown, "request_context_mismatch")
+                        : attempt.Residency is { } residency
                         ? (Offload(residency), null)
                         : job.Receipt?.Routing is { VramResidentPercent: not null } routing
+                            && routing.SelectedModel == job.Receipt.Model
                             && routing.SelectedModel == attempt.Model && routing.ContextTokens == attempt.ContextTokens
                             ? (Offload(routing.ResidencyShortfall), null)
                             : (UsageOffload.Unknown, "not_recorded");
@@ -35,11 +38,22 @@ public static class UsageEvidence
                 }
                 if (job.Receipt is { } receipt)
                 {
-                    if (attempts.Length == 0)
+                    if (attempts.Length == 0 && receipt.InferenceExecuted is false)
+                    {
+                        if (job.ExpectedModel is null || job.ExpectedModel == receipt.Model)
+                        {
+                            call.NoInference(job.JobId);
+                            call.CacheHit("query_embedding");
+                        }
+                    }
+                    else if (attempts.Length == 0)
                     {
                         var (offload, reason) = receipt.Routing switch
                         {
                             null => (UsageOffload.Unknown, "no_residency_check"),
+                            var routing when routing.SelectedModel != receipt.Model ||
+                                !MatchesRequest(job, routing.SelectedModel, routing.ContextTokens) =>
+                                (UsageOffload.Unknown, "request_context_mismatch"),
                             { VramResidentPercent: null } => (UsageOffload.Unknown, "not_recorded"),
                             var routing => (Offload(routing.ResidencyShortfall), (string?)null),
                         };
@@ -57,6 +71,10 @@ public static class UsageEvidence
             }
         }
     }
+
+    private static bool MatchesRequest(UsageJobEvidence job, string model, int? contextTokens) =>
+        (job.ExpectedModel is null || job.ExpectedModel == model) &&
+        (job.ExpectedContextTokens is null || job.ExpectedContextTokens == contextTokens);
 
     private static UsageOffload Offload(ResidencyShortfall shortfall) => shortfall switch
     {

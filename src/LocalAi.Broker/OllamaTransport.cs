@@ -8,7 +8,7 @@ using LocalAi.Contracts;
 
 namespace LocalAi.Broker;
 
-public sealed partial class OllamaTransport : IModelRuntimeTransport, IDisposable
+public sealed partial class OllamaTransport : IModelRuntimeTransport, IEmbeddingExecutionTransport, IDisposable
 {
     private const int MaxAttempts = 3;
 
@@ -167,7 +167,7 @@ public sealed partial class OllamaTransport : IModelRuntimeTransport, IDisposabl
             if (model is null ||
                 string.IsNullOrWhiteSpace(model.Name) ||
                 model.Size <= 0 ||
-                model.SizeVram <= 0 ||
+                model.SizeVram < 0 ||
                 model.ContextLength <= 0 ||
                 model.ExpiresAt == default)
             {
@@ -570,7 +570,8 @@ public sealed partial class OllamaTransport : IModelRuntimeTransport, IDisposabl
     private async Task<JsonDocument> SendEmbedAsync(
         EmbedJobPayload payload,
         string body,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Func<CancellationToken, Task>? beforeAttempt = null)
     {
         try
         {
@@ -581,7 +582,8 @@ public sealed partial class OllamaTransport : IModelRuntimeTransport, IDisposabl
                 payload.Inputs,
                 cancellationToken,
                 maximumResponseBytes: EmbedResponseCeilingBytes,
-                surfaceRunnerFailure: true);
+                surfaceRunnerFailure: true,
+                beforeAttempt: beforeAttempt);
         }
         catch (HttpRequestException failure) when (failure.StatusCode == HttpStatusCode.NotFound)
         {
@@ -607,10 +609,28 @@ public sealed partial class OllamaTransport : IModelRuntimeTransport, IDisposabl
         }
     }
 
-    private async Task<BrokerExecutionResult> ExecuteEmbedAsync(
-        EmbedJobPayload payload,
+    public Task<BrokerExecutionResult> ExecuteEmbeddingAsync(LocalJobRequest request,
+        Func<EmbedJobPayload, CancellationToken, Task<ModelResidencyProof>> ensureReady,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(ensureReady);
+        if (request.Payload is not EmbedJobPayload payload) throw new ArgumentException("An embedding request is required.", nameof(request));
+        return request.Priority == LocalJobPriority.Interactive && payload.Inputs.Count == 1 &&
+            request.DeduplicationKey.StartsWith("codesearch:query:", StringComparison.Ordinal)
+            ? ExecuteSearchEmbeddingAsync(payload, cancellationToken, ensureReady)
+            : ExecuteEmbedAsync(payload, cancellationToken, ensureReady);
+    }
+
+    private async Task<BrokerExecutionResult> ExecuteEmbedAsync(
+        EmbedJobPayload payload,
+        CancellationToken cancellationToken,
+        Func<EmbedJobPayload, CancellationToken, Task<ModelResidencyProof>>? ensureReady = null)
+    {
+        ModelResidencyProof? proof = null;
+        async Task Ready(CancellationToken token)
+        {
+            if (ensureReady is not null) proof = await ensureReady(payload, token);
+        }
         TrackActiveModel(payload.Model);
         var body = JsonSerializer.Serialize(new EmbedRequest(
             payload.Model,
@@ -618,7 +638,8 @@ public sealed partial class OllamaTransport : IModelRuntimeTransport, IDisposabl
             Options: payload.RequestedContextTokens is { } contextTokens
                 ? new GenerateOptions(contextTokens)
                 : null));
-        using var document = await SendEmbedAsync(payload, body, cancellationToken);
+        using var document = await SendEmbedAsync(payload, body, cancellationToken,
+            ensureReady is null ? null : Ready);
         EmbedResponse response;
         try
         {
@@ -672,6 +693,8 @@ public sealed partial class OllamaTransport : IModelRuntimeTransport, IDisposabl
         var tokens = ReadTokenCount(document.RootElement, "prompt_eval_count");
         return Result(new EmbedJobOutput(response.Embeddings)) with
         {
+            Routing = proof is null ? null : EmbeddingExecution.Routing(proof),
+            InferenceExecuted = true,
             BackendInputTokens = tokens,
             EmbeddingTiming = new EmbeddingBackendTiming(false, total, load, evaluation, tokens),
         };
@@ -774,11 +797,15 @@ public sealed partial class OllamaTransport : IModelRuntimeTransport, IDisposabl
         IReadOnlyList<string> sensitiveValues,
         CancellationToken cancellationToken,
         long maximumResponseBytes = DefaultResponseCeilingBytes,
-        bool surfaceRunnerFailure = false)
+        bool surfaceRunnerFailure = false,
+        Func<CancellationToken, Task>? beforeAttempt = null)
     {
         for (var attempt = 1; attempt <= MaxAttempts; attempt++)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            // A retry may follow a restarted runner. Validate the current residency
+            // before every useful embedding attempt, outside the transport retry catch.
+            if (beforeAttempt is not null) await beforeAttempt(cancellationToken);
             try
             {
                 using var request = new HttpRequestMessage(

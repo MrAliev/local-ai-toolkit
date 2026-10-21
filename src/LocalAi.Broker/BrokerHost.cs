@@ -404,7 +404,7 @@ public sealed class BrokerHost
                     lease.Request,
                     executionStartedAtUtc,
                     completedAtUtc,
-                    result.Routing));
+                    result.Routing) with { InferenceExecuted = result.InferenceExecuted });
             await _queue.CompleteAsync(
                 lease.Request.JobId,
                 _workerId,
@@ -637,6 +637,7 @@ public sealed record BrokerExecutionResult(
     long? BackendOutputTokens = null)
 {
     public EmbeddingBackendTiming? EmbeddingTiming { get; init; }
+    public bool? InferenceExecuted { get; init; }
 }
 
 public sealed record BrokerHostDiagnostic(
