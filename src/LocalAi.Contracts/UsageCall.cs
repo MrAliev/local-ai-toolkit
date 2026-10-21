@@ -31,6 +31,9 @@ public sealed class UsageCall : IDisposable
     public UsageCall(UsageSurface surface, string component, string operation, Guid? callId = null)
     {
         initial = UsageReportingRegistry.CreateReport(surface, component, operation, callId ?? Guid.NewGuid());
+        var tool = UsageReportingRegistry.Find(surface, component, operation).McpTool ?? operation;
+        if (tool is "search_code" or "get_code_chunk" or "search_documents")
+            Comparison.UnknownBaseline("retrieval_baseline_not_established");
         previous = Ambient.Value;
         Ambient.Value = this;
     }

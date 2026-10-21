@@ -179,9 +179,10 @@ validator; a broker success does not replace it.
 The model's answer is written to stdout. A separate usage notice on stderr identifies the
 call and the models actually used, reports elapsed time, and shows one approximate token
 saving (or additional overhead). The underlying INPUT and OUTPUT values remain in the report.
-Runtime calls use a **conditional first-read comparison**, not account billing:
-INPUT is the tokenized source units minus the arguments and model-visible response;
-OUTPUT is the validated, delivered local answer minus the generated tool request. Either
+Runtime calls use the versioned **request-context comparison** `runtime-request-context-v2`,
+not account billing. INPUT compares the explicitly supplied task input, after selection and
+truncation, with the arguments and model-visible response. Local output earns no assumed
+cloud-generation credit; OUTPUT accounts only for generating the tool request. Either
 difference can be negative; an unsuccessful, invalid or undelivered result earns no savings
 estimate. A later cloud answer and transport framing outside that payload
 are excluded from both sides. In methodology `cloud-comparison-v2`, MCP counts the tool name
@@ -198,11 +199,21 @@ Text uses the bundled `microsoft-ml-tokenizers-2.0.0:o200k_base` vocabulary, che
 independent reference counts. Images use `openai-gpt-4o-tiles-v1` at high detail; PDF comparisons
 use the rendered page images, not a provider's native PDF upload. Neither profile claims to
 match the cloud model used by your account. Duplicate source units within a call count once;
-triage counts unique fragment text without overlap. Search compares reading only the files
-behind valid hits, not the entire repository. Missing evidence remains unknown with a reason;
+triage counts unique fragment text without overlap. Different unlocated slices or alternative
+image/text representations of one source make the baseline unknown instead of double-counting.
+Code and document retrieval do not establish how much source the cloud would have needed:
+their notice reports the observed request/response context and unknown savings. Reading a
+whole file for its hash or a search hit never earns whole-file credit. Missing evidence remains unknown with a reason;
 administrative operations and code-only translation report not applicable.
 
-The default `NotPresent` assumption means the source has not entered the cloud context.
+The default is `Unknown`: the tool cannot infer the cloud context's history. Pass `NotPresent`
+explicitly only when the supplied task context has not entered the cloud context.
+History and relevance are independent. A first-read text/image baseline additionally requires
+`contextBasis: "ExplicitTaskInput"`, `_meta: {"localai/contextBasis":"ExplicitTaskInput"}`,
+or CLI `LOCALAI_CONTEXT_BASIS=ExplicitTaskInput`. This is the caller's assertion that the
+bounded input was selected as necessary for this task, not an automatically proven minimum.
+Do not set it merely because a file was opened or supplied. The default basis is `Unknown`;
+undeclared context, retrieval and conflicting source coverage cannot earn positive credit.
 For an already read source, pass `sourceContext: "AlreadyPresent"` to the supported MCP tool,
 or `_meta: {"localai/sourceContext":"AlreadyPresent"}` on the request. Use `"Unknown"` if
 context presence cannot be established. CLI uses `LOCALAI_SOURCE_CONTEXT` with the same values.

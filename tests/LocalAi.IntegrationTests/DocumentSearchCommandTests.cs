@@ -43,8 +43,9 @@ public sealed class DocumentSearchCommandTests
             Assert.Equal(JsonValueKind.Null, hit.GetProperty("page").ValueKind);
             Assert.DoesNotContain("INPUT", searched.Error);
             Assert.DoesNotContain("OUTPUT", searched.Error);
-            Assert.Contains("No token savings; approximately", searched.Error);
-            Assert.Contains("additional cloud tokens.", searched.Error);
+            Assert.Contains("tokens of request/response input context", searched.Error);
+            Assert.Contains("necessary source context is not established", searched.Error);
+            Assert.DoesNotContain("additional cloud tokens", searched.Error);
             Assert.Contains("No model call", searched.Error);
         }
         finally { Directory.Delete(root, true); }
@@ -125,7 +126,7 @@ public sealed class DocumentSearchCommandTests
             Assert.Equal(0, searched.Exit);
             using var found = JsonDocument.Parse(searched.Output);
             Assert.Empty(found.RootElement.GetProperty("data").GetProperty("hits").EnumerateArray());
-            Assert.Contains("Token savings cannot be estimated.", searched.Error);
+            Assert.Contains("necessary source context is not established", searched.Error);
             Assert.Contains("No model call", searched.Error);
         }
         finally { Directory.Delete(root, true); }

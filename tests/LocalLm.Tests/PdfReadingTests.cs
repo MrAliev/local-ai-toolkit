@@ -430,8 +430,9 @@ public sealed partial class PdfReadingTests : IDisposable
         else
         {
             Assert.Equal(UsageDelivery.Delivered, report.Outcome.Delivery);
-            Assert.Equal(O200kCloudTokenProfile.Instance.CountText(await File.ReadAllTextAsync(target, TestContext.Current.CancellationToken)),
+            Assert.Equal(UsageValue.Measured(0),
                 report.CloudTokens[UsageCloudTokens.OutputWithoutDelegation]);
+            Assert.Contains("reply 1", await File.ReadAllTextAsync(target, TestContext.Current.CancellationToken), StringComparison.Ordinal);
         }
         Assert.Empty(Directory.GetFiles(root, "*.tmp"));
     }

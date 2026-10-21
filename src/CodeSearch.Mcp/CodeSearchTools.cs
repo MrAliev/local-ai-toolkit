@@ -498,10 +498,13 @@ public static class CodeSearchTools
         [Description("Max hits from any single file. Default 3, keeps one big class from taking every slot.")]
         int maxPerFile = 3,
         CancellationToken cancellationToken = default,
-        [Description("Context comparison for files behind valid hits: NotPresent assumes first reading (default); AlreadyPresent excludes files already in cloud context; Unknown reports that uncertainty.")]
-        CloudContextPresence? sourceContext = null)
+[Description("Context comparison for files behind valid hits: Unknown by default; NotPresent explicitly assumes the supplied task context is new; AlreadyPresent excludes files already in cloud context; Unknown reports that uncertainty.")]
+        CloudContextPresence? sourceContext = null,
+        [Description("Unknown by default. ExplicitTaskInput asserts that the caller selected this bounded task input as the comparison baseline; do not infer this from files being read. It does not prove minimum context.")]
+        CloudContextBasis? contextBasis = null)
     {
         if (sourceContext is { } context) UsageCall.Current?.Comparison.SourceContext(context);
+        if (contextBasis is { } basis) UsageCall.Current?.Comparison.ContextBasis(basis);
         var options = new SearchOptions
         {
             TopK = Math.Clamp(topK, 1, 50),
@@ -639,10 +642,13 @@ public static class CodeSearchTools
             "and must resolve to the same exact snapshot as the chunk id.")]
         string? root = null,
         CancellationToken cancellationToken = default,
-        [Description("Context comparison for the source file: NotPresent assumes first reading (default); AlreadyPresent excludes a file already in cloud context; Unknown reports that uncertainty.")]
-        CloudContextPresence? sourceContext = null)
+        [Description("Context comparison for the source file: Unknown by default; NotPresent explicitly assumes the supplied task context is new; AlreadyPresent excludes a file already in cloud context; Unknown reports that uncertainty.")]
+        CloudContextPresence? sourceContext = null,
+        [Description("Unknown by default. ExplicitTaskInput asserts that the caller selected this bounded task input as the comparison baseline; do not infer this from files being read. It does not prove minimum context.")]
+        CloudContextBasis? contextBasis = null)
     {
         if (sourceContext is { } context) UsageCall.Current?.Comparison.SourceContext(context);
+        if (contextBasis is { } basis) UsageCall.Current?.Comparison.ContextBasis(basis);
         try
         {
             var chunk = await service.GetChunkAsync(

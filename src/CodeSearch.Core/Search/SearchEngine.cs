@@ -490,11 +490,8 @@ public static class SearchEngine
                     var text = File.ReadAllText(fullPath);
                     lines = SourceLines.Split(text);
                     canonicalHash = CanonicalIndexText.Hash(text);
-                    // The explicit comparison is reading the files behind valid hits, once,
-                    // not reading the entire repository. Reuse this read, never reopen files.
-                    if (chunk.StartLine >= 1 && chunk.StartLine <= lines.Length &&
-                        (indexedHash.IndexOfAnyExcept((byte)0) < 0 || canonicalHash.AsSpan().SequenceEqual(indexedHash)))
-                        UsageCall.Current?.Comparison.SourceText(text, fullPath);
+                    // This read validates freshness. It does not establish how much context
+                    // a cloud agent would need, so it earns no whole-file token credit.
                 }
                 catch (Exception ex) when (
                     ex is IOException or UnauthorizedAccessException)
