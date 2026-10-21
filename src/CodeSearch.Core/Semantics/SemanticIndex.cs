@@ -71,40 +71,82 @@ public sealed record SemanticIndex
     /// is describing an index, not trusting it, so an unreadable one is reported rather than
     /// thrown — and it is a caller's job to treat null as "cannot say".
     /// </summary>
-    public static int? TryReadDocumentCount(string path)
+    public static int? TryReadDocumentCount(string path) => TryReadDocumentCount(path, null, null, null);
+
+    /// <summary>Reads at most 4096 bytes from the current position; leaves the caller's stream open.</summary>
+    public static int? TryReadDocumentCountFromStream(Stream source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        try
+        {
+            using var reader = OpenStatusHeader(source);
+            return ReadStatusDocumentCount(reader, null, null, null);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or
+            InvalidDataException or ArgumentException or FormatException)
+        {
+            return null;
+        }
+    }
+
+    internal static int? TryReadDocumentCount(string path, string? repositoryId, string? generationId, string? gitTree,
+        string? dirtyHash = null, bool verifyDirtyHash = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         try
         {
-            using var stream = File.OpenRead(path);
-            using var reader = new BinaryReader(stream, Encoding.UTF8);
-            if (!string.Equals(
-                    Encoding.ASCII.GetString(reader.ReadBytes(4)),
-                    Magic,
-                    StringComparison.Ordinal) ||
-                reader.ReadInt32() != CurrentVersion)
-            {
-                return null;
-            }
-
-            reader.ReadString();
-            reader.ReadString();
-            reader.ReadString();
-            if (reader.ReadBoolean())
-            {
-                reader.ReadString();
-            }
-
-            reader.ReadString();
-            reader.ReadInt64();
-            return ReadCount(reader, "document");
+            using var reader = OpenStatusHeader(path);
+            return ReadStatusDocumentCount(reader, repositoryId, generationId, gitTree, dirtyHash, verifyDirtyHash);
         }
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException or
-                InvalidDataException or ArgumentException)
+                InvalidDataException or ArgumentException or FormatException)
         {
             return null;
         }
+    }
+
+    // Status must not scan a corpus or allocate from an untrusted string-length prefix.
+    // An unusually large header is explicitly unknown rather than read without a bound.
+    internal static BinaryReader OpenStatusHeader(string path)
+    {
+        using var stream = File.OpenRead(path);
+        return OpenStatusHeader(stream);
+    }
+
+    private static BinaryReader OpenStatusHeader(Stream stream)
+    {
+        var bytes = new byte[4096];
+        var count = stream.ReadAtLeast(bytes, bytes.Length, throwOnEndOfStream: false);
+        return new BinaryReader(new MemoryStream(bytes, 0, count, writable: false), Encoding.UTF8);
+    }
+
+    internal static string ReadStatusHeaderString(BinaryReader reader)
+    {
+        var count = reader.Read7BitEncodedInt();
+        if (count is < 0 or > 1024 || count > reader.BaseStream.Length - reader.BaseStream.Position)
+            throw new InvalidDataException("Semantic status header string is outside its read budget.");
+        return new UTF8Encoding(false, true).GetString(reader.ReadBytes(count));
+    }
+
+    internal static int? ReadStatusDocumentCount(BinaryReader reader, string? repositoryId,
+        string? generationId, string? gitTree, string? expectedDirtyHash = null, bool checkDirtyHash = false)
+    {
+        if (Encoding.ASCII.GetString(reader.ReadBytes(4)) != Magic || reader.ReadInt32() != CurrentVersion)
+            return null;
+        var actualRepository = ReadStatusHeaderString(reader);
+        var actualGeneration = ReadStatusHeaderString(reader);
+        var actualTree = ReadStatusHeaderString(reader);
+        var dirtyFlag = reader.ReadByte();
+        if (dirtyFlag > 1) return null;
+        var actualDirtyHash = dirtyFlag == 1 ? ReadStatusHeaderString(reader) : null;
+        if (checkDirtyHash && actualDirtyHash != expectedDirtyHash) return null;
+        ReadStatusHeaderString(reader);
+        _ = new DateTime(reader.ReadInt64(), DateTimeKind.Utc);
+        if (repositoryId is not null && actualRepository != repositoryId ||
+            generationId is not null && actualGeneration != generationId ||
+            gitTree is not null && actualTree != gitTree) return null;
+        return ReadCount(reader, "document");
     }
 
     internal static SemanticIndex ReadFrom(

@@ -277,4 +277,6 @@ Check the broker, then search again: localai doctor</value>
   <data name="WorkingSetTrimmed" xml:space="preserve">
     <value>the process working set was trimmed</value>
   </data>
+  <data name="NavigationUnknownHeader" xml:space="preserve"><value>Navigation: UNKNOWN (semantic index or overlay header could not be verified); run: {0}</value></data>
+  <data name="NavigationHeaderOnly" xml:space="preserve"><value>Navigation: HEADER ONLY (semantic headers match; full data integrity and navigation readiness were not verified by this status check)</value></data>
 </root>
