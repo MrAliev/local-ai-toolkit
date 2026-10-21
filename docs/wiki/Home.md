@@ -2,7 +2,10 @@
 
 [Русская версия](Home.ru.md)
 
-**Local context. Clear answers.** Repository-aware search and local-model tools for Windows.
+![Lower costs. Faster results. Local AI Toolkit.](../images/handbook-banner.svg)
+
+**Lower costs. Faster results.** Reduce paid cloud context with local search and analysis.
+Find relevant code in a ready index and give your agent concise findings with source locations.
 
 [Explore the interactive portal](https://mraliev.github.io/local-ai-toolkit/) · [Download](https://github.com/MrAliev/local-ai-toolkit/releases/latest) · [Source](https://github.com/MrAliev/local-ai-toolkit)
 
@@ -11,11 +14,32 @@
 | [First repository](Getting-started.md) | [Architecture](Architecture.md) | [Token estimates](Token-estimates.md) | [Community](Community.md) |
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: "#CCE4F7"
+    primaryTextColor: "#1A1A1A"
+    primaryBorderColor: "#2D7FD3"
+    lineColor: "#0067C0"
+    secondaryColor: "#FAFAFA"
+    tertiaryColor: "#F3F3F3"
+---
 flowchart LR
-  intent["Your task"] --> context["Local search and analysis"]
-  context --> evidence["Concise evidence"]
-  evidence --> decision["Verified decision"]
+  intent["Your task"] --> context["Find and analyse locally"]
+  context --> evidence["Return relevant context"]
+  evidence --> decision["Less cloud reading · next step sooner"]
 ```
+
+## Where you save work
+
+| Cost | Speed | Clear estimates |
+| --- | --- | --- |
+| Read locally first; send only necessary findings to the cloud. | Use semantic and symbol search in a ready index instead of opening candidate files one by one. | Compare against necessary request context, including tool overhead. |
+
+Savings and latency depend on the task, index, queue and hardware. Initial indexing takes
+time; local inference is not automatically faster, and a call can add token overhead.
+[Explore the token comparison](Token-estimates.md).
 
 ## What you get
 

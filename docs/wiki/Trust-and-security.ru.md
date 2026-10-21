@@ -10,6 +10,17 @@
 | Издатель Windows | Подключение SignPath планируется; сертификат не заявляется |
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: "#CCE4F7"
+    primaryTextColor: "#1A1A1A"
+    primaryBorderColor: "#2D7FD3"
+    lineColor: "#0067C0"
+    secondaryColor: "#FAFAFA"
+    tertiaryColor: "#F3F3F3"
+---
 flowchart LR
   source["Проверенный код"] --> build["Доверенная сборка CI"]
   build --> approval["Ручное одобрение подписи"]

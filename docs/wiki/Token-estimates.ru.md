@@ -5,6 +5,17 @@
 **База сравнения — необходимый контекст запроса. Размер целого файла не заменяет её автоматически.**
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: "#CCE4F7"
+    primaryTextColor: "#1A1A1A"
+    primaryBorderColor: "#2D7FD3"
+    lineColor: "#0067C0"
+    secondaryColor: "#FAFAFA"
+    tertiaryColor: "#F3F3F3"
+---
 flowchart TD
   task["Контекст альтернативы известен?"] -->|Нет| unknown["Оценить нельзя"]
   task -->|Да| seen["Уже был в облачном контексте?"]
