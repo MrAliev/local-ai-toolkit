@@ -250,6 +250,8 @@ public sealed class ModelRuntime : IModelRuntime
                 $"Model/context '{model}/{contextTokens}' is disabled.");
         }
 
+        var mayAttemptLoad = false;
+        var checkingSnapshot = false;
         try
         {
             var installed = await _transport.ListInstalledAsync(cancellationToken);
@@ -259,8 +261,18 @@ public sealed class ModelRuntime : IModelRuntime
                     $"Model '{model}' is not installed.");
             }
 
+            checkingSnapshot = true;
             var beforePreflight = await _transport.ListProcessesAsync(
                 cancellationToken);
+            // Validate this immutable snapshot before changing any model's residency.
+            // A deterministic external-context refusal must neither unload another
+            // session's model nor poison the transient preflight cooldown.
+            var existing = beforePreflight.SingleOrDefault(
+                candidate => string.Equals(candidate.Model, model, StringComparison.Ordinal));
+            if (entry is null && existing is not null && existing.ContextTokens != contextTokens)
+                throw new ModelPreflightException(model, contextTokens, ModelExecutionOutcome.ContextFailure,
+                    Resources.BrokerRuntimeText.ExternalContextMismatch(model, existing.ContextTokens));
+            mayAttemptLoad = true;
             var managedModels = _catalog.Models
                 .Select(candidate => candidate.Tag)
                 .ToHashSet(StringComparer.Ordinal);
@@ -276,17 +288,9 @@ public sealed class ModelRuntime : IModelRuntime
                 await _transport.UnloadAsync(otherModel, cancellationToken);
             }
 
-            var existing = beforePreflight.SingleOrDefault(
-                candidate => string.Equals(
-                    candidate.Model,
-                    model,
-                    StringComparison.Ordinal));
             if (existing is not null &&
                 existing.ContextTokens != contextTokens)
             {
-                if (entry is null)
-                    throw new ModelPreflightException(model, contextTokens, ModelExecutionOutcome.ContextFailure,
-                        Resources.BrokerRuntimeText.ExternalContextMismatch(model, existing.ContextTokens));
                 await _transport.UnloadAsync(model, cancellationToken);
             }
 
@@ -386,14 +390,15 @@ public sealed class ModelRuntime : IModelRuntime
             exception is not OperationCanceledException ||
             !cancellationToken.IsCancellationRequested)
         {
-            lock (_sync)
+            var validationRefused = checkingSnapshot && !mayAttemptLoad;
+            if (!validationRefused && (entry is not null || mayAttemptLoad)) lock (_sync)
             {
                 _disabledUntil[key] = _timeProvider.GetUtcNow() + DisabledFor;
             }
 
             try
             {
-                if (entry is not null) await _transport.UnloadAsync(model, cancellationToken);
+                if (entry is not null && !validationRefused) await _transport.UnloadAsync(model, cancellationToken);
             }
             catch (Exception unloadException) when (
                 unloadException is not OperationCanceledException ||

@@ -83,11 +83,19 @@ public sealed class UsageCall : IDisposable
     public void Observe(UsageVolume volume, long value) => Change(() => volumes[volume] = UsageValue.Measured(value));
     public void Observe(UsageTiming timing, long value) => Change(() => timings[timing] = UsageValue.Measured(value));
     public IReadOnlyList<Guid> JobIds { get { lock (gate) return jobs.ToArray(); } }
-    public void RegisterJobEvidence(string runtimeRoot, Guid jobId, LocalUsageReceipt? receipt = null) =>
+    public void RegisterJobEvidence(string runtimeRoot, Guid jobId, LocalUsageReceipt? receipt = null,
+        string? expectedModel = null, int? expectedContextTokens = null) =>
         Change(() =>
         {
+            if (receipt is not null && receipt.JobId != jobId)
+                throw new ArgumentException("Receipt does not belong to the linked job.", nameof(receipt));
             var key = (runtimeRoot, jobId);
-            if (receipt is not null || !evidence.ContainsKey(key)) evidence[key] = new(runtimeRoot, jobId, receipt);
+            evidence.TryGetValue(key, out var previous);
+            if (receipt is not null || previous is null) evidence[key] = new(runtimeRoot, jobId, receipt)
+            {
+                ExpectedModel = expectedModel ?? previous?.ExpectedModel,
+                ExpectedContextTokens = expectedContextTokens ?? previous?.ExpectedContextTokens,
+            };
         });
     public IReadOnlyList<UsageJobEvidence> TakeJobEvidence()
     {
@@ -151,4 +159,8 @@ public sealed class UsageCall : IDisposable
     public void Dispose() => Ambient.Value = previous;
 }
 
-public sealed record UsageJobEvidence(string RuntimeRoot, Guid JobId, LocalUsageReceipt? Receipt);
+public sealed record UsageJobEvidence(string RuntimeRoot, Guid JobId, LocalUsageReceipt? Receipt)
+{
+    public string? ExpectedModel { get; init; }
+    public int? ExpectedContextTokens { get; init; }
+}

@@ -118,19 +118,48 @@ public sealed class EmbeddingResidencyTests : IDisposable
         Assert.Empty(report.Models.Actual);
     }
 
-    [Fact]
-    public async Task An_external_model_at_another_context_is_refused_without_unloading_it()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task An_external_model_at_another_context_is_refused_without_unloading_it_or_other_models(bool anotherManagedModel)
     {
-        using var backend = new Backend { Model = "external-embedding:1", Loaded = true };
+        using var backend = new Backend { Model = "external-embedding:1", Loaded = true,
+            OtherManagedModel = anotherManagedModel ? "qwen3.5:9b" : null };
         using var client = new HttpClient(backend);
         using var transport = new OllamaTransport(client, new Uri("http://embedding.test/"));
         var request = LocalJobRequestFactory.CreateEmbed("external", LocalJobPriority.Foreground,
             backend.Model, ["text"], requestedContextTokens: 4096);
+        var router = Router(transport);
+
+        var error = await Assert.ThrowsAsync<ModelPreflightException>(() =>
+            router.ExecuteAsync(request, null, TestContext.Current.CancellationToken));
+
+        Assert.Equal(ModelExecutionOutcome.ContextFailure, error.Outcome);
+        Assert.Equal(0, backend.Preflights);
+        Assert.Equal(0, backend.Embeddings);
+        Assert.Equal(0, backend.Unloads);
+
+        backend.Context = 4096; // The external owner corrected its loaded context.
+        var fixedContext = await router.ExecuteAsync(request, null, TestContext.Current.CancellationToken);
+        Assert.Equal(4096, fixedContext.Routing!.ContextTokens);
+    }
+
+    [Theory]
+    [InlineData("external-embedding:1")]
+    [InlineData(Model)]
+    public async Task An_ambiguous_process_snapshot_is_refused_before_unloading_any_model(string requestedModel)
+    {
+        using var backend = new Backend { Model = requestedModel, Loaded = true,
+            DuplicateTarget = true, OtherManagedModel = "qwen3.5:9b" };
+        using var client = new HttpClient(backend);
+        using var transport = new OllamaTransport(client, new Uri("http://embedding.test/"));
+        var request = LocalJobRequestFactory.CreateEmbed("external", LocalJobPriority.Foreground,
+            backend.Model, ["text"], requestedContextTokens: 2048);
 
         var error = await Assert.ThrowsAsync<ModelPreflightException>(() =>
             Router(transport).ExecuteAsync(request, null, TestContext.Current.CancellationToken));
 
-        Assert.Equal(ModelExecutionOutcome.ContextFailure, error.Outcome);
+        Assert.Equal(ModelExecutionOutcome.TechnicalFailure, error.Outcome);
         Assert.Equal(0, backend.Preflights);
         Assert.Equal(0, backend.Embeddings);
         Assert.Equal(0, backend.Unloads);
@@ -153,6 +182,105 @@ public sealed class EmbeddingResidencyTests : IDisposable
         await UsageEvidence.CollectAsync(call);
 
         Assert.Equal(allCached ? UsageModelState.NotCalled : UsageModelState.Unknown, call.Complete().Models.State);
+    }
+
+    [Fact]
+    public async Task A_retry_rechecks_residency_after_the_runner_returns_a_transient_failure()
+    {
+        using var backend = new Backend { OffloadAfterFirstUsefulFailure = true };
+        using var client = new HttpClient(backend);
+        using var transport = new OllamaTransport(client, new Uri("http://embedding.test/"),
+            (_, _) => Task.CompletedTask);
+
+        var error = await Assert.ThrowsAsync<ModelPreflightException>(() =>
+            Router(transport).ExecuteAsync(Request(), null, TestContext.Current.CancellationToken));
+
+        Assert.Equal(ModelExecutionOutcome.CpuOffload, error.Outcome);
+        Assert.Equal(2, backend.Preflights);
+        Assert.Equal(1, backend.Embeddings);
+    }
+
+    [Fact]
+    public async Task An_admitted_retry_reports_its_new_partial_proof_not_the_original_full_proof()
+    {
+        using var backend = new Backend { OffloadAfterFirstUsefulFailure = true };
+        using var client = new HttpClient(backend);
+        using var transport = new OllamaTransport(client, new Uri("http://embedding.test/"),
+            (_, _) => Task.CompletedTask);
+
+        var result = await Router(transport, ModelResidencyPolicy.AllowPartialOffload)
+            .ExecuteAsync(Request(), null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(ResidencyShortfall.PartialOffload, result.Routing!.ResidencyShortfall);
+        Assert.Equal(60, result.Routing!.VramResidentPercent);
+        Assert.Equal(2, backend.Preflights);
+        Assert.Equal(2, backend.Embeddings);
+    }
+
+    [Fact]
+    public async Task A_receipt_for_another_job_cannot_resolve_the_linked_jobs_inference()
+    {
+        using var call = new UsageCall(UsageSurface.Mcp, "codesearch", "search_code");
+        var linked = Guid.NewGuid();
+        call.LinkJob(linked);
+        var foreign = new LocalUsageReceipt(Guid.NewGuid(), "code-search", "embed", Model,
+            TimeSpan.Zero, TimeSpan.Zero, 0, 0, null, null, null) { InferenceExecuted = false };
+
+        Assert.Throws<ArgumentException>(() => call.RegisterJobEvidence(root, linked, foreign));
+        await UsageEvidence.CollectAsync(call);
+
+        Assert.Equal(UsageModelState.Unknown, call.Complete().Models.State);
+    }
+
+    [Fact]
+    public async Task Routing_for_another_model_does_not_prove_receipt_residency()
+    {
+        using var call = new UsageCall(UsageSurface.Mcp, "codesearch", "search_code");
+        var job = Guid.NewGuid();
+        call.LinkJob(job);
+        var routing = new LocalRoutingReceipt(null, "another-model", 2048, false, false, null,
+            0, 0, 0, VramResidentPercent: 100);
+        call.RegisterJobEvidence(root, job, new LocalUsageReceipt(job, "code-search", "embed", Model,
+            TimeSpan.Zero, TimeSpan.Zero, 0, 0, null, null, null, routing));
+
+        await UsageEvidence.CollectAsync(call);
+
+        Assert.Equal(UsageOffload.Unknown, Assert.Single(call.Complete().Models.Actual).Offload);
+    }
+
+    [Theory]
+    [InlineData(2048, UsageOffload.None)]
+    [InlineData(4096, UsageOffload.Unknown)]
+    public async Task Routing_must_match_the_context_requested_by_the_linked_embedding_job(int receiptContext, UsageOffload expected)
+    {
+        using var call = new UsageCall(UsageSurface.Mcp, "codesearch", "search_code");
+        var job = Guid.NewGuid();
+        call.LinkJob(job);
+        call.RegisterJobEvidence(root, job, expectedModel: Model, expectedContextTokens: 2048);
+        var routing = new LocalRoutingReceipt(null, Model, receiptContext, false, false, null,
+            0, 0, 0, VramResidentPercent: 100);
+        call.RegisterJobEvidence(root, job, new LocalUsageReceipt(job, "code-search", "embed", Model,
+            TimeSpan.Zero, TimeSpan.Zero, 0, 0, null, null, null, routing));
+
+        await UsageEvidence.CollectAsync(call);
+
+        Assert.Equal(expected, Assert.Single(call.Complete().Models.Actual).Offload);
+    }
+
+    [Fact]
+    public async Task An_omitted_external_context_that_the_backend_clamps_is_refused_with_the_expected_tier()
+    {
+        using var backend = new Backend { Model = "external-embedding:1", ClampContext = 2048 };
+        using var client = new HttpClient(backend);
+        using var transport = new OllamaTransport(client, new Uri("http://embedding.test/"));
+        var request = LocalJobRequestFactory.CreateEmbed("external", LocalJobPriority.Foreground, backend.Model, ["text"]);
+
+        var error = await Assert.ThrowsAsync<ModelPreflightException>(() =>
+            Router(transport).ExecuteAsync(request, null, TestContext.Current.CancellationToken));
+
+        Assert.Equal(ModelExecutionOutcome.ContextFailure, error.Outcome);
+        Assert.Contains("16384", error.Message, StringComparison.Ordinal);
+        Assert.Equal(0, backend.Embeddings);
     }
 
     private BrokerExecutionRouter Router(OllamaTransport transport,
@@ -252,10 +380,14 @@ public sealed class EmbeddingResidencyTests : IDisposable
         internal int Embeddings;
         internal int? LastEmbeddingContext;
         internal bool Loaded;
+        internal string? OtherManagedModel;
+        internal bool DuplicateTarget;
+        internal bool OffloadAfterFirstUsefulFailure;
         internal int Unloads;
         internal bool BlockPreflight;
         internal TaskCompletionSource PreflightStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        private int context = 2048;
+        internal int Context = 2048;
+        internal int? ClampContext;
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
@@ -267,8 +399,18 @@ public sealed class EmbeddingResidencyTests : IDisposable
                     body = new { models = new[] { new { name = Model, digest = new string('a', 64) } } };
                     break;
                 case "/api/ps":
-                    body = new { models = Loaded ? new[] { new { name = Model, size = 100, size_vram = SizeVram,
-                        context_length = context, expires_at = DateTimeOffset.UtcNow.AddMinutes(30) } } : [] };
+                    var models = new List<object>();
+                    if (Loaded)
+                    {
+                        var target = new { name = Model, size = 100, size_vram = SizeVram,
+                            context_length = Context, expires_at = DateTimeOffset.UtcNow.AddMinutes(30) };
+                        models.Add(target);
+                        if (DuplicateTarget) models.Add(target);
+                    }
+                    if (OtherManagedModel is { } otherModel)
+                        models.Add(new { name = otherModel, size = 100, size_vram = 100,
+                            context_length = 2048, expires_at = DateTimeOffset.UtcNow.AddMinutes(30) });
+                    body = new { models };
                     break;
                 case "/api/embed":
                     using (var document = JsonDocument.Parse(await request.Content!.ReadAsStringAsync(cancellationToken)))
@@ -282,9 +424,19 @@ public sealed class EmbeddingResidencyTests : IDisposable
                             PreflightStarted.TrySetResult();
                             if (BlockPreflight) await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
                             Loaded = true;
-                            context = selected!.Value;
+                            Context = ClampContext ?? selected!.Value;
                         }
-                        else { Embeddings++; LastEmbeddingContext = selected; }
+                        else
+                        {
+                            Embeddings++;
+                            LastEmbeddingContext = selected;
+                            if (OffloadAfterFirstUsefulFailure && Embeddings == 1)
+                            {
+                                SizeVram = 60;
+                                return new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+                                    { Content = new StringContent("runner restarting") };
+                            }
+                        }
                     }
                     body = new { embeddings = new[] { new[] { 1d, 2, 3 } } };
                     break;

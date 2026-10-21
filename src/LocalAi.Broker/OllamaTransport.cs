@@ -570,7 +570,8 @@ public sealed partial class OllamaTransport : IModelRuntimeTransport, IEmbedding
     private async Task<JsonDocument> SendEmbedAsync(
         EmbedJobPayload payload,
         string body,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Func<CancellationToken, Task>? beforeAttempt = null)
     {
         try
         {
@@ -581,7 +582,8 @@ public sealed partial class OllamaTransport : IModelRuntimeTransport, IEmbedding
                 payload.Inputs,
                 cancellationToken,
                 maximumResponseBytes: EmbedResponseCeilingBytes,
-                surfaceRunnerFailure: true);
+                surfaceRunnerFailure: true,
+                beforeAttempt: beforeAttempt);
         }
         catch (HttpRequestException failure) when (failure.StatusCode == HttpStatusCode.NotFound)
         {
@@ -624,7 +626,11 @@ public sealed partial class OllamaTransport : IModelRuntimeTransport, IEmbedding
         CancellationToken cancellationToken,
         Func<EmbedJobPayload, CancellationToken, Task<ModelResidencyProof>>? ensureReady = null)
     {
-        var proof = ensureReady is null ? null : await ensureReady(payload, cancellationToken);
+        ModelResidencyProof? proof = null;
+        async Task Ready(CancellationToken token)
+        {
+            if (ensureReady is not null) proof = await ensureReady(payload, token);
+        }
         TrackActiveModel(payload.Model);
         var body = JsonSerializer.Serialize(new EmbedRequest(
             payload.Model,
@@ -632,7 +638,8 @@ public sealed partial class OllamaTransport : IModelRuntimeTransport, IEmbedding
             Options: payload.RequestedContextTokens is { } contextTokens
                 ? new GenerateOptions(contextTokens)
                 : null));
-        using var document = await SendEmbedAsync(payload, body, cancellationToken);
+        using var document = await SendEmbedAsync(payload, body, cancellationToken,
+            ensureReady is null ? null : Ready);
         EmbedResponse response;
         try
         {
@@ -790,11 +797,15 @@ public sealed partial class OllamaTransport : IModelRuntimeTransport, IEmbedding
         IReadOnlyList<string> sensitiveValues,
         CancellationToken cancellationToken,
         long maximumResponseBytes = DefaultResponseCeilingBytes,
-        bool surfaceRunnerFailure = false)
+        bool surfaceRunnerFailure = false,
+        Func<CancellationToken, Task>? beforeAttempt = null)
     {
         for (var attempt = 1; attempt <= MaxAttempts; attempt++)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            // A retry may follow a restarted runner. Validate the current residency
+            // before every useful embedding attempt, outside the transport retry catch.
+            if (beforeAttempt is not null) await beforeAttempt(cancellationToken);
             try
             {
                 using var request = new HttpRequestMessage(
