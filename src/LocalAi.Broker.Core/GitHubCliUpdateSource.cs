@@ -78,16 +78,34 @@ public sealed class GitHubCliUpdateSource : IGitHubUpdateSource
         return bytes;
     }
 
-    internal static async Task<byte[]> ExecuteAsync(IReadOnlyList<string> arguments, int maximumBytes,
-        CancellationToken cancellationToken)
+    internal static Task<byte[]> ExecuteAsync(IReadOnlyList<string> arguments, int maximumBytes,
+        CancellationToken cancellationToken) =>
+        ExecuteWithLocatorAsync(arguments, maximumBytes, cancellationToken, null, TimeSpan.FromSeconds(30));
+
+    internal static async Task<byte[]> ExecuteWithLocatorAsync(IReadOnlyList<string> arguments, int maximumBytes,
+        CancellationToken cancellationToken, Func<CancellationToken, ProcessStartInfo>? createStartInfo,
+        TimeSpan requestTimeout, TimeProvider? deadlineClock = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        using var process = new Process { StartInfo = CreateStartInfo(arguments) };
-        using var budget = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        budget.CancelAfter(TimeSpan.FromSeconds(30));
+        using var process = new Process();
+        using var deadline = new CancellationTokenSource(requestTimeout, deadlineClock ?? TimeProvider.System);
+        using var budget = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, deadline.Token);
+        var budgetToken = budget.Token;
         var oversized = 0;
         try
         {
+            // Filesystem/drive probes can block in native I/O. Bound the caller's wait too;
+            // a late lookup result is discarded and can never start a process after timeout.
+            process.StartInfo = await Task.Run(() =>
+            {
+                budgetToken.ThrowIfCancellationRequested();
+                var start = createStartInfo is null
+                    ? CreateStartInfo(arguments, cancellationToken: budgetToken)
+                    : createStartInfo(budgetToken);
+                budgetToken.ThrowIfCancellationRequested();
+                return start;
+            }, CancellationToken.None).WaitAsync(budgetToken).ConfigureAwait(false);
+            budgetToken.ThrowIfCancellationRequested();
             if (!process.Start()) throw new UpdateCheckSourceException(UpdateCheckFailure.AuthenticationUnavailable);
             process.StandardInput.Close();
             var output = ReadBoundedAsync(process.StandardOutput.BaseStream, maximumBytes, budget,
@@ -123,10 +141,10 @@ public sealed class GitHubCliUpdateSource : IGitHubUpdateSource
     }
 
     internal static ProcessStartInfo CreateStartInfo(IReadOnlyList<string> arguments,
-        string? searchPath = null, string? currentDirectory = null)
+        string? searchPath = null, string? currentDirectory = null, CancellationToken cancellationToken = default)
     {
         var executable = GitHubCliExecutableLocator.Find(searchPath ?? Environment.GetEnvironmentVariable("PATH") ?? string.Empty,
-            currentDirectory ?? Environment.CurrentDirectory)
+            currentDirectory ?? Environment.CurrentDirectory, cancellationToken)
             ?? throw new UpdateCheckSourceException(UpdateCheckFailure.AuthenticationUnavailable);
         var start = new ProcessStartInfo(executable)
         {
@@ -148,13 +166,14 @@ public sealed class GitHubCliUpdateSource : IGitHubUpdateSource
     private static async Task<byte[]> ReadBoundedAsync(Stream stream, int maximumBytes,
         CancellationTokenSource budget, Action exceeded)
     {
+        var cancellationToken = budget.Token;
         try
         {
             using var buffer = new MemoryStream();
             var bytes = new byte[4096];
             while (true)
             {
-                var read = await stream.ReadAsync(bytes, budget.Token).ConfigureAwait(false);
+                var read = await stream.ReadAsync(bytes, cancellationToken).ConfigureAwait(false);
                 if (read == 0) return buffer.ToArray();
                 if (buffer.Length + read > maximumBytes)
                 {
@@ -166,7 +185,8 @@ public sealed class GitHubCliUpdateSource : IGitHubUpdateSource
         }
         catch
         {
-            await budget.CancelAsync().ConfigureAwait(false);
+            try { await budget.CancelAsync().ConfigureAwait(false); }
+            catch (ObjectDisposedException) { }
             throw;
         }
     }
