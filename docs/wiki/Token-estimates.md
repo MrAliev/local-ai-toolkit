@@ -5,6 +5,17 @@
 **Necessary request context is the baseline. Whole-file sizes are not a universal substitute.**
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: "#CCE4F7"
+    primaryTextColor: "#1A1A1A"
+    primaryBorderColor: "#2D7FD3"
+    lineColor: "#0067C0"
+    secondaryColor: "#FAFAFA"
+    tertiaryColor: "#F3F3F3"
+---
 flowchart TD
   task["Alternative task context known?"] -->|No| unknown["Cannot estimate"]
   task -->|Yes| seen["Already in cloud context?"]

@@ -10,6 +10,17 @@
 | Windows publisher identity | SignPath onboarding planned; no certificate is claimed here |
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: "#CCE4F7"
+    primaryTextColor: "#1A1A1A"
+    primaryBorderColor: "#2D7FD3"
+    lineColor: "#0067C0"
+    secondaryColor: "#FAFAFA"
+    tertiaryColor: "#F3F3F3"
+---
 flowchart LR
   source["Reviewed source"] --> build["Trusted CI build"]
   build --> approval["Human signing approval"]

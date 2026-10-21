@@ -2,8 +2,7 @@
 
 ![Local AI logo](images/localai-mark.png)
 
-**Local models that do the reading — for you, and for your cloud agent. A real saving in
-cloud tokens, and in your own time.**
+**Lower costs. Faster results.**
 
 [Русская версия](README.ru.md)
 
@@ -11,13 +10,14 @@ cloud tokens, and in your own time.**
 
 [Project guide](opensource.md) · [Interactive website](https://mraliev.github.io/local-ai-toolkit/) · [Wiki](https://github.com/MrAliev/local-ai-toolkit/wiki) · [Support](support.md)
 
-A cloud agent spends most of its tokens looking rather than thinking: opening candidate
-files, searching the code, walking dependencies, scrolling a build log, describing a
-screenshot, translating a page. Local AI does that part on your own machine and hands back
-the answer, so the agent starts from a result instead of paying to find one.
+Reduce paid cloud context and get to relevant code sooner. Local AI searches an existing
+repository index by meaning or symbol, and uses local models to inspect files, logs and
+images. Your agent receives concise findings and source locations instead of unnecessary
+source text.
 
-**A cloud agent that answers a question by reading files pays for every file it opens. A
-question answered from the local index brings back only the fragments that matched.**
+Savings depend on the context actually needed for the request, including tool overhead.
+Response time depends on the task, index, queue and hardware; local inference is not
+automatically faster for every task.
 
 A subscription to any cloud agent is optional: the same tools answer from the command line,
 if you would rather work on your own.

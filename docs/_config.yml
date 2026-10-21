@@ -3,7 +3,7 @@
 # give each one its title from its first heading and turn links to .md files into links to
 # the rendered pages.
 title: Local AI Toolkit
-description: Local models that do the reading — for you, and for your cloud agent.
+description: Lower costs. Faster results. Local search and analysis to reduce cloud context and find relevant code.
 theme: jekyll-theme-cayman
 plugins:
   - jekyll-relative-links

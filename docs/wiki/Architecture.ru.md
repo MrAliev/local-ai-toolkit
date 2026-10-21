@@ -3,6 +3,17 @@
 [English version](Architecture.md) · [Главная](Home.ru.md)
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: "#CCE4F7"
+    primaryTextColor: "#1A1A1A"
+    primaryBorderColor: "#2D7FD3"
+    lineColor: "#0067C0"
+    secondaryColor: "#FAFAFA"
+    tertiaryColor: "#F3F3F3"
+---
 flowchart TB
   subgraph clients["Клиенты"]
     agent["Codex / Claude Code"]
@@ -29,6 +40,17 @@ flowchart TB
 | Вызывающий клиент | Решение о передаче результатов облачному сервису |
 
 ```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: "#CCE4F7"
+    primaryTextColor: "#1A1A1A"
+    primaryBorderColor: "#2D7FD3"
+    lineColor: "#0067C0"
+    secondaryColor: "#FAFAFA"
+    tertiaryColor: "#F3F3F3"
+---
 sequenceDiagram
   participant C as Клиент
   participant S as CodeSearch

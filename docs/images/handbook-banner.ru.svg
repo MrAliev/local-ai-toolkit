@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="310" viewBox="0 0 1120 310" role="img" aria-labelledby="title desc">
+  <title id="title">Local AI Toolkit · Меньше затрат. Быстрее к результату.</title>
+  <desc id="desc">Поиск и анализ локально. Нужный контекст для облачного агента.</desc>
+  <rect width="1120" height="310" rx="18" fill="#FAFAFA"/>
+  <path d="M18 0H1102Q1120 0 1120 18V24H0V18Q0 0 18 0" fill="#2D7FD3"/>
+  <g font-family="Segoe UI,Arial,sans-serif">
+    <text x="44" y="65" fill="#5A5A5A" font-size="16" letter-spacing="2">LOCAL AI TOOLKIT</text>
+    <text x="44" y="126" fill="#1A1A1A" font-size="44" font-weight="600">Меньше затрат.</text>
+    <text x="44" y="181" fill="#0067C0" font-size="44" font-weight="600">Быстрее к результату.</text>
+    <g transform="translate(44 226)"><rect width="322" height="52" rx="8" fill="#FFFFFF" stroke="#E1E1E1"/><text x="16" y="32" fill="#0067C0" font-size="14" font-weight="700">01</text><text x="52" y="32" fill="#1A1A1A" font-size="17">Найти локально</text></g><g transform="translate(390 226)"><rect width="322" height="52" rx="8" fill="#FFFFFF" stroke="#E1E1E1"/><text x="16" y="32" fill="#0067C0" font-size="14" font-weight="700">02</text><text x="52" y="32" fill="#1A1A1A" font-size="17">Передать нужное</text></g><g transform="translate(736 226)"><rect width="322" height="52" rx="8" fill="#FFFFFF" stroke="#E1E1E1"/><text x="16" y="32" fill="#0067C0" font-size="14" font-weight="700">03</text><text x="52" y="32" fill="#1A1A1A" font-size="17">Продолжить работу</text></g>
+  </g>
+</svg>
