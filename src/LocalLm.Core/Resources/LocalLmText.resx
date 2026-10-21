@@ -114,6 +114,36 @@
   <data name="LogTextRead" xml:space="preserve">
     <value>Log text read: {0} characters, fragments: {1}, context: {2}</value>
   </data>
+  <data name="LogErrorLineCount" xml:space="preserve">
+    <value>Error lines in source: {0}</value>
+  </data>
+  <data name="LogErrorCodeCounts" xml:space="preserve">
+    <value>By code: {0}</value>
+  </data>
+  <data name="LogMsBuildSummary" xml:space="preserve">
+    <value>MSBuild summary: {0}</value>
+  </data>
+  <data name="LogErrorSamples" xml:space="preserve">
+    <value>Showing {0} of {1} error lines. Sample limits do not affect diagnostic counts.</value>
+  </data>
+  <data name="LogDiagnosticLine" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="LogModelVerificationFailed" xml:space="preserve">
+    <value>The model response failed verification. Showing the deterministic source report.</value>
+  </data>
+  <data name="LogModelVerificationPassed" xml:space="preserve">
+    <value>Model diagnostic counts match the source.</value>
+  </data>
+  <data name="LogNoRecognizedErrors" xml:space="preserve">
+    <value>No recognized error diagnostics. The build result is unverified.</value>
+  </data>
+  <data name="LogUnparsedLongLines" xml:space="preserve">
+    <value>Lines exceeding the parser limit: {0}. Diagnostic counts may be incomplete.</value>
+  </data>
+  <data name="LogOmittedBuildSummaries" xml:space="preserve">
+    <value>Additional MSBuild summaries not shown: {0}</value>
+  </data>
   <data name="LogTriageNoReceipt" xml:space="preserve">
     <value>Log triage produced no model receipt.</value>
   </data>

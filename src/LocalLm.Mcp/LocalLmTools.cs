@@ -549,7 +549,11 @@ public static class LocalLmTools
             return Report(
                 result.Notice,
                 result.Receipt.Routing?.ResidencyShortfall ?? ResidencyShortfall.None,
-                result.Validation is null ? result.Answer : Serialize(new { answer = result.Answer, validation = result.Validation }),
+                result.CompilerDiagnostics is not null
+                    ? Serialize(new { answer = result.Answer, compilerDiagnostics = result.CompilerDiagnostics,
+                        diagnosticVerification = result.DiagnosticVerification })
+                    : result.Validation is null ? result.Answer
+                        : Serialize(new { answer = result.Answer, validation = result.Validation }),
                 origin);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
