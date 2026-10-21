@@ -235,6 +235,15 @@ checked against the source. Incorrect counts, omitted errors or invented codes r
 diagnosis and produce the deterministic source report. No recognized diagnostics does not mean
 that the build succeeded.
 
+Compiler fragments and reductions request a JSON inventory rather than a prose diagnosis.
+One enclosing JSON code fence may be removed, followed by the same source reconciliation.
+A malformed inventory can receive at most one bounded format retry through the broker, using
+compact source counts and the already accepted model/context. Incorrect semantic counts are
+not repaired into a success. Cancellation stops the retry; a failed or oversized repair keeps
+the deterministic source report. Verification metadata records normalization, repair attempts,
+initial reasons and any repair failure. A failed job without a receipt explicitly marks its
+repair timings incomplete; the known queue/execution subtotal is not a complete retry timing.
+
 It takes a stream too, so the log need not be saved at all:
 
 ```powershell
