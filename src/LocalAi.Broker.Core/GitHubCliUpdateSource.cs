@@ -78,24 +78,11 @@ public sealed class GitHubCliUpdateSource : IGitHubUpdateSource
         return bytes;
     }
 
-    private static async Task<byte[]> ExecuteAsync(IReadOnlyList<string> arguments, int maximumBytes,
+    internal static async Task<byte[]> ExecuteAsync(IReadOnlyList<string> arguments, int maximumBytes,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var start = new ProcessStartInfo("gh")
-        {
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardInput = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-        };
-        foreach (var argument in arguments) start.ArgumentList.Add(argument);
-        start.Environment["GH_PROMPT_DISABLED"] = "1";
-        start.Environment["GH_NO_UPDATE_NOTIFIER"] = "1";
-        start.Environment["GIT_TERMINAL_PROMPT"] = "0";
-        start.Environment["NO_COLOR"] = "1";
-        using var process = new Process { StartInfo = start };
+        using var process = new Process { StartInfo = CreateStartInfo(arguments) };
         using var budget = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         budget.CancelAfter(TimeSpan.FromSeconds(30));
         var oversized = 0;
@@ -133,6 +120,29 @@ public sealed class GitHubCliUpdateSource : IGitHubUpdateSource
             try { if (process.Id != 0 && !process.HasExited) process.Kill(entireProcessTree: true); }
             catch (Exception exception) when (exception is InvalidOperationException or Win32Exception) { }
         }
+    }
+
+    internal static ProcessStartInfo CreateStartInfo(IReadOnlyList<string> arguments,
+        string? searchPath = null, string? currentDirectory = null)
+    {
+        var executable = GitHubCliExecutableLocator.Find(searchPath ?? Environment.GetEnvironmentVariable("PATH") ?? string.Empty,
+            currentDirectory ?? Environment.CurrentDirectory)
+            ?? throw new UpdateCheckSourceException(UpdateCheckFailure.AuthenticationUnavailable);
+        var start = new ProcessStartInfo(executable)
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            WorkingDirectory = Path.GetDirectoryName(executable)!,
+        };
+        foreach (var argument in arguments) start.ArgumentList.Add(argument);
+        start.Environment["GH_PROMPT_DISABLED"] = "1";
+        start.Environment["GH_NO_UPDATE_NOTIFIER"] = "1";
+        start.Environment["GIT_TERMINAL_PROMPT"] = "0";
+        start.Environment["NO_COLOR"] = "1";
+        return start;
     }
 
     private static async Task<byte[]> ReadBoundedAsync(Stream stream, int maximumBytes,
