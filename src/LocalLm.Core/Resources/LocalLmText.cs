@@ -112,6 +112,27 @@ public static class LocalLmText
         int contextTokens) =>
         Format(nameof(LogFileRead), fileName, kilobytes, fragments, contextTokens);
 
+    public static string LogErrorLineCount(long count) => Format(nameof(LogErrorLineCount), count);
+
+    public static string LogErrorCodeCounts(string counts) => Format(nameof(LogErrorCodeCounts), counts);
+
+    public static string LogMsBuildSummary(string summary) => Format(nameof(LogMsBuildSummary), summary);
+
+    public static string LogErrorSamples(long shown, long total) => Format(nameof(LogErrorSamples), shown, total);
+
+    public static string LogDiagnosticLine(long lineNumber, string diagnostic) =>
+        Format(nameof(LogDiagnosticLine), lineNumber, diagnostic);
+
+    public static string LogModelVerificationFailed => Get(nameof(LogModelVerificationFailed));
+
+    public static string LogModelVerificationPassed => Get(nameof(LogModelVerificationPassed));
+
+    public static string LogNoRecognizedErrors => Get(nameof(LogNoRecognizedErrors));
+
+    public static string LogUnparsedLongLines(long count) => Format(nameof(LogUnparsedLongLines), count);
+
+    public static string LogOmittedBuildSummaries(long count) => Format(nameof(LogOmittedBuildSummaries), count);
+
     public static string TranslationNotice(
         string model,
         string residency,

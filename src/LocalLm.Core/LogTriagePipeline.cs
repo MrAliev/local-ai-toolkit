@@ -70,6 +70,8 @@ internal sealed class LogTriagePipeline(
             policy.MaximumFragmentCharacters,
             availableCharacters);
         var maximumSummaryCharacters = MaximumSummaryCharacters(capacity.ContextTokens);
+        using var diagnosticScanner = new CompilerLogScanner();
+        var verifyCompilerDiagnostics = false;
         var reducer = new HierarchicalReducer(
             reductionBudget,
             (summaries, level, ct) => ReduceAsync(
@@ -78,6 +80,7 @@ internal sealed class LogTriagePipeline(
                 focus,
                 maximumSummaryCharacters,
                 capacity,
+                verifyCompilerDiagnostics,
                 ct));
 
         long fragmentCount = 0;
@@ -96,6 +99,11 @@ internal sealed class LogTriagePipeline(
                            cancellationToken))
         {
             fragmentCount++;
+            // Only fresh source text is counted: overlap belongs to an earlier fragment.
+            diagnosticScanner.Append(fragment.UniqueText);
+            var fragmentHasCompilerDiagnostics = CompilerLogVerification.HasEvidence(
+                CompilerLogScanner.Scan(fragment.Content));
+            verifyCompilerDiagnostics |= fragmentHasCompilerDiagnostics;
             UsageCall.Current?.Comparison.SourceText(fragment.UniqueText, $"{source.Path ?? "inline"}:{fragment.ConsumedBefore}");
             observer?.Report(new TriagingFragment(
                 (int)fragmentCount,
@@ -110,6 +118,7 @@ internal sealed class LogTriagePipeline(
                 focus,
                 maximumSummaryCharacters,
                 capacity,
+                fragmentHasCompilerDiagnostics,
                 cancellationToken);
             lastReceipt = result.Receipt;
             queued += result.Receipt.QueueDuration;
@@ -119,6 +128,8 @@ internal sealed class LogTriagePipeline(
 
         // The total, at the first moment it is true.
         observer?.Report(new TriageLogRead((int)fragmentCount));
+        var compilerDiagnostics = diagnosticScanner.Complete();
+        verifyCompilerDiagnostics |= CompilerLogVerification.HasEvidence(compilerDiagnostics);
         var reduced = await reducer.CompleteAsync(cancellationToken);
         if (reduced.Receipt is not null)
         {
@@ -128,6 +139,15 @@ internal sealed class LogTriagePipeline(
         }
 
         var answer = reduced.Text;
+        CompilerModelVerification? diagnosticVerification = null;
+        if (verifyCompilerDiagnostics || CompilerLogVerification.ContainsDiagnosticClaim(answer))
+        {
+            diagnosticVerification = CompilerLogVerification.Verify(answer, compilerDiagnostics);
+            UsageCall.Current?.Validated(diagnosticVerification.Status == "passed");
+            // Counts and source diagnostics are always rendered by code. Even a structurally
+            // valid model inventory cannot introduce an unverified natural-language diagnosis.
+            answer = CompilerLogVerification.Render(compilerDiagnostics, diagnosticVerification);
+        }
         UsageCall.Current?.Comparison.GeneratedText(answer);
         var receipt = (lastReceipt
             ?? throw new InvalidOperationException(LocalLmText.LogTriageNoReceipt))
@@ -147,7 +167,11 @@ internal sealed class LogTriagePipeline(
             TokenEstimator.Saved((int)originalTokens, answer),
             capacity.Model,
             detail,
-            receipt);
+            receipt)
+        {
+            CompilerDiagnostics = diagnosticVerification is null ? null : compilerDiagnostics,
+            DiagnosticVerification = diagnosticVerification,
+        };
     }
 
     private async Task<Capacity> SelectCapacityAsync(
@@ -359,10 +383,11 @@ internal sealed class LogTriagePipeline(
         string question,
         int maximumSummaryCharacters,
         Capacity capacity,
+        bool compilerDiagnostics,
         CancellationToken cancellationToken) =>
         await client.RoutedChatAsync(
             LocalTaskProfile.LogTriage,
-            $"""
+            WithCompilerContract($"""
              {question}
 
              Analyze log fragment {fragmentIndex}. Return only relevant findings from this
@@ -372,7 +397,7 @@ internal sealed class LogTriagePipeline(
              --- BEGIN LOG FRAGMENT {fragmentIndex} ---
              {content}
              --- END LOG FRAGMENT {fragmentIndex} ---
-             """,
+             """, compilerDiagnostics, capacity),
             SystemPrompt,
             null,
             new LocalWorkloadMetadata(
@@ -394,6 +419,7 @@ internal sealed class LogTriagePipeline(
         string question,
         int maximumSummaryCharacters,
         Capacity capacity,
+        bool compilerDiagnostics,
         CancellationToken cancellationToken)
     {
         // Merges also happen mid-stream when a level overflows its budget, so the line
@@ -408,7 +434,7 @@ internal sealed class LogTriagePipeline(
 
         var result = await client.RoutedChatAsync(
             LocalTaskProfile.LogTriage,
-            $"""
+            WithCompilerContract($"""
              {question}
 
              Merge these ordered partial log findings (reduction level {level}). Deduplicate repeated
@@ -417,7 +443,7 @@ internal sealed class LogTriagePipeline(
              {maximumSummaryCharacters} characters.
 
              {body}
-             """,
+             """, compilerDiagnostics, capacity),
             SystemPrompt,
             null,
             new LocalWorkloadMetadata(
@@ -433,6 +459,17 @@ internal sealed class LogTriagePipeline(
             LocalJobPriority.Foreground,
             cancellationToken);
         return new ReducedSummary(result.Value, result.Receipt);
+    }
+
+    private string WithCompilerContract(string prompt, bool compilerDiagnostics, Capacity capacity)
+    {
+        if (!compilerDiagnostics) return prompt;
+        var structured = CompilerLogVerification.Instruction + "\n\n" + prompt;
+        // Preserve the existing budget for generic logs and never overrun a small context
+        // to request the inventory. An unstructured reply still fails the final source
+        // reconciliation and the deterministic evidence is delivered instead.
+        return structured.Length + SystemPrompt.Length <= InputCharacterBudget(capacity.ContextTokens)
+            ? structured : prompt;
     }
 
     private static async IAsyncEnumerable<LogFragment> ReadFragmentsAsync(

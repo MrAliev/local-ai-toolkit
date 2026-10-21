@@ -38,7 +38,11 @@ public sealed record LocalModelData(
                JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     int? VramResidentPercent = null,
     [property: JsonPropertyName("validation"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    StructuredValidationResult? Validation = null);
+    StructuredValidationResult? Validation = null,
+    [property: JsonPropertyName("compilerDiagnostics"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    CompilerLogReport? CompilerDiagnostics = null,
+    [property: JsonPropertyName("diagnosticVerification"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    CompilerModelVerification? DiagnosticVerification = null);
 
 /// <summary>
 /// What <c>translate</c> tells a program: the shared block, plus the two figures only this command
@@ -322,7 +326,9 @@ internal static class LocalModelRun
             result.SavedTokens,
             result.Truncated,
             Vram(result.Receipt),
-            result.Validation);
+            result.Validation,
+            result.CompilerDiagnostics,
+            result.DiagnosticVerification);
 
     private static TranslationData Describe(string origin, LocalTranslationResult result) =>
         new(
