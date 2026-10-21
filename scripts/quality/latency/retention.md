@@ -10,6 +10,10 @@ LocalAi broker. It does not call the backend directly or claim cloud-token savin
 
 Use the installed launcher and the existing clean mixed evaluation corpus:
 
+The installed runtime is located through the Windows known-folder API. Overriding
+`LOCALAPPDATA` does not select another installation. These diagnostics require Windows
+and stop if the known-folder lookup fails; they do not fall back to an environment path.
+
 ```powershell
 python scripts/quality/latency/retention_probe.py `
   <clean-mixed-corpus> tests/Fixtures/OcrQuality/short-repeated-en.png `
