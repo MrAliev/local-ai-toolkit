@@ -1,0 +1,94 @@
+---
+layout: null
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Local AI Toolkit: spend less on cloud context and find relevant code faster with local search and model tools for Windows.">
+  <title>Local AI Toolkit · Lower costs. Faster results.</title>
+  <link rel="icon" href="images/localai-mark.png">
+  <link rel="stylesheet" href="assets/portal.css">
+  <script defer src="assets/portal.js"></script>
+</head>
+<body>
+<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+<header class="topbar">
+  <a class="brand" href="./"><img src="images/localai-mark.png" alt="" width="32" height="32">Local AI <span>Toolkit</span></a>
+  <nav aria-label="Main navigation">
+    <a href="README.html" data-i18n="docs">Documentation</a>
+    <a href="https://github.com/MrAliev/local-ai-toolkit/wiki">Wiki ↗</a>
+    <a href="https://github.com/MrAliev/local-ai-toolkit">GitHub ↗</a>
+    <button id="language" type="button" lang="ru" aria-label="Switch to Russian">Русский</button>
+  </nav>
+</header>
+<main id="main">
+  <section class="hero wrap">
+    <div>
+      <p class="eyebrow"><span class="status-dot"></span><span data-i18n="eyebrow">OPEN SOURCE · WINDOWS · MCP</span></p>
+      <h1 data-i18n="hero">Lower costs.<br><em>Faster results.</em></h1>
+      <p class="lead" data-i18n="lead">Reduce paid cloud context with local search and analysis. Find relevant code in an index, inspect files on your machine, and send concise findings to your agent.</p>
+      <div class="actions">
+        <a class="button primary" href="installing.html" data-i18n="start">Get started <span aria-hidden="true">→</span></a>
+        <a class="button secondary" href="#architecture" data-i18n="explore">Explore the architecture</a>
+      </div>
+      <p class="fine" data-i18n="heroNote">MIT licensed. Windows · MCP · CLI. Savings and latency depend on the task, index and hardware.</p>
+    </div>
+    <div class="hero-art" aria-label="A repository connects to local search and a model broker, returning evidence to the client">
+      <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+      <div class="art-label art-top"><span>01</span><b data-i18n="repository">Your repository</b><small>source · symbols · worktrees</small></div>
+      <div class="core"><img src="images/localai-mark.png" alt="" width="58" height="58"><span>LOCAL AI</span></div>
+      <div class="art-label art-left"><span>02</span><b>CodeSearch</b><small data-i18n="semantic">semantic + symbol search</small></div>
+      <div class="art-label art-right"><span>03</span><b data-i18n="broker">Shared broker</b><small data-i18n="queue">one model queue</small></div>
+      <div class="art-label art-bottom"><span>04</span><b data-i18n="evidence">Evidence for your agent</b><small>paths · excerpts · provenance</small></div>
+    </div>
+  </section>
+  <section class="principles wrap" aria-label="Project principles">
+    <article><span data-i18n="p1tag">01 / COST</span><h2 data-i18n="p1">Less cloud context</h2><p data-i18n="p1text">Let local tools read first and return relevant excerpts. Avoid paying to send unnecessary source text to the cloud.</p></article>
+    <article><span data-i18n="p2tag">02 / SPEED</span><h2 data-i18n="p2">Find the code sooner</h2><p data-i18n="p2text">Search an existing index by meaning or symbol, with source locations for the next step.</p></article>
+    <article><span data-i18n="p3tag">03 / CLARITY</span><h2 data-i18n="p3">See the trade-off</h2><p data-i18n="p3text">Usage notices distinguish estimated savings, additional overhead and unknown results.</p></article>
+  </section>
+  <section class="section wrap" id="architecture">
+    <div class="section-heading"><div><p class="eyebrow" data-i18n="inside">INSIDE THE TOOLKIT</p><h2 data-i18n="architecture">Follow the work.</h2></div><p data-i18n="architectureLead">Three views of one system. Select a stage to see its purpose and boundary.</p></div>
+    <div class="view-tabs" role="group" aria-label="Architecture views">
+      <button type="button" class="active" data-view="request" aria-pressed="true" data-i18n="requestTab">A request</button>
+      <button type="button" data-view="index" aria-pressed="false" data-i18n="indexTab">Index lifecycle</button>
+      <button type="button" data-view="trust" aria-pressed="false" data-i18n="trustTab">Release trust</button>
+    </div>
+    <div class="flow-panel"><div id="flow" class="flow" aria-label="Stages"></div><aside id="stage-detail" aria-live="polite"></aside></div>
+    <p class="fine" data-i18n="flowNote">Conceptual stages, not live status. The signing view includes a planned SignPath step.</p>
+    <a class="text-link" href="how-it-works.html" data-i18n="fullArchitecture">Read the full architecture →</a>
+  </section>
+  <section class="calculator-section" id="tokens"><div class="wrap calculator-grid">
+    <div><p class="eyebrow" data-i18n="estimateLabel">UNDERSTAND THE ESTIMATE</p><h2 data-i18n="estimateTitle">Less context.<br>Honest arithmetic.</h2><p class="lead small" data-i18n="estimateText">Compare against the context necessary for the request, not the combined size of every file opened locally.</p><a class="text-link" href="token-comparison.html" data-i18n="methodology">Read the methodology →</a><p class="fine" data-i18n="localOnly">Illustrative only. All calculations stay in this page. No model call, analytics or account data.</p></div>
+    <form id="calculator" class="calculator">
+      <label for="source"><span data-i18n="sourceLabel">Necessary unseen source context (S)</span><input id="source" type="number" min="0" max="10000000" step="1" value="4000" required inputmode="numeric"></label>
+      <label for="response"><span data-i18n="responseLabel">Complete returned response (V)</span><input id="response" type="number" min="0" max="10000000" step="1" value="600" required inputmode="numeric"></label>
+      <label for="request"><span data-i18n="requestLabel">Tool request (R)</span><input id="request" type="number" min="0" max="10000000" step="1" value="100" required inputmode="numeric"></label>
+      <label class="check"><input id="known" type="checkbox" checked><span data-i18n="knownLabel">I explicitly assume this is the necessary task context.</span></label>
+      <label class="check"><input id="seen" type="checkbox"><span data-i18n="seenLabel">The cloud agent has already read the source context.</span></label>
+      <div class="result" aria-live="polite"><span id="result-label"></span><output id="result-value" for="source response request known seen">3,200</output><p id="result-detail"></p></div>
+      <p class="fine" data-i18n="formulaNote">S − V − 2R. The request is generated and later read as context. Local generation is not automatically credited. This is not a bill or measured savings.</p>
+    </form>
+  </div></section>
+  <section class="section wrap" id="learn">
+    <div class="section-heading"><div><p class="eyebrow" data-i18n="handbook">THE HANDBOOK</p><h2 data-i18n="next">A clear next step.</h2></div><p data-i18n="nextText">Start with a supported workflow, then go deeper.</p></div>
+    <div class="resource-grid">
+      <a href="installing.html"><span>01</span><h3 data-i18n="install">Install & connect</h3><p data-i18n="installText">Requirements, installer choices and the first repository.</p><b aria-hidden="true">↗</b></a>
+      <a href="using-it-from-the-command-line.html"><span>02</span><h3 data-i18n="operate">Operate & diagnose</h3><p data-i18n="operateText">CLI commands, index status and practical checks.</p><b aria-hidden="true">↗</b></a>
+      <a href="privacy.html"><span>03</span><h3 data-i18n="privacy">Privacy & trust</h3><p data-i18n="privacyText">What stays local, what clients receive, and release verification.</p><b aria-hidden="true">↗</b></a>
+      <a href="opensource.html"><span>04</span><h3 data-i18n="contribute">Build & contribute</h3><p data-i18n="contributeText">Project boundaries, governance, support and contribution guides.</p><b aria-hidden="true">↗</b></a>
+    </div>
+  </section>
+  <section class="section wrap faq"><p class="eyebrow">FAQ</p><h2 data-i18n="questions">Before you begin.</h2>
+    <details><summary data-i18n="faq1">Does local inference mean nothing reaches the cloud?</summary><p data-i18n="faq1text">No. The calling client receives results and selected excerpts; a cloud agent may forward them to its provider. See the privacy policy for the exact boundary.</p></details>
+    <details><summary data-i18n="faq2">Does every call save tokens?</summary><p data-i18n="faq2text">No. If the source is already in context, or the request and result cost more than the necessary alternative, delegation may add overhead. Missing evidence means an unknown estimate.</p></details>
+    <details><summary data-i18n="faq3">Are Windows binaries already Authenticode-signed?</summary><p data-i18n="faq3text">Do not assume that. Current distribution uses an ECDSA-signed manifest. SignPath onboarding and a verified CI signing path must be completed before claiming an Authenticode-signed release.</p></details>
+    <details><summary data-i18n="faq4">Can several projects use Local AI together?</summary><p data-i18n="faq4text">Yes. They share the broker and model queue. Check status and coordinate long operations; do not stop the shared runtime or unload another session's model to troubleshoot your own project.</p></details>
+  </section>
+</main>
+<footer class="wrap"><div class="brand">Local AI <span>Toolkit</span></div><p data-i18n="footer">Open source under MIT. Dependencies and models have their own licenses.</p><div><a href="code-signing-policy.html" data-i18n="signing">Code signing policy</a><a href="privacy.html" data-i18n="privacyShort">Privacy</a><a href="support.html" data-i18n="support">Support</a></div></footer>
+<noscript><p class="wrap">Interactive controls require JavaScript. The documentation and FAQ links work without it. / Интерактивные элементы требуют JavaScript; ссылки на документацию и FAQ работают без него.</p></noscript>
+</body>
+</html>

@@ -172,18 +172,20 @@ sequenceDiagram
 
 ## How the saving is counted
 
-Every answer ends with a line naming the model, the time it took and the cloud tokens it
-saved. The saving compares two ways of getting the same answer:
+Compare against the necessary context of the request, not entire candidate files. The
+runtime requires an explicit task-input comparison basis before crediting file context;
+retrieval alone does not establish that baseline. Previously read material is excluded,
+and missing evidence produces an unknown estimate.
 
-- **Input.** Without the tool, the cloud agent would have read the sources itself: the files,
-  the log, the image. With it, the agent reads its own call and the whole answer. Text is
-  counted with the `o200k_base` tokenizer, images with the GPT-4o tile formula; both names
-  are printed in the line.
-- **Output.** What the local model wrote is what the agent would otherwise have written,
-  against the call it writes instead.
-- The count assumes the agent had not read the sources yet. A caller that already has them
-  says so with `sourceContext: AlreadyPresent`, and that part is not counted.
-- It is an estimate, labelled as one, and it is not what your account was charged.
+For an explicit text scenario, necessary unseen source context `S`, the full visible tool
+response `V` and request `R` give the conservative comparison `S - V - 2R`. Local answer
+generation is not automatically credited as avoided cloud generation. An explicit context
+is an assumption supplied by the caller, not proof of the smallest possible cloud input.
+
+`sourceContext: AlreadyPresent` excludes source credit; `Unknown` does not pretend it was
+unseen. Skip a redundant local call when its remaining benefit cannot cover its overhead.
+See [Understanding token estimates](token-comparison.md), including examples and
+historical-runtime limits. This is an estimate, not a meter of billed tokens.
 
 ## What the installer does
 

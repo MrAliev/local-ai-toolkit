@@ -1,0 +1,16 @@
+<!doctype html>
+{% assign ru = false %}{% if page.path contains '.ru.' %}{% assign ru = true %}{% endif %}
+<html lang="{% if ru %}ru{% else %}en{% endif %}">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{ page.title | default: site.title | escape }} · Local AI Toolkit</title>
+  <link rel="stylesheet" href="{{ '/assets/portal.css' | relative_url }}">
+  <link rel="icon" href="{{ '/images/localai-mark.png' | relative_url }}">
+  {% include head-custom.html %}
+</head>
+<body>
+<a class="skip" href="#content">Skip to content / К содержимому</a>
+<header class="topbar"><a class="brand" href="{{ '/' | relative_url }}">Local AI <span>Toolkit</span></a><nav aria-label="{% if ru %}Документация{% else %}Documentation{% endif %}"><a href="{% if ru %}{{ '/README.ru.html' | relative_url }}{% else %}{{ '/README.html' | relative_url }}{% endif %}">{% if ru %}Документация{% else %}Documentation{% endif %}</a><a href="https://github.com/MrAliev/local-ai-toolkit/wiki{% if ru %}/Home.ru{% endif %}">Wiki ↗</a><a href="https://github.com/MrAliev/local-ai-toolkit">GitHub ↗</a></nav></header>
+<main id="content" class="doc-shell"><nav class="doc-nav" aria-label="Handbook">{% if ru %}<a href="{{ '/opensource.ru.html' | relative_url }}">О проекте</a><a href="{{ '/installing.ru.html' | relative_url }}">Установка</a><a href="{{ '/token-comparison.ru.html' | relative_url }}">Оценка токенов</a><a href="{{ '/support.ru.html' | relative_url }}">Поддержка</a>{% else %}<a href="{{ '/opensource.html' | relative_url }}">Project guide</a><a href="{{ '/installing.html' | relative_url }}">Install</a><a href="{{ '/token-comparison.html' | relative_url }}">Token estimates</a><a href="{{ '/support.html' | relative_url }}">Support</a>{% endif %}</nav>{{ content }}</main>
+<footer class="wrap"><div class="brand">Local AI <span>Toolkit</span></div><p>MIT · {% if ru %}<a href="{{ '/privacy.ru.html' | relative_url }}">Конфиденциальность</a> · <a href="{{ '/code-signing-policy.ru.html' | relative_url }}">Политика подписи кода</a>{% else %}<a href="{{ '/privacy.html' | relative_url }}">Privacy</a> · <a href="{{ '/code-signing-policy.html' | relative_url }}">Code signing policy</a>{% endif %}</p></footer>
+</body></html>
