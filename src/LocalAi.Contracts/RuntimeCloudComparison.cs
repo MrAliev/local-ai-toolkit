@@ -54,18 +54,20 @@ public sealed class O200kCloudTokenProfile : ICloudTokenProfile
 }
 
 /// <summary>
-/// Per-call evidence for an explicit comparison: supply the consumed source units directly to
-/// the cloud versus generate the tool request and consume its full response. Subsequent cloud
-/// replies and transport framing outside this request/response are outside both sides. The
-/// default is a conditional first-read estimate, never a claim about account billing/history.
+/// Per-call comparison of the explicitly supplied task context with the tool exchange.
+/// Incidental reads (hashing, retrieval and indexing) do not establish necessary task context.
+/// Cloud history is unknown unless supplied; locally generated text earns no cloud credit.
+/// This bounded comparison is not account billing or an estimate of an entire conversation.
 /// Only hashes and token counts survive source reads; nothing here is serialized or persisted.
 /// </summary>
 public sealed class RuntimeCloudComparison
 {
     private readonly object gate = new();
     private readonly Dictionary<string, CloudSource> sources = new(StringComparer.Ordinal);
-    private string? generatedOutput;
-    private CloudContextPresence presence = CloudContextPresence.NotPresent;
+    private readonly Dictionary<string, string> sourceSnapshots = new(StringComparer.Ordinal);
+    private CloudContextPresence presence = CloudContextPresence.Unknown;
+    private CloudContextBasis basis = CloudContextBasis.Unknown;
+    private string? unknownBaselineReason;
     private bool sourceObserved;
     private string? notApplicableReason;
     private bool evidenceLimitReached;
@@ -80,12 +82,35 @@ public sealed class RuntimeCloudComparison
     public void SourceText(string text, string identity = "input")
     {
         ArgumentNullException.ThrowIfNull(text);
-        var id = Hash(identity + "\0" + Hash(text));
-        var tokens = Profile.CountText(text);
         lock (gate)
         {
-            Record(id, new CloudCountedTextSource(id, tokens, Profile.TextProfileId));
+            sourceObserved = true;
+            if (unknownBaselineReason is not null || evidenceLimitReached) return;
+            var snapshot = Hash(text);
+            var identityKey = Hash(identity);
+            if (sourceSnapshots.TryGetValue(identityKey, out var previous) && previous != snapshot)
+            {
+                // Without offsets/snapshot provenance, different slices can overlap. Do not
+                // add them as distinct required context or guess which revision is intended.
+                unknownBaselineReason = "source_observation_overlap_unknown";
+                return;
+            }
+            var id = Hash(identity + "\0" + snapshot);
+            Record(id, new CloudCountedTextSource(id, Profile.CountText(text), Profile.TextProfileId));
+            if (!evidenceLimitReached) sourceSnapshots[identityKey] = snapshot;
         }
+    }
+
+    public void ContextBasis(CloudContextBasis value)
+    {
+        if (!Enum.IsDefined(value)) throw new ArgumentOutOfRangeException(nameof(value));
+        lock (gate) basis = value;
+    }
+
+    public void UnknownBaseline(string reason)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+        lock (gate) { sourceObserved = true; unknownBaselineReason = reason; }
     }
 
     public void SourceImage(string identity, int width, int height, string detail = "high")
@@ -93,7 +118,16 @@ public sealed class RuntimeCloudComparison
         var id = Hash(identity);
         lock (gate)
         {
+            sourceObserved = true;
+            if (unknownBaselineReason is not null || evidenceLimitReached) return;
+            var snapshot = $"image:{width}:{height}:{detail}";
+            if (sourceSnapshots.TryGetValue(id, out var previous) && previous != snapshot)
+            {
+                unknownBaselineReason = "source_observation_overlap_unknown";
+                return;
+            }
             Record(id, new CloudImageSource(id, width, height, detail));
+            if (!evidenceLimitReached) sourceSnapshots[id] = snapshot;
         }
     }
 
@@ -106,6 +140,7 @@ public sealed class RuntimeCloudComparison
         if (sources.Count >= 16_384 && !sources.ContainsKey(id))
         {
             sources.Clear();
+            sourceSnapshots.Clear();
             sources["limit"] = new CloudCountedTextSource("limit", UsageValue.Unknown("source_evidence_limit"), Profile.TextProfileId);
             evidenceLimitReached = true;
             return;
@@ -119,7 +154,9 @@ public sealed class RuntimeCloudComparison
         ArgumentException.ThrowIfNullOrWhiteSpace(reason);
         lock (gate) notApplicableReason = reason;
     }
-    public void GeneratedText(string text) { lock (gate) generatedOutput = text; }
+    // Compatibility observation: a local answer is not evidence of what the cloud would
+    // have generated. Actual local output remains in model receipts, not avoided tokens.
+    public void GeneratedText(string text) { ArgumentNullException.ThrowIfNull(text); }
 
     public CloudTokenScenario? Scenario(string? request)
     {
@@ -129,20 +166,26 @@ public sealed class RuntimeCloudComparison
                 return new("runtime-not-applicable-v1", [], null, request, request) { NotApplicableReason = reason };
             if (!sourceObserved) return null;
             var context = presence;
-            var snapshot = sources.Values.Select(source => source switch
+            var missingBaseline = unknownBaselineReason
+                ?? (context == CloudContextPresence.NotPresent && basis != CloudContextBasis.ExplicitTaskInput
+                    && sources.Count > 0 && !evidenceLimitReached ? "request_context_not_declared" : null);
+            var snapshot = missingBaseline is { } unknown
+                ? [(CloudSource)new CloudCountedTextSource("request-context", UsageValue.Unknown(unknown),
+                    Profile.TextProfileId, CloudContextPresence.NotPresent)]
+                : sources.Values.Select(source => source switch
             {
                 CloudCountedTextSource text => (CloudSource)(text with { Presence = context }),
                 CloudImageSource image => image with { Presence = context },
                 _ => throw new InvalidOperationException("Unsupported observation."),
             }).ToArray();
-            return new("runtime-source-units-v1:" + context, snapshot,
-                generatedOutput ?? string.Empty, request, request);
+            return new("runtime-request-context-v2:" + context + ":" + basis, snapshot,
+                string.Empty, request, request);
         }
     }
 
     public static UsageReport MarkConditional(UsageReport report)
     {
-        if (report.Comparison.ScenarioId?.StartsWith("runtime-source-units-v1:", StringComparison.Ordinal) != true) return report;
+        if (report.Comparison.ScenarioId?.StartsWith("runtime-request-context-v2:", StringComparison.Ordinal) != true) return report;
         // Tokenizer counts are measurements in the named vocabulary. Their counterfactual
         // difference is still an estimate, including when every count is known exactly.
         var tokens = report.CloudTokens.ToDictionary();

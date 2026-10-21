@@ -20,6 +20,10 @@ public static class CliUsageReporting
         if (contextSetting is not null)
             call.Comparison.SourceContext(Enum.TryParse<CloudContextPresence>(contextSetting, true, out var presence)
                 && Enum.IsDefined(presence) ? presence : CloudContextPresence.Unknown);
+        var basisSetting = Environment.GetEnvironmentVariable("LOCALAI_CONTEXT_BASIS");
+        if (basisSetting is not null)
+            call.Comparison.ContextBasis(Enum.TryParse<CloudContextBasis>(basisSetting, true, out var basis)
+                && Enum.IsDefined(basis) ? basis : CloudContextBasis.Unknown);
         using var stdout = new CountingWriter(output);
         using var stderr = new CountingWriter(error);
         var store = new UsageReportStore(runtimeRoot);

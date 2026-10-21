@@ -10,20 +10,26 @@ namespace CodeSearch.Tests;
 public class SearchEngineTests : IDisposable
 {
     [Fact]
-    public void Source_comparison_counts_each_hit_file_once_and_excludes_missing_files()
+    public void Retrieval_does_not_infer_necessary_context_from_hit_file_size()
     {
         using var call = new UsageCall(UsageSurface.Mcp, "codesearch", "search_code");
+        call.Comparison.SourceContext(CloudContextPresence.NotPresent);
         var hits = SearchEngine.Search(_index, Unit(1, 0, 0), "charging", new SearchOptions { TopK = 3, PathContains = "Payments" }, _root);
         Assert.Equal(3, hits.Count);
         var scenario = Assert.IsType<CloudTokenScenario>(call.Comparison.Scenario("request"));
         Assert.Single(scenario.Sources);
         var report = CloudTokenMethodology.Apply(call.Complete(), scenario, "hits", call.Comparison.Profile);
-        Assert.Equal(O200kCloudTokenProfile.Instance.CountText(File.ReadAllText(Path.Combine(_root, "Payments.cs"))),
+        Assert.Equal(UsageValue.Unknown("retrieval_baseline_not_established"),
             report.CloudTokens[UsageCloudTokens.InputWithoutDelegation]);
+        File.AppendAllText(Path.Combine(_root, "Payments.cs"), new string('x', 100_000));
+        var after = SearchEngine.Search(_index, Unit(1, 0, 0), "charging", new SearchOptions { TopK = 3, PathContains = "Payments" }, _root);
+        Assert.Equal(hits.Select(hit => hit.Snippet), after.Select(hit => hit.Snippet));
+        var unchanged = CloudTokenMethodology.Apply(call.Complete(), call.Comparison.Scenario("request"), "hits", call.Comparison.Profile);
+        Assert.Equal(report.CloudTokens, unchanged.CloudTokens);
         using var missing = new UsageCall(UsageSurface.Mcp, "codesearch", "search_code");
         File.Delete(Path.Combine(_root, "Payments.cs"));
         SearchEngine.Search(_index, Unit(1, 0, 0), "charging", new SearchOptions { TopK = 1, PathContains = "Payments" }, _root);
-        Assert.Null(missing.Comparison.Scenario("request"));
+        Assert.NotNull(missing.Comparison.Scenario("request"));
     }
 
     private readonly string _root = Path.Combine(Path.GetTempPath(), $"codesearch-root-{Guid.NewGuid():N}");

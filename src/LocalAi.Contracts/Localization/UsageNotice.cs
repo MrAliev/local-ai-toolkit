@@ -24,6 +24,12 @@ public static class UsageNotice
 
     private static string Savings(UsageReport report)
     {
+        if (report.Comparison.ScenarioId?.StartsWith("runtime-request-context-v2:", StringComparison.Ordinal) == true
+            && report.CloudTokens[UsageCloudTokens.InputWithoutDelegation].Reason is
+                "retrieval_baseline_not_established" or "source_observation_overlap_unknown" or "request_context_not_declared")
+            return report.CloudTokens[UsageCloudTokens.InputWithDelegation].Value is { } context
+                ? Catalogue.Format("UsageRequiredContextUnknown", context.ToString("0", CultureInfo.InvariantCulture))
+                : Catalogue.Get("UsageSavingsUnknown");
         var input = report.CloudTokens[UsageCloudTokens.InputSaved];
         var output = report.CloudTokens[UsageCloudTokens.OutputSaved];
         if (input.Status == UsageValueStatus.NotApplicable && output.Status == UsageValueStatus.NotApplicable)
@@ -53,11 +59,15 @@ public static class UsageNotice
 
     private static string Scenario(UsageReport report)
     {
-        const string prefix = "runtime-source-units-v1:";
+        if (report.CloudTokens[UsageCloudTokens.InputWithoutDelegation].Reason is
+            "retrieval_baseline_not_established" or "source_observation_overlap_unknown" or "request_context_not_declared") return string.Empty;
+        var prefix = report.Comparison.ScenarioId?.StartsWith("runtime-request-context-v2:", StringComparison.Ordinal) == true
+            ? "runtime-request-context-v2:" : "runtime-source-units-v1:";
         if (report.Comparison.ScenarioId?.StartsWith(prefix, StringComparison.Ordinal) != true) return string.Empty;
-        var key = report.Comparison.ScenarioId[prefix.Length..] switch
+        var key = report.Comparison.ScenarioId[prefix.Length..].Split(':')[0] switch
         {
-            nameof(CloudContextPresence.NotPresent) => "UsageFirstReadScenario",
+            nameof(CloudContextPresence.NotPresent) => prefix == "runtime-request-context-v2:"
+                ? "UsageRequestContextScenario" : "UsageFirstReadScenario",
             nameof(CloudContextPresence.AlreadyPresent) => "UsageAlreadyReadScenario",
             _ => "UsageUnknownContextScenario",
         };

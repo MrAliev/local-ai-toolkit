@@ -243,12 +243,12 @@ public static class ManagedInstructionBlock
         without routinely rereading sources. Do not read whole files just for a later edit.
         Read governing instructions directly.
 
-        If relevant content was already read or created by the cloud agent, skip local calls
-        unless expected savings in remaining work outweigh the request and result overhead.
-        Use existing context. This overrides routine tool routing below, but not an explicit user
-        request for a local call. Keep sourceContext truthful: AlreadyPresent for seen content;
-        for partially seen sources, narrow the input or use Unknown. Never invent savings.
-        Code navigation, index freshness, verification, log and safety rules still apply.
+        For content seen or created by the cloud agent, skip local calls unless savings exceed
+        overhead. This overrides routine routing; explicit local requests win. Keep sourceContext
+        truthful: AlreadyPresent for seen input; narrow partial input or use Unknown. Navigation,
+        freshness, verification and safety apply. contextBasis ExplicitTaskInput asserts input
+        is necessary for this request, not a proven minimum. NotPresent or a whole file cannot establish
+        it. Otherwise Unknown; no full-file or assumed cloud-generation credit.
 
         ### Keeping the index current
 
@@ -319,13 +319,12 @@ public static class ManagedInstructionBlock
         After every local tool call, say which tool and model ran, how long it took, and the
         cloud tokens avoided. One line:
 
-        > Locally: `search_code` (Ollama, <model>), 6.2s. Saved roughly ~25-30K cloud tokens.
+        > Locally: `search_code` (<model>), 6.2s. Savings unknown: necessary context not established.
 
         LocalLm returns that line itself; quote its numbers as they come rather than inventing
         any, and where it marks a shortfall beside the model, carry the mark into what you
         report and treat the answer as one to verify rather than one to build on.
-        `search_code` prints its own time above the hits; its saving is the one figure you
-        estimate.
+        Quote CodeSearch's estimate or Unknown as returned; never derive savings from file sizes.
 
         After CodeSearch work, name `index_unload` so the user can free the cached index at
         once — it leaves the on-disk index alone.

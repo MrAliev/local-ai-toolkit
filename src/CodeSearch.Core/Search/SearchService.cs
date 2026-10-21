@@ -323,7 +323,8 @@ public sealed class SearchService : IDisposable
                 IndexText.ChunkSourceStaleRange);
         }
 
-        UsageCall.Current?.Comparison.SourceText(sourceText, fullPath);
+        // The requested chunk is delivered context, not evidence that the cloud needed
+        // this whole file. Retrieval's alternative reading baseline remains unknown.
         var body = string.Join(
             "\n",
             lines[(meta.StartLine - 1)..meta.EndLine]);

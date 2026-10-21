@@ -23,10 +23,12 @@ public sealed class UsageReporting(string runtimeRoot)
     public string RuntimeRoot { get; } = runtimeRoot;
     public async ValueTask<CallToolResult> InvokeAsync(string component, string operation, Guid callId,
         Func<CancellationToken, ValueTask<CallToolResult>> next, CancellationToken cancellationToken,
-        string? requestJson = null, CloudContextPresence sourceContext = CloudContextPresence.NotPresent)
+        string? requestJson = null, CloudContextPresence sourceContext = CloudContextPresence.Unknown,
+        CloudContextBasis contextBasis = CloudContextBasis.Unknown)
     {
         using var call = new UsageCall(UsageSurface.Mcp, component, operation, callId);
         call.Comparison.SourceContext(sourceContext);
+        call.Comparison.ContextBasis(contextBasis);
         var store = new UsageReportStore(RuntimeRoot);
         _ = new RuntimeAcl().TryCreateRoot(RuntimeRoot);
         CallToolResult result;
@@ -115,10 +117,14 @@ public static class UsageReportingExtensions
             var presenceText = presenceNode is JsonValue presenceValue && presenceValue.TryGetValue<string>(out var sourcePresence)
                 ? sourcePresence : null;
             var presence = Enum.TryParse<CloudContextPresence>(presenceText, true, out var parsedPresence)
-                && Enum.IsDefined(parsedPresence) ? parsedPresence : presenceNode is null
-                    ? CloudContextPresence.NotPresent : CloudContextPresence.Unknown;
+                && Enum.IsDefined(parsedPresence) ? parsedPresence : CloudContextPresence.Unknown;
+            var basisNode = context.Params?.Meta?["localai/contextBasis"];
+            var basisText = basisNode is JsonValue basisValue && basisValue.TryGetValue<string>(out var suppliedBasis)
+                ? suppliedBasis : null;
+            var basis = Enum.TryParse<CloudContextBasis>(basisText, true, out var parsedBasis)
+                && Enum.IsDefined(parsedBasis) ? parsedBasis : CloudContextBasis.Unknown;
             return new UsageReporting(runtimeRoot).InvokeAsync(component, context.Params!.Name, id,
                 token => next(context, token), cancellationToken,
-                UsageReporting.ModelVisibleRequest(context.Params), presence);
+                UsageReporting.ModelVisibleRequest(context.Params), presence, basis);
         }));
 }

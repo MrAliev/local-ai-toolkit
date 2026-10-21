@@ -9,6 +9,8 @@ public sealed class RuntimeCloudComparisonTests
     public void Long_streams_bound_evidence_and_never_report_partial_baseline_as_complete()
     {
         using var call = new UsageCall(UsageSurface.Mcp, "locallm", "triage_log");
+        call.Comparison.ContextBasis(CloudContextBasis.ExplicitTaskInput);
+        call.Comparison.SourceContext(CloudContextPresence.NotPresent);
         for (var i = 0; i < 16_385; i++) call.Comparison.SourceText("x", i.ToString(System.Globalization.CultureInfo.InvariantCulture));
         var scenario = Assert.IsType<CloudTokenScenario>(call.Comparison.Scenario("request"));
         Assert.Single(scenario.Sources);
@@ -46,6 +48,8 @@ public sealed class RuntimeCloudComparisonTests
     {
         using var call = new UsageCall(UsageSurface.Mcp, "locallm", "ask_local");
         var source = string.Concat(Enumerable.Repeat("One substantial source unit. ", 2000));
+        call.Comparison.ContextBasis(CloudContextBasis.ExplicitTaskInput);
+        call.Comparison.SourceContext(CloudContextPresence.NotPresent);
         call.Comparison.SourceText(source, "same-file");
         call.Comparison.SourceText(source, "same-file");
         call.Comparison.GeneratedText("Summary");
@@ -66,6 +70,8 @@ public sealed class RuntimeCloudComparisonTests
     {
         using var call = new UsageCall(UsageSurface.Mcp, "locallm", "ask_local");
         call.Comparison.SourceText("small");
+        call.Comparison.ContextBasis(CloudContextBasis.ExplicitTaskInput);
+        call.Comparison.SourceContext(CloudContextPresence.NotPresent);
         call.Comparison.GeneratedText("answer");
         var scenario = call.Comparison.Scenario("request");
         var payload = UsagePayload.Finalize(call.Complete(), report => UsageNotice.Render(report) + "\n" + new string('x', 1000),

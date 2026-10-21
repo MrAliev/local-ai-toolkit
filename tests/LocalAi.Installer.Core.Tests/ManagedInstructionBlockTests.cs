@@ -137,7 +137,7 @@ public sealed class ManagedInstructionBlockTests
     [InlineData("ask before switching")]
     // The report is a shape, not a sentiment: a local call reported vaguely cannot be told
     // from one that never happened.
-    [InlineData("the one figure you estimate")]
+    [InlineData("never derive savings from file sizes")]
     // The first thing to check when the index lags HEAD, and the one people never think of.
     // Naming only search_code left the tool that answers "who calls X" unnamed anywhere in the
     // block, so a long session drifted back to grep for exactly the questions the navigation
