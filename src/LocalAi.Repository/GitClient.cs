@@ -91,7 +91,7 @@ public sealed class GitClient
             IReadOnlyList<string> arguments,
             CancellationToken cancellationToken)
     {
-        var start = new ProcessStartInfo("git")
+        var start = new ProcessStartInfo()
         {
             WorkingDirectory = Path.GetFullPath(workingDirectory),
             // Git gets a stream of ours, closed at once. Inherited, under an MCP server or
@@ -121,6 +121,7 @@ public sealed class GitClient
             throw new DirectoryNotFoundException(start.WorkingDirectory);
         }
 
+        start.FileName = GitExecutableLocator.Resolve(start.WorkingDirectory);
         using var process = Process.Start(start)
             ?? throw new InvalidOperationException("Could not start git.");
         var stdout = process.StandardOutput.ReadToEndAsync(cancellationToken);
