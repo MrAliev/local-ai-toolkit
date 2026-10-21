@@ -191,6 +191,9 @@ public static class CliText
     public static string PolicyUpdateCheckUnknown(string requested) =>
         Catalogue.Format(nameof(PolicyUpdateCheckUnknown), requested);
 
+    public static string PolicyUpdateCheckAuthenticationUnknown(string requested) =>
+        Catalogue.Format(nameof(PolicyUpdateCheckAuthenticationUnknown), requested);
+
     public static string PolicyUpdateCheckIntervalInvalid(
         string requested,
         int minimumIntervalHours,

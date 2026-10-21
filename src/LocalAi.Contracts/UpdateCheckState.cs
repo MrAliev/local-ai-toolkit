@@ -54,6 +54,8 @@ public sealed record UpdateCheckState(
     /// <summary>Why the last attempt produced nothing trusted: one of <see cref="UpdateCheckFailure"/>.</summary>
     public string? FailureReason { get; init; }
 
+    public UpdateCheckAuthentication Authentication { get; init; } = UpdateCheckAuthentication.Anonymous;
+
     /// <summary>
     /// Whether <paramref name="installedVersion"/> is behind what was last verified. Compared
     /// as versions rather than as strings, because "0.1.9" is not newer than "0.1.10" and a
@@ -149,11 +151,12 @@ public static class UpdateCheckFailure
     public const string InvalidResponse = "invalid_response";
     public const string VerificationFailed = "verification_failed";
     public const string Unexpected = "unexpected";
+    public const string AuthenticationUnavailable = "authentication_unavailable";
 
     private static readonly HashSet<string> Known =
     [
         Network, Timeout, NoRelease, UnexpectedStatus, AssetsUnavailable, InvalidResponse,
-        VerificationFailed, Unexpected,
+        VerificationFailed, Unexpected, AuthenticationUnavailable,
     ];
 
     /// <summary>The code to show. A record kept before reasons existed has none.</summary>

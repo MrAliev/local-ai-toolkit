@@ -3,6 +3,12 @@ using System.Text.Json.Serialization;
 
 namespace LocalAi.Contracts;
 
+public enum UpdateCheckAuthentication
+{
+    Anonymous,
+    GitHubCli,
+}
+
 /// <summary>
 /// Whether this installation may look up whether a newer release exists, and how often.
 ///
@@ -18,6 +24,9 @@ public sealed record UpdateCheckPolicy(
     int IntervalHours)
 {
     public const string FileName = "update-check.json";
+
+    /// <summary>Anonymous unless the owner explicitly permits the GitHub CLI account fallback.</summary>
+    public UpdateCheckAuthentication Authentication { get; init; } = UpdateCheckAuthentication.Anonymous;
 
     /// <summary>
     /// Daily. Often enough that a release is noticed within a day of being published, rare
@@ -64,6 +73,18 @@ public sealed record UpdateCheckPolicy(
         "версию. Об этом компьютере ничего не отправляется: ни " +
         "идентификатора, ни учётной записи, ни данных об использовании. " +
         "Ничего никогда не скачивается и не устанавливается без вашего запроса.";
+
+    public const string AuthenticatedDisclosure =
+        "Allows the update check to use your GitHub CLI account when anonymous release lookup " +
+        "cannot find the release or its assets. GitHub receives authenticated requests. " +
+        "LocalAI does not read or store the account token. Only the release manifest and its " +
+        "signature are fetched and verified; no package is downloaded or installed.";
+
+    public const string AuthenticatedDisclosureRussian =
+        "Разрешает проверке обновлений использовать вашу учётную запись GitHub CLI, если " +
+        "анонимный поиск не нашёл релиз или его файлы. GitHub получает авторизованные запросы. " +
+        "LocalAI не читает и не сохраняет токен учётной записи. Получает и проверяет только " +
+        "манифест релиза и его подпись; пакет не скачивается и не устанавливается.";
 }
 
 public sealed class UpdateCheckPolicyStore
@@ -113,6 +134,7 @@ public sealed class UpdateCheckPolicyStore
                 SerializerOptions);
             if (policy is null ||
                 policy.SchemaVersion != UpdateCheckPolicy.Default.SchemaVersion ||
+                !Enum.IsDefined(policy.Authentication) ||
                 policy.IntervalHours < UpdateCheckPolicy.MinimumIntervalHours ||
                 policy.IntervalHours > UpdateCheckPolicy.MaximumIntervalHours)
             {
@@ -131,6 +153,7 @@ public sealed class UpdateCheckPolicyStore
     public void Write(UpdateCheckPolicy policy)
     {
         ArgumentNullException.ThrowIfNull(policy);
+        if (!Enum.IsDefined(policy.Authentication)) throw new ArgumentOutOfRangeException(nameof(policy));
         if (policy.IntervalHours < UpdateCheckPolicy.MinimumIntervalHours ||
             policy.IntervalHours > UpdateCheckPolicy.MaximumIntervalHours)
         {

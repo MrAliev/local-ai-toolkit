@@ -9,6 +9,7 @@
        The namespace stays LocalAi.Broker so no call site had to change. -->
 
   <ItemGroup>
+    <InternalsVisibleTo Include="LocalAi.Broker.Tests" />
     <ProjectReference Include="..\LocalAi.Contracts\LocalAi.Contracts.csproj" />
   </ItemGroup>
 

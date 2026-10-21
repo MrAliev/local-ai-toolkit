@@ -39,6 +39,7 @@ public sealed class UpdateCheckProbe : IDisposable
     private readonly bool ownsClient;
     private readonly string? repository;
     private readonly byte[]? trustedPublicKey;
+    private readonly IGitHubUpdateSource authenticatedSource;
 
     public UpdateCheckProbe(string? repository = null)
         : this(
@@ -64,12 +65,14 @@ public sealed class UpdateCheckProbe : IDisposable
         HttpClient client,
         string? repository = null,
         bool ownsClient = false,
-        byte[]? trustedPublicKey = null)
+        byte[]? trustedPublicKey = null,
+        IGitHubUpdateSource? authenticatedSource = null)
     {
         this.client = client ?? throw new ArgumentNullException(nameof(client));
         this.ownsClient = ownsClient;
         this.repository = repository;
         this.trustedPublicKey = trustedPublicKey?.ToArray();
+        this.authenticatedSource = authenticatedSource ?? new GitHubCliUpdateSource();
         if (!this.client.DefaultRequestHeaders.UserAgent.Any())
         {
             // Says which program is asking and nothing else: no version, no machine, no
@@ -87,9 +90,38 @@ public sealed class UpdateCheckProbe : IDisposable
     /// those are answers, and an update check that can fail a broker is worse than no update
     /// check.
     /// </summary>
+    public Task<UpdateCheckState> CheckAsync(
+        DateTimeOffset now,
+        CancellationToken cancellationToken = default) =>
+        CheckAsync(now, UpdateCheckAuthentication.Anonymous, cancellationToken);
+
     public async Task<UpdateCheckState> CheckAsync(
         DateTimeOffset now,
+        UpdateCheckAuthentication authentication,
         CancellationToken cancellationToken = default)
+    {
+        if (!Enum.IsDefined(authentication)) throw new ArgumentOutOfRangeException(nameof(authentication));
+        var anonymous = await CheckAnonymousAsync(now, cancellationToken).ConfigureAwait(false);
+        if (authentication != UpdateCheckAuthentication.GitHubCli
+            || anonymous.FailureReason is not (UpdateCheckFailure.NoRelease or UpdateCheckFailure.AssetsUnavailable))
+            return anonymous;
+        try
+        {
+            var documents = await authenticatedSource.FetchAsync(repository ?? ReleaseAssets.DefaultRepository,
+                cancellationToken).ConfigureAwait(false);
+            return Verify(now, documents.Tag, documents.Manifest, documents.Signature);
+        }
+        catch (UpdateCheckSourceException exception) { return Unavailable(now, exception.Failure); }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        { return Unavailable(now, UpdateCheckFailure.Timeout); }
+        catch (Exception exception) when (exception is HttpRequestException or IOException)
+        { return Unavailable(now, UpdateCheckFailure.Network); }
+        catch (ReleaseVerificationException) { return Unavailable(now, UpdateCheckFailure.VerificationFailed); }
+        catch (Exception exception) when (exception is JsonException or InvalidOperationException or KeyNotFoundException)
+        { return Unavailable(now, UpdateCheckFailure.InvalidResponse); }
+    }
+
+    private async Task<UpdateCheckState> CheckAnonymousAsync(DateTimeOffset now, CancellationToken cancellationToken)
     {
         try
         {
@@ -114,20 +146,7 @@ public sealed class UpdateCheckProbe : IDisposable
                 return Unavailable(now, UpdateCheckFailure.AssetsUnavailable);
             }
 
-            using var verifier = trustedPublicKey is null
-                ? ReleaseTrustAnchor.CreateManifestVerifier()
-                : new ReleaseManifestVerifier(trustedPublicKey);
-            var manifest = verifier.Verify(manifestJson, signature);
-            return new UpdateCheckState(
-                1,
-                UpdateCheckStatus.Verified,
-                now,
-                manifest.ReleaseVersion,
-                ReleaseAssets.Release(tag, repository).ToString(),
-                // Recorded beside the version because an installation made before the release
-                // version was written down knows only its own directory name, and two
-                // directory names still answer "is this a different release".
-                manifest.VersionDirectory);
+            return Verify(now, tag, manifestJson, signature);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
@@ -147,6 +166,18 @@ public sealed class UpdateCheckProbe : IDisposable
         {
             return Unavailable(now, UpdateCheckFailure.InvalidResponse);
         }
+    }
+
+    private UpdateCheckState Verify(DateTimeOffset now, string tag, byte[] manifestJson, byte[] signature)
+    {
+        if (manifestJson.Length > MaximumManifestBytes || signature.Length > MaximumSignatureBytes)
+            return Unavailable(now, UpdateCheckFailure.InvalidResponse);
+        using var verifier = trustedPublicKey is null
+            ? ReleaseTrustAnchor.CreateManifestVerifier()
+            : new ReleaseManifestVerifier(trustedPublicKey);
+        var manifest = verifier.Verify(manifestJson, signature);
+        return new(1, UpdateCheckStatus.Verified, now, manifest.ReleaseVersion,
+            ReleaseAssets.Release(tag, repository).ToString(), manifest.VersionDirectory);
     }
 
     public void Dispose()

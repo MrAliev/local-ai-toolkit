@@ -18,9 +18,14 @@ namespace LocalAi.Broker;
 /// </summary>
 public sealed class UpdateCheckService(
     string runtimeRoot,
-    Func<DateTimeOffset, CancellationToken, Task<UpdateCheckState>> check,
+    Func<UpdateCheckPolicy, DateTimeOffset, CancellationToken, Task<UpdateCheckState>> check,
     TimeProvider? timeProvider = null)
 {
+    public UpdateCheckService(string runtimeRoot,
+        Func<DateTimeOffset, CancellationToken, Task<UpdateCheckState>> check,
+        TimeProvider? timeProvider = null)
+        : this(runtimeRoot, (_, now, token) => check(now, token), timeProvider) { }
+
     /// <summary>
     /// How often the loop wakes to ask whether a check is due. Not the interval between
     /// checks, which is the policy's: this is only the resolution at which the policy is
@@ -32,7 +37,7 @@ public sealed class UpdateCheckService(
         ? throw new ArgumentException("A runtime root is required.", nameof(runtimeRoot))
         : Path.GetFullPath(runtimeRoot);
 
-    private readonly Func<DateTimeOffset, CancellationToken, Task<UpdateCheckState>> check =
+    private readonly Func<UpdateCheckPolicy, DateTimeOffset, CancellationToken, Task<UpdateCheckState>> check =
         check ?? throw new ArgumentNullException(nameof(check));
 
     private readonly TimeProvider timeProvider = timeProvider ?? TimeProvider.System;
@@ -42,6 +47,7 @@ public sealed class UpdateCheckService(
     /// be written or read would otherwise let every pass check again.
     /// </summary>
     private DateTimeOffset? lastAttemptUtc;
+    private UpdateCheckAuthentication? lastAttemptAuthentication;
 
     /// <summary>
     /// One pass: read the consent, decide whether a check is due, and record what it found.
@@ -53,7 +59,9 @@ public sealed class UpdateCheckService(
         var policy = new UpdateCheckPolicyStore(runtimeRoot).Read();
         var stateStore = new UpdateCheckStateStore(runtimeRoot);
         var state = stateStore.Read();
-        if (lastAttemptUtc is { } attempted &&
+        if (state.Authentication != policy.Authentication)
+            state = state with { CheckedAtUtc = null, Authentication = policy.Authentication };
+        if (lastAttemptUtc is { } attempted && lastAttemptAuthentication == policy.Authentication &&
             (state.CheckedAtUtc is not { } recorded || recorded < attempted))
         {
             state = state with { CheckedAtUtc = attempted };
@@ -70,7 +78,7 @@ public sealed class UpdateCheckService(
         UpdateCheckState result;
         try
         {
-            result = await check(now, cancellationToken).ConfigureAwait(false);
+            result = await check(policy, now, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -88,6 +96,8 @@ public sealed class UpdateCheckService(
         }
 
         lastAttemptUtc = now;
+        lastAttemptAuthentication = policy.Authentication;
+        result = result with { Authentication = policy.Authentication };
         try
         {
             stateStore.Write(result);

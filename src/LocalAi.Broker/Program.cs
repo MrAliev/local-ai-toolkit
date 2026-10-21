@@ -199,7 +199,8 @@ internal static class BrokerProgram
             // It does nothing at all until somebody switches it on, and it reads that consent
             // on every pass rather than capturing it here.
             using var updateProbe = new UpdateCheckProbe();
-            var updates = new UpdateCheckService(runtimeRoot, updateProbe.CheckAsync)
+            var updates = new UpdateCheckService(runtimeRoot, (policy, now, cancellationToken) =>
+                updateProbe.CheckAsync(now, policy.Authentication, cancellationToken))
                 .RunAsync(shutdown.Token);
             var installedModels = new InstalledModelsWatch(transport.ListInstalledAsync)
                 .RunAsync(shutdown.Token);
