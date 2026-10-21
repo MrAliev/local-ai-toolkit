@@ -9,6 +9,8 @@ cloud tokens, and in your own time.**
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
+[Project guide](docs/opensource.md) · [Interactive website](https://mraliev.github.io/local-ai-toolkit/) · [Wiki](https://github.com/MrAliev/local-ai-toolkit/wiki) · [Support](docs/support.md)
+
 A cloud agent spends most of its tokens looking rather than thinking: opening candidate
 files, searching the code, walking dependencies, scrolling a build log, describing a
 screenshot, translating a page. Local AI does that part on your own machine and hands back
@@ -309,9 +311,9 @@ job finishing":
 
 | Question | Without Local AI: where the tokens go | With Local AI: where the tokens go |
 | --- | --- | --- |
-| "Who is subscribed to a job finishing?" | guess a keyword, open candidates whole — `DurableQueue.cs` alone is 52 KB, about **13 100** tokens at four bytes a token, and not the answer yet | three fragments, with paths and line ranges |
-| "How does the order pipeline work?" | read every file mentioning "Order" and assemble the picture yourself | a fragment per link in the chain, each with its place |
-| "What does this codebase do?" | read all of it | index once, then ask |
+| "Who is subscribed to a job finishing?" | locate the relevant declarations and inspect enough surrounding context; the required volume depends on the question | three fragments, with paths and line ranges |
+| "How does the order pipeline work?" | inspect the relevant pipeline definitions and relationships | a fragment per link in the chain, each with its place |
+| "What does this codebase do?" | inspect representative entry points and documentation | use the index to locate them, then request a bounded overview |
 
 The difference is not that the agent reads faster. It is that **only the fragments that
 matched enter its context**, and the hunt through candidates is paid for by your GPU rather
@@ -323,14 +325,12 @@ than by your subscription.
 first. From there the agent decides for itself: it sees a "where does this live" question and
 reaches for `search_code` instead of opening files.
 
-**Runtime token reports use one shared record per call.** MCP tools and both CLIs, except for
-`localai model` commands, show one estimate: “Approximately N cloud tokens saved.” It is the
-input savings plus output savings for the same call. If the result is negative, the notice
-says “No token savings; approximately N additional cloud tokens”, without a negative counter.
-If either part is unknown, the total cannot be estimated; administrative calls are inapplicable.
-For example, 1,000 fewer input tokens and 40 additional output tokens means about 960 saved.
-This is a comparison with doing the same work in the cloud, not account usage or a bill.
-The detailed signed counts and tokenizer/vision profiles remain in the JSON report.
+**Runtime token reports use one shared record per call.** A positive figure is a conditional
+estimate against the necessary context for that request, not the total size of files read
+locally. Unknown evidence stays unknown. A negative comparison is displayed as an amount
+of additional tokens, rather than a negative savings counter. Administrative calls are
+inapplicable. This is not account usage or a bill. See [Understanding token estimates](docs/token-comparison.md)
+for the assumptions, a worked example and the difference between installed runtime versions.
 
 `localai sync` announces each indexing phase and repeats its current status every 15 seconds.
 Known work reports completed/total and a percentage for that phase; embeddings also report
@@ -637,18 +637,20 @@ sequenceDiagram
 
 ### How the saving is counted
 
-Every answer ends with a line naming the model, the time it took and the cloud tokens it
-saved. The saving compares two ways of getting the same answer:
+Compare against the necessary context of the request, not entire candidate files. The
+runtime requires an explicit task-input comparison basis before crediting file context;
+retrieval alone does not establish that baseline. Previously read material is excluded,
+and missing evidence produces an unknown estimate.
 
-- **Input.** Without the tool, the cloud agent would have read the sources itself: the files,
-  the log, the image. With it, the agent reads its own call and the whole answer. Text is
-  counted with the `o200k_base` tokenizer, images with the GPT-4o tile formula; both names
-  are printed in the line.
-- **Output.** What the local model wrote is what the agent would otherwise have written,
-  against the call it writes instead.
-- The count assumes the agent had not read the sources yet. A caller that already has them
-  says so with `sourceContext: AlreadyPresent`, and that part is not counted.
-- It is an estimate, labelled as one, and it is not what your account was charged.
+For an explicit text scenario, necessary unseen source context `S`, the full visible tool
+response `V` and request `R` give the conservative comparison `S - V - 2R`. Local answer
+generation is not automatically credited as avoided cloud generation. An explicit context
+is an assumption supplied by the caller, not proof of the smallest possible cloud input.
+
+`sourceContext: AlreadyPresent` excludes source credit; `Unknown` does not pretend it was
+unseen. Skip a redundant local call when its remaining benefit cannot cover its overhead.
+See [Understanding token estimates](docs/token-comparison.md), including examples and
+historical-runtime limits. This is an estimate, not a meter of billed tokens.
 
 ### What the installer does
 

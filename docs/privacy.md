@@ -29,13 +29,15 @@ and what they send. Connections made by a cloud client are controlled by that cl
 | --- | --- | --- | --- |
 | Finding and downloading a release | `github.com`, then `api.github.com` if the first answer does not name a release | when the installer opens, unless you pointed it at a folder; again before it installs; on `localai update` | anonymous HTTPS requests for the release's files |
 | Model sizes | `registry.ollama.ai` | when the installer checks the computer | the name and tag of each model it can offer |
-| Update check | `github.com` | **off by default**; when you turn it on, about once a day | anonymous requests for the newest release manifest and its signature |
+| Update check | `github.com` | **off by default**; when you turn it on, about once a day | anonymous manifest/signature requests by default; the separately selected GitHub CLI authentication mode uses the signed-in account |
 | Prerequisites | the sources of `winget` and `npm` | only for the prerequisites you tick in the installer | whatever `winget` and `npm` send |
 | Models | the model registry Ollama uses | when you choose models in the installer, run `localai model pull`, or approve the `local_models_sync` tool | whatever Ollama sends |
-| GitHub CLI fallback | `github.com`, signed in as you | only when the anonymous download failed and the GitHub CLI is installed | whatever `gh` sends |
+| GitHub CLI access | `github.com`, signed in as you | installer release access requires explicit selection/consent; update checks require their own explicit GitHub CLI authentication setting | whatever `gh` sends |
 
-The update check sends no identifier, no account and nothing about how you use Local AI. It
-never downloads or installs anything by itself.
+Anonymous update checks send no account authentication or Local AI usage identifier.
+Explicit GitHub CLI mode authenticates as the signed-in GitHub account. Neither mode sends
+project files or Local AI usage reports. The check reads the manifest and signature; it
+does not download the release package or install an update by itself.
 
 ## Your choices
 
@@ -52,3 +54,11 @@ never downloads or installs anything by itself.
 ## Changes
 
 A change to any of this changes this page in the same pull request.
+
+## Documentation website
+
+The interactive landing page calculates in your browser without analytics or model calls.
+Reference pages load Mermaid 11.12.1 from jsDelivr to render diagrams; this sends a normal
+web request (including your IP address and browser metadata) to that CDN. GitHub hosts the
+site and Wiki under its own privacy policy. These website requests are separate from the
+installed runtime.

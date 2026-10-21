@@ -9,6 +9,8 @@ cloud tokens, and in your own time.**
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/MrAliev/local-ai-toolkit/blob/main/LICENSE)
 
+[Project guide](opensource.md) · [Interactive website](https://mraliev.github.io/local-ai-toolkit/) · [Wiki](https://github.com/MrAliev/local-ai-toolkit/wiki) · [Support](support.md)
+
 A cloud agent spends most of its tokens looking rather than thinking: opening candidate
 files, searching the code, walking dependencies, scrolling a build log, describing a
 screenshot, translating a page. Local AI does that part on your own machine and hands back
