@@ -16,9 +16,9 @@ Neither adapter sets `SymbolInformation.kind`, so definitions are classified by
 the hover documentation both of them do emit.
 """
 
-import os
 import sys
 from collections import defaultdict
+from pathlib import Path, PureWindowsPath
 
 DEFINITION_ROLE = 0x1
 
@@ -178,6 +178,28 @@ def contains(outer, inner):
            (inner[2], inner[3]) <= (outer[2], outer[3])
 
 
+def is_source_child(source, root):
+    # WindowsPath equality folds case even in case-sensitive NTFS directories.
+    # Both paths are already resolved; compare their component strings exactly.
+    return (len(source.parts) > len(root.parts)
+            and source.parts[:len(root.parts)] == root.parts)
+
+
+def source_path(source_root, document_path):
+    """Keep document-derived reads within the canonical fixture source root."""
+    relative = document_path.replace("\\", "/")
+    windows_path = PureWindowsPath(relative)
+    if (not relative or "\0" in relative or windows_path.drive or windows_path.root
+            or ".." in relative.split("/")):
+        raise ValueError(f"SCIP document path must be relative to the source root: {document_path!r}")
+
+    root = Path(source_root).resolve()
+    source = (root / relative).resolve()
+    if not is_source_child(source, root):
+        raise ValueError(f"SCIP document path escapes the source root: {document_path!r}")
+    return source
+
+
 def report(index_path, source_root):
     totals = defaultdict(lambda: [0, 0])
     for doc in read_index(index_path):
@@ -193,9 +215,11 @@ def report(index_path, source_root):
             doc["path"], len(definitions), len(carried),
             100 * len(carried) // max(len(definitions), 1)))
 
-        source = os.path.join(source_root, doc["path"].replace("\\", os.sep))
-        lines = open(source, encoding="utf-8").read().split("\n") \
-            if os.path.exists(source) else []
+        source = source_path(source_root, doc["path"])
+        lines = []
+        if source.exists():
+            with source.open(encoding="utf-8") as handle:
+                lines = handle.read().split("\n")
         bodies = []
         for occ in sorted(definitions, key=lambda o: span(o["range"])):
             kind = classify(occ["symbol"], hover.get(occ["symbol"], []))
