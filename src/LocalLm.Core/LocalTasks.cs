@@ -25,6 +25,8 @@ public sealed record LocalResult(
 {
     public StructuredValidationResult? Validation { get; init; }
     public PdfOcrEvidence? PdfEvidence { get; init; }
+    public CompilerLogReport? CompilerDiagnostics { get; init; }
+    public CompilerModelVerification? DiagnosticVerification { get; init; }
 
     /// <summary>
     /// The line the caller is expected to surface, so what a local call cost and saved is
