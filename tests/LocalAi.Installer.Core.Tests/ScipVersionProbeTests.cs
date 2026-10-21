@@ -110,6 +110,31 @@ public sealed class ScipVersionProbeTests : IDisposable
         Assert.Equal(17, json.RootElement.GetProperty("exitCode").GetInt32());
     }
 
+    [Theory]
+    [InlineData(null, true, false)]
+    [InlineData(null, false, true)]
+    [InlineData(null, false, false)]
+    [InlineData(17, true, false)]
+    [InlineData(17, false, true)]
+    [InlineData(0, true, false)]
+    [InlineData(0, false, true)]
+    public async Task Exemption_does_not_hide_an_interrupted_or_unestablished_exit(
+        int? exitCode, bool timedOut, bool cancelled)
+    {
+        var runner = new FakeRunner(new(exitCode, "partial output", "partial error", timedOut, cancelled));
+        var failure = await Assert.ThrowsAnyAsync<Exception>(() => ScipVersionProbe.VerifyAsync(
+            "scip-typescript", Resolve("scip-typescript"), "0.4.0", runner,
+            ["scip-typescript"], Resolve, TestContext.Current.CancellationToken, root));
+
+        Assert.Contains("ExitCode=" + (exitCode?.ToString() ?? "null"), failure.Message, StringComparison.Ordinal);
+        var evidence = Assert.Single(Directory.GetDirectories(root));
+        using var json = JsonDocument.Parse(File.ReadAllText(Path.Combine(evidence, "probe.json")));
+        Assert.False(json.RootElement.GetProperty("isExcused").GetBoolean());
+        Assert.Equal(timedOut, json.RootElement.GetProperty("timedOut").GetBoolean());
+        Assert.Equal(cancelled, json.RootElement.GetProperty("cancelled").GetBoolean());
+        Assert.Equal(1, runner.ProbeCalls);
+    }
+
     private Task VerifyAsync(IProcessRunner runner) => ScipVersionProbe.VerifyAsync(
         "scip-typescript", Resolve("scip-typescript"), "0.4.0", runner, [], Resolve,
         TestContext.Current.CancellationToken, root);

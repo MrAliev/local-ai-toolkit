@@ -43,8 +43,9 @@ internal static class ScipVersionProbe
             return;
         }
 
-        // Preserve the existing exemption: a thrown launch/runner error is not an excused exit.
-        var isExcused = result is not null && result.ExitCode != 0 &&
+        // Only a completed nonzero exit is excused. A nullable exit is not evidence of
+        // that outcome, and a timeout/cancellation must remain visible even on the allowlist.
+        var isExcused = result is { ExitCode: not null and not 0, TimedOut: false, Cancelled: false } &&
                         FixturePrerequisite.IsExcused(command, excused);
         var runtime = new List<RuntimeVersion>();
         foreach (var tool in new[] { "node", "npm" })
