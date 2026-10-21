@@ -1,0 +1,74 @@
+name: Documentation
+
+on:
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'README*'
+      - 'scripts/check-documentation-site.py'
+      - 'scripts/publish-wiki.ps1'
+      - '.github/workflows/documentation.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'README*'
+      - 'scripts/check-documentation-site.py'
+      - 'scripts/publish-wiki.ps1'
+      - '.github/workflows/documentation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: documentation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/jekyll-build-pages@44a6e6beabd48582f863aeeb6cb2151cc1716697 # v1
+        with:
+          source: ./docs
+          destination: ./_site
+      - name: Verify portal output
+        run: |
+          test -f _site/index.html
+          test -f _site/README.html
+          test -f _site/README.ru.html
+          test -f _site/assets/portal.js
+          test -f _site/opensource.html
+          test -f _site/opensource.ru.html
+          test -f _site/token-comparison.html
+          test -f _site/token-comparison.ru.html
+          node --check _site/assets/portal.js
+          python3 scripts/check-documentation-site.py _site
+      - name: Verify Wiki preview
+        shell: pwsh
+        run: ./scripts/publish-wiki.ps1 -PreviewDirectory '${{ runner.temp }}/localai-wiki-preview'
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
+        with:
+          path: ./_site
+
+  deploy:
+    # A private build must not accidentally become a public documentation site.
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && github.event.repository.private == false
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Deploy documentation
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
