@@ -131,6 +131,22 @@ jobs:
           retention-days: 7
           include-hidden-files: false
 
+  git-executable-boundary-posix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Set up .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: global.json
+      - name: Build Git executable boundary tests
+        run: dotnet build tests/CodeSearch.Tests/CodeSearch.Tests.csproj --configuration Release
+      - name: Test Git executable boundaries, including symbolic links
+        run: dotnet tests/CodeSearch.Tests/bin/Release/net10.0/CodeSearch.Tests.dll -class CodeSearch.Tests.GitExecutableLocatorTests
+
   # This portable measurement helper also runs on Linux so that symlink containment
   # is exercised even when a Windows host cannot create links without elevation.
   fixture-source-boundary-posix:

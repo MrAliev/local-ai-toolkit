@@ -218,7 +218,7 @@ public static class RepoLocator
         var command = "git " + string.Join(' ', arguments);
         try
         {
-            var start = new ProcessStartInfo("git")
+            var start = new ProcessStartInfo(GitExecutableLocator.Resolve(workingDirectory))
             {
                 WorkingDirectory = workingDirectory,
                 RedirectStandardInput = true,
@@ -416,7 +416,7 @@ public static class RepoLocator
     {
         try
         {
-            using var process = Process.Start(new ProcessStartInfo("git", arguments)
+            using var process = Process.Start(new ProcessStartInfo(GitExecutableLocator.Resolve(workingDirectory), arguments)
             {
                 WorkingDirectory = workingDirectory,
                 RedirectStandardInput = true,
