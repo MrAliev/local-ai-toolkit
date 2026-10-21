@@ -1,0 +1,69 @@
+name: Build unsigned candidate
+
+# Groundwork for a future trusted SignPath build. This workflow does not sign,
+# package an installable release, or publish any release assets.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Candidate version, for example 0.3.0-rc.1'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unsigned-candidate-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  build-unsigned-candidate:
+    if: github.repository == 'MrAliev/local-ai-toolkit' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
+    runs-on: windows-2025
+    timeout-minutes: 40
+    env:
+      DOTNET_NOLOGO: 'true'
+      DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+    steps:
+      - name: Check out the main commit selected at dispatch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up the repository SDK
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: global.json
+
+      - name: Build only the seven own Windows binaries
+        shell: pwsh
+        env:
+          CANDIDATE_VERSION: ${{ inputs.version }}
+        run: ./scripts/build-localai-unsigned-candidate.ps1 -ReleaseVersion $env:CANDIDATE_VERSION
+
+      - name: Upload the unsigned candidate
+        id: candidate
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: localai-unsigned-candidate-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: publish/unsigned-candidate/artifact/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+      - name: Record the candidate artifact
+        shell: pwsh
+        env:
+          CANDIDATE_ARTIFACT_ID: ${{ steps.candidate.outputs.artifact-id }}
+          CANDIDATE_ARTIFACT_DIGEST: ${{ steps.candidate.outputs.artifact-digest }}
+        run: |
+          @"
+          Unsigned candidate only; no release was signed or published.
+          Source commit: $env:GITHUB_SHA
+          GitHub artifact ID: $env:CANDIDATE_ARTIFACT_ID
+          GitHub artifact digest: $env:CANDIDATE_ARTIFACT_DIGEST
+          Checksums in unsigned-candidate.json describe the uploaded bytes; they are not a signing or build-provenance claim.
+          "@ | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
