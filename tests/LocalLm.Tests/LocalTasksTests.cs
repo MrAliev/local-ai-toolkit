@@ -252,7 +252,8 @@ public sealed partial class LocalTasksTests
             var response = await new UsageReporting(root).InvokeAsync("locallm", "translate_local", Guid.NewGuid(), async token =>
                 new CallToolResult { Content = [new TextContentBlock { Text = await LocalLm.Mcp.LocalLmTools.TranslateLocal(tasks,
                     "English", "Russian", path: sourcePath, outPath: targetPath, cancellationToken: token) }] },
-                TestContext.Current.CancellationToken, requestJson: "{\"path\":\"source.txt\",\"outPath\":\"translation.txt\"}");
+                TestContext.Current.CancellationToken, requestJson: "{\"path\":\"source.txt\",\"outPath\":\"translation.txt\"}",
+                sourceContext: CloudContextPresence.NotPresent, contextBasis: CloudContextBasis.ExplicitTaskInput);
             var report = UsageReportJson.Read(response.Meta!["localai/usage"]!.ToJsonString());
             Assert.Equal(O200kCloudTokenProfile.Instance.CountText("Hello."), report.CloudTokens[UsageCloudTokens.InputWithoutDelegation]);
             Assert.DoesNotContain("Привет.", string.Join("\n", response.Content.OfType<TextContentBlock>().Select(block => block.Text)), StringComparison.Ordinal);
@@ -265,8 +266,9 @@ public sealed partial class LocalTasksTests
             else
             {
                 Assert.Equal(UsageDelivery.Delivered, report.Outcome.Delivery);
-                Assert.Equal(O200kCloudTokenProfile.Instance.CountText(await File.ReadAllTextAsync(targetPath, TestContext.Current.CancellationToken)),
+                Assert.Equal(UsageValue.Measured(0),
                     report.CloudTokens[UsageCloudTokens.OutputWithoutDelegation]);
+                Assert.StartsWith("Привет.", await File.ReadAllTextAsync(targetPath, TestContext.Current.CancellationToken), StringComparison.Ordinal);
                 Assert.Equal(UsageValueStatus.Estimated, report.CloudTokens[UsageCloudTokens.OutputSaved].Status);
             }
         }
@@ -290,6 +292,7 @@ public sealed partial class LocalTasksTests
             var exit = await CliUsageReporting.RunAsync("localai", arguments, root, output, error, async (stdout, stderr) =>
             {
                 UsageCall.Current!.Comparison.SourceContext(CloudContextPresence.NotPresent);
+                UsageCall.Current.Comparison.ContextBasis(CloudContextBasis.ExplicitTaskInput);
                 var result = await tasks.AskAsync(LocalTaskProfile.ShortSummary, "Резюме", [path], null, TestContext.Current.CancellationToken);
                 await stdout.WriteAsync(result.Answer);
                 await stderr.WriteAsync("Готово.\n");
@@ -324,7 +327,7 @@ public sealed partial class LocalTasksTests
     [InlineData(CloudContextPresence.NotPresent)]
     [InlineData(CloudContextPresence.AlreadyPresent)]
     [InlineData(CloudContextPresence.Unknown)]
-    public async Task Real_ask_surface_reports_a_numeric_comparison_for_a_known_file(CloudContextPresence presence)
+    public async Task Real_ask_surface_compares_declared_task_input_without_inventing_history(CloudContextPresence presence)
     {
         var root = Path.Combine(Path.GetTempPath(), "localai-runtime-comparison-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
@@ -334,8 +337,9 @@ public sealed partial class LocalTasksTests
             await File.WriteAllTextAsync(path, string.Concat(Enumerable.Repeat("A substantial source document with diagnostic facts.\n", 1000)), TestContext.Current.CancellationToken);
             var tasks = new LocalTasks(new FakeLocalModelClient { Answer = "One compact result." });
             var response = await new UsageReporting(root).InvokeAsync("locallm", "ask_local", Guid.NewGuid(), async token =>
-                new CallToolResult { Content = [new TextContentBlock { Text = await LocalLm.Mcp.LocalLmTools.AskLocal(tasks, "Summarize", [path], cancellationToken: token, sourceContext: presence) }] },
-                TestContext.Current.CancellationToken, requestJson: "{\"name\":\"ask_local\",\"arguments\":{\"prompt\":\"Summarize\",\"files\":[\"source.txt\"]}}");
+                new CallToolResult { Content = [new TextContentBlock { Text = await LocalLm.Mcp.LocalLmTools.AskLocal(tasks, "Summarize the whole supplied document", [path], cancellationToken: token,
+                    sourceContext: presence, contextBasis: CloudContextBasis.ExplicitTaskInput) }] },
+                TestContext.Current.CancellationToken, requestJson: "{\"name\":\"ask_local\",\"arguments\":{\"prompt\":\"Summarize the whole supplied document\",\"files\":[\"source.txt\"],\"contextBasis\":\"ExplicitTaskInput\"}}");
             var report = UsageReportJson.Read(response.Meta!["localai/usage"]!.ToJsonString());
             if (presence == CloudContextPresence.Unknown)
                 Assert.Equal(UsageValue.Unknown("source_context_unknown"), report.CloudTokens[UsageCloudTokens.InputSaved]);

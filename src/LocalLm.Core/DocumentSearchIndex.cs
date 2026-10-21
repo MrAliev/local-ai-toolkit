@@ -170,8 +170,7 @@ public static class DocumentSearchIndex
                     MatchStartLine = plain ? LineAt(page.Text, offset) : null,
                     MatchEndLine = plain ? LineAt(page.Text, offset + query.Length - 1) : null,
                 });
-                // Compare only delivered pages with their excerpts, not the entire corpus scanned.
-                UsageCall.Current?.Comparison.SourceText(page.Text, path + ":" + entry.Sha256 + ":" + page.Number);
+                // Retrieving an excerpt does not establish the alternative cloud input.
             }
         }
         UsageCall.Current?.NoInference();

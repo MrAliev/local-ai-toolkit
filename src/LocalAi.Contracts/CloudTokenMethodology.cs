@@ -4,6 +4,7 @@ using System.Text;
 namespace LocalAi.Contracts;
 
 public enum CloudContextPresence { Unknown, AlreadyPresent, NotPresent }
+public enum CloudContextBasis { Unknown, ExplicitTaskInput }
 
 /// <summary>Id identifies a content snapshot, not merely a mutable file path.</summary>
 public abstract record CloudSource(string Id, CloudContextPresence Presence);
