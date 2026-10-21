@@ -10,6 +10,7 @@ import sys
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "latency"))
 from retention_probe import Mcp
+from localai_installation import installed_runtime_root
 
 
 def normal(text):
@@ -37,7 +38,7 @@ def main():
     output = root / args.output_name
     output.mkdir(exist_ok=False)
     manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))["result"]["fixtures"]
-    runtime = Path(os.environ["LOCALAPPDATA"]) / "LocalAi"
+    runtime = installed_runtime_root()
     host_path = runtime / "host.json"
     before = json.loads(host_path.read_text(encoding="utf-8-sig"))
     identity_keys = ("ProcessId", "StartedAtUtc", "BrokerAssemblyPath", "SchemaVersion")
