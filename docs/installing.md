@@ -2,15 +2,23 @@
 
 [Contents](README.md#contents) · [Русская версия](installing.ru.md)
 
-Install a signed package from [GitHub Releases](https://github.com/MrAliev/local-ai-toolkit/releases/latest).
+Install a package with an ECDSA-signed manifest from [GitHub Releases](https://github.com/MrAliev/local-ai-toolkit/releases/latest).
 Installing a published release requires neither a .NET SDK nor the private release signing key.
+
+**Windows publisher signature:** the currently published installer is not Authenticode-signed.
+The manifest protects package integrity; it does not establish a verified Windows publisher
+for the bootstrap installer. Check the [code signing policy](code-signing-policy.md)
+and the specific release notes for signing status.
 
 **1. Download the release.** From the same release, download `LocalAi.Installer.exe`,
 `release-manifest.json`, `release-manifest.sig` and `localai-package.zip`. Keep the three
 package files together and point the installer's package page at that folder. The installer
 verifies the manifest against its built-in release key before accepting the package.
 
-**Optional: build from source.** This is for maintainers with the release signing key.
+**Contributing from source:** anyone can build and test the solution without a GPU or a
+private signing key; see [Contributing](https://github.com/MrAliev/local-ai-toolkit/blob/main/CONTRIBUTING.md).
+
+**Optional: build an official installable release.** This is for maintainers with the release signing key.
 It needs `pwsh` 7 and a .NET 10 SDK of version 10.0.302 or later (`global.json` pins it).
 Choose the intended build version in place of this example:
 
