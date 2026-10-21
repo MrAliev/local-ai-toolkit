@@ -13,6 +13,8 @@ public sealed class CliHelpTests
     [InlineData("ru", "repo status --help", "localai repo status")]
     [InlineData("en", "help model pull", "--catalog-version")]
     [InlineData("en", "-h", "localai sync")]
+    [InlineData("en", "sync --help", "--all-worktrees")]
+    [InlineData("ru", "sync --help", "--all-worktrees")]
     [InlineData("en", "docs prune --help", "--dry-run | --apply")]
     [InlineData("ru", "docs pin --help", "--package")]
     [InlineData("en", "docs unpin --help", "--package")]

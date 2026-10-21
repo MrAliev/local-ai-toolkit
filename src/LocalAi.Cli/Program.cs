@@ -622,7 +622,8 @@ static async Task<int> RunAsync(string[] args, bool machineReadable, CommandStre
             streams.Error,
             includeOverlays: !args.Contains("--base-only", StringComparer.Ordinal),
             requireSemantics: args.Contains("--require-semantics", StringComparer.Ordinal),
-            refuseInlineOverFiles: inlineLimit);
+            refuseInlineOverFiles: inlineLimit,
+            allWorktrees: args.Contains("--all-worktrees", StringComparer.Ordinal));
         if (result.RefusedFiles is { } refused)
         {
             UsageCall.Current?.Refused("inline_limit");

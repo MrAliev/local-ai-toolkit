@@ -95,7 +95,8 @@ public static class CodeSearchSyncCommand
         string? runtimeRoot = null,
         bool requireSemantics = false,
         int? refuseInlineOverFiles = null,
-        IEmbeddingClient? embedder = null)
+        IEmbeddingClient? embedder = null,
+        bool allWorktrees = false)
     {
         // Before the gate, so the figure is what the caller waited rather than what the work
         // took: a run that spent four minutes queued behind another one waited four minutes.
@@ -286,8 +287,10 @@ public static class CodeSearchSyncCommand
                 DateTimeOffset.UtcNow));
             var store = new GenerationStore(requested.RepositoryRuntimeRoot);
             var current = store.ReadCurrent();
+            var requestedCurrent = WorktreeGenerationPublications.ReadCurrent(requested);
+            var reusableCurrent = !includeOverlays || allWorktrees ? current : requestedCurrent ?? current;
             var generationChanged = !string.Equals(
-                current?.GenerationId,
+                reusableCurrent?.GenerationId,
                 generationIdentity.Id,
                 StringComparison.Ordinal);
 
@@ -301,7 +304,7 @@ public static class CodeSearchSyncCommand
                 store.QuarantineUnreadable(generationIdentity.Id);
                 generation = await BuildGenerationAsync(
                     store,
-                    current,
+                    reusableCurrent,
                     generationIdentity,
                     mainline.Identity,
                     progress => ReportProgress(
@@ -325,8 +328,10 @@ public static class CodeSearchSyncCommand
                     cancellationToken);
             }
 
+            // Replacing the shared base must not turn one worktree's refresh into maintenance
+            // of every linked tree. Other trees can refresh against the new base on demand.
             var targets = includeOverlays
-                ? generationChanged
+                ? allWorktrees
                     ? worktrees
                     : worktrees.Where(
                         item => FsPath.From(item.Path) == requested.WorkingRoot).ToArray()
@@ -339,7 +344,8 @@ public static class CodeSearchSyncCommand
             var orderedWorktrees = present.Worktrees.OrderBy(item =>
                 FsPath.From(item.Path) == requested.WorkingRoot ? 0 : 1).ToArray();
             error.WriteLine($"SYNC_PLAN requested={JsonSerializer.Serialize(requested.WorkingRoot.Value)} " +
-                $"generation={generation.Identity.Id} pending={JsonSerializer.Serialize(orderedWorktrees.Select(item => item.Path))}");
+                $"generation={generation.Identity.Id} pending={JsonSerializer.Serialize(orderedWorktrees.Select(item => item.Path))} " +
+                $"scope={(!includeOverlays ? "base-only" : allWorktrees ? "all-worktrees" : "requested-worktree")} worktrees={orderedWorktrees.Length}");
             var activeReady = false;
             var maintenanceIncomplete = false;
             void PublishReady(WorkingIndexIdentity identity)
@@ -635,17 +641,35 @@ public static class CodeSearchSyncCommand
                 IndexBuildStep.SwitchingOver,
                 0,
                 0);
-            store.SetCurrent(generation, current);
+            // A global epoch change invalidates every per-worktree publication. A scoped
+            // refresh therefore publishes its own readiness without moving that epoch while
+            // other live trees still depend on it. Full maintenance retains its old contract.
+            var advanceGlobal = current is null || !includeOverlays || allWorktrees ||
+                worktrees.Count(item => !item.IsPrunable) == 1;
+            GenerationManifest repositoryGeneration;
+            if (advanceGlobal)
+            {
+                store.SetCurrent(generation, current);
+                repositoryGeneration = generation;
+            }
+            else
+            {
+                // SetCurrent normally supplies this final stale-run guard. Keep it even
+                // when the pointer must remain byte-for-byte unchanged.
+                if (!store.TryReadCurrent(out var observed) || observed != current)
+                    throw new InvalidOperationException("current_pointer_changed: cannot complete a worktree from a stale sync.");
+                repositoryGeneration = store.ReadManifest(current!.GenerationId);
+            }
             var manifest = new RepositoryManifest(
                 requested.RepositoryId,
                 commonDirectory,
                 mainline.Ref,
-                generation.Identity.Id,
-                generation.Identity.DevTree,
-                generation.Identity.EmbeddingModel,
-                generation.Identity.EmbeddingDimension,
-                generation.Identity.ChunkFormatVersion,
-                generation.Identity.IndexFormatVersion,
+                repositoryGeneration.Identity.Id,
+                repositoryGeneration.Identity.DevTree,
+                repositoryGeneration.Identity.EmbeddingModel,
+                repositoryGeneration.Identity.EmbeddingDimension,
+                repositoryGeneration.Identity.ChunkFormatVersion,
+                repositoryGeneration.Identity.IndexFormatVersion,
                 RepositoryIndexState.Current,
                 worktrees
                     .Where(item => !item.IsPrunable)
