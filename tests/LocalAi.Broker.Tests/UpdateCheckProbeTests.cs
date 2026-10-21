@@ -31,6 +31,101 @@ public sealed class UpdateCheckProbeTests : IDisposable
     public void Dispose() => key.Dispose();
 
     [Fact]
+    public async Task Private_release_is_verified_through_the_explicit_authenticated_fallback()
+    {
+        var manifest = Manifest("0.2.3");
+        var source = new StubAuthenticatedSource(new("0.2.3", manifest, Sign(manifest)));
+        using var probe = PrivateProbe(source);
+        var state = await probe.CheckAsync(Now, UpdateCheckAuthentication.GitHubCli, TestContext.Current.CancellationToken);
+        Assert.Equal(UpdateCheckStatus.Verified, state.Status);
+        Assert.Equal("0.2.3", state.LatestVersion);
+        Assert.Equal(1, source.Calls);
+        Assert.Equal(Repository, source.Repository);
+    }
+
+    [Fact]
+    public async Task Anonymous_mode_never_uses_the_cli_account_when_a_private_release_is_hidden()
+    {
+        var source = new StubAuthenticatedSource(null);
+        using var probe = PrivateProbe(source);
+        var state = await probe.CheckAsync(Now, TestContext.Current.CancellationToken);
+        Assert.Equal(UpdateCheckFailure.NoRelease, state.FailureReason);
+        Assert.Equal(0, source.Calls);
+    }
+
+    [Fact]
+    public async Task Public_success_does_not_use_the_cli_account_even_when_fallback_is_permitted()
+    {
+        var manifest = Manifest("0.2.3");
+        var source = new StubAuthenticatedSource(null);
+        using var probe = new UpdateCheckProbe(new HttpClient(Responses("0.2.3", manifest, Sign(manifest))),
+            Repository, ownsClient: true, trustedPublicKey: key.ExportSubjectPublicKeyInfo(), authenticatedSource: source);
+        var state = await probe.CheckAsync(Now, UpdateCheckAuthentication.GitHubCli, TestContext.Current.CancellationToken);
+        Assert.Equal(UpdateCheckStatus.Verified, state.Status);
+        Assert.Equal(0, source.Calls);
+    }
+
+    [Fact]
+    public async Task Authentication_failure_is_distinct_from_no_published_release()
+    {
+        var source = new StubAuthenticatedSource(null) { Failure = new UpdateCheckSourceException(UpdateCheckFailure.AuthenticationUnavailable) };
+        using var probe = PrivateProbe(source);
+        var state = await probe.CheckAsync(Now, UpdateCheckAuthentication.GitHubCli, TestContext.Current.CancellationToken);
+        Assert.Equal(UpdateCheckStatus.Unavailable, state.Status);
+        Assert.Equal(UpdateCheckFailure.AuthenticationUnavailable, state.FailureReason);
+        Assert.Null(state.LatestVersion);
+    }
+
+    [Fact]
+    public async Task Authenticated_transport_does_not_bypass_signature_verification()
+    {
+        var source = new StubAuthenticatedSource(new("0.2.3", Manifest("0.2.3"), new byte[64]));
+        using var probe = PrivateProbe(source);
+        var state = await probe.CheckAsync(Now, UpdateCheckAuthentication.GitHubCli, TestContext.Current.CancellationToken);
+        Assert.Equal(UpdateCheckFailure.VerificationFailed, state.FailureReason);
+        Assert.Null(state.LatestVersion);
+    }
+
+    [Fact]
+    public async Task Authenticated_documents_still_have_the_same_size_limits()
+    {
+        var source = new StubAuthenticatedSource(new("0.2.3", new byte[65537], new byte[64]));
+        using var probe = PrivateProbe(source);
+        var state = await probe.CheckAsync(Now, UpdateCheckAuthentication.GitHubCli, TestContext.Current.CancellationToken);
+        Assert.Equal(UpdateCheckFailure.InvalidResponse, state.FailureReason);
+    }
+
+    [Fact]
+    public async Task Cancellation_during_authenticated_lookup_is_not_hidden_as_no_release()
+    {
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        var source = new StubAuthenticatedSource(null) { OnFetch = cancellation.Cancel };
+        using var probe = PrivateProbe(source);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            probe.CheckAsync(Now, UpdateCheckAuthentication.GitHubCli, cancellation.Token));
+    }
+
+    private UpdateCheckProbe PrivateProbe(IGitHubUpdateSource source) => new(new HttpClient(new RoutingHandler()),
+        Repository, ownsClient: true, trustedPublicKey: key.ExportSubjectPublicKeyInfo(), authenticatedSource: source);
+
+    private sealed class StubAuthenticatedSource(GitHubUpdateDocuments? documents) : IGitHubUpdateSource
+    {
+        public int Calls { get; private set; }
+        public string? Repository { get; private set; }
+        public Exception? Failure { get; init; }
+        public Action? OnFetch { get; init; }
+        public Task<GitHubUpdateDocuments> FetchAsync(string repository, CancellationToken cancellationToken)
+        {
+            Calls++;
+            Repository = repository;
+            OnFetch?.Invoke();
+            cancellationToken.ThrowIfCancellationRequested();
+            if (Failure is not null) return Task.FromException<GitHubUpdateDocuments>(Failure);
+            return Task.FromResult(documents ?? throw new InvalidOperationException("Unexpected authenticated lookup"));
+        }
+    }
+
+    [Fact]
     public async Task A_signed_manifest_is_believed_and_named_with_where_to_read_about_it()
     {
         var manifest = Manifest("0.1.51");

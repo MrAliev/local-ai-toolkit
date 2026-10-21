@@ -19,6 +19,44 @@ public sealed class UpdateCheckServiceTests : IDisposable
 
     public UpdateCheckServiceTests() => Directory.CreateDirectory(root);
 
+    [Fact]
+    public async Task Authenticated_checks_remain_throttled_when_the_state_cannot_be_written()
+    {
+        new UpdateCheckPolicyStore(root).Write(UpdateCheckPolicy.Default with
+            { Enabled = true, Authentication = UpdateCheckAuthentication.GitHubCli });
+        Directory.CreateDirectory(new UpdateCheckStateStore(root).FilePath);
+        var calls = 0;
+        var service = new UpdateCheckService(root, (policy, now, token) =>
+        {
+            calls++;
+            return Task.FromResult(new UpdateCheckState(1, UpdateCheckStatus.Unavailable, now, null, null));
+        });
+        Assert.True(await service.RunOnceAsync(TestContext.Current.CancellationToken));
+        Assert.False(await service.RunOnceAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(1, calls);
+    }
+
+    [Fact]
+    public async Task Changing_authentication_rechecks_on_the_next_pass_using_one_consent_snapshot()
+    {
+        var policies = new UpdateCheckPolicyStore(root);
+        policies.Write(UpdateCheckPolicy.Default with { Enabled = true });
+        var observed = new List<UpdateCheckAuthentication>();
+        var service = new UpdateCheckService(root, (policy, now, token) =>
+        {
+            observed.Add(policy.Authentication);
+            return Task.FromResult(new UpdateCheckState(1, UpdateCheckStatus.Unavailable, now, null, null)
+                { FailureReason = UpdateCheckFailure.NoRelease });
+        });
+        Assert.True(await service.RunOnceAsync(TestContext.Current.CancellationToken));
+        Assert.False(await service.RunOnceAsync(TestContext.Current.CancellationToken));
+        policies.Write(policies.Read() with { Authentication = UpdateCheckAuthentication.GitHubCli });
+        Assert.True(await service.RunOnceAsync(TestContext.Current.CancellationToken));
+        Assert.False(await service.RunOnceAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(new[] { UpdateCheckAuthentication.Anonymous, UpdateCheckAuthentication.GitHubCli }, observed);
+        Assert.Equal(UpdateCheckAuthentication.GitHubCli, new UpdateCheckStateStore(root).Read().Authentication);
+    }
+
     public void Dispose()
     {
         try

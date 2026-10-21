@@ -295,12 +295,16 @@
   <data name="PolicyUpdateCheckUnknown" xml:space="preserve">
     <value>Неизвестное значение проверки обновлений: '{0}'.</value>
   </data>
+  <data name="PolicyUpdateCheckAuthenticationUnknown" xml:space="preserve">
+    <value>Неизвестный способ проверки обновлений '{0}'. Допустимо: Anonymous, GitHubCli.</value>
+  </data>
   <data name="PolicyUsage" xml:space="preserve">
     <value>Usage: localai policy show
        localai policy set --residency &lt;RequireFullVram|AllowPartialOffload|AllowCpu&gt;
        localai policy set --idle-model-keep-alive-seconds &lt;non-negative integer&gt;
        localai policy set --max-embedding-batch &lt;4..256, a power of two&gt;
        localai policy set --update-check &lt;on|off&gt;
+       localai policy set --update-check-authentication Anonymous|GitHubCli
        localai policy set --update-check-interval-hours &lt;{0}..{1}&gt;
        localai policy set --language &lt;en|ru|system&gt;
 
