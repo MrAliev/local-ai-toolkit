@@ -104,6 +104,9 @@ public interface IModelRuntime
         string model,
         int contextTokens,
         CancellationToken cancellationToken = default);
+
+    Task<ModelResidencyProof> EnsureEmbeddingReadyAsync(string model, int contextTokens,
+        CancellationToken cancellationToken = default) => EnsureReadyAsync(model, contextTokens, cancellationToken);
 }
 
 public sealed class ModelPreflightException(
@@ -219,13 +222,21 @@ public sealed class ModelRuntime : IModelRuntime
             cancellationToken);
     }
 
-    public async Task<ModelResidencyProof> EnsureReadyAsync(
+    public Task<ModelResidencyProof> EnsureReadyAsync(
         string model,
         int contextTokens,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        EnsureReadyCoreAsync(model, contextTokens, embedding: false, cancellationToken);
+
+    public Task<ModelResidencyProof> EnsureEmbeddingReadyAsync(string model, int contextTokens,
+        CancellationToken cancellationToken = default) =>
+        EnsureReadyCoreAsync(model, contextTokens, embedding: true, cancellationToken);
+
+    private async Task<ModelResidencyProof> EnsureReadyCoreAsync(string model, int contextTokens,
+        bool embedding, CancellationToken cancellationToken)
     {
-        var entry = _catalog.Model(model);
-        if (!entry.ContextTokens.Contains(contextTokens))
+        var entry = embedding ? _catalog.Models.SingleOrDefault(candidate => candidate.Tag == model) : _catalog.Model(model);
+        if (entry is not null ? !entry.ContextTokens.Contains(contextTokens) : !LocalContextTiers.IsSupported(contextTokens))
         {
             throw new ArgumentOutOfRangeException(
                 nameof(contextTokens),
@@ -239,6 +250,8 @@ public sealed class ModelRuntime : IModelRuntime
                 $"Model/context '{model}/{contextTokens}' is disabled.");
         }
 
+        var mayAttemptLoad = false;
+        var checkingSnapshot = false;
         try
         {
             var installed = await _transport.ListInstalledAsync(cancellationToken);
@@ -248,8 +261,18 @@ public sealed class ModelRuntime : IModelRuntime
                     $"Model '{model}' is not installed.");
             }
 
+            checkingSnapshot = true;
             var beforePreflight = await _transport.ListProcessesAsync(
                 cancellationToken);
+            // Validate this immutable snapshot before changing any model's residency.
+            // A deterministic external-context refusal must neither unload another
+            // session's model nor poison the transient preflight cooldown.
+            var existing = beforePreflight.SingleOrDefault(
+                candidate => string.Equals(candidate.Model, model, StringComparison.Ordinal));
+            if (entry is null && existing is not null && existing.ContextTokens != contextTokens)
+                throw new ModelPreflightException(model, contextTokens, ModelExecutionOutcome.ContextFailure,
+                    Resources.BrokerRuntimeText.ExternalContextMismatch(model, existing.ContextTokens));
+            mayAttemptLoad = true;
             var managedModels = _catalog.Models
                 .Select(candidate => candidate.Tag)
                 .ToHashSet(StringComparer.Ordinal);
@@ -265,19 +288,14 @@ public sealed class ModelRuntime : IModelRuntime
                 await _transport.UnloadAsync(otherModel, cancellationToken);
             }
 
-            var existing = beforePreflight.SingleOrDefault(
-                candidate => string.Equals(
-                    candidate.Model,
-                    model,
-                    StringComparison.Ordinal));
             if (existing is not null &&
                 existing.ContextTokens != contextTokens)
             {
                 await _transport.UnloadAsync(model, cancellationToken);
             }
 
-            if (entry.Capabilities.Contains(LocalAi.Contracts.LocalModelCapability.Embedding) &&
-                !entry.Capabilities.Contains(LocalAi.Contracts.LocalModelCapability.Text))
+            if (embedding || (entry!.Capabilities.Contains(LocalAi.Contracts.LocalModelCapability.Embedding) &&
+                !entry.Capabilities.Contains(LocalAi.Contracts.LocalModelCapability.Text)))
             {
                 await _transport.PreflightEmbeddingAsync(
                     model,
@@ -372,14 +390,15 @@ public sealed class ModelRuntime : IModelRuntime
             exception is not OperationCanceledException ||
             !cancellationToken.IsCancellationRequested)
         {
-            lock (_sync)
+            var validationRefused = checkingSnapshot && !mayAttemptLoad;
+            if (!validationRefused && (entry is not null || mayAttemptLoad)) lock (_sync)
             {
                 _disabledUntil[key] = _timeProvider.GetUtcNow() + DisabledFor;
             }
 
             try
             {
-                await _transport.UnloadAsync(model, cancellationToken);
+                if (entry is not null && !validationRefused) await _transport.UnloadAsync(model, cancellationToken);
             }
             catch (Exception unloadException) when (
                 unloadException is not OperationCanceledException ||

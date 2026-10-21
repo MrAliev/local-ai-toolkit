@@ -67,7 +67,9 @@ public sealed class BrokerClient : IBrokerClient
         var inference = request.Payload is ChatJobPayload or EmbedJobPayload
             or NativeOllamaJobPayload { Operation: NativeOllamaOperation.Chat or NativeOllamaOperation.Generate or NativeOllamaOperation.Embed };
         usage?.LinkJob(queued.JobId, (request.Payload as ChatJobPayload)?.Workflow?.WorkflowId, inference);
-        if (inference) usage?.RegisterJobEvidence(_queue.RuntimeRoot, queued.JobId);
+        var embedding = request.Payload as EmbedJobPayload;
+        if (inference) usage?.RegisterJobEvidence(_queue.RuntimeRoot, queued.JobId,
+            expectedModel: embedding?.Model, expectedContextTokens: embedding?.RequestedContextTokens);
         LocalUsageReceipt? receipt = null;
 
         using var deadline = new CancellationTokenSource(_timeout, _timeProvider);
@@ -89,7 +91,8 @@ public sealed class BrokerClient : IBrokerClient
         finally
         {
             if (usage is not null && inference)
-                usage.RegisterJobEvidence(_queue.RuntimeRoot, queued.JobId, receipt);
+                usage.RegisterJobEvidence(_queue.RuntimeRoot, queued.JobId, receipt,
+                    expectedModel: embedding?.Model, expectedContextTokens: embedding?.RequestedContextTokens);
         }
     }
 

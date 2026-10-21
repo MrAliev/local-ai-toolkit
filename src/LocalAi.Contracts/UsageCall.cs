@@ -11,6 +11,7 @@ public sealed class UsageCall : IDisposable
     private readonly object gate = new();
     private readonly long started = Stopwatch.GetTimestamp();
     private readonly HashSet<Guid> jobs = [];
+    private readonly HashSet<Guid> inferenceJobs = [];
     private readonly HashSet<Guid> attempts = [];
     private readonly HashSet<Guid> workflows = [];
     private readonly List<(UsageModelUse Use, long? Input, long? Output)> models = [];
@@ -57,13 +58,14 @@ public sealed class UsageCall : IDisposable
     });
     public void CacheHit(string reason = "result_cache") => Change(() => { cache = UsageCache.Hit; cacheReason = reason; });
     public void UnknownInference() => Change(() => pendingInference = true);
-    public void NoInference() => Change(() => pendingInference = false);
+    public void NoInference() => Change(() => { pendingInference = false; inferenceJobs.Clear(); });
+    public void NoInference(Guid jobId) => Change(() => inferenceJobs.Remove(jobId));
     public void LinkJob(Guid jobId, Guid? workflowId = null, bool inference = true) => Change(() =>
     {
         if (jobId == Guid.Empty) throw new ArgumentException("A job ID is required.", nameof(jobId));
         jobs.Add(jobId);
         if (workflowId is { } id && id != Guid.Empty) workflows.Add(id);
-        pendingInference |= inference;
+        if (inference) inferenceJobs.Add(jobId);
     });
     public void ModelCalled(string model, UsageOffload offload, string? reason = null,
         long? inputTokens = null, long? outputTokens = null, Guid? attemptId = null) => Change(() =>
@@ -81,11 +83,19 @@ public sealed class UsageCall : IDisposable
     public void Observe(UsageVolume volume, long value) => Change(() => volumes[volume] = UsageValue.Measured(value));
     public void Observe(UsageTiming timing, long value) => Change(() => timings[timing] = UsageValue.Measured(value));
     public IReadOnlyList<Guid> JobIds { get { lock (gate) return jobs.ToArray(); } }
-    public void RegisterJobEvidence(string runtimeRoot, Guid jobId, LocalUsageReceipt? receipt = null) =>
+    public void RegisterJobEvidence(string runtimeRoot, Guid jobId, LocalUsageReceipt? receipt = null,
+        string? expectedModel = null, int? expectedContextTokens = null) =>
         Change(() =>
         {
+            if (receipt is not null && receipt.JobId != jobId)
+                throw new ArgumentException("Receipt does not belong to the linked job.", nameof(receipt));
             var key = (runtimeRoot, jobId);
-            if (receipt is not null || !evidence.ContainsKey(key)) evidence[key] = new(runtimeRoot, jobId, receipt);
+            evidence.TryGetValue(key, out var previous);
+            if (receipt is not null || previous is null) evidence[key] = new(runtimeRoot, jobId, receipt)
+            {
+                ExpectedModel = expectedModel ?? previous?.ExpectedModel,
+                ExpectedContextTokens = expectedContextTokens ?? previous?.ExpectedContextTokens,
+            };
         });
     public IReadOnlyList<UsageJobEvidence> TakeJobEvidence()
     {
@@ -116,7 +126,7 @@ public sealed class UsageCall : IDisposable
             var observedModels = actual.Length > 0
                 ? new UsageModels(UsageModelState.Called, UsageValue.Measured(models.Count), actual, cache, null)
                 : loaded.Length > 0 ? new UsageModels(UsageModelState.Loaded, UsageValue.Measured(loads.Count), loaded, cache, null)
-                : pendingInference ? UsageModels.Unrecorded() : UsageModels.NoCall();
+                : pendingInference || inferenceJobs.Count > 0 ? UsageModels.Unrecorded() : UsageModels.NoCall();
             observedModels = observedModels with
             { Cache = cache, CacheReason = cacheReason };
             return completed = initial with
@@ -149,4 +159,8 @@ public sealed class UsageCall : IDisposable
     public void Dispose() => Ambient.Value = previous;
 }
 
-public sealed record UsageJobEvidence(string RuntimeRoot, Guid JobId, LocalUsageReceipt? Receipt);
+public sealed record UsageJobEvidence(string RuntimeRoot, Guid JobId, LocalUsageReceipt? Receipt)
+{
+    public string? ExpectedModel { get; init; }
+    public int? ExpectedContextTokens { get; init; }
+}

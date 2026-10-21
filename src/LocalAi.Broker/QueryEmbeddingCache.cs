@@ -18,7 +18,8 @@ public sealed partial class OllamaTransport
     private int _queryBytes;
     private sealed record CachedQuery(string Key, BrokerExecutionResult Result, int Bytes);
 
-    private async Task<BrokerExecutionResult> ExecuteSearchEmbeddingAsync(EmbedJobPayload payload, CancellationToken ct)
+    private async Task<BrokerExecutionResult> ExecuteSearchEmbeddingAsync(EmbedJobPayload payload, CancellationToken ct,
+        Func<EmbedJobPayload, CancellationToken, Task<ModelResidencyProof>>? ensureReady = null)
     {
         await _queryCacheGate.WaitAsync(ct);
         try
@@ -36,12 +37,14 @@ public sealed partial class OllamaTransport
                 _queryRecency.AddLast(cached);
                 return cached.Value.Result with
                 {
+                    Routing = null,
+                    InferenceExecuted = false,
                     BackendInputTokens = null,
                     EmbeddingTiming = new EmbeddingBackendTiming(true, null, null, null, null),
                 };
             }
 
-            var result = await ExecuteEmbedAsync(payload, ct);
+            var result = await ExecuteEmbedAsync(payload, ct, ensureReady);
             // A changed/unknown identity or failed/cancelled inference never seeds the cache.
             if (key is not null && digest == await QueryModelDigestAsync(payload.Model, ct))
             {

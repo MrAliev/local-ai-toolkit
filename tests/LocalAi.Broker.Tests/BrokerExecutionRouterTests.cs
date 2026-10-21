@@ -261,6 +261,7 @@ public sealed class BrokerExecutionRouterTests : IDisposable
     public async Task Direct_embedding_is_tracked_for_idle_unload()
     {
         var fixture = CreateFixture();
+        fixture.Transport.Installed = ["qwen3-embedding:8b-q8_0"];
         var request = LocalJobRequestFactory.CreateEmbed(
             "embedding",
             LocalJobPriority.Foreground,
@@ -290,6 +291,7 @@ public sealed class BrokerExecutionRouterTests : IDisposable
     public async Task A_model_the_catalog_does_not_name_is_still_what_is_loaded()
     {
         var fixture = CreateFixture();
+        fixture.Transport.Installed = ["some-other-embedding:4b"];
         var request = LocalJobRequestFactory.CreateEmbed(
             "embedding",
             LocalJobPriority.Foreground,
@@ -313,6 +315,7 @@ public sealed class BrokerExecutionRouterTests : IDisposable
     public async Task A_model_the_catalog_does_not_name_is_never_unloaded()
     {
         var fixture = CreateFixture();
+        fixture.Transport.Installed = ["some-other-embedding:4b"];
         await fixture.Router.ExecuteAsync(
             LocalJobRequestFactory.CreateEmbed(
                 "embedding",
