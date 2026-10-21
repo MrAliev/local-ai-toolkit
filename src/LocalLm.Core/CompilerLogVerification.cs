@@ -6,7 +6,14 @@ using LocalLm.Core.Resources;
 
 namespace LocalLm.Core;
 
-public sealed record CompilerModelVerification(string Status, IReadOnlyList<string> Reasons);
+public sealed record CompilerModelVerification(string Status, IReadOnlyList<string> Reasons)
+{
+    public int RepairAttempts { get; init; }
+    public bool FormatNormalized { get; init; }
+    public string? RepairFailureReason { get; init; }
+    public bool RepairTimingComplete { get; init; } = true;
+    public IReadOnlyList<string> InitialReasons { get; init; } = [];
+}
 
 /// <summary>
 /// The model is never the authority for diagnostic counts. Only a complete, exact
@@ -98,6 +105,32 @@ internal static partial class CompilerLogVerification
         return new CompilerModelVerification(reasons.Count == 0 ? "passed" : "failed", reasons);
     }
 
+    // A single enclosing Markdown fence can be removed without inventing or changing any
+    // facts. Extra prose, nested fences and arbitrary JSON extraction are not normalization.
+    internal static bool TryUnwrapJsonFence(string answer, out string inventory)
+    {
+        var text = answer.Trim();
+        var lineEnd = text.IndexOf('\n');
+        if (lineEnd < 0 || !text.EndsWith("```", StringComparison.Ordinal))
+        {
+            inventory = string.Empty;
+            return false;
+        }
+        var header = text[..lineEnd].TrimEnd('\r');
+        if (header is not ("```json" or "```"))
+        {
+            inventory = string.Empty;
+            return false;
+        }
+        inventory = text[(lineEnd + 1)..^3].Trim();
+        return !inventory.Contains("```", StringComparison.Ordinal);
+    }
+
+    internal static bool IsFormatFailure(CompilerModelVerification verification) =>
+        verification.Status == "failed" && verification.Reasons.Count > 0 &&
+        verification.Reasons.All(reason => reason is "response_not_json" or "response_not_inventory"
+            or "response_schema_mismatch" or "code_counts_not_object" or "build_summary_not_array");
+
     internal static string Render(CompilerLogReport report, CompilerModelVerification verification)
     {
         var text = new StringBuilder();
@@ -121,6 +154,15 @@ internal static partial class CompilerLogVerification
             text.AppendLine(LocalLmText.LogUnparsedLongLines(report.UnparsedLongLines));
         text.AppendLine("analysis_status=" + report.AnalysisStatus);
         text.AppendLine("model_validation=" + verification.Status);
+        text.AppendLine("model_format_normalized=" + (verification.FormatNormalized ? "true" : "false"));
+        text.AppendLine("model_format_repair_attempts=" + verification.RepairAttempts.ToString(CultureInfo.InvariantCulture));
+        if (verification.RepairFailureReason is not null)
+        {
+            text.AppendLine("model_format_repair_failure_reason=" + verification.RepairFailureReason);
+            text.AppendLine("model_format_repair_timing_complete=" + (verification.RepairTimingComplete ? "true" : "false"));
+        }
+        if (verification.InitialReasons.Count > 0)
+            text.AppendLine("model_initial_validation_reason=" + string.Join(";", verification.InitialReasons));
         text.AppendLine(verification.Status == "passed"
             ? LocalLmText.LogModelVerificationPassed : LocalLmText.LogModelVerificationFailed);
         if (verification.Reasons.Count > 0)

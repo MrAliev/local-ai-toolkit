@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.Json;
 using LocalAi.Broker.Client;
 using LocalAi.Contracts;
 using LocalLm.Core.Resources;
@@ -52,7 +53,8 @@ internal sealed class LogTriagePipeline(
         var capacity = await SelectCapacityAsync(model, cancellationToken);
         var promptBudget = InputCharacterBudget(capacity.ContextTokens);
         var availableCharacters =
-            promptBudget - focus.Length - SystemPrompt.Length - policy.PromptOverheadCharacters;
+            promptBudget - focus.Length - Math.Max(SystemPrompt.Length, CompilerLogVerification.Instruction.Length)
+            - policy.PromptOverheadCharacters;
         if (availableCharacters < 128)
         {
             throw new ArgumentException(
@@ -139,10 +141,56 @@ internal sealed class LogTriagePipeline(
         }
 
         var answer = reduced.Text;
+        cancellationToken.ThrowIfCancellationRequested();
         CompilerModelVerification? diagnosticVerification = null;
         if (verifyCompilerDiagnostics || CompilerLogVerification.ContainsDiagnosticClaim(answer))
         {
             diagnosticVerification = CompilerLogVerification.Verify(answer, compilerDiagnostics);
+            var initialReasons = diagnosticVerification.Reasons;
+            if (diagnosticVerification.Status != "passed" &&
+                CompilerLogVerification.TryUnwrapJsonFence(answer, out var normalized))
+                diagnosticVerification = CompilerLogVerification.Verify(normalized, compilerDiagnostics) with
+                { FormatNormalized = true, InitialReasons = initialReasons };
+            if (CompilerLogVerification.HasEvidence(compilerDiagnostics) &&
+                CompilerLogVerification.IsFormatFailure(diagnosticVerification))
+            {
+                LocalJobResult<string>? repaired = null;
+                try
+                {
+                    repaired = await RepairCompilerInventoryAsync(compilerDiagnostics, capacity,
+                        maximumSummaryCharacters, cancellationToken);
+                }
+                catch (BrokerJobFailedException)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    // The source proof survives a failed optional format job. No receipt
+                    // exists for its backend timings; never call the known subtotal complete.
+                    diagnosticVerification = diagnosticVerification with
+                    {
+                        RepairAttempts = 1, RepairFailureReason = "repair_job_failed",
+                        RepairTimingComplete = false, InitialReasons = initialReasons,
+                    };
+                }
+                if (repaired is not null)
+                {
+                    lastReceipt = repaired.Receipt;
+                    queued += repaired.Receipt.QueueDuration;
+                    executed += repaired.Receipt.ExecutionDuration;
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var repairedAnswer = repaired.Value;
+                    var formatNormalized = CompilerLogVerification.TryUnwrapJsonFence(repairedAnswer, out var repairedJson);
+                    diagnosticVerification = CompilerLogVerification.Verify(
+                        formatNormalized ? repairedJson : repairedAnswer, compilerDiagnostics) with
+                    {
+                        RepairAttempts = 1,
+                        FormatNormalized = diagnosticVerification.FormatNormalized || formatNormalized,
+                        InitialReasons = initialReasons,
+                    };
+                }
+                else if (diagnosticVerification.RepairAttempts == 0)
+                    diagnosticVerification = diagnosticVerification with
+                    { RepairFailureReason = "repair_context_budget", InitialReasons = initialReasons };
+            }
             UsageCall.Current?.Validated(diagnosticVerification.Status == "passed");
             // Counts and source diagnostics are always rendered by code. Even a structurally
             // valid model inventory cannot introduce an unverified natural-language diagnosis.
@@ -387,7 +435,13 @@ internal sealed class LogTriagePipeline(
         CancellationToken cancellationToken) =>
         await client.RoutedChatAsync(
             LocalTaskProfile.LogTriage,
-            WithCompilerContract($"""
+            compilerDiagnostics ? $"""
+             Return the compiler inventory for original log fragment {fragmentIndex} as JSON.
+             Keep the response under {maximumSummaryCharacters} characters.
+             --- BEGIN LOG FRAGMENT {fragmentIndex} ---
+             {content}
+             --- END LOG FRAGMENT {fragmentIndex} ---
+             """ : $"""
              {question}
 
              Analyze log fragment {fragmentIndex}. Return only relevant findings from this
@@ -397,8 +451,8 @@ internal sealed class LogTriagePipeline(
              --- BEGIN LOG FRAGMENT {fragmentIndex} ---
              {content}
              --- END LOG FRAGMENT {fragmentIndex} ---
-             """, compilerDiagnostics, capacity),
-            SystemPrompt,
+             """,
+            compilerDiagnostics ? CompilerLogVerification.Instruction : SystemPrompt,
             null,
             new LocalWorkloadMetadata(
                 content.Length,
@@ -434,7 +488,12 @@ internal sealed class LogTriagePipeline(
 
         var result = await client.RoutedChatAsync(
             LocalTaskProfile.LogTriage,
-            WithCompilerContract($"""
+            compilerDiagnostics ? $"""
+             Merge these ordered partial compiler inventories into one JSON inventory.
+             Do not invent codes, lose occurrences or count repeated overlap twice.
+             Keep the response under {maximumSummaryCharacters} characters.
+             {body}
+             """ : $"""
              {question}
 
              Merge these ordered partial log findings (reduction level {level}). Deduplicate repeated
@@ -443,8 +502,8 @@ internal sealed class LogTriagePipeline(
              {maximumSummaryCharacters} characters.
 
              {body}
-             """, compilerDiagnostics, capacity),
-            SystemPrompt,
+             """,
+            compilerDiagnostics ? CompilerLogVerification.Instruction : SystemPrompt,
             null,
             new LocalWorkloadMetadata(
                 body.Length,
@@ -461,15 +520,29 @@ internal sealed class LogTriagePipeline(
         return new ReducedSummary(result.Value, result.Receipt);
     }
 
-    private string WithCompilerContract(string prompt, bool compilerDiagnostics, Capacity capacity)
+    private async Task<LocalJobResult<string>?> RepairCompilerInventoryAsync(
+        CompilerLogReport evidence, Capacity capacity, int maximumSummaryCharacters,
+        CancellationToken cancellationToken)
     {
-        if (!compilerDiagnostics) return prompt;
-        var structured = CompilerLogVerification.Instruction + "\n\n" + prompt;
-        // Preserve the existing budget for generic logs and never overrun a small context
-        // to request the inventory. An unstructured reply still fails the final source
-        // reconciliation and the deterministic evidence is delivered instead.
-        return structured.Length + SystemPrompt.Length <= InputCharacterBudget(capacity.ContextTokens)
-            ? structured : prompt;
+        cancellationToken.ThrowIfCancellationRequested();
+        // Only compact facts scanned from the original source are supplied, never the
+        // rejected prose. This is a single format retry, not another unbounded log pass.
+        var inventory = JsonSerializer.Serialize(new
+        {
+            diagnosticLineCount = evidence.DiagnosticLineCount,
+            codeCounts = evidence.CodeCounts,
+            buildSummaryErrors = evidence.BuildSummaries.Select(summary => summary.ErrorCount).ToArray(),
+        });
+        var prompt = "Return exactly the required JSON inventory for these programmatically verified source counts. " +
+            "Do not change any count or add fields. No prose or code fences.\n" + inventory;
+        if (inventory.Length > maximumSummaryCharacters ||
+            prompt.Length + CompilerLogVerification.Instruction.Length > InputCharacterBudget(capacity.ContextTokens))
+            return null;
+        return await client.RoutedChatAsync(LocalTaskProfile.LogTriage, prompt,
+            CompilerLogVerification.Instruction, null,
+            new LocalWorkloadMetadata(prompt.Length, maximumSummaryCharacters, 1, 0, 0, LocalDurationClass.Short),
+            workflow: null, modelOverride: capacity.Model, requestedContextTokens: capacity.ContextTokens,
+            LocalJobPriority.Foreground, cancellationToken);
     }
 
     private static async IAsyncEnumerable<LogFragment> ReadFragmentsAsync(
