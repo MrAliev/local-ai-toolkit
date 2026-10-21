@@ -15,24 +15,43 @@ public static class ActivationCoordinator
     public static ActivationExclusiveLease AcquireExclusive(
         string binRoot,
         TimeSpan timeout,
+        CancellationToken cancellationToken) =>
+        AcquireExclusive(
+            binRoot,
+            timeout,
+            SecureNamedMutexFactory.Instance,
+            TimeProvider.System,
+            AcquireExclusive,
+            cancellationToken);
+
+    internal static ActivationExclusiveLease AcquireExclusive(
+        string binRoot,
+        TimeSpan timeout,
+        ISecureNamedMutexFactory mutexFactory,
+        TimeProvider timeProvider,
+        Func<ActivationStartupGateLease, TimeSpan, CancellationToken, bool,
+            ActivationExclusiveLease> acquireFileLease,
         CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(binRoot);
+        ArgumentNullException.ThrowIfNull(mutexFactory);
+        ArgumentNullException.ThrowIfNull(timeProvider);
+        ArgumentNullException.ThrowIfNull(acquireFileLease);
         if (timeout < TimeSpan.Zero)
         {
             throw new ArgumentOutOfRangeException(nameof(timeout));
         }
 
-        var started = Stopwatch.GetTimestamp();
-        var gate = AcquireStartupGate(binRoot, timeout, cancellationToken);
+        var started = timeProvider.GetTimestamp();
+        var gate = AcquireStartupGate(binRoot, timeout, mutexFactory, cancellationToken);
         try
         {
-            var remaining = Remaining(timeout, started);
-            var result = AcquireExclusive(
+            var remaining = Remaining(timeout, started, timeProvider);
+            var result = acquireFileLease(
                 gate,
                 remaining,
                 cancellationToken,
-                ownsGate: true);
+                true);
             gate = null!;
             return result;
         }
@@ -246,9 +265,12 @@ public static class ActivationCoordinator
     internal static string MutexName(string canonicalRoot)
         => SecureNamedMutexName.Create(MutexPrefix, canonicalRoot);
 
-    private static TimeSpan Remaining(TimeSpan timeout, long started)
+    private static TimeSpan Remaining(TimeSpan timeout, long started) =>
+        Remaining(timeout, started, TimeProvider.System);
+
+    private static TimeSpan Remaining(TimeSpan timeout, long started, TimeProvider timeProvider)
     {
-        var elapsed = Stopwatch.GetElapsedTime(started);
+        var elapsed = timeProvider.GetElapsedTime(started);
         return elapsed >= timeout ? TimeSpan.Zero : timeout - elapsed;
     }
 
