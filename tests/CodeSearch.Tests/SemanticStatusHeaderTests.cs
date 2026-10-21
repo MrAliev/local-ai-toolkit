@@ -11,7 +11,7 @@ public sealed class SemanticStatusHeaderTests
         using var header = Header();
         using var source = new BudgetStream(header.ToArray());
 
-        Assert.Equal(1, SemanticIndex.TryReadDocumentCount(source));
+        Assert.Equal(1, SemanticIndex.TryReadDocumentCountFromStream(source));
         Assert.Equal(4096, source.BytesRead);
         Assert.False(source.WasClosed);
     }
@@ -30,8 +30,14 @@ public sealed class SemanticStatusHeaderTests
         }
         using var source = new BudgetStream(header.ToArray());
 
-        Assert.Null(SemanticIndex.TryReadDocumentCount(source));
+        Assert.Null(SemanticIndex.TryReadDocumentCountFromStream(source));
         Assert.Equal(4096, source.BytesRead);
+    }
+
+    [Fact]
+    public void String_null_path_guard_remains_unambiguous()
+    {
+        Assert.Throws<ArgumentNullException>(() => SemanticIndex.TryReadDocumentCount(null!));
     }
 
     private static MemoryStream Header()

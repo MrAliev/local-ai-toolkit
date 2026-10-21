@@ -584,7 +584,8 @@ public sealed class SearchService : IDisposable
                 return (false, false, null);
             }
 
-            var count = SemanticIndex.TryReadDocumentCount(path, index.RepositoryId, index.GenerationId, index.GitTree);
+            var count = SemanticIndex.TryReadDocumentCount(path, index.RepositoryId, index.GenerationId,
+                index.GitTree, index.DirtyHash, verifyDirtyHash: true);
             return (true, count == 0, count is not null);
         }
         catch (Exception exception) when (

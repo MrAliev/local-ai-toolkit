@@ -416,7 +416,8 @@ public sealed record SemanticIndexOverlay
             for (var index = 0; index < count; index++) SemanticIndex.ReadStatusHeaderString(reader);
             return actualRepository == repositoryId && actualGeneration == generationId &&
                 actualBaseTree == baseGitTree && actualTree == gitTree && actualDirty == dirtyHash &&
-                SemanticIndex.ReadStatusDocumentCount(reader, repositoryId, generationId, gitTree) is not null;
+                SemanticIndex.ReadStatusDocumentCount(reader, repositoryId, generationId, gitTree,
+                    dirtyHash, checkDirtyHash: true) is not null;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or
             InvalidDataException or ArgumentException or FormatException)

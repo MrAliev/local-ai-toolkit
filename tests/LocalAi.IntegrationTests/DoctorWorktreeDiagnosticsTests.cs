@@ -160,8 +160,10 @@ public sealed class DoctorWorktreeDiagnosticsTests : IDisposable
         Assert.Equal(true, Fact(check, "worktreeUsable"));
     }
 
-    [Fact]
-    public void A_corrupt_semantic_overlay_does_not_become_precise_merely_by_existing()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void A_corrupt_semantic_overlay_does_not_become_precise_merely_by_existing(bool nestedDirtyMismatch)
     {
         var (_, worktree) = CreateRepository();
         var runtime = Path.Combine(root, "runtime");
@@ -183,7 +185,43 @@ public sealed class DoctorWorktreeDiagnosticsTests : IDisposable
         }.Save(overlayPath);
         var semanticPath = RuntimeIndexLayout.SemanticOverlayPath(dirty, generation.Identity.Id);
         Directory.CreateDirectory(Path.GetDirectoryName(semanticPath)!);
-        File.WriteAllText(semanticPath, "broken semantic overlay");
+        if (!nestedDirtyMismatch) File.WriteAllText(semanticPath, "broken semantic overlay");
+        else
+        {
+            new SemanticIndexOverlay
+            {
+                RepositoryId = dirty.RepositoryId, GenerationId = generation.Identity.Id,
+                BaseGitTree = identity.HeadTree, GitTree = dirty.HeadTree, DirtyHash = dirty.DirtyHash,
+                DeletedDocuments = [],
+                Changed = new SemanticIndex
+                {
+                    RepositoryId = dirty.RepositoryId, GenerationId = generation.Identity.Id,
+                    GitTree = dirty.HeadTree, DirtyHash = dirty.DirtyHash, BaseCommit = dirty.HeadCommit,
+                    IndexedAtUtc = DateTime.UtcNow,
+                    Documents = [new SemanticDocument { RelPath = "Changed.cs", Hash = new byte[32] }],
+                    Symbols = [], Occurrences = [], Relationships = [],
+                },
+            }.Save(semanticPath);
+            using (var stream = File.Open(semanticPath, FileMode.Open, FileAccess.ReadWrite))
+            using (var reader = new BinaryReader(stream, System.Text.Encoding.UTF8, leaveOpen: true))
+            {
+                reader.ReadBytes(4);
+                reader.ReadInt32();
+                for (var index = 0; index < 4; index++) reader.ReadString();
+                if (reader.ReadBoolean()) reader.ReadString();
+                var deleted = reader.ReadInt32();
+                for (var index = 0; index < deleted; index++) reader.ReadString();
+                reader.ReadBytes(4);
+                reader.ReadInt32();
+                for (var index = 0; index < 3; index++) reader.ReadString();
+                Assert.True(reader.ReadBoolean());
+                var length = reader.Read7BitEncodedInt();
+                Assert.Equal(dirty.DirtyHash!.Length, length);
+                var different = (dirty.DirtyHash[0] == 'a' ? "b" : "a") + dirty.DirtyHash[1..];
+                stream.Write(System.Text.Encoding.UTF8.GetBytes(different));
+            }
+            Assert.Throws<InvalidDataException>(() => SemanticIndexOverlay.Load(semanticPath));
+        }
 
         var check = RepositoryCheck(runtime, worktree, DateTimeOffset.UtcNow);
 

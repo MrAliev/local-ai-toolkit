@@ -74,7 +74,7 @@ public sealed record SemanticIndex
     public static int? TryReadDocumentCount(string path) => TryReadDocumentCount(path, null, null, null);
 
     /// <summary>Reads at most 4096 bytes from the current position; leaves the caller's stream open.</summary>
-    public static int? TryReadDocumentCount(Stream source)
+    public static int? TryReadDocumentCountFromStream(Stream source)
     {
         ArgumentNullException.ThrowIfNull(source);
         try
@@ -89,13 +89,14 @@ public sealed record SemanticIndex
         }
     }
 
-    internal static int? TryReadDocumentCount(string path, string? repositoryId, string? generationId, string? gitTree)
+    internal static int? TryReadDocumentCount(string path, string? repositoryId, string? generationId, string? gitTree,
+        string? dirtyHash = null, bool verifyDirtyHash = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         try
         {
             using var reader = OpenStatusHeader(path);
-            return ReadStatusDocumentCount(reader, repositoryId, generationId, gitTree);
+            return ReadStatusDocumentCount(reader, repositoryId, generationId, gitTree, dirtyHash, verifyDirtyHash);
         }
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException or
@@ -129,7 +130,7 @@ public sealed record SemanticIndex
     }
 
     internal static int? ReadStatusDocumentCount(BinaryReader reader, string? repositoryId,
-        string? generationId, string? gitTree)
+        string? generationId, string? gitTree, string? expectedDirtyHash = null, bool checkDirtyHash = false)
     {
         if (Encoding.ASCII.GetString(reader.ReadBytes(4)) != Magic || reader.ReadInt32() != CurrentVersion)
             return null;
@@ -138,7 +139,8 @@ public sealed record SemanticIndex
         var actualTree = ReadStatusHeaderString(reader);
         var dirtyFlag = reader.ReadByte();
         if (dirtyFlag > 1) return null;
-        if (dirtyFlag == 1) ReadStatusHeaderString(reader);
+        var actualDirtyHash = dirtyFlag == 1 ? ReadStatusHeaderString(reader) : null;
+        if (checkDirtyHash && actualDirtyHash != expectedDirtyHash) return null;
         ReadStatusHeaderString(reader);
         _ = new DateTime(reader.ReadInt64(), DateTimeKind.Utc);
         if (repositoryId is not null && actualRepository != repositoryId ||
