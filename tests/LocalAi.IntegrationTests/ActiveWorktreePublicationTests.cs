@@ -6,6 +6,7 @@ using CodeSearch.Core.Search;
 using CodeSearch.Core.Semantics;
 using LocalAi.Cli;
 using LocalAi.Contracts;
+using LocalAi.Contracts.Activation;
 using LocalAi.Documentation;
 
 namespace LocalAi.IntegrationTests;
@@ -53,6 +54,178 @@ public sealed class ActiveWorktreePublicationTests : IDisposable
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    public async Task A_new_base_refreshes_only_the_requested_worktree_by_default(bool linkedActive)
+    {
+        var fixture = Prepare(linkedActive);
+        var otherIdentity = RuntimeIndexLayout.Inspect(Other, Runtime);
+        var blockedPath = RuntimeIndexLayout.SemanticOverlayPath(otherIdentity, fixture.Next.Identity.Id);
+        Directory.CreateDirectory(blockedPath);
+        using var output = new OnLineWriter(value =>
+        {
+            if (value.StartsWith("WORKTREE_PLAN ", StringComparison.Ordinal))
+                Assert.DoesNotContain(System.Text.Json.JsonSerializer.Serialize(Other), value);
+        });
+
+        await CodeSearchSyncCommand.ExecuteAsync(fixture.Active, output,
+            cancellationToken: TestContext.Current.CancellationToken, runtimeRoot: Runtime);
+
+        Assert.Equal(fixture.Previous.Identity.Id, fixture.Store.ReadCurrent()!.GenerationId);
+        Assert.False(File.Exists(RuntimeIndexLayout.OverlayPath(otherIdentity, fixture.Next.Identity.Id)));
+        Assert.True(Directory.Exists(blockedPath));
+        Assert.Contains("scope=requested-worktree worktrees=1", output.ToString());
+        await AssertReadable(fixture);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Scoped_refresh_preserves_other_readers_across_generations_and_retention(bool otherPublished)
+    {
+        var fixture = Prepare();
+        var originalPointer = fixture.Store.ReadCurrent();
+        var otherGeneration = fixture.Previous.Identity.Id;
+        if (otherPublished)
+        {
+            PrepareOtherOverlay(fixture);
+            var otherIdentity = RuntimeIndexLayout.Inspect(Other, Runtime);
+            Assert.True(WorktreeGenerationPublications.Publish(otherIdentity, fixture.Next, originalPointer));
+            otherGeneration = fixture.Next.Identity.Id;
+        }
+
+        var intermediate = string.Empty;
+        for (var iteration = 0; iteration < 3; iteration++)
+        {
+            if (iteration > 0)
+            {
+                File.WriteAllText(Path.Combine(Root, "generation.md"), iteration.ToString());
+                Git("add", ".");
+                Git("commit", "-m", "Next generation");
+                var identity = RuntimeIndexLayout.Inspect(Root, Runtime);
+                fixture = fixture with { Identity = identity, Next = Publish(identity, "ActiveSymbol") };
+            }
+            await CodeSearchSyncCommand.ExecuteAsync(Root, TextWriter.Null,
+                cancellationToken: TestContext.Current.CancellationToken, runtimeRoot: Runtime);
+            Assert.Equal(originalPointer, fixture.Store.ReadCurrent());
+            await AssertReadable(fixture);
+            if (iteration == 1) intermediate = fixture.Next.Identity.Id;
+        }
+
+        // A no-op refresh must not replace the global pointer's timestamp/epoch either.
+        var noOp = await CodeSearchSyncCommand.ExecuteAsync(Root, TextWriter.Null,
+            cancellationToken: TestContext.Current.CancellationToken, runtimeRoot: Runtime);
+        Assert.False(noOp.GenerationChanged);
+        Assert.Equal(originalPointer, fixture.Store.ReadCurrent());
+        var reachable = new HashSet<(string WorktreeId, string HeadTree)>();
+        foreach (var path in new[] { Root, Other })
+        {
+            var identity = RuntimeIndexLayout.Inspect(path, Runtime);
+            reachable.Add((RuntimeIndexLayout.WorktreeKey(identity.WorkingRoot), identity.HeadTree));
+        }
+        var pruned = GenerationRetention.Prune(fixture.Identity.RepositoryRuntimeRoot.Value,
+            RuntimeRetentionPolicy.Default with { GenerationsPerRepository = 1 },
+            DateTimeOffset.UtcNow + TimeSpan.FromDays(3), reachable: reachable);
+        Assert.Contains(intermediate, pruned.GenerationsRemoved);
+        Assert.True(File.Exists(fixture.Store.IndexPath(otherGeneration)));
+        await AssertReadable(fixture);
+
+        using var search = new SearchService(model => new UnitEmbedding(model), runtimeRoot: Runtime);
+        File.WriteAllText(Path.Combine(Other, "notes.md"), "Changed without refreshing\n");
+        await Assert.ThrowsAsync<SearchNotReadyException>(() => search.SearchAsync("OldSymbol", Other,
+            new SearchOptions(), TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task Base_only_reports_the_global_generation_change_after_a_scoped_refresh()
+    {
+        var fixture = Prepare();
+        await CodeSearchSyncCommand.ExecuteAsync(Root, TextWriter.Null,
+            cancellationToken: TestContext.Current.CancellationToken, runtimeRoot: Runtime);
+        Assert.Equal(fixture.Previous.Identity.Id, fixture.Store.ReadCurrent()!.GenerationId);
+        var result = await CodeSearchSyncCommand.ExecuteAsync(Root, TextWriter.Null,
+            cancellationToken: TestContext.Current.CancellationToken, runtimeRoot: Runtime,
+            includeOverlays: false);
+        Assert.True(result.GenerationChanged);
+        Assert.Equal(fixture.Next.Identity.Id, fixture.Store.ReadCurrent()!.GenerationId);
+    }
+
+    [Fact]
+    public async Task Explicit_all_worktrees_also_processes_other_trees_when_base_is_unchanged()
+    {
+        var fixture = Prepare();
+        PrepareOtherOverlay(fixture);
+        fixture.Store.SetCurrent(fixture.Next);
+        var processedOther = false;
+        using var output = new OnLineWriter(value =>
+        {
+            if (value.StartsWith("WORKTREE_PLAN ", StringComparison.Ordinal) &&
+                value.Contains(System.Text.Json.JsonSerializer.Serialize(Other), StringComparison.Ordinal))
+                processedOther = true;
+        });
+        var result = await CodeSearchSyncCommand.ExecuteAsync(Root, output,
+            cancellationToken: TestContext.Current.CancellationToken, runtimeRoot: Runtime,
+            allWorktrees: true);
+        Assert.False(result.GenerationChanged);
+        Assert.True(processedOther);
+        Assert.Contains("scope=all-worktrees worktrees=2", output.ToString());
+        await AssertReadable(fixture);
+    }
+
+    [Theory]
+    [InlineData(CodeSearchSyncCommand.DefaultModel, false)]
+    [InlineData("test-worktree-model", true)]
+    public async Task Effective_generation_selects_its_own_model_and_dimension(string alternateModel, bool uncalibrated)
+    {
+        var fixture = Prepare();
+        const int alternateDimension = 8;
+        var alternate = Publish(fixture.Identity, "ActiveSymbol", alternateModel, alternateDimension);
+        Assert.True(WorktreeGenerationPublications.Publish(
+            fixture.Identity, alternate, fixture.Store.ReadCurrent()));
+        var models = new List<string>();
+        using var search = new SearchService(model =>
+        {
+            models.Add(model);
+            return new UnitEmbedding(model, alternateDimension);
+        }, runtimeRoot: Runtime);
+        Assert.Equal(alternateDimension,
+            CodeIndex.Load(search.Status(Root).IndexPath, withVectors: false).Dim);
+        if (uncalibrated)
+        {
+            var error = await Assert.ThrowsAsync<SearchNotReadyException>(() =>
+                search.SearchAsync("ActiveSymbol", Root, new SearchOptions(), TestContext.Current.CancellationToken));
+            Assert.Contains(alternateModel, error.Message);
+            Assert.Empty(models);
+        }
+        else
+        {
+            var active = await search.SearchAsync("ActiveSymbol", Root, new SearchOptions(),
+                TestContext.Current.CancellationToken);
+            Assert.Equal("ActiveSymbol", Assert.Single(active.Hits).Symbol);
+            Assert.Contains(alternateModel, models);
+        }
+        using var otherSearch = new SearchService(model => new UnitEmbedding(model), runtimeRoot: Runtime);
+        var other = await otherSearch.SearchAsync("OldSymbol", Other, new SearchOptions(),
+            TestContext.Current.CancellationToken);
+        Assert.Equal("OldSymbol", Assert.Single(other.Hits).Symbol);
+        Assert.Equal(fixture.Previous.Identity.Id, fixture.Store.ReadCurrent()!.GenerationId);
+        Assert.Equal(DocumentationWorkspace.Snapshot(fixture.Identity),
+            DocumentationWorkspace.Capture(Root, Runtime,
+                cancellationToken: TestContext.Current.CancellationToken).Snapshot);
+    }
+
+    [Fact]
+    public async Task A_global_epoch_change_after_scoped_readiness_refuses_completion()
+    {
+        var fixture = Prepare();
+        using var output = new OnReadyWriter(() => fixture.Store.SetCurrent(fixture.Previous));
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            CodeSearchSyncCommand.ExecuteAsync(Root, output,
+                cancellationToken: TestContext.Current.CancellationToken, runtimeRoot: Runtime));
+        Assert.Contains("current_pointer_changed", error.Message);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public async Task A_ready_active_tree_survives_failure_and_restart(bool linkedActive)
     {
         var fixture = Prepare(linkedActive);
@@ -64,7 +237,7 @@ public sealed class ActiveWorktreePublicationTests : IDisposable
         Directory.CreateDirectory(blockedPath);
         var error = await Record.ExceptionAsync(() => CodeSearchSyncCommand.ExecuteAsync(
             fixture.Active, TextWriter.Null, cancellationToken: TestContext.Current.CancellationToken,
-            runtimeRoot: Runtime));
+            runtimeRoot: Runtime, allWorktrees: true));
         Assert.NotNull(error);
         Assert.True(error is IOException or UnauthorizedAccessException, error.ToString());
         await AssertReadable(fixture);
@@ -73,7 +246,7 @@ public sealed class ActiveWorktreePublicationTests : IDisposable
         Directory.Delete(blockedPath);
         PrepareOtherOverlay(fixture);
         await CodeSearchSyncCommand.ExecuteAsync(fixture.Active, TextWriter.Null,
-            cancellationToken: TestContext.Current.CancellationToken, runtimeRoot: Runtime);
+            cancellationToken: TestContext.Current.CancellationToken, runtimeRoot: Runtime, allWorktrees: true);
         Assert.Equal(fixture.Next.Identity.Id, fixture.Store.ReadCurrent()!.GenerationId);
         await AssertReadable(fixture);
     }
@@ -87,12 +260,12 @@ public sealed class ActiveWorktreePublicationTests : IDisposable
             TestContext.Current.CancellationToken);
         using var output = new OnReadyWriter(cancellation.Cancel);
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => CodeSearchSyncCommand.ExecuteAsync(
-            fixture.Active, output, cancellationToken: cancellation.Token, runtimeRoot: Runtime));
+            fixture.Active, output, cancellationToken: cancellation.Token, runtimeRoot: Runtime, allWorktrees: true));
 
         Assert.Equal(fixture.Previous.Identity.Id, fixture.Store.ReadCurrent()!.GenerationId);
         await AssertReadable(fixture);
         await CodeSearchSyncCommand.ExecuteAsync(fixture.Active, TextWriter.Null,
-            cancellationToken: TestContext.Current.CancellationToken, runtimeRoot: Runtime);
+            cancellationToken: TestContext.Current.CancellationToken, runtimeRoot: Runtime, allWorktrees: true);
         Assert.Equal(fixture.Next.Identity.Id, fixture.Store.ReadCurrent()!.GenerationId);
         await AssertReadable(fixture);
     }
@@ -107,7 +280,7 @@ public sealed class ActiveWorktreePublicationTests : IDisposable
         if (!during) DeleteOther();
         using var output = new OnReadyWriter(() => { if (during) DeleteOther(); });
         await CodeSearchSyncCommand.ExecuteAsync(fixture.Active, output,
-            cancellationToken: TestContext.Current.CancellationToken, runtimeRoot: Runtime);
+            cancellationToken: TestContext.Current.CancellationToken, runtimeRoot: Runtime, allWorktrees: true);
         Assert.Equal(fixture.Next.Identity.Id, fixture.Store.ReadCurrent()!.GenerationId);
         await AssertReadable(fixture, includeOther: false);
     }
@@ -124,14 +297,14 @@ public sealed class ActiveWorktreePublicationTests : IDisposable
                 File.WriteAllText(Path.Combine(Other, "notes.md"), "Saved while syncing\n");
         });
         var error = await Assert.ThrowsAsync<InvalidOperationException>(() => CodeSearchSyncCommand.ExecuteAsync(
-            fixture.Active, output, cancellationToken: TestContext.Current.CancellationToken, runtimeRoot: Runtime));
+            fixture.Active, output, cancellationToken: TestContext.Current.CancellationToken, runtimeRoot: Runtime, allWorktrees: true));
         Assert.Contains("worktree_changed", error.Message);
         Assert.Equal(fixture.Previous.Identity.Id, fixture.Store.ReadCurrent()!.GenerationId);
         await AssertReadable(fixture, includeOther: false);
 
         File.WriteAllText(Path.Combine(Other, "notes.md"), "OldSymbol\n");
         await CodeSearchSyncCommand.ExecuteAsync(fixture.Active, TextWriter.Null,
-            cancellationToken: TestContext.Current.CancellationToken, runtimeRoot: Runtime);
+            cancellationToken: TestContext.Current.CancellationToken, runtimeRoot: Runtime, allWorktrees: true);
         Assert.Equal(fixture.Next.Identity.Id, fixture.Store.ReadCurrent()!.GenerationId);
         await AssertReadable(fixture);
     }
@@ -170,17 +343,19 @@ public sealed class ActiveWorktreePublicationTests : IDisposable
         }, []).Save(RuntimeIndexLayout.SemanticOverlayPath(identity, fixture.Next.Identity.Id));
     }
 
-    private GenerationManifest Publish(WorkingIndexIdentity identity, string symbol)
+    private GenerationManifest Publish(WorkingIndexIdentity identity, string symbol,
+        string model = CodeSearchSyncCommand.DefaultModel,
+        int dimension = CodeSearchSyncCommand.DefaultDimension)
     {
         var generation = new GenerationIdentity(
             identity.RepositoryId, identity.HeadCommit, identity.HeadTree,
-            CodeSearchSyncCommand.DefaultModel, CodeSearchSyncCommand.DefaultDimension,
+            model, dimension,
             CodeSearchSyncCommand.CurrentChunkFormatVersion, CodeIndex.CurrentVersion,
             CodeSearchSyncCommand.CurrentNormalizationVersion, 1,
             CodeSearchSyncCommand.CurrentSemanticGenerationVersion);
         var source = Path.Combine(_fixture, generation.Id + ".cidx");
         var semantic = Path.Combine(_fixture, generation.Id + ".sidx");
-        Index(identity, generation.Id, symbol).Save(source);
+        Index(identity, generation.Id, symbol, model: model, dimension: dimension).Save(source);
         new SemanticIndex
         {
             RepositoryId = identity.RepositoryId, GenerationId = generation.Id,
@@ -192,13 +367,14 @@ public sealed class ActiveWorktreePublicationTests : IDisposable
     }
 
     private static CodeIndex Index(WorkingIndexIdentity identity, string generation, string symbol,
-        string baseCommit = "")
+        string baseCommit = "", string model = CodeSearchSyncCommand.DefaultModel,
+        int dimension = CodeSearchSyncCommand.DefaultDimension)
     {
-        var vectors = new float[CodeSearchSyncCommand.DefaultDimension];
+        var vectors = new float[dimension];
         vectors[0] = 1;
         return new CodeIndex
         {
-            Dim = vectors.Length, Model = CodeSearchSyncCommand.DefaultModel,
+            Dim = vectors.Length, Model = model,
             Root = identity.WorkingRoot.Value, BaseCommit = baseCommit,
             GitCommit = identity.HeadCommit, GitTree = identity.HeadTree,
             RepositoryId = identity.RepositoryId, GenerationId = generation,
@@ -258,13 +434,13 @@ public sealed class ActiveWorktreePublicationTests : IDisposable
         Directory.Delete(_fixture, recursive: true);
     }
 
-    private sealed class UnitEmbedding(string model) : IEmbeddingClient
+    private sealed class UnitEmbedding(string model, int dimension = CodeSearchSyncCommand.DefaultDimension) : IEmbeddingClient
     {
         public string Model => model;
         public Task<float[][]> EmbedAsync(IReadOnlyList<string> inputs, LocalJobPriority priority,
             string deduplicationKey, CancellationToken cancellationToken = default)
         {
-            var vector = new float[CodeSearchSyncCommand.DefaultDimension];
+            var vector = new float[dimension];
             vector[0] = 1;
             return Task.FromResult<float[][]>([vector]);
         }
