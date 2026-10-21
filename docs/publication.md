@@ -94,3 +94,6 @@ Keep application correspondence and API tokens outside this repository.
 
 The existing release-asset attestation records uploaded bytes. It must not be described as
 CI build provenance until a build-to-source attestation is produced by the build itself.
+
+[Unsigned release candidate](unsigned-release-candidate.md) describes the CI groundwork
+and its limits. Its output is not installable or signed release distribution.
