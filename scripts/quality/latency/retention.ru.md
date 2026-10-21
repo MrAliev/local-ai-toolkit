@@ -10,6 +10,10 @@
 
 Используйте установленный launcher и существующий чистый смешанный корпус:
 
+Каталог установленного runtime определяется через Windows known-folder API.
+Переопределение `LOCALAPPDATA` не выбирает другую установку. Эта диагностика требует
+Windows и завершается при ошибке определения каталога, без перехода к пути из окружения.
+
 ```powershell
 python scripts/quality/latency/retention_probe.py `
   <clean-mixed-corpus> tests/Fixtures/OcrQuality/short-repeated-en.png `

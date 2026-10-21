@@ -61,6 +61,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Test installed-runtime selection for Python diagnostics
+        run: python -B -m unittest discover -s scripts/quality/latency -p test_localai_installation.py -v
+
       - name: Test SCIP fixture source boundaries
         run: python -m unittest discover -s tests/CodeSearch.Tests/Fixtures/SymbolChunking -p test_scip_enclosing_range_report.py -v
 

@@ -10,6 +10,8 @@ import subprocess
 import threading
 import time
 
+from localai_installation import installed_runtime_root
+
 
 def digest(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
@@ -87,7 +89,7 @@ def main():
     if git(corpus, "status", "--porcelain"):
         raise ValueError("Corpus must be clean")
     output.mkdir(parents=True, exist_ok=False)
-    runtime = Path(os.environ["LOCALAPPDATA"]) / "LocalAi"
+    runtime = installed_runtime_root()
     launcher = runtime / "bin/launcher/localai-launcher.exe"
     policy = runtime / "settings/policy.json"
     host = runtime / "host.json"
