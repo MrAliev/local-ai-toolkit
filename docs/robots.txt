@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://mraliev.github.io/local-ai-toolkit/sitemap.xml

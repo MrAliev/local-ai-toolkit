@@ -2,7 +2,9 @@
 
 [Русская версия](code-signing-policy.ru.md)
 
-Local AI's Windows programs are to be signed through the SignPath Foundation's free code
+**Status: planned onboarding; no SignPath approval or Authenticode certificate is claimed.**
+
+Local AI's Windows programs are intended to be signed through the SignPath Foundation's free code
 signing for open-source projects. **Until a release says in its notes that it is signed, its
 installer is not Authenticode-signed.** What protects a release today is the release manifest:
 it is signed with ECDSA P-256, and the installer accepts a package only when the manifest
@@ -11,7 +13,7 @@ verifies against the key built into it and the package matches the manifest. See
 
 ## Attribution
 
-Every signed release carries this line:
+After approval, releases signed through that service will carry this line:
 
 Free code signing provided by [SignPath.io](https://signpath.io), certificate by
 [SignPath Foundation](https://signpath.org).
@@ -51,6 +53,10 @@ Every change reaches `main` through a pull request.
 - Every team member uses multi-factor authentication for GitHub and for SignPath.
 - A binary that turns out to be signed in breach of this policy is reported to SignPath, and
   the release that carried it is withdrawn.
+
+These are the intended signing requirements, not a statement that onboarding or MFA
+verification is already complete. [Publication and signing](publication.md) records the
+application, trusted CI build, real certificate policy and renewal checks still needed.
 
 ## Privacy
 

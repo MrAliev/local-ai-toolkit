@@ -9,6 +9,8 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/MrAliev/local-ai-toolkit/blob/main/LICENSE)
 
+[Руководство по проекту](opensource.ru.md) · [Интерактивный сайт](https://mraliev.github.io/local-ai-toolkit/?lang=ru) · [Wiki](https://github.com/MrAliev/local-ai-toolkit/wiki) · [Поддержка](support.ru.md)
+
 Облачный агент тратит бо́льшую часть токенов не на размышления, а на чтение и поиск:
 открыть подходящие файлы, поискать по коду, пройти по зависимостям, пролистать лог сборки,
 описать скриншот, перевести страницу. Local AI делает эту работу на Вашей машине и отдаёт

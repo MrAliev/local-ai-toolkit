@@ -5,3 +5,22 @@
 title: Local AI Toolkit
 description: Local models that do the reading — for you, and for your cloud agent.
 theme: jekyll-theme-cayman
+plugins:
+  - jekyll-relative-links
+  - jekyll-optional-front-matter
+  - jekyll-titles-from-headings
+  - jekyll-sitemap
+url: https://mraliev.github.io
+baseurl: /local-ai-toolkit
+include:
+  - README.md
+  - README.ru.md
+readme_index:
+  enabled: false
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
+exclude:
+  - wiki
