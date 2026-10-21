@@ -1,6 +1,6 @@
 name: Build and test
 
-# Windows-only on purpose: the installer targets net10.0-windows, the launcher and staging code
+# The product suite runs on Windows: the installer targets net10.0-windows, the launcher and staging code
 # use Windows ACLs, and the npm shim behaviour several fixtures exercise only exists here. A
 # Linux runner would be cheaper per minute and would not be running the product.
 on:
@@ -60,6 +60,9 @@ jobs:
         uses: actions/setup-python@v7
         with:
           python-version: "3.12"
+
+      - name: Test SCIP fixture source boundaries
+        run: python -m unittest discover -s tests/CodeSearch.Tests/Fixtures/SymbolChunking -p test_scip_enclosing_range_report.py -v
 
       - name: Report the toolchain
         shell: pwsh
@@ -127,3 +130,15 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
           include-hidden-files: false
+
+  # This portable measurement helper also runs on Linux so that symlink containment
+  # is exercised even when a Windows host cannot create links without elevation.
+  fixture-source-boundary-posix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Test SCIP fixture source boundaries, including symlinks
+        run: python3 -m unittest discover -s tests/CodeSearch.Tests/Fixtures/SymbolChunking -p test_scip_enclosing_range_report.py -v
