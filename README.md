@@ -1773,6 +1773,24 @@ lai localai policy set --update-check on
 lai localai policy set --update-check-interval-hours 24
 ```
 
+Enabled update checks are anonymous by default. A private GitHub release can remain invisible
+to that lookup even when the installer succeeded through its GitHub CLI fallback. To explicitly
+allow the background check to use your existing GitHub CLI account after an anonymous lookup
+cannot find the release or its assets:
+
+```powershell
+lai localai policy set --update-check-authentication GitHubCli
+```
+
+This does not turn checking on by itself. Authenticate GitHub CLI separately if needed; LocalAI
+does not request or store its token. The fallback fetches only release metadata, the manifest
+and its signature, and applies the same signature verification; it never downloads a package.
+Missing or revoked authentication is reported as `authentication_unavailable`, distinct from
+`no_release`. Changing the mode is noticed on the next broker check pass without a restart.
+Use `--update-check-authentication Anonymous` to return to anonymous-only access. The installer
+checkbox applies anonymous checking and resets this mode to Anonymous. Opt in again after an
+installer run if needed; a runtime-only update preserves the explicit mode.
+
 `update` uses the published GitHub releases. To update client instructions as well, download
 the installer and package from the same release and run the installer with the relevant
 client selected. A runtime-only update preserves the existing client instructions.

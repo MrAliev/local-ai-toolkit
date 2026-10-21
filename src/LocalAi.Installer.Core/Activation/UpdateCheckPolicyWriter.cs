@@ -32,7 +32,9 @@ public static class UpdateCheckPolicyWriter
         }
 
         var store = new UpdateCheckPolicyStore(runtimeRoot);
-        store.Write(store.Read() with { Enabled = enabled });
+        // This checkbox takes consent to anonymous access only. A separately opted-in CLI
+        // account must not survive under a disclosure promising that no account is used.
+        store.Write(store.Read() with { Enabled = enabled, Authentication = UpdateCheckAuthentication.Anonymous });
         return ResidencyPolicyOutcome.Applied;
     }
 
@@ -50,7 +52,8 @@ public static class UpdateCheckPolicyWriter
         }
 
         var store = new UpdateCheckPolicyStore(runtimeRoot);
-        return store.Read().Enabled == enabled &&
+        var policy = store.Read();
+        return policy.Enabled == enabled && policy.Authentication == UpdateCheckAuthentication.Anonymous &&
             string.Equals(Path.GetFullPath(store.FilePath), target, StringComparison.OrdinalIgnoreCase);
     }
 }

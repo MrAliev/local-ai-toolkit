@@ -54,6 +54,8 @@ public static class PolicyCommand
                 SetUpdateCheck(updates, value, output, error),
             ["set", "--update-check-interval-hours", var value, ..] =>
                 SetUpdateCheckInterval(updates, value, output, error),
+            ["set", "--update-check-authentication", var value] =>
+                SetUpdateCheckAuthentication(updates, value, output, error),
             _ => Usage(error),
         };
     }
@@ -129,6 +131,7 @@ public static class PolicyCommand
         output.WriteLine(updatePolicy.Enabled
             ? CliText.PolicyUpdateCheckOn(updatePolicy.IntervalHours)
             : "update check: off");
+        output.WriteLine($"update check authentication: {updatePolicy.Authentication}");
         output.WriteLine(Describe(states.Read()));
         output.WriteLine(Describe(languages));
         return 0;
@@ -187,8 +190,29 @@ public static class PolicyCommand
         // knowing what the call is — and knowing it in the language the rest of this terminal
         // answers in, which is why the paragraph is picked rather than printed.
         output.WriteLine(enabled
-            ? OutputCulture.Pick(UpdateCheckPolicy.Disclosure, UpdateCheckPolicy.DisclosureRussian)
+            ? policy.Authentication == UpdateCheckAuthentication.GitHubCli
+                ? OutputCulture.Pick(UpdateCheckPolicy.AuthenticatedDisclosure, UpdateCheckPolicy.AuthenticatedDisclosureRussian)
+                : OutputCulture.Pick(UpdateCheckPolicy.Disclosure, UpdateCheckPolicy.DisclosureRussian)
             : CliText.PolicyUpdateCheckNothingFetched);
+        return 0;
+    }
+
+    private static int SetUpdateCheckAuthentication(
+        UpdateCheckPolicyStore updates, string value, TextWriter output, TextWriter error)
+    {
+        if (!Enum.TryParse<UpdateCheckAuthentication>(value, true, out var authentication)
+            || !Enum.IsDefined(authentication)
+            || !Enum.GetNames<UpdateCheckAuthentication>().Contains(value, StringComparer.OrdinalIgnoreCase))
+        {
+            error.WriteLine(CliText.PolicyUpdateCheckAuthenticationUnknown(value));
+            return Usage(error);
+        }
+
+        updates.Write(updates.Read() with { Authentication = authentication });
+        output.WriteLine($"update check authentication: {authentication}");
+        output.WriteLine(authentication == UpdateCheckAuthentication.GitHubCli
+            ? OutputCulture.Pick(UpdateCheckPolicy.AuthenticatedDisclosure, UpdateCheckPolicy.AuthenticatedDisclosureRussian)
+            : OutputCulture.Pick(UpdateCheckPolicy.Disclosure, UpdateCheckPolicy.DisclosureRussian));
         return 0;
     }
 
