@@ -19,16 +19,17 @@ public sealed class SemanticToolExecutableBoundaryTests
         var fixture = typeof(SemanticToolExecutableBoundaryTests).Assembly
             .GetCustomAttributes<AssemblyMetadataAttribute>()
             .Single(attribute => attribute.Key == "SemanticToolProcessFixtureExecutable").Value!;
-        var root = Path.Combine(Path.GetTempPath(), "semantic-tool-boundary-" + Guid.NewGuid().ToString("N"));
-        var project = Directory.CreateDirectory(Path.Combine(root, "project")).FullName;
-        var workspace = Directory.CreateDirectory(Path.Combine(root, "snapshot")).FullName;
-        var neutral = Directory.CreateDirectory(Path.Combine(root, "neutral")).FullName;
-        var marker = Path.Combine(root, "marker.txt");
-        var command = "missing-semantic-tool-" + Guid.NewGuid().ToString("N");
-        var plantedExecutable = Path.Combine(project, command + ".exe");
-        var parentCwd = Environment.CurrentDirectory;
+        var root = Directory.CreateTempSubdirectory("semantic-tool-boundary-").FullName;
         try
         {
+            var project = Directory.CreateDirectory(Path.Combine(root, "project")).FullName;
+            var workspace = Directory.CreateDirectory(Path.Combine(root, "snapshot")).FullName;
+            var neutral = Directory.CreateDirectory(Path.Combine(root, "neutral")).FullName;
+            var marker = Path.Combine(root, "marker.txt");
+            var command = "missing-semantic-tool-" + Guid.NewGuid().ToString("N");
+            var plantedExecutable = Path.Combine(project, command + ".exe");
+            var parentCwd = Environment.CurrentDirectory;
+
             // The copied apphost keeps its original DLL/runtimeconfig alongside it.
             foreach (var file in Directory.EnumerateFiles(Path.GetDirectoryName(fixture)!))
             {
