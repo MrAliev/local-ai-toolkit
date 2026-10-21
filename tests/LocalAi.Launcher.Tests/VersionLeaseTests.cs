@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using LocalAi.Contracts.Activation;
 
 namespace LocalAi.Launcher.Tests;
@@ -73,51 +72,83 @@ public sealed class VersionLeaseTests : IDisposable
         Assert.Equal(1, held.ReleaseCount);
     }
 
-    [Fact]
-    public async Task Exclusive_uses_one_total_timeout_for_gate_and_file_lease()
+    [Theory]
+    [InlineData(0, 1_000)]
+    [InlineData(700, 300)]
+    [InlineData(1_000, 0)]
+    [InlineData(1_400, 0)]
+    public void Exclusive_uses_one_total_timeout_for_gate_and_file_lease(
+        int gateMilliseconds,
+        int remainingMilliseconds)
     {
-        var path = Path.Combine(_root, "current.lock");
-        Directory.CreateDirectory(_root);
-        using var shared = new FileStream(
-            path,
-            FileMode.OpenOrCreate,
-            FileAccess.ReadWrite,
-            FileShare.ReadWrite);
-        var gateHeld = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var holder = Task.Run(() =>
+        var budget = TimeSpan.FromSeconds(1);
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var timeProvider = new ManualTimeProvider();
+        var held = new FakeSecureNamedMutex(true, (timeout, token) =>
         {
-            using var gate = ActivationCoordinator.AcquireStartupGate(_root, TimeSpan.FromSeconds(1));
-            gateHeld.SetResult();
-            Thread.Sleep(700);
-        }, TestContext.Current.CancellationToken);
-        await gateHeld.Task;
-        var stopwatch = Stopwatch.StartNew();
+            Assert.Equal(budget, timeout);
+            Assert.Equal(cancellationToken, token);
+            timeProvider.Advance(TimeSpan.FromMilliseconds(gateMilliseconds));
+        });
+        var factory = new FakeSecureNamedMutexFactory(_ => held);
+        var expectedError = new InvalidOperationException("file-lease phase failed");
+        TimeSpan? fileBudget = null;
 
-        var error = Assert.Throws<LauncherException>(() =>
-            VersionLease.AcquireExclusive(path, TimeSpan.FromSeconds(1)));
+        // Capture the actual argument passed to the same second-phase callback used
+        // in production. Virtual gate time avoids measuring CI scheduling jitter.
+        var error = Assert.Throws<InvalidOperationException>(() =>
+            ActivationCoordinator.AcquireExclusive(
+                _root,
+                budget,
+                factory,
+                timeProvider,
+                (gate, timeout, token, ownsGate) =>
+                {
+                    fileBudget = timeout;
+                    Assert.Equal(_root, gate.BinRoot);
+                    Assert.Equal(cancellationToken, token);
+                    Assert.True(ownsGate);
+                    throw expectedError;
+                },
+                cancellationToken));
 
-        stopwatch.Stop();
-        await holder;
-        Assert.Equal("version_in_use", error.Code);
+        Assert.Same(expectedError, error);
+        Assert.Equal(TimeSpan.FromMilliseconds(remainingMilliseconds), fileBudget);
+        Assert.Equal(1, held.WaitCount);
+        Assert.Equal(1, held.ReleaseCount);
+        Assert.Equal(1, held.DisposeCount);
+    }
 
-        // The regression guarded against is spending the budget twice — once on the startup gate
-        // and again on the file lease — so the only thing the bounds must do is separate one
-        // budget from two. That separation has to be wider than the machine's scheduling
-        // jitter, and twice it was not: the bound was 280 ms, was raised to 360 ms for the same
-        // reason, and a CI runner then took 731 ms of correct behaviour. Raising it again would
-        // have been the third time measuring the machine rather than the code.
-        //
-        // The gap between the two outcomes is exactly how long the gate is held, so the hold has
-        // to be a large share of the budget or there is nothing to measure. Holding for 700 ms
-        // of a one-second budget puts a correct run at about a second and a double-spending one
-        // at about 1.7 — 700 ms apart, where several hundred milliseconds of jitter no longer
-        // reach the boundary. With the old 120 ms hold the two were 1.0 and 1.12 seconds apart
-        // and the mutation survived, which is what a bound tuned for the machine rather than the
-        // behaviour buys.
-        Assert.InRange(
-            stopwatch.Elapsed,
-            TimeSpan.FromMilliseconds(850),
-            TimeSpan.FromMilliseconds(1_400));
+    [Fact]
+    public void Exclusive_transfers_gate_ownership_to_the_returned_file_lease()
+    {
+        var held = new FakeSecureNamedMutex(waitResult: true);
+        var factory = new FakeSecureNamedMutexFactory(_ => held);
+
+        using var lease = ActivationCoordinator.AcquireExclusive(
+            _root,
+            TimeSpan.Zero,
+            factory,
+            TimeProvider.System,
+            (gate, timeout, token, ownsGate) =>
+            {
+                Assert.True(ownsGate);
+                Directory.CreateDirectory(gate.BinRoot);
+                var stream = new FileStream(
+                    Path.Combine(gate.BinRoot, "current.lock"),
+                    FileMode.CreateNew,
+                    FileAccess.ReadWrite,
+                    FileShare.None);
+                return new ActivationExclusiveLease(gate.BinRoot, stream, gate);
+            },
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, held.ReleaseCount);
+        Assert.Equal(0, held.DisposeCount);
+        lease.Dispose();
+        lease.Dispose();
+        Assert.Equal(1, held.ReleaseCount);
+        Assert.Equal(1, held.DisposeCount);
     }
 
     public void Dispose()
@@ -140,20 +171,33 @@ public sealed class VersionLeaseTests : IDisposable
         }
     }
 
-    private sealed class FakeSecureNamedMutex(bool waitResult) : ISecureNamedMutex
+    private sealed class ManualTimeProvider : TimeProvider
+    {
+        private long timestamp;
+
+        public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+        public override long GetTimestamp() => timestamp;
+        public void Advance(TimeSpan elapsed) => timestamp += elapsed.Ticks;
+    }
+
+    private sealed class FakeSecureNamedMutex(
+        bool waitResult,
+        Action<TimeSpan, CancellationToken>? onWait = null) : ISecureNamedMutex
     {
         public int WaitCount { get; private set; }
         public int ReleaseCount { get; private set; }
+        public int DisposeCount { get; private set; }
 
         public bool WaitOne(
             TimeSpan timeout,
             CancellationToken cancellationToken)
         {
             WaitCount++;
+            onWait?.Invoke(timeout, cancellationToken);
             return waitResult;
         }
 
         public void Release() => ReleaseCount++;
-        public void Dispose() { }
+        public void Dispose() => DisposeCount++;
     }
 }
