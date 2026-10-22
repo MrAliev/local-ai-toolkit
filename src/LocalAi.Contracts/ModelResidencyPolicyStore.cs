@@ -97,10 +97,27 @@ public sealed class ModelResidencyPolicyStore
 
     /// <summary>
     /// The runtime root every LocalAi component uses when none was passed explicitly.
+    /// The user-data directory need not exist yet. An unavailable default location is
+    /// an error rather than permission to store settings under the working directory.
     /// </summary>
-    public static string DefaultRuntimeRoot => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "LocalAi");
+    public static string DefaultRuntimeRoot
+    {
+        get
+        {
+            var localApplicationData = Environment.GetFolderPath(
+                Environment.SpecialFolder.LocalApplicationData,
+                Environment.SpecialFolderOption.DoNotVerify);
+            if (string.IsNullOrWhiteSpace(localApplicationData) ||
+                !Path.IsPathFullyQualified(localApplicationData))
+            {
+                throw new InvalidOperationException(
+                    "The default LocalAi runtime root requires an absolute user-data directory. " +
+                    "Pass an explicit runtime root when that directory is unavailable.");
+            }
+
+            return Path.Combine(localApplicationData, "LocalAi");
+        }
+    }
 
     public static BrokerPolicy ReadDefault() =>
         new ModelResidencyPolicyStore(DefaultRuntimeRoot).Read();
