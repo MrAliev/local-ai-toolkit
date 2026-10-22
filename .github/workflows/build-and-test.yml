@@ -149,6 +149,8 @@ jobs:
         run: dotnet build tests/CodeSearch.Tests/CodeSearch.Tests.csproj --configuration Release
       - name: Test Git executable boundaries, including symbolic links
         run: dotnet tests/CodeSearch.Tests/bin/Release/net10.0/CodeSearch.Tests.dll -class CodeSearch.Tests.GitExecutableLocatorTests
+      - name: Test literal Git worktree arguments
+        run: dotnet tests/CodeSearch.Tests/bin/Release/net10.0/CodeSearch.Tests.dll -method CodeSearch.Tests.AnOverlayStaysOutOfTheRepositoryTests.Worktree_paths_are_passed_as_literal_git_arguments
       - name: Build GitHub CLI physical boundary tests
         run: dotnet build tests/LocalAi.Broker.Tests/LocalAi.Broker.Tests.csproj --configuration Release
       - name: Test GitHub CLI physical boundaries, including file symbolic links
