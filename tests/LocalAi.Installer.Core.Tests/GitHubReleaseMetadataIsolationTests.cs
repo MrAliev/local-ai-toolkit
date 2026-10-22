@@ -111,13 +111,17 @@ public sealed class GitHubReleaseMetadataIsolationTests : IDisposable
     // Update the fixture pairs deliberately if the production signing key is rotated.
     private static byte[] Fixture(string tag, string asset)
     {
-        var extension = asset == GitHubReleaseFeed.SignatureAsset ? "sig" : "json";
+        var isSignature = asset == GitHubReleaseFeed.SignatureAsset;
+        var extension = isSignature ? "sig.base64" : "json";
         using var stream = typeof(GitHubReleaseMetadataIsolationTests).Assembly.GetManifestResourceStream(
             $"GitHubMetadata.manifest-{tag}.{extension}")
             ?? throw new InvalidOperationException("Missing signed metadata fixture.");
         using var copy = new MemoryStream();
         stream.CopyTo(copy);
-        return copy.ToArray();
+        var bytes = copy.ToArray();
+        return isSignature
+            ? Convert.FromBase64String(System.Text.Encoding.ASCII.GetString(bytes))
+            : bytes;
     }
 
     private static async Task SettleAsync(Task? task)
