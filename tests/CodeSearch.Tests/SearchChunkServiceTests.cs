@@ -1,4 +1,4 @@
-﻿using LocalAi.Contracts;
+using LocalAi.Contracts;
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
@@ -498,32 +498,8 @@ public sealed class SearchChunkServiceTests : IDisposable
         return SHA256.HashData(Encoding.UTF8.GetBytes(canonical));
     }
 
-    private static void CreateDirectoryLink(string linkPath, string targetPath)
-    {
-        if (!OperatingSystem.IsWindows())
-        {
-            Directory.CreateSymbolicLink(linkPath, targetPath);
-            return;
-        }
-
-        var start = new ProcessStartInfo(
-            Environment.GetEnvironmentVariable("ComSpec") ?? "cmd.exe")
-        {
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-        start.ArgumentList.Add("/d");
-        start.ArgumentList.Add("/c");
-        start.ArgumentList.Add("mklink");
-        start.ArgumentList.Add("/J");
-        start.ArgumentList.Add(linkPath);
-        start.ArgumentList.Add(targetPath);
-        using var process = Process.Start(start)!;
-        process.WaitForExit();
-        Assert.Equal(0, process.ExitCode);
-    }
+    private static void CreateDirectoryLink(string linkPath, string targetPath) =>
+        LocalAi.Tests.Shared.DirectoryLinkFixture.CreateAsync(linkPath, targetPath).GetAwaiter().GetResult();
 
     private void WriteLegacyIndexV2(string path)
     {

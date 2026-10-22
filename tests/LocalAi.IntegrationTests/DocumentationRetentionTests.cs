@@ -230,17 +230,7 @@ public sealed class DocumentationRetentionTests
         var candidate = fixture.Artifact(history[0]);
         var external = Path.Combine(fixture.Runtime, "external");
         Directory.Move(candidate, external);
-        if (OperatingSystem.IsWindows())
-        {
-            var start = new System.Diagnostics.ProcessStartInfo("cmd.exe", $"/d /c mklink /J \"{candidate}\" \"{external}\"")
-            { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
-            using var process = System.Diagnostics.Process.Start(start)!;
-            var output = process.StandardOutput.ReadToEndAsync(TestContext.Current.CancellationToken);
-            var error = process.StandardError.ReadToEndAsync(TestContext.Current.CancellationToken);
-            await process.WaitForExitAsync(TestContext.Current.CancellationToken);
-            Assert.True(process.ExitCode == 0, await output + await error);
-        }
-        else Directory.CreateSymbolicLink(candidate, external);
+        await DirectoryLinkFixture.CreateAsync(candidate, external, TestContext.Current.CancellationToken);
         var before = Directory.GetFiles(external).Select(File.ReadAllBytes).Select(Convert.ToHexString).ToArray();
         Assert.Contains("destination_link", Assert.Throws<DocumentationValidationException>(() => fixture.Store.Prune(fixture.Worktree, 1, dryRun: false, cancellationToken: TestContext.Current.CancellationToken)).Errors);
         Assert.Equal(before, Directory.GetFiles(external).Select(File.ReadAllBytes).Select(Convert.ToHexString).ToArray());

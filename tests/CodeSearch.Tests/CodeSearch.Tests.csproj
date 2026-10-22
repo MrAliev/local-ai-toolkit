@@ -58,5 +58,6 @@
 
   <ItemGroup>
     <Compile Include="..\Shared\TemporaryDirectory.cs" Link="TemporaryDirectory.cs" />
+    <Compile Include="..\Shared\DirectoryLinkFixture.cs" Link="DirectoryLinkFixture.cs" />
   </ItemGroup>
 </Project>
