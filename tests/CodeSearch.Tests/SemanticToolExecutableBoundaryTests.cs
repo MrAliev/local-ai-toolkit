@@ -149,6 +149,105 @@ public sealed class SemanticToolExecutableBoundaryTests
         }
     }
 
+    [Theory]
+    [InlineData("scip", "missing")]
+    [InlineData("lsp", "missing")]
+    [InlineData("scip", "explicit-system")]
+    [InlineData("lsp", "explicit-system")]
+    [InlineData("scip", "explicit-fixture")]
+    [InlineData("lsp", "explicit-fixture")]
+    [InlineData("scip", "bare")]
+    [InlineData("lsp", "bare")]
+    [InlineData("scip", "relative")]
+    [InlineData("lsp", "relative")]
+    [InlineData("scip", "drive-relative")]
+    [InlineData("lsp", "drive-relative")]
+    [InlineData("scip", "root-relative")]
+    [InlineData("lsp", "root-relative")]
+    [InlineData("scip", "explicit-missing")]
+    [InlineData("lsp", "explicit-missing")]
+    public async Task Interpreter_selection_requires_an_explicit_full_path(string launcher, string scenario)
+    {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "Regression for Windows interpreter lookup.");
+        var fixture = typeof(SemanticToolExecutableBoundaryTests).Assembly
+            .GetCustomAttributes<AssemblyMetadataAttribute>()
+            .Single(attribute => attribute.Key == "SemanticToolProcessFixtureExecutable").Value!;
+        var root = Directory.CreateTempSubdirectory("semantic-interpreter-boundary-").FullName;
+        try
+        {
+            var project = Directory.CreateDirectory(Path.Combine(root, "project")).FullName;
+            var workspace = Directory.CreateDirectory(Path.Combine(root, "snapshot")).FullName;
+            var marker = Path.Combine(project, "interpreter-selected.txt");
+            foreach (var file in Directory.EnumerateFiles(Path.GetDirectoryName(fixture)!))
+            {
+                File.Copy(file, Path.Combine(project, Path.GetFileName(file)));
+            }
+
+            var decoy = Path.Combine(project, "cmd.exe");
+            File.Copy(fixture, decoy);
+            var script = Path.Combine(root, "trusted-adapter.cmd");
+            await File.WriteAllTextAsync(script,
+                "@echo off\r\n> \"%~2.done\" echo finished\r\nexit /b 23\r\n",
+                TestContext.Current.CancellationToken);
+            var start = new ProcessStartInfo(fixture)
+            {
+                UseShellExecute = false,
+                WorkingDirectory = project,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+            };
+            // Change only this isolated host; the test runner keeps its environment and CWD.
+            if (scenario == "missing")
+            {
+                start.Environment.Remove("ComSpec");
+            }
+            else
+            {
+                if (scenario == "drive-relative")
+                {
+                    Assert.SkipUnless(Path.GetPathRoot(project) is { Length: >= 2 } drive && drive[1] == ':',
+                        "Drive-relative lookup requires a DOS drive fixture.");
+                }
+
+                start.Environment["ComSpec"] = scenario switch
+                {
+                    "explicit-system" => Path.Combine(Environment.SystemDirectory, "cmd.exe"),
+                    "explicit-fixture" => decoy,
+                    "explicit-missing" => Path.Combine(root, "absent-interpreter.exe"),
+                    "bare" => "cmd.exe",
+                    "relative" => ".\\cmd.exe",
+                    "drive-relative" => Path.GetPathRoot(project)![..2] + "cmd.exe",
+                    "root-relative" => "\\cmd.exe",
+                    _ => throw new ArgumentOutOfRangeException(nameof(scenario)),
+                };
+            }
+
+            foreach (var argument in new[] { "probe-interpreter", launcher, script, workspace, marker })
+            {
+                start.ArgumentList.Add(argument);
+            }
+
+            var expectedOutcome = scenario == "explicit-missing"
+                ? launcher == "scip" ? "Skipped" : "Missing"
+                : launcher == "scip" ? "Failed" : "Started";
+            Assert.Equal(expectedOutcome, await RunProbeAsync(start));
+            var fixtureSelected = scenario == "explicit-fixture";
+            Assert.Equal(fixtureSelected, File.Exists(marker));
+            Assert.Equal(scenario is not ("explicit-fixture" or "explicit-missing"), File.Exists(marker + ".done"));
+            if (fixtureSelected)
+            {
+                Assert.Equal(decoy,
+                    await File.ReadAllTextAsync(marker, TestContext.Current.CancellationToken),
+                    ignoreCase: true);
+            }
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
     private static async Task<string> RunProbeAsync(ProcessStartInfo start)
     {
         using var child = Process.Start(start)!;
