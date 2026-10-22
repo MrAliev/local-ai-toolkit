@@ -22,6 +22,8 @@
     -->
     <ProjectReference Include="..\Fixtures\ProcessFixture\ProcessFixture.csproj"
                       ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\Fixtures\SemanticToolProcessFixture\SemanticToolProcessFixture.csproj"
+                      ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <PropertyGroup>
@@ -34,6 +36,10 @@
     <ProcessFixtureExecutable>$(MSBuildThisFileDirectory)..\Fixtures\ProcessFixture\bin\$(Configuration)\net10.0\ProcessFixture.exe</ProcessFixtureExecutable>
   </PropertyGroup>
   <ItemGroup>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>SemanticToolProcessFixtureExecutable</_Parameter1>
+      <_Parameter2>$(MSBuildThisFileDirectory)..\Fixtures\SemanticToolProcessFixture\bin\$(Configuration)\net10.0\SemanticToolProcessFixture.exe</_Parameter2>
+    </AssemblyAttribute>
     <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
       <_Parameter1>ProcessFixtureExecutable</_Parameter1>
       <_Parameter2>$(ProcessFixtureExecutable)</_Parameter2>

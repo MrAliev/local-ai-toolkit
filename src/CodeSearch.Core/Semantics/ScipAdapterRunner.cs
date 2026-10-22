@@ -112,7 +112,13 @@ public sealed class ScipAdapterRunner(ScipImporter? importer = null)
         var arguments = spec.Arguments
             .Select(argument => Expand(argument, root))
             .ToArray();
-        var executable = ExecutableResolver.Resolve(spec.Executable);
+        var executable = ExecutableResolver.Find(spec.Executable);
+        if (executable is null)
+        {
+            return Result(current, spec, SemanticAdapterState.Skipped,
+                $"Indexer executable '{spec.Executable}' is not installed.", TimeSpan.Zero);
+        }
+
         var isCommandScript = WindowsCommandScript.Is(executable);
         var start = new ProcessStartInfo(
             isCommandScript ? WindowsCommandScript.Interpreter : executable)

@@ -18,11 +18,12 @@ namespace CodeSearch.Core.Semantics;
 public static class ExecutableResolver
 {
     /// <summary>
-    /// Resolves <paramref name="executable"/> to a full path, or returns it unchanged when it
-    /// cannot be found — the caller then gets the operating system's own error, which names the
-    /// command rather than a path this method invented.
+    /// Resolves <paramref name="executable"/> to a discovered full path. An unavailable command
+    /// fails here rather than being passed to a second, implicit operating-system search.
     /// </summary>
-    public static string Resolve(string executable) => Find(executable) ?? executable;
+    public static string Resolve(string executable) => Find(executable) ??
+        throw new System.ComponentModel.Win32Exception(
+            2, $"Tool executable '{executable}' was not found.");
 
     /// <summary>
     /// The resolved path when the command can actually be run, or null. Use this where "not

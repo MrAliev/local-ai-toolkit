@@ -29,12 +29,14 @@ public sealed class ExecutableResolverTests : IDisposable
     }
 
     [Fact]
-    public void An_unknown_command_comes_back_unchanged()
+    public void An_unknown_command_fails_before_operating_system_lookup()
     {
-        // Returned as given so the operating system reports the command the caller asked for,
-        // not a path this resolver invented.
-        Assert.Equal("no-such-tool-xyz", ExecutableResolver.Resolve("no-such-tool-xyz"));
-        Assert.Null(ExecutableResolver.Find("no-such-tool-xyz"));
+        var command = "missing-tool-" + Guid.NewGuid().ToString("N");
+        var exception = Assert.Throws<System.ComponentModel.Win32Exception>(
+            () => ExecutableResolver.Resolve(command));
+        Assert.Equal(2, exception.NativeErrorCode);
+        Assert.Contains(command, exception.Message);
+        Assert.Null(ExecutableResolver.Find(command));
     }
 
     [Fact]
