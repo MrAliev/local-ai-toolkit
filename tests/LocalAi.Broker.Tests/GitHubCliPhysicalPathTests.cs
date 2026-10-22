@@ -192,7 +192,11 @@ public sealed class GitHubCliPhysicalPathTests : IDisposable
     public void Dispose()
     {
         foreach (var link in fileLinks) File.Delete(link);
-        foreach (var link in directoryLinks) Directory.Delete(link);
+        foreach (var link in directoryLinks)
+        {
+            if (OperatingSystem.IsWindows()) Directory.Delete(link);
+            else File.Delete(link); // unlink also handles dangling/cyclic POSIX directory symlinks
+        }
         OwnedProcessDirectoryCleanup.Delete(root);
     }
 }
