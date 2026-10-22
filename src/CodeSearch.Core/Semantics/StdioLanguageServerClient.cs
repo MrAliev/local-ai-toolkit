@@ -141,6 +141,8 @@ public sealed class StdioLanguageServerClient : ILanguageServerClient
         };
         if (commandScript)
         {
+            // cmd must not implicitly prepend the workspace to dependency lookup.
+            start.Environment["NoDefaultCurrentDirectoryInExePath"] = "1";
             start.Arguments = WindowsCommandScript.Arguments(
                 executable,
                 spec.Arguments,

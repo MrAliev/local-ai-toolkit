@@ -145,6 +145,8 @@ public sealed class ScipAdapterRunner(ScipImporter? importer = null)
 
         if (isCommandScript)
         {
+            // cmd must not implicitly prepend the workspace to dependency lookup.
+            start.Environment["NoDefaultCurrentDirectoryInExePath"] = "1";
             try
             {
                 start.Arguments = WindowsCommandScript.Arguments(
