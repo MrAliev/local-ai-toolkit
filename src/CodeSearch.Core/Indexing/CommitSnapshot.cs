@@ -14,20 +14,23 @@ public sealed class CommitSnapshot : IDisposable
         Root = root;
     }
 
+    /// <summary>
+    /// Exported files, not a Git worktree. The local gitfile stops implicit discovery of
+    /// ancestor repositories, including when the host's temporary directory is inside one.
+    /// Explicit Git directory/environment overrides remain trusted host configuration.
+    /// </summary>
     public string Root { get; }
 
     public static CommitSnapshot Create(string repositoryRoot, string revision)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(repositoryRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(revision);
-        var temporaryRoot = Path.Combine(
-            Path.GetTempPath(),
-            "localai-snapshot-" + Guid.NewGuid().ToString("N"));
+        var temporaryRoot = Directory.CreateTempSubdirectory("localai-snapshot-").FullName;
         var contentRoot = Path.Combine(temporaryRoot, "content");
         var archivePath = Path.Combine(temporaryRoot, "snapshot.zip");
-        Directory.CreateDirectory(contentRoot);
         try
         {
+            Directory.CreateDirectory(contentRoot);
             using var process = Process.Start(ArchiveStartInfo(repositoryRoot, archivePath, revision))
                 ?? throw new InvalidOperationException("Could not start git archive.");
             // Closed at once. Redirecting it is what stops git inheriting the caller's; closing
@@ -50,6 +53,15 @@ public sealed class CommitSnapshot : IDisposable
             }
 
             ZipFile.ExtractToDirectory(archivePath, contentRoot);
+            // An empty .git directory is not a discovery boundary. An invalid gitfile makes
+            // Git fail closed here, so callers can fall back to scanning the exported files.
+            // CreateNew also rejects a conflicting archive entry instead of overwriting it.
+            using (var marker = new StreamWriter(new FileStream(
+                       Path.Combine(contentRoot, ".git"), FileMode.CreateNew, FileAccess.Write)))
+            {
+                marker.WriteLine("This exported snapshot is not a Git repository.");
+            }
+
             File.Delete(archivePath);
             return new CommitSnapshot(temporaryRoot, contentRoot);
         }

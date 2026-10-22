@@ -2,6 +2,7 @@ using System.Diagnostics;
 using CodeSearch.Core.Indexing;
 using CodeSearch.Core.Semantics;
 using LocalAi.Documentation;
+using LocalAi.Repository;
 using LocalAi.Tests.Shared;
 
 namespace LocalAi.IntegrationTests;
@@ -162,7 +163,7 @@ internal sealed class DocumentationRepositoryFixture : IDisposable
     }
     internal void Git(params string[] arguments)
     {
-        var start = new ProcessStartInfo("git") { WorkingDirectory = Root, RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false, CreateNoWindow = true };
+        var start = new ProcessStartInfo(GitExecutableLocator.Resolve(Root)) { WorkingDirectory = Root, RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false, CreateNoWindow = true };
         foreach (var argument in arguments) start.ArgumentList.Add(argument);
         using var process = Process.Start(start)!;
         var output = process.StandardOutput.ReadToEndAsync(); var error = process.StandardError.ReadToEndAsync();

@@ -524,32 +524,8 @@ public class SearchEngineTests : IDisposable
             Vectors = [1f, 0f, 0f]
         };
 
-    private static void CreateDirectoryLink(string linkPath, string targetPath)
-    {
-        if (!OperatingSystem.IsWindows())
-        {
-            Directory.CreateSymbolicLink(linkPath, targetPath);
-            return;
-        }
-
-        var start = new ProcessStartInfo(
-            Environment.GetEnvironmentVariable("ComSpec") ?? "cmd.exe")
-        {
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-        start.ArgumentList.Add("/d");
-        start.ArgumentList.Add("/c");
-        start.ArgumentList.Add("mklink");
-        start.ArgumentList.Add("/J");
-        start.ArgumentList.Add(linkPath);
-        start.ArgumentList.Add(targetPath);
-        using var process = Process.Start(start)!;
-        process.WaitForExit();
-        Assert.Equal(0, process.ExitCode);
-    }
+    private static void CreateDirectoryLink(string linkPath, string targetPath) =>
+        LocalAi.Tests.Shared.DirectoryLinkFixture.CreateAsync(linkPath, targetPath).GetAwaiter().GetResult();
 
     private static float[] Unit(params float[] values)
     {

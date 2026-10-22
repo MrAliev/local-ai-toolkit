@@ -525,22 +525,8 @@ public sealed class DocumentationPackStoreTests
         }
     }
 
-    private static async Task CreateDirectoryLink(string path, string target)
-    {
-        if (OperatingSystem.IsWindows())
-        {
-            // Directory junctions exercise the same reparse-point guard without the
-            // elevated privilege needed to create a Windows symbolic link.
-            var start = new System.Diagnostics.ProcessStartInfo("cmd.exe", $"/d /c mklink /J \"{path}\" \"{target}\"")
-            { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
-            using var process = System.Diagnostics.Process.Start(start)!;
-            var output = process.StandardOutput.ReadToEndAsync(TestContext.Current.CancellationToken);
-            var failure = process.StandardError.ReadToEndAsync(TestContext.Current.CancellationToken);
-            await process.WaitForExitAsync(TestContext.Current.CancellationToken);
-            Assert.True(process.ExitCode == 0, await output + await failure);
-        }
-        else Directory.CreateSymbolicLink(path, target);
-    }
+    private static Task CreateDirectoryLink(string path, string target) =>
+        DirectoryLinkFixture.CreateAsync(path, target, TestContext.Current.CancellationToken);
 
     private sealed class Fixture : IDisposable
     {

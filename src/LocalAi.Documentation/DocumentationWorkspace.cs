@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using CodeSearch.Core.Indexing;
 using CodeSearch.Core.Semantics;
+using LocalAi.Repository;
 
 namespace LocalAi.Documentation;
 
@@ -73,7 +74,7 @@ public static class DocumentationWorkspace
     private static IReadOnlyList<DocumentationHistory> History(string root, string commit, IReadOnlyList<string> paths, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var start = new ProcessStartInfo("git") { WorkingDirectory = root, RedirectStandardOutput = true, RedirectStandardError = true,
+        var start = new ProcessStartInfo(GitExecutableLocator.Resolve(root)) { WorkingDirectory = root, RedirectStandardOutput = true, RedirectStandardError = true,
             StandardOutputEncoding = Encoding.UTF8, StandardErrorEncoding = Encoding.UTF8, UseShellExecute = false, CreateNoWindow = true };
         foreach (var argument in new[] { "log", "-10", "--no-show-signature", "--format=%H%x00%B%x00", commit, "--" }.Concat(paths.Select(path => ":(literal)" + path))) start.ArgumentList.Add(argument);
         using var process = Process.Start(start)!;
