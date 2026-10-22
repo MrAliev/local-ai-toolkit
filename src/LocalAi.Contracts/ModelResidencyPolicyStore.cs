@@ -111,7 +111,7 @@ public sealed class ModelResidencyPolicyStore
                 !Path.IsPathFullyQualified(localApplicationData))
             {
                 throw new InvalidOperationException(
-                    "The default LocalAi runtime root requires an absolute user-data directory. " +
+                    "The default Local AI runtime root requires an absolute user-data directory. " +
                     "Pass an explicit runtime root when that directory is unavailable.");
             }
 

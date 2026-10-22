@@ -146,6 +146,29 @@ public sealed class DurableQueueTests
     }
 
     [Fact]
+    public async Task Concurrent_admission_checks_do_not_report_an_update()
+    {
+        using var root = new TemporaryRuntimeRoot();
+        var queues = new[]
+        {
+            new DurableQueue(root.Path),
+            new DurableQueue(root.Path + System.IO.Path.DirectorySeparatorChar),
+        };
+        var start = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var token = TestContext.Current.CancellationToken;
+        var pending = Enumerable.Range(0, 64).Select(index => Task.Run(async () =>
+        {
+            await start.Task.WaitAsync(token);
+            return await queues[index % queues.Length].EnqueueAsync(Request($"probe-{index}"), token);
+        }, token)).ToArray();
+
+        start.SetResult();
+        var enqueues = await Task.WhenAll(pending);
+        Assert.Equal(Enumerable.Range(1, 64).Select(sequence => (long)sequence),
+            enqueues.Select(result => result.Sequence).Order());
+    }
+
+    [Fact]
     public async Task Active_deduplication_joins_but_terminal_job_allows_resubmission()
     {
         using var root = new TemporaryRuntimeRoot();
