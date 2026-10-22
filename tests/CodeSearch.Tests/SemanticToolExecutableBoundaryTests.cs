@@ -156,7 +156,17 @@ public sealed class SemanticToolExecutableBoundaryTests
     [InlineData("lsp", "explicit-system")]
     [InlineData("scip", "explicit-fixture")]
     [InlineData("lsp", "explicit-fixture")]
-    public async Task Missing_interpreter_uses_the_system_directory(string launcher, string scenario)
+    [InlineData("scip", "bare")]
+    [InlineData("lsp", "bare")]
+    [InlineData("scip", "relative")]
+    [InlineData("lsp", "relative")]
+    [InlineData("scip", "drive-relative")]
+    [InlineData("lsp", "drive-relative")]
+    [InlineData("scip", "root-relative")]
+    [InlineData("lsp", "root-relative")]
+    [InlineData("scip", "explicit-missing")]
+    [InlineData("lsp", "explicit-missing")]
+    public async Task Interpreter_selection_requires_an_explicit_full_path(string launcher, string scenario)
     {
         Assert.SkipUnless(OperatingSystem.IsWindows(), "Regression for Windows interpreter lookup.");
         var fixture = typeof(SemanticToolExecutableBoundaryTests).Assembly
@@ -194,9 +204,23 @@ public sealed class SemanticToolExecutableBoundaryTests
             }
             else
             {
-                start.Environment["ComSpec"] = scenario == "explicit-system"
-                    ? Path.Combine(Environment.SystemDirectory, "cmd.exe")
-                    : decoy;
+                if (scenario == "drive-relative")
+                {
+                    Assert.SkipUnless(Path.GetPathRoot(project) is { Length: >= 2 } drive && drive[1] == ':',
+                        "Drive-relative lookup requires a DOS drive fixture.");
+                }
+
+                start.Environment["ComSpec"] = scenario switch
+                {
+                    "explicit-system" => Path.Combine(Environment.SystemDirectory, "cmd.exe"),
+                    "explicit-fixture" => decoy,
+                    "explicit-missing" => Path.Combine(root, "absent-interpreter.exe"),
+                    "bare" => "cmd.exe",
+                    "relative" => ".\\cmd.exe",
+                    "drive-relative" => Path.GetPathRoot(project)![..2] + "cmd.exe",
+                    "root-relative" => "\\cmd.exe",
+                    _ => throw new ArgumentOutOfRangeException(nameof(scenario)),
+                };
             }
 
             foreach (var argument in new[] { "probe-interpreter", launcher, script, workspace, marker })
@@ -204,10 +228,13 @@ public sealed class SemanticToolExecutableBoundaryTests
                 start.ArgumentList.Add(argument);
             }
 
-            Assert.Equal(launcher == "scip" ? "Failed" : "Started", await RunProbeAsync(start));
+            var expectedOutcome = scenario == "explicit-missing"
+                ? launcher == "scip" ? "Skipped" : "Missing"
+                : launcher == "scip" ? "Failed" : "Started";
+            Assert.Equal(expectedOutcome, await RunProbeAsync(start));
             var fixtureSelected = scenario == "explicit-fixture";
             Assert.Equal(fixtureSelected, File.Exists(marker));
-            Assert.Equal(!fixtureSelected, File.Exists(marker + ".done"));
+            Assert.Equal(scenario is not ("explicit-fixture" or "explicit-missing"), File.Exists(marker + ".done"));
             if (fixtureSelected)
             {
                 Assert.Equal(decoy,

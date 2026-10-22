@@ -34,11 +34,19 @@ public static class WindowsCommandScript
     }
 
     /// <summary>
-    /// The interpreter to start instead of the script: what <c>ComSpec</c> names, or
-    /// <c>cmd.exe</c> in the system directory where the variable is missing.
+    /// The fully qualified interpreter named by <c>ComSpec</c>, or the system
+    /// <c>cmd.exe</c> when the setting is missing, blank, bare, or relative.
     /// </summary>
-    public static string Interpreter =>
-        Environment.GetEnvironmentVariable("ComSpec") ?? Path.Combine(Environment.SystemDirectory, "cmd.exe");
+    public static string Interpreter
+    {
+        get
+        {
+            var configured = Environment.GetEnvironmentVariable("ComSpec");
+            return !string.IsNullOrWhiteSpace(configured) && Path.IsPathFullyQualified(configured)
+                ? configured
+                : Path.Combine(Environment.SystemDirectory, "cmd.exe");
+        }
+    }
 
     /// <param name="refusal">
     /// The message of the <see cref="ArgumentException"/> when a value is unsafe. Passed in
