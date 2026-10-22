@@ -3,8 +3,31 @@ using System.Diagnostics;
 using System.Text.Json;
 using CodeSearch.Core.Indexing;
 using CodeSearch.Core.Semantics;
+using LocalAi.Contracts;
 
 // A separate host gives each regression its own process CWD and environment.
+if (args is ["probe-runtime-root", var expectedUserData])
+{
+    var runtimeRoot = ModelResidencyPolicyStore.DefaultRuntimeRoot;
+    var expectedRoot = Path.Combine(expectedUserData, "LocalAi");
+    if (!Path.IsPathFullyQualified(runtimeRoot) || runtimeRoot != expectedRoot)
+    {
+        throw new InvalidOperationException("The default runtime root did not preserve the chosen user-data location.");
+    }
+
+    var dataExistsAfterLookup = Directory.Exists(expectedUserData);
+    var store = new ModelResidencyPolicyStore(runtimeRoot);
+    store.Write(BrokerPolicy.Default);
+    Console.Write(JsonSerializer.Serialize(new
+    {
+        RuntimeRoot = runtimeRoot,
+        DataExistsAfterLookup = dataExistsAfterLookup,
+        SettingsFile = RuntimeDirectories.SettingsFileForWriting(runtimeRoot, BrokerPolicy.FileName),
+        RoundTrip = store.Read() == BrokerPolicy.Default,
+    }));
+    return 0;
+}
+
 if (args is ["git-fsmonitor", var gitMarker, ..])
 {
     WriteMarker(gitMarker);
