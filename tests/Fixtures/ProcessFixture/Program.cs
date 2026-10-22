@@ -22,6 +22,9 @@ switch (args[0])
     case "current-directory":
         Console.WriteLine(Environment.CurrentDirectory);
         return 0;
+    case "process-path":
+        Console.WriteLine(Environment.ProcessPath);
+        return 0;
     case "echo-args":
         // Serialised rather than printed one per line: the point of the test using this is that
         // separators inside an argument survive, so the output must not be separator-delimited.
