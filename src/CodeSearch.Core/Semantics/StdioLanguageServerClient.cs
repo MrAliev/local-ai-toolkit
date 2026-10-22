@@ -116,7 +116,18 @@ public sealed class StdioLanguageServerClient : ILanguageServerClient
         ArgumentNullException.ThrowIfNull(spec);
         spec.Validate();
         var root = Path.GetFullPath(workspaceRoot);
-        var executable = ExecutableResolver.Resolve(spec.Executable);
+        string executable;
+        try
+        {
+            executable = ExecutableResolver.Resolve(spec.Executable);
+        }
+        catch (Win32Exception exception)
+        {
+            throw new InvalidOperationException(
+                $"Language server executable '{spec.Executable}' could not start: {exception.Message}",
+                exception);
+        }
+
         var commandScript = WindowsCommandScript.Is(executable);
         var start = new ProcessStartInfo(
             commandScript ? WindowsCommandScript.Interpreter : executable)
