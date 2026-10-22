@@ -5,13 +5,33 @@ using CodeSearch.Core.Semantics;
 // A separate host gives each regression its own process CWD and environment.
 if (args is ["mark", var markerPath])
 {
-    File.WriteAllText(markerPath, "harmless semantic-tool fixture");
+    File.WriteAllText(markerPath, Environment.ProcessPath ?? "unknown");
     return 23;
 }
 
-if (args is not ["probe", var launcher, var executable, var workspace, var marker])
+string launcher, executable, workspace, marker;
+string? completionPath = null;
+if (args is ["probe", var nativeLauncher, var nativeExecutable, var nativeWorkspace, var nativeMarker])
 {
-    Console.Error.WriteLine("Expected probe <scip|lsp> <executable> <workspace> <marker>.");
+    (launcher, executable, workspace, marker) = (nativeLauncher, nativeExecutable, nativeWorkspace, nativeMarker);
+}
+else if (args is ["probe-script", var scriptLauncher, var scriptExecutable, var scriptWorkspace,
+             var scriptMarker, var scenario, var dependency])
+{
+    (launcher, executable, workspace, marker) = (scriptLauncher, scriptExecutable, scriptWorkspace, scriptMarker);
+    completionPath = marker + ".done";
+    // A deliberate PATH entry resolving inside the workspace is outside this regression.
+    var configuredDependency = ExecutableResolver.Find(dependency);
+    if (scenario != "explicit-relative" && configuredDependency is not null &&
+        string.Equals(Path.GetDirectoryName(configuredDependency), workspace, StringComparison.OrdinalIgnoreCase))
+    {
+        Console.WriteLine("ConfiguredLookup");
+        return 0;
+    }
+}
+else
+{
+    Console.Error.WriteLine("Expected probe <scip|lsp> <executable> <workspace> <marker>, or probe-script with scenario and dependency.");
     return 2;
 }
 
@@ -42,16 +62,17 @@ if (launcher == "lsp")
     {
         await using var client = StdioLanguageServerClient.Start(workspace,
             new LanguageServerProcessSpec(executable, ["mark", marker]));
-        // Give the harmless marker time to exit before disposing the uninitialized client.
+        // Script completion also covers the case where dependency lookup was blocked.
+        var completed = completionPath ?? marker;
         var deadline = Stopwatch.StartNew();
-        while (!File.Exists(marker) && deadline.Elapsed < TimeSpan.FromSeconds(10))
+        while (!File.Exists(completed) && deadline.Elapsed < TimeSpan.FromSeconds(10))
         {
             await Task.Delay(20);
         }
 
-        if (!File.Exists(marker))
+        if (!File.Exists(completed))
         {
-            throw new TimeoutException("The selected marker executable did not finish its write.");
+            throw new TimeoutException("The selected fixture did not finish its write.");
         }
 
         Console.WriteLine("Started");
