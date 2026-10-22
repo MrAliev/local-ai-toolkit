@@ -34,9 +34,10 @@ public sealed partial class DurableQueue
             var handedOff = false;
             try
             {
-                ThrowIfAdmissionPaused();
+                ThrowIfAdmissionPaused(cancellationToken);
                 using var admission = new Mutex(false, UpdateMutexName);
                 using (EnterMutex(cancellationToken))
+                using (EnterAdmissionProbe(cancellationToken))
                 {
                     if (!TryEnter(admission))
                     {
@@ -114,8 +115,9 @@ public sealed partial class DurableQueue
 
     private string UpdateMutexName => _mutexName + ".Update";
 
-    private void ThrowIfAdmissionPaused()
+    private void ThrowIfAdmissionPaused(CancellationToken cancellationToken)
     {
+        using var probe = EnterAdmissionProbe(cancellationToken);
         using var admission = new Mutex(false, UpdateMutexName);
         if (!TryEnter(admission))
         {
@@ -123,6 +125,51 @@ public sealed partial class DurableQueue
         }
 
         admission.ReleaseMutex();
+    }
+
+    private IDisposable EnterAdmissionProbe(CancellationToken cancellationToken)
+    {
+        // Probes briefly own the update mutex too. Serialize their entire acquire/release
+        // and the updater's acquisition so only a real updater can look like a pause.
+        var probe = new Mutex(false, UpdateMutexName + "-probe");
+        try
+        {
+            while (true)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    if (probe.WaitOne(TimeSpan.FromMilliseconds(100)))
+                    {
+                        return new AdmissionProbeLease(probe);
+                    }
+                }
+                catch (AbandonedMutexException)
+                {
+                    return new AdmissionProbeLease(probe);
+                }
+            }
+        }
+        catch
+        {
+            probe.Dispose();
+            throw;
+        }
+    }
+
+    private sealed class AdmissionProbeLease(Mutex mutex) : IDisposable
+    {
+        public void Dispose()
+        {
+            try
+            {
+                mutex.ReleaseMutex();
+            }
+            finally
+            {
+                mutex.Dispose();
+            }
+        }
     }
 
     private static bool TryEnter(Mutex mutex)
