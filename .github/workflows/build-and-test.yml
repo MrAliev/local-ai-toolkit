@@ -149,6 +149,10 @@ jobs:
         run: dotnet build tests/CodeSearch.Tests/CodeSearch.Tests.csproj --configuration Release
       - name: Test Git executable boundaries, including symbolic links
         run: dotnet tests/CodeSearch.Tests/bin/Release/net10.0/CodeSearch.Tests.dll -class CodeSearch.Tests.GitExecutableLocatorTests
+      - name: Build GitHub CLI physical boundary tests
+        run: dotnet build tests/LocalAi.Broker.Tests/LocalAi.Broker.Tests.csproj --configuration Release
+      - name: Test GitHub CLI physical boundaries, including file symbolic links
+        run: dotnet tests/LocalAi.Broker.Tests/bin/Release/net10.0/LocalAi.Broker.Tests.dll -class LocalAi.Broker.Tests.GitHubCliPhysicalPathTests
 
   # This portable measurement helper also runs on Linux so that symlink containment
   # is exercised even when a Windows host cannot create links without elevation.
