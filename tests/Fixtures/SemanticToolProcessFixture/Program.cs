@@ -1,8 +1,45 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Text.Json;
+using CodeSearch.Core.Indexing;
 using CodeSearch.Core.Semantics;
 
 // A separate host gives each regression its own process CWD and environment.
+if (args is ["git-fsmonitor", var gitMarker, ..])
+{
+    WriteMarker(gitMarker);
+    Console.Write("fixture-token\0");
+    return 0;
+}
+
+if (args is ["probe-snapshot", var repository, var revision, var relativeDirectory, var gitDirectory])
+{
+    using var snapshot = CommitSnapshot.Create(repository, revision);
+    if (gitDirectory != "-")
+    {
+        // An explicit repository override is a separate, supported host authority.
+        Environment.SetEnvironmentVariable("GIT_DIR", gitDirectory);
+    }
+
+    var directory = Path.Combine(snapshot.Root, relativeDirectory);
+    var files = FileScanner.Enumerate(snapshot.Root);
+    var listed = RepoLocator.GitOutputBytes(directory,
+        ["ls-files", "--cached", "--others", "--exclude-standard", "-z"]);
+    var diff = RepoLocator.GitOutputBytes(directory,
+        ["diff", "--no-renames", "--name-only", "-z", "HEAD", "--"]);
+    Console.Write(JsonSerializer.Serialize(new
+    {
+        Files = files.Select(path => path.Replace('\\', '/')).ToArray(),
+        Content = File.ReadAllText(Path.Combine(snapshot.Root, "Root.cs")),
+        Commit = RepoLocator.GitCommit(directory),
+        CommonDirectory = RepoLocator.GitOutput(directory, "rev-parse --path-format=absolute --git-common-dir"),
+        Listed = listed is not null,
+        Diffed = diff is not null,
+        SnapshotRoot = snapshot.Root,
+    }));
+    return 0;
+}
+
 if (args is ["mark", var markerPath])
 {
     WriteMarker(markerPath);

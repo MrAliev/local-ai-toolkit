@@ -206,15 +206,7 @@ public sealed class DiagnosticBundleTests
         var runtime = fixture.Combine("runtime");
         Directory.CreateDirectory(runtime);
         var link = Path.Combine(runtime, "jobs");
-        if (OperatingSystem.IsWindows())
-        {
-            var start = new System.Diagnostics.ProcessStartInfo("cmd.exe", $"/d /c mklink /J \"{link}\" \"{external}\"")
-            { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
-            using var process = System.Diagnostics.Process.Start(start)!;
-            await process.WaitForExitAsync(Token);
-            Assert.Equal(0, process.ExitCode);
-        }
-        else Directory.CreateSymbolicLink(link, external);
+        await DirectoryLinkFixture.CreateAsync(link, external, Token);
         try
         {
             var snapshot = await DiagnosticBundle.CaptureAsync(runtime, Token);

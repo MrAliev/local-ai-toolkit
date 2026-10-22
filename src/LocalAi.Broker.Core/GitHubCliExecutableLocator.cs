@@ -1,6 +1,6 @@
 namespace LocalAi.Broker;
 
-/// <summary>Resolve gh without implicit CWD search or probes of remote executable paths.</summary>
+/// <summary>Resolve gh outside the lexical and physical project/CWD boundaries, without remote executable probes.</summary>
 internal static class GitHubCliExecutableLocator
 {
     internal static string? Find(string searchPath, string currentDirectory,
@@ -13,7 +13,23 @@ internal static class GitHubCliExecutableLocator
         var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
         var executable = OperatingSystem.IsWindows() ? "gh.exe" : "gh";
         driveType ??= root => new DriveInfo(root).DriveType;
-        var project = IsLocal(cwd) ? FindProject(cwd) : cwd;
+        string? project;
+        string physicalCwd;
+        string? physicalProject;
+        string? physicalLexicalProject;
+        try
+        {
+            if (!IsLocal(cwd) || PhysicalPath(cwd, directory: true) is not { } resolvedCwd) return null;
+            physicalCwd = resolvedCwd;
+            project = FindProject(cwd);
+            physicalProject = FindProject(physicalCwd);
+            physicalLexicalProject = project is null ? null : PhysicalPath(project, directory: true);
+            if (project is not null && physicalLexicalProject is null) return null;
+        }
+        catch (Exception exception) when (exception is ArgumentException or IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
         foreach (var raw in searchPath.Split(Path.PathSeparator))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -27,8 +43,11 @@ internal static class GitHubCliExecutableLocator
                 if (!IsLocal(directory) || directory.Equals(cwd, comparison)
                     || (project is not null && Within(directory, project)))
                     continue;
+                var physicalDirectory = PhysicalPath(directory, directory: true);
+                if (physicalDirectory is null || ExcludedPhysical(physicalDirectory)) continue;
                 cancellationToken.ThrowIfCancellationRequested();
-                var candidate = Path.Combine(directory, executable);
+                var candidate = PhysicalPath(Path.Combine(directory, executable), directory: false);
+                if (candidate is null || ExcludedPhysical(Path.GetDirectoryName(candidate)!)) continue;
                 var exists = (fileExists ?? File.Exists)(candidate);
                 cancellationToken.ThrowIfCancellationRequested();
                 if (exists) return candidate;
@@ -36,6 +55,44 @@ internal static class GitHubCliExecutableLocator
             catch (Exception exception) when (exception is ArgumentException or IOException or UnauthorizedAccessException) { }
         }
         return null;
+
+        bool ExcludedPhysical(string directory) => directory.Equals(physicalCwd, comparison)
+            || (physicalProject is not null && Within(directory, physicalProject))
+            || (physicalLexicalProject is not null && Within(directory, physicalLexicalProject));
+
+        // Resolve every component, including the executable itself. Returning this path also
+        // keeps process creation from traversing the PATH alias after it has been checked.
+        string? PhysicalPath(string path, bool directory, int links = 0)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (links > 40 || !Path.IsPathFullyQualified(path) || !IsLocal(path)) return null;
+            path = Path.GetFullPath(path);
+            var pathRoot = Path.GetPathRoot(path)!;
+            var parts = path[pathRoot.Length..].Split(
+                new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
+                StringSplitOptions.RemoveEmptyEntries);
+            var resolved = pathRoot;
+            for (var index = 0; index < parts.Length; index++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var isDirectory = index < parts.Length - 1 || directory;
+                var next = Path.Combine(resolved, parts[index]);
+                FileSystemInfo item = isDirectory ? new DirectoryInfo(next) : new FileInfo(next);
+                if (item.LinkTarget is not null || (item.Attributes & FileAttributes.ReparsePoint) != 0)
+                {
+                    var target = item.ResolveLinkTarget(returnFinalTarget: false);
+                    if (target is null || PhysicalPath(target.FullName, isDirectory, links + 1) is not { } physical)
+                        return null;
+                    resolved = physical;
+                }
+                else
+                {
+                    if (!item.Exists || (!isDirectory && (item.Attributes & FileAttributes.Directory) != 0)) return null;
+                    resolved = next;
+                }
+            }
+            return resolved;
+        }
 
         bool IsLocal(string directory)
         {

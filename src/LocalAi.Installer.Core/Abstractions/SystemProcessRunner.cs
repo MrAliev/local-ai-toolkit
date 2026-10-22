@@ -357,6 +357,9 @@ public sealed class SystemProcessRunner : IProcessRunner, IProcessFileRunner, IP
         };
         if (isCommandScript)
         {
+            // A working directory is not an implicit provider of script dependencies.
+            // Scripts can still use configured PATH entries or explicit relative commands.
+            startInfo.Environment["NoDefaultCurrentDirectoryInExePath"] = "1";
             startInfo.Arguments = WindowsCommandScript.Arguments(
                 executable,
                 arguments,

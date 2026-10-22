@@ -28,12 +28,12 @@ public sealed class AnOverlayStaysOutOfTheRepositoryTests : IDisposable
     public AnOverlayStaysOutOfTheRepositoryTests()
     {
         Directory.CreateDirectory(_root);
-        Git("init --quiet .");
-        Git("config user.email tests@localai");
-        Git("config user.name Tests");
+        Git("init", "--quiet", ".");
+        Git("config", "user.email", "tests@localai");
+        Git("config", "user.name", "Tests");
         File.WriteAllText(Path.Combine(_root, "README.md"), "sample\n");
-        Git("add README.md");
-        Git("commit --quiet -m initial");
+        Git("add", "README.md");
+        Git("commit", "--quiet", "-m", "initial");
     }
 
     public void Dispose()
@@ -131,7 +131,7 @@ public sealed class AnOverlayStaysOutOfTheRepositoryTests : IDisposable
     {
         RepoLocator.EnsureOverlayIgnored(FsPath.From(_root));
         var worktree = Path.Combine(Path.GetTempPath(), "localai-overlay-wt-" + Guid.NewGuid().ToString("N"));
-        Git($"worktree add --quiet -b probe \"{worktree}\" HEAD");
+        Git("worktree", "add", "--quiet", "-b", "probe", worktree, "HEAD");
 
         try
         {
@@ -139,11 +139,41 @@ public sealed class AnOverlayStaysOutOfTheRepositoryTests : IDisposable
             File.WriteAllText(
                 Path.Combine(worktree, ".localai", "codesearch", "overlay.cidx"), "binary");
 
-            Assert.DoesNotContain(".localai", GitIn(worktree, "status --porcelain --untracked-files=all"));
+            Assert.DoesNotContain(".localai", GitIn(worktree, "status", "--porcelain", "--untracked-files=all"));
         }
         finally
         {
-            Git($"worktree remove --force \"{worktree}\"");
+            Git("worktree", "remove", "--force", worktree);
+        }
+    }
+
+    [Fact]
+    public void Worktree_paths_are_passed_as_literal_git_arguments()
+    {
+        var characters = OperatingSystem.IsWindows() ? "space & caret^ (group)" : "space \"quote\" & caret^ (group)";
+        var parent = Directory.CreateTempSubdirectory("localai-overlay-argv-").FullName;
+        var worktree = Path.Combine(parent, "localai-overlay-wt-" + characters + "-" + Guid.NewGuid().ToString("N"));
+        var expected = Path.GetFullPath(worktree);
+        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        string[] ListedWorktrees() => Git("worktree", "list", "--porcelain", "-z").Split('\0')
+            .Where(value => value.StartsWith("worktree ", StringComparison.Ordinal))
+            .Select(value => Path.GetFullPath(value[9..])).ToArray();
+        try
+        {
+            Git("worktree", "add", "--quiet", "-b", "literal-argument-probe", worktree, "HEAD");
+            Assert.True(File.Exists(Path.Combine(worktree, ".git")));
+            Assert.True(string.Equals(expected, Path.GetFullPath(GitIn(worktree, "rev-parse", "--show-toplevel").Trim()), comparison));
+            Assert.Contains(ListedWorktrees(), path => string.Equals(expected, path, comparison));
+            Git("worktree", "remove", "--force", worktree);
+            Assert.False(Directory.Exists(worktree));
+            Assert.DoesNotContain(ListedWorktrees(), path => string.Equals(expected, path, comparison));
+        }
+        finally
+        {
+            var ownedPrefix = Path.GetFullPath(parent) + Path.DirectorySeparatorChar;
+            foreach (var path in ListedWorktrees().Where(path => path.StartsWith(ownedPrefix, comparison)))
+                Git("worktree", "remove", "--force", path);
+            Directory.Delete(parent, recursive: true);
         }
     }
 
@@ -156,21 +186,26 @@ public sealed class AnOverlayStaysOutOfTheRepositoryTests : IDisposable
         File.WriteAllText(path, "binary");
     }
 
-    private string Status() => Git("status --porcelain --untracked-files=all");
+    private string Status() => Git("status", "--porcelain", "--untracked-files=all");
 
-    private string Git(string arguments) => GitIn(_root, arguments);
+    private string Git(params string[] arguments) => GitIn(_root, arguments);
 
-    private static string GitIn(string directory, string arguments)
+    private static string GitIn(string directory, params string[] arguments)
     {
-        using var process = Process.Start(new ProcessStartInfo("git", arguments)
+        var start = new ProcessStartInfo("git")
         {
             WorkingDirectory = directory,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             StandardOutputEncoding = Encoding.UTF8,
-        })!;
+            UseShellExecute = false,
+        };
+        foreach (var argument in arguments) start.ArgumentList.Add(argument);
+        using var process = Process.Start(start)!;
+        var error = process.StandardError.ReadToEndAsync();
         var output = process.StandardOutput.ReadToEnd();
         process.WaitForExit();
+        Assert.True(process.ExitCode == 0, error.GetAwaiter().GetResult());
         return output;
     }
 }

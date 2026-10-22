@@ -169,9 +169,10 @@ internal static class ControlledGitHubCliNativeHelper
         var mode = Environment.GetEnvironmentVariable("LOCALAI_GH_NATIVE_MODE");
         var marker = Environment.GetEnvironmentVariable("LOCALAI_GH_NATIVE_MARKER");
         if (arguments.Length < 4 || arguments[1] != "api" || arguments[2] != "--hostname" || arguments[3] != "github.com"
-            || mode is not ("wait" or "stdout" or "stderr") || string.IsNullOrWhiteSpace(marker))
+            || mode is not ("wait" or "stdout" or "stderr" or "exit") || string.IsNullOrWhiteSpace(marker))
             return;
         File.WriteAllText(marker, Environment.ProcessId.ToString(CultureInfo.InvariantCulture));
+        if (mode == "exit") Environment.Exit(23);
         if (mode is "stdout" or "stderr")
         {
             using var stream = mode == "stdout" ? Console.OpenStandardOutput() : Console.OpenStandardError();
