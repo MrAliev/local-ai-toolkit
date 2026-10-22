@@ -35,10 +35,10 @@ public static class WindowsCommandScript
 
     /// <summary>
     /// The interpreter to start instead of the script: what <c>ComSpec</c> names, or
-    /// <c>cmd.exe</c> where the variable is missing.
+    /// <c>cmd.exe</c> in the system directory where the variable is missing.
     /// </summary>
     public static string Interpreter =>
-        Environment.GetEnvironmentVariable("ComSpec") ?? "cmd.exe";
+        Environment.GetEnvironmentVariable("ComSpec") ?? Path.Combine(Environment.SystemDirectory, "cmd.exe");
 
     /// <param name="refusal">
     /// The message of the <see cref="ArgumentException"/> when a value is unsafe. Passed in

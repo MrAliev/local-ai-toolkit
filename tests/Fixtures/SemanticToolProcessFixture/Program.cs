@@ -5,12 +5,20 @@ using CodeSearch.Core.Semantics;
 // A separate host gives each regression its own process CWD and environment.
 if (args is ["mark", var markerPath])
 {
-    File.WriteAllText(markerPath, Environment.ProcessPath ?? "unknown");
+    WriteMarker(markerPath);
+    return 23;
+}
+
+if (string.Equals(Path.GetFileName(Environment.ProcessPath), "cmd.exe", StringComparison.OrdinalIgnoreCase))
+{
+    // The isolated interpreter probe copies this fixture beside its marker destination.
+    WriteMarker(Path.Combine(AppContext.BaseDirectory, "interpreter-selected.txt"));
     return 23;
 }
 
 string launcher, executable, workspace, marker;
 string? completionPath = null;
+var interpreterProbe = false;
 if (args is ["probe", var nativeLauncher, var nativeExecutable, var nativeWorkspace, var nativeMarker])
 {
     (launcher, executable, workspace, marker) = (nativeLauncher, nativeExecutable, nativeWorkspace, nativeMarker);
@@ -29,9 +37,17 @@ else if (args is ["probe-script", var scriptLauncher, var scriptExecutable, var 
         return 0;
     }
 }
+else if (args is ["probe-interpreter", var interpreterLauncher, var interpreterExecutable,
+             var interpreterWorkspace, var interpreterMarker])
+{
+    (launcher, executable, workspace, marker) =
+        (interpreterLauncher, interpreterExecutable, interpreterWorkspace, interpreterMarker);
+    completionPath = marker + ".done";
+    interpreterProbe = true;
+}
 else
 {
-    Console.Error.WriteLine("Expected probe <scip|lsp> <executable> <workspace> <marker>, or probe-script with scenario and dependency.");
+    Console.Error.WriteLine("Expected probe/probe-interpreter <scip|lsp> <executable> <workspace> <marker>, or probe-script with scenario and dependency.");
     return 2;
 }
 
@@ -64,13 +80,14 @@ if (launcher == "lsp")
             new LanguageServerProcessSpec(executable, ["mark", marker]));
         // Script completion also covers the case where dependency lookup was blocked.
         var completed = completionPath ?? marker;
+        bool HasCompleted() => File.Exists(completed) || (interpreterProbe && File.Exists(marker));
         var deadline = Stopwatch.StartNew();
-        while (!File.Exists(completed) && deadline.Elapsed < TimeSpan.FromSeconds(10))
+        while (!HasCompleted() && deadline.Elapsed < TimeSpan.FromSeconds(10))
         {
             await Task.Delay(20);
         }
 
-        if (!File.Exists(completed))
+        if (!HasCompleted())
         {
             throw new TimeoutException("The selected fixture did not finish its write.");
         }
@@ -87,3 +104,9 @@ if (launcher == "lsp")
 }
 
 return 2;
+
+static void WriteMarker(string path)
+{
+    File.WriteAllText(path + ".writing", Environment.ProcessPath ?? "unknown");
+    File.Move(path + ".writing", path);
+}
