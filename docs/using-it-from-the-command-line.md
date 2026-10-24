@@ -79,10 +79,14 @@ lai localai sync --root C:\work\myapp
 lai localai hooks install --root C:\work\myapp
 ```
 
-The first build reads the whole repository and prints its progress in figures: chunks
-embedded out of the total, the rate and an estimate of the minutes left. You do not have to
-watch the window: `localai repo status --follow` shows the phase and its figures while it
-runs.
+The first build reads the repository and reports the current indexing pass.
+`localai repo status --follow` shows the phase, origin operation GUID, requested/current
+worktree and completed/total passes. When available, chunk counts, rate and ETA describe
+the current pass; whole-operation chunk totals, rate and ETA stay unknown.
+Use the displayed origin GUID to request cooperative cancellation:
+`localai sync cancel --root <root> --operation <GUID>`.
+A different GUID is refused. A cancellation request does not prove that work has stopped;
+keep observing status. An MCP wait timeout also leaves backend state unknown.
 
 From then on the hooks keep the index current by themselves: after a commit, checkout, merge
 or rebase. Hooks you already had are not overwritten — Local AI joins the chain and calls them
@@ -129,12 +133,12 @@ lai codesearch get-chunk --id cs1.AUAwZWNjOTAx…
 ### Walk from a symbol
 
 Once you have a place, keep going with navigation rather than another search. Lines and
-columns count from one — exactly as search prints them and an editor shows them. Pass the
-start line a hit prints; for `CompleteAsync` that is line 1392 today:
+columns count from one — exactly as search prints them and an editor shows them. Use the
+current start line from your search result; the examples below use line 346 for `CompleteAsync`:
 
 ```powershell
-lai localai semantic references --path src/LocalAi.Broker.Core/DurableQueue.cs --line 1392 --column 1
-lai localai semantic implementations --path src/LocalAi.Broker.Core/DurableQueue.cs --line 1392 --column 1
+lai localai semantic references --path src/LocalAi.Broker.Core/DurableQueue.cs --line 346 --column 1
+lai localai semantic implementations --path src/LocalAi.Broker.Core/DurableQueue.cs --line 346 --column 1
 ```
 
 ### Ask about files you already know
@@ -237,7 +241,13 @@ context sizes from largest to smallest, up to the limit in `log-triage.json`, un
 accepts a load (by default, only when the model loads entirely into video memory). It then
 works through the file in pieces sized to the accepted context.
 
-A streaming detector counts error diagnostic lines and occurrences by code independently of
+The requested `--question` stays in fragment and reduction prompts and can ask for a summary
+of successful operations. Default full-log triage retains its declared whole-source
+comparison baseline. A custom question has an unknown task-context baseline: processing
+the whole log does not establish the context needed for that question. The caller's
+`sourceContext` declaration is preserved.
+
+For diagnostic triage, a streaming detector counts error diagnostic lines and occurrences by code independently of
 the model; repeated source lines are not deduplicated. MSBuild summary totals are reported
 separately. The report includes a source hash and original line numbers with bounded diagnostic
 and summary samples. Sample limits do not reduce counts; lines exceeding the parser limit
@@ -246,7 +256,8 @@ checked against the source. Incorrect counts, omitted errors or invented codes r
 diagnosis and produce the deterministic source report. No recognized diagnostics does not mean
 that the build succeeded.
 
-Compiler fragments and reductions request a JSON inventory rather than a prose diagnosis.
+For compiler diagnostic triage, fragments and reductions request a JSON inventory rather
+than a prose diagnosis.
 One enclosing JSON code fence may be removed, followed by the same source reconciliation.
 A malformed inventory can receive at most one bounded format retry through the broker, using
 compact source counts and the already accepted model/context. Incorrect semantic counts are

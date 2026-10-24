@@ -99,7 +99,7 @@ public static class UsageReportingRegistry
             "semantic config", "semantic config show", "semantic config path", "semantic config init",
             "semantic lsp-config", "semantic lsp-config show", "semantic lsp-config path", "semantic lsp-config init",
             "semantic fallback-config", "semantic fallback-config show", "semantic fallback-config path", "semantic fallback-config init",
-            "semantic evaluate", "bootstrap", "sync", "agent gate", "agent worktree", "agent worktree create", "agent worktree remove",
+            "semantic evaluate", "bootstrap", "sync", "sync cancel", "agent gate", "agent worktree", "agent worktree create", "agent worktree remove",
             "repo prune", "hook", "hook post-commit", "hook post-checkout", "hook post-merge", "hook post-rewrite",
             "prune", "telemetry", "hooks install",
         }) yield return new(UsageSurface.Cli, "localai", command, UsagePolicy.Administration);

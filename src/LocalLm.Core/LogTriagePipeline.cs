@@ -22,9 +22,9 @@ internal sealed class LogTriagePipeline(
     private const string DefaultQuestion =
         "What failed, and why? Give the exact file and line if the log names one.";
     private const string TriageInstruction =
-        "You are triaging a build or test log for an engineer who will not read it themselves. " +
-        "Report only failures the supplied material actually contains - never invent a failure " +
-        "that is not there, and say plainly if nothing failed. Preserve exact file paths, line " +
+        "Answer the engineer's requested focus using the supplied build or test log. " +
+        "Successful test summaries and skipped-test reasons are relevant when requested. " +
+        "Report only facts the supplied material contains and never invent a failure or finding. Preserve exact file paths, line " +
         "numbers, timestamps, identifiers and error codes, and preserve the original language of " +
         "quoted messages.";
 
@@ -46,6 +46,11 @@ internal sealed class LogTriagePipeline(
     {
         var source = ValidateSource(path, text);
         var focus = string.IsNullOrWhiteSpace(question) ? DefaultQuestion : question.Trim();
+        // A question does not establish how much of the log a cloud answer would need.
+        // First reading and task relevance are separate: preserve the caller's source
+        // presence, but do not turn unrelated setup output into estimated savings.
+        if (!string.IsNullOrWhiteSpace(question))
+            UsageCall.Current?.Comparison.UnknownBaseline("log_question_context_unknown");
         // Before the probe, which loads a model to find out whether it fits: it unloads
         // others, preflights at a context size and steps down on failure. Minutes of
         // silence otherwise, before anything else about this run can be said.
@@ -446,7 +451,8 @@ internal sealed class LogTriagePipeline(
 
              Analyze log fragment {fragmentIndex}. Return only relevant findings from this
              fragment. Keep the response under {maximumSummaryCharacters} characters.
-             Preserve exact evidence. If the fragment contains no relevant failure, say so briefly.
+             Preserve exact evidence relevant to the request, including successful results.
+             If the fragment contains no evidence answering the request, say so briefly.
 
              --- BEGIN LOG FRAGMENT {fragmentIndex} ---
              {content}
@@ -497,8 +503,8 @@ internal sealed class LogTriagePipeline(
              {question}
 
              Merge these ordered partial log findings (reduction level {level}). Deduplicate repeated
-             overlap evidence, preserve every distinct failure and its exact evidence, and do not
-             introduce claims absent from the partial findings. Return one concise diagnosis under
+             overlap evidence, preserve the requested facts and their exact evidence, and do not
+             introduce claims absent from the partial findings. Answer the requested focus under
              {maximumSummaryCharacters} characters.
 
              {body}

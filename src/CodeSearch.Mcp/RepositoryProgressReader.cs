@@ -72,7 +72,11 @@ public sealed class RepositoryProgressReader
             return null;
         }
 
-        return new SyncSighting(repositoryId, _gateHeld(repositoryId), Recorded(repositoryId));
+        var runtimeRoot = string.IsNullOrWhiteSpace(_runtimeRoot)
+            ? RuntimeIndexLayout.DefaultRuntimeRoot : _runtimeRoot;
+        var operation = new RepositorySyncOperationStore(FsPath.From(runtimeRoot)
+            .Combine("repositories", repositoryId)).Read();
+        return new SyncSighting(repositoryId, _gateHeld(repositoryId), Recorded(repositoryId), operation);
     }
 
     private RepositoryIndexProgress? Recorded(string repositoryId)
