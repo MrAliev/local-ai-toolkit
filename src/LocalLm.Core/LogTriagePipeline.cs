@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using LocalAi.Broker.Client;
 using LocalAi.Contracts;
+using LocalAi.Contracts.Localization;
 using LocalLm.Core.Resources;
 
 namespace LocalLm.Core;
@@ -22,9 +23,9 @@ internal sealed class LogTriagePipeline(
     private const string DefaultQuestion =
         "What failed, and why? Give the exact file and line if the log names one.";
     private const string TriageInstruction =
-        "You are triaging a build or test log for an engineer who will not read it themselves. " +
-        "Report only failures the supplied material actually contains - never invent a failure " +
-        "that is not there, and say plainly if nothing failed. Preserve exact file paths, line " +
+        "Answer the engineer's requested focus using the supplied build or test log. " +
+        "Successful test summaries and skipped-test reasons are relevant when requested. " +
+        "Report only facts the supplied material contains and never invent a failure or finding. Preserve exact file paths, line " +
         "numbers, timestamps, identifiers and error codes, and preserve the original language of " +
         "quoted messages.";
 
@@ -37,6 +38,14 @@ internal sealed class LogTriagePipeline(
     private static string SystemPrompt =>
         TriageInstruction + " " + AnswerLanguage.Instruction;
 
+    private static string CompilerSystemPrompt(bool requestedFocus) => !requestedFocus
+        ? CompilerLogVerification.Instruction
+        : "Return exactly one JSON envelope with exactly two fields: inventory (object) and requestedAnswer (string). " +
+          "The inventory object alone must obey the following rules; references to the response/object below mean inventory: " +
+          CompilerLogVerification.Instruction +
+          " The separate requestedAnswer must answer the user's question using the supplied log or partial findings. " +
+          "Keep compiler counts in inventory and the requested answer outside it. Do not add other envelope fields.";
+
     public async Task<LocalResult> RunAsync(
         string? path,
         string? text,
@@ -45,7 +54,13 @@ internal sealed class LogTriagePipeline(
         CancellationToken cancellationToken)
     {
         var source = ValidateSource(path, text);
-        var focus = string.IsNullOrWhiteSpace(question) ? DefaultQuestion : question.Trim();
+        var requestedFocus = !string.IsNullOrWhiteSpace(question);
+        var focus = requestedFocus ? question!.Trim() : DefaultQuestion;
+        // A question does not establish how much of the log a cloud answer would need.
+        // First reading and task relevance are separate: preserve the caller's source
+        // presence, but do not turn unrelated setup output into estimated savings.
+        if (requestedFocus)
+            UsageCall.Current?.Comparison.UnknownBaseline("log_question_context_unknown");
         // Before the probe, which loads a model to find out whether it fits: it unloads
         // others, preflights at a context size and steps down on failure. Minutes of
         // silence otherwise, before anything else about this run can be said.
@@ -53,7 +68,7 @@ internal sealed class LogTriagePipeline(
         var capacity = await SelectCapacityAsync(model, cancellationToken);
         var promptBudget = InputCharacterBudget(capacity.ContextTokens);
         var availableCharacters =
-            promptBudget - focus.Length - Math.Max(SystemPrompt.Length, CompilerLogVerification.Instruction.Length)
+            promptBudget - focus.Length - Math.Max(SystemPrompt.Length, CompilerSystemPrompt(requestedFocus).Length)
             - policy.PromptOverheadCharacters;
         if (availableCharacters < 128)
         {
@@ -83,6 +98,7 @@ internal sealed class LogTriagePipeline(
                 maximumSummaryCharacters,
                 capacity,
                 verifyCompilerDiagnostics,
+                requestedFocus,
                 ct));
 
         long fragmentCount = 0;
@@ -121,6 +137,7 @@ internal sealed class LogTriagePipeline(
                 maximumSummaryCharacters,
                 capacity,
                 fragmentHasCompilerDiagnostics,
+                requestedFocus,
                 cancellationToken);
             lastReceipt = result.Receipt;
             queued += result.Receipt.QueueDuration;
@@ -145,10 +162,22 @@ internal sealed class LogTriagePipeline(
         CompilerModelVerification? diagnosticVerification = null;
         if (verifyCompilerDiagnostics || CompilerLogVerification.ContainsDiagnosticClaim(answer))
         {
-            diagnosticVerification = CompilerLogVerification.Verify(answer, compilerDiagnostics);
+            string? requestedAnswer = null;
+            var inventoryAnswer = answer;
+            var normalizedEnvelope = false;
+            if (requestedFocus && TryReadFocusedInventory(answer, maximumSummaryCharacters,
+                    out var inventory, out var separateAnswer, out var envelopeWasNormalized))
+            {
+                inventoryAnswer = inventory;
+                requestedAnswer = separateAnswer;
+                normalizedEnvelope = envelopeWasNormalized;
+            }
+            diagnosticVerification = CompilerLogVerification.Verify(inventoryAnswer, compilerDiagnostics);
+            if (normalizedEnvelope)
+                diagnosticVerification = diagnosticVerification with { FormatNormalized = true };
             var initialReasons = diagnosticVerification.Reasons;
             if (diagnosticVerification.Status != "passed" &&
-                CompilerLogVerification.TryUnwrapJsonFence(answer, out var normalized))
+                CompilerLogVerification.TryUnwrapJsonFence(inventoryAnswer, out var normalized))
                 diagnosticVerification = CompilerLogVerification.Verify(normalized, compilerDiagnostics) with
                 { FormatNormalized = true, InitialReasons = initialReasons };
             if (CompilerLogVerification.HasEvidence(compilerDiagnostics) &&
@@ -191,10 +220,21 @@ internal sealed class LogTriagePipeline(
                     diagnosticVerification = diagnosticVerification with
                     { RepairFailureReason = "repair_context_budget", InitialReasons = initialReasons };
             }
-            UsageCall.Current?.Validated(diagnosticVerification.Status == "passed");
-            // Counts and source diagnostics are always rendered by code. Even a structurally
-            // valid model inventory cannot introduce an unverified natural-language diagnosis.
+            // The compiler inventory has a verification result; the separate free-form
+            // answer does not. Do not turn inventory success into validation of that answer.
+            if (diagnosticVerification.Status != "passed" || !requestedFocus)
+                UsageCall.Current?.Validated(diagnosticVerification.Status == "passed");
+            // Counts and source diagnostics are rendered by code, independently of the
+            // requested answer. Inventory repair must not replace or invent that answer.
             answer = CompilerLogVerification.Render(compilerDiagnostics, diagnosticVerification);
+            if (requestedFocus)
+                answer += "\n\n" + (requestedAnswer is null
+                    ? OutputCulture.Pick(
+                        "Requested answer unavailable: the model did not return a valid separate answer.",
+                        "Запрошенный ответ недоступен: модель не вернула корректный отдельный ответ.")
+                    : OutputCulture.Pick(
+                        "Requested answer (model-generated; not verified as compiler evidence):\n",
+                        "Запрошенный ответ (сгенерирован моделью; не проверен как диагностика компилятора):\n") + requestedAnswer);
         }
         UsageCall.Current?.Comparison.GeneratedText(answer);
         var receipt = (lastReceipt
@@ -220,6 +260,37 @@ internal sealed class LogTriagePipeline(
             CompilerDiagnostics = diagnosticVerification is null ? null : compilerDiagnostics,
             DiagnosticVerification = diagnosticVerification,
         };
+    }
+
+    private static bool TryReadFocusedInventory(string text, int maximumAnswerCharacters,
+        out string inventory, out string requestedAnswer, out bool normalized)
+    {
+        inventory = requestedAnswer = string.Empty;
+        normalized = false;
+        if (text.Length > Math.Max(4096L, 4L * maximumAnswerCharacters)) return false;
+        var candidate = text;
+        if (CompilerLogVerification.TryUnwrapJsonFence(text, out var unwrapped))
+        {
+            candidate = unwrapped;
+            normalized = true;
+        }
+        try
+        {
+            using var document = JsonDocument.Parse(candidate, new JsonDocumentOptions { MaxDepth = 16 });
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object) return false;
+            var fields = root.EnumerateObject().ToArray();
+            if (fields.Length != 2 || fields.Select(field => field.Name).Distinct(StringComparer.Ordinal).Count() != 2 ||
+                !root.TryGetProperty("inventory", out var evidence) || evidence.ValueKind != JsonValueKind.Object ||
+                !root.TryGetProperty("requestedAnswer", out var answer) || answer.ValueKind != JsonValueKind.String)
+                return false;
+            var value = answer.GetString();
+            if (string.IsNullOrWhiteSpace(value) || value.Length > maximumAnswerCharacters) return false;
+            inventory = evidence.GetRawText();
+            requestedAnswer = value;
+            return true;
+        }
+        catch (JsonException) { return false; }
     }
 
     private async Task<Capacity> SelectCapacityAsync(
@@ -432,11 +503,12 @@ internal sealed class LogTriagePipeline(
         int maximumSummaryCharacters,
         Capacity capacity,
         bool compilerDiagnostics,
+        bool requestedFocus,
         CancellationToken cancellationToken) =>
         await client.RoutedChatAsync(
             LocalTaskProfile.LogTriage,
             compilerDiagnostics ? $"""
-             Return the compiler inventory for original log fragment {fragmentIndex} as JSON.
+             {(requestedFocus ? question + "\n\n" : string.Empty)}Return the compiler inventory{(requestedFocus ? " and requestedAnswer envelope" : string.Empty)} for original log fragment {fragmentIndex} as JSON.
              Keep the response under {maximumSummaryCharacters} characters.
              --- BEGIN LOG FRAGMENT {fragmentIndex} ---
              {content}
@@ -446,13 +518,14 @@ internal sealed class LogTriagePipeline(
 
              Analyze log fragment {fragmentIndex}. Return only relevant findings from this
              fragment. Keep the response under {maximumSummaryCharacters} characters.
-             Preserve exact evidence. If the fragment contains no relevant failure, say so briefly.
+             Preserve exact evidence relevant to the request, including successful results.
+             If the fragment contains no evidence answering the request, say so briefly.
 
              --- BEGIN LOG FRAGMENT {fragmentIndex} ---
              {content}
              --- END LOG FRAGMENT {fragmentIndex} ---
              """,
-            compilerDiagnostics ? CompilerLogVerification.Instruction : SystemPrompt,
+            compilerDiagnostics ? CompilerSystemPrompt(requestedFocus) : SystemPrompt,
             null,
             new LocalWorkloadMetadata(
                 content.Length,
@@ -474,6 +547,7 @@ internal sealed class LogTriagePipeline(
         int maximumSummaryCharacters,
         Capacity capacity,
         bool compilerDiagnostics,
+        bool requestedFocus,
         CancellationToken cancellationToken)
     {
         // Merges also happen mid-stream when a level overflows its budget, so the line
@@ -489,7 +563,7 @@ internal sealed class LogTriagePipeline(
         var result = await client.RoutedChatAsync(
             LocalTaskProfile.LogTriage,
             compilerDiagnostics ? $"""
-             Merge these ordered partial compiler inventories into one JSON inventory.
+             {(requestedFocus ? question + "\n\n" : string.Empty)}Merge these ordered partial compiler inventories{(requestedFocus ? " and requested answers into one inventory/requestedAnswer JSON envelope" : " into one JSON inventory")}.
              Do not invent codes, lose occurrences or count repeated overlap twice.
              Keep the response under {maximumSummaryCharacters} characters.
              {body}
@@ -497,13 +571,13 @@ internal sealed class LogTriagePipeline(
              {question}
 
              Merge these ordered partial log findings (reduction level {level}). Deduplicate repeated
-             overlap evidence, preserve every distinct failure and its exact evidence, and do not
-             introduce claims absent from the partial findings. Return one concise diagnosis under
+             overlap evidence, preserve the requested facts and their exact evidence, and do not
+             introduce claims absent from the partial findings. Answer the requested focus under
              {maximumSummaryCharacters} characters.
 
              {body}
              """,
-            compilerDiagnostics ? CompilerLogVerification.Instruction : SystemPrompt,
+            compilerDiagnostics ? CompilerSystemPrompt(requestedFocus) : SystemPrompt,
             null,
             new LocalWorkloadMetadata(
                 body.Length,

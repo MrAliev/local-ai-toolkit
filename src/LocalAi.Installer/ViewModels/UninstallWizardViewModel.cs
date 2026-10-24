@@ -189,9 +189,7 @@ public sealed class UninstallWizardViewModel : ObservableObject
     /// Where the journal is written: outside the runtime root, so the record of what this run
     /// removed survives the removal. Settable so tests point it at their own directory.
     /// </summary>
-    public string LogDirectory { get; set; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        RemovalMatrix.JournalDirectoryName);
+    public string LogDirectory { get; set; } = InstallerLogDirectory.Default;
 
     /// <summary>
     /// The matrix page. Shared with the installer wizard, which needs the same page for the

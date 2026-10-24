@@ -7,7 +7,7 @@ using LocalLm.Core;
 
 var model = args[0];
 var prompt = await File.ReadAllTextAsync(args[1]);
-var root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LocalAi");
+var root = LocalAi.Contracts.ModelResidencyPolicyStore.DefaultRuntimeRoot;
 using var pointer = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(root,"bin","current.json")));
 var version = pointer.RootElement.GetProperty("version").GetString()!;
 var executable = Path.Combine(root,"bin","versions",version,"LocalAi.Broker.exe");

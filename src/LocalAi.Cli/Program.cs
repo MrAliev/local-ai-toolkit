@@ -160,6 +160,9 @@ static async Task<int> FollowIndexBuildAsync(RepositoryStatus status, TimeSpan i
                 : DateTimeOffset.UtcNow - progress.UpdatedAtUtc,
             RepoFollowCommand.DefaultStaleAfter,
             embedded.Total);
+        var operation = new LocalAi.Repository.RepositorySyncOperationStore(FsPath.From(Path.Combine(
+            Path.GetFullPath(ModelResidencyPolicyStore.DefaultRuntimeRoot), "repositories", status.Identity.Id))).Read();
+        if (operation is not null) followOutput.WriteLine(operation.Describe());
         followOutput.WriteLine(step.Line);
         followOutput.Flush();
         if (step.ExitCode is { } code)
@@ -511,6 +514,12 @@ static async Task<int> RunAsync(string[] args, bool machineReadable, CommandStre
         streams.Out.WriteLine(machineReadable
             ? MachineOutput.Answer("repo status", RepoCommand.MachineStatus(status))
             : status.Message);
+        if (!machineReadable)
+        {
+            var syncOperation = new LocalAi.Repository.RepositorySyncOperationStore(FsPath.From(Path.Combine(
+                Path.GetFullPath(ModelResidencyPolicyStore.DefaultRuntimeRoot), "repositories", status.Identity.Id))).Read();
+            if (syncOperation is not null) streams.Out.WriteLine(syncOperation.Describe());
+        }
         if (!target.Follow)
         {
             return 0;
@@ -595,6 +604,27 @@ static async Task<int> RunAsync(string[] args, bool machineReadable, CommandStre
         return 0;
     }
 
+    if (args is ["sync", "cancel", ..])
+    {
+        var rootIndex = Array.IndexOf(args, "--root");
+        var idIndex = Array.IndexOf(args, "--operation");
+        if (rootIndex < 0 || rootIndex + 1 >= args.Length || idIndex < 0 || idIndex + 1 >= args.Length ||
+            !Guid.TryParse(args[idIndex + 1], out var operationId) || operationId == Guid.Empty)
+        {
+            streams.Error.WriteLine(OutputCulture.Pick(
+                "Usage: localai sync cancel --root <worktree> --operation <operation-id>",
+                "Использование: localai sync cancel --root <каталог> --operation <GUID>"));
+            return 64;
+        }
+        var identity = CodeSearch.Core.Indexing.RuntimeIndexLayout.Inspect(args[rootIndex + 1]);
+        var accepted = new LocalAi.Repository.RepositorySyncOperationStore(identity.RepositoryRuntimeRoot)
+            .RequestCancellation(operationId);
+        streams.Out.WriteLine(accepted
+            ? $"SYNC_CANCEL_REQUESTED operation={operationId:D} backend_completion=UNKNOWN"
+            : $"SYNC_CANCEL_NOT_RUNNING operation={operationId:D}");
+        return accepted ? 0 : 75;
+    }
+
     if (args is ["sync", ..])
     {
         var rootIndex = Array.IndexOf(args, "--root");
@@ -617,13 +647,28 @@ static async Task<int> RunAsync(string[] args, bool machineReadable, CommandStre
 
             inlineLimit = parsedLimit;
         }
+        Guid? operationId = null;
+        var operationIndex = Array.IndexOf(args, "--operation");
+        if (operationIndex >= 0)
+        {
+            if (operationIndex + 1 >= args.Length || !Guid.TryParse(args[operationIndex + 1], out var parsedOperation) ||
+                parsedOperation == Guid.Empty)
+            {
+                streams.Error.WriteLine(OutputCulture.Pick(
+                    "sync_operation_invalid: --operation requires a nonempty GUID.",
+                    "sync_operation_invalid: для --operation требуется непустой идентификатор GUID."));
+                return 64;
+            }
+            operationId = parsedOperation;
+        }
         var result = await CodeSearchSyncCommand.ExecuteAsync(
             root,
             streams.Error,
             includeOverlays: !args.Contains("--base-only", StringComparer.Ordinal),
             requireSemantics: args.Contains("--require-semantics", StringComparer.Ordinal),
             refuseInlineOverFiles: inlineLimit,
-            allWorktrees: args.Contains("--all-worktrees", StringComparer.Ordinal));
+            allWorktrees: args.Contains("--all-worktrees", StringComparer.Ordinal),
+            operationId: operationId);
         if (result.RefusedFiles is { } refused)
         {
             UsageCall.Current?.Refused("inline_limit");

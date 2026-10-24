@@ -16,13 +16,16 @@ internal sealed class SyncProgressReporter : IDisposable
     private readonly long _started;
     private RepositoryIndexProgress? _latest;
     private bool _disposed;
+    private readonly Func<string>? _operation;
 
-    public SyncProgressReporter(Action<RepositoryIndexProgress> save, TextWriter output, TimeProvider? time = null)
+    public SyncProgressReporter(Action<RepositoryIndexProgress> save, TextWriter output, TimeProvider? time = null,
+        Func<string>? operation = null)
     {
         _save = save;
         _output = output;
         _time = time ?? TimeProvider.System;
         _started = _time.GetTimestamp();
+        _operation = operation;
         _timer = _time.CreateTimer(_ => Tick(), null, TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15));
     }
 
@@ -60,8 +63,12 @@ internal sealed class SyncProgressReporter : IDisposable
         }
     }
 
-    private void Write() => _output.WriteLine(Catalogue.Format("Elapsed", Format(_latest!),
-        _time.GetElapsedTime(_started).TotalSeconds.ToString("0", CultureInfo.InvariantCulture)));
+    private void Write()
+    {
+        if (_operation is not null) _output.WriteLine(_operation());
+        _output.WriteLine(Catalogue.Format("Elapsed", Format(_latest!),
+            _time.GetElapsedTime(_started).TotalSeconds.ToString("0", CultureInfo.InvariantCulture)));
+    }
 
     internal static string Format(RepositoryIndexProgress progress)
     {

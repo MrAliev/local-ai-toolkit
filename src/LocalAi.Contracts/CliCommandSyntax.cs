@@ -52,6 +52,7 @@ internal static class CliCommandSyntax
         ["semantic impact"] = LocalAiCommandSyntax.SemanticImpact,
         ["bootstrap"] = "localai bootstrap --dry-run",
         ["sync"] = "localai sync [--root dir] [--base-only] [--all-worktrees] [--require-semantics] [--max-inline-files n]",
+        ["sync cancel"] = "localai sync cancel --root dir --operation operation-id",
         ["hooks install"] = "localai hooks install [--root dir]",
     };
 

@@ -743,7 +743,8 @@ public sealed class UninstallRunnerTests : IDisposable
         var plan = await Plan(RemovalSelection.FromPreset(RemovalPreset.FullUninstall));
         var seen = new List<UninstallProgress>();
 
-        await Apply(plan, progress: new Progress<UninstallProgress>(seen.Add));
+        // Observe emitted progress inline; Progress<T> can still dispatch after Apply returns.
+        await Apply(plan, progress: new SynchronousProgress(seen.Add));
 
         // Reported in order, ending short of 100: finishing is the caller's to announce,
         // because only the caller knows whether anything follows this removal.
