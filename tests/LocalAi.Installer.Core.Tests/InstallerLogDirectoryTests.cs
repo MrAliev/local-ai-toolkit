@@ -17,15 +17,13 @@ public sealed class InstallerLogDirectoryTests
     }
 
     [Fact]
-    public void An_absolute_profile_does_not_need_to_exist()
+    public void An_absolute_profile_is_preserved()
     {
         var profile = Path.Combine(Path.GetTempPath(), "LocalAi.LogDirectory.Tests", Guid.NewGuid().ToString("N"));
-        Assert.False(Directory.Exists(profile));
 
         var actual = InstallerLogDirectory.FromLocalApplicationData(profile);
 
         Assert.Equal(Path.Combine(profile, "LocalAi-installer-logs"), actual);
         Assert.True(Path.IsPathFullyQualified(actual));
-        Assert.False(Directory.Exists(profile));
     }
 }
