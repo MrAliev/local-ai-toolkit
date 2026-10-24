@@ -444,9 +444,7 @@ public sealed class InstallerWizardViewModel : ObservableObject
     /// stray file inside it would refuse the next installation. Settable so tests can point
     /// the journal at their own directory instead of the machine's.
     /// </summary>
-    public string LogDirectory { get; set; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "LocalAi-installer-logs");
+    public string LogDirectory { get; set; } = InstallerLogDirectory.Default;
 
     /// <summary>
     /// The runtime root the stored settings are read from and written into, and whose existence
