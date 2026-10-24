@@ -30,6 +30,10 @@ For an explicit text scenario: `S - V - 2R`, where `S` is necessary unseen sourc
 `V` the complete visible response and `R` the request. Local generation is not automatically
 credited as avoided cloud generation. Unknown provenance or an unknown baseline remains unknown.
 
+For log triage with a custom question, the comparison baseline is `UNKNOWN`; the entire
+log is not credited as avoided context. In compiler-log triage, the model-generated answer
+to that question is reported separately from the strictly verified diagnostic inventory.
+
 <details>
 <summary>Example: a 100,000-token file, a 4,000-token task</summary>
 

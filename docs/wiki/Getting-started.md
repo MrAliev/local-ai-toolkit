@@ -22,6 +22,12 @@ lai localai hooks install --root C:\work\myapp
 Repository setup is opt-in. A connected repository is not necessarily ready: inspect the
 build's phase and counts. Do not start duplicate builds while a sync is active.
 
+By default, sync targets the requested worktree; `--all-worktrees` explicitly includes the
+others. The admission estimate covers all scheduled work, while live progress describes
+the current pass. An unknown overall ETA remains unknown. Keep the operation ID printed
+at startup: `lai localai sync cancel --root C:\work\myapp --operation <GUID>` cancels
+that exact operation. A client timeout does not establish that the backend has stopped.
+
 ## 3 · Keep the right context
 
 After saved edits, a merge or a branch change, refresh the working tree before searching it.
