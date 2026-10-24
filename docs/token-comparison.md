@@ -40,6 +40,10 @@ the agent cannot establish what context was already present. Files are not credi
 because their paths were supplied; an explicit task-input comparison basis is required.
 Retrieval alone cannot establish how much a cloud agent would need to read.
 
+Custom log-triage questions use an unknown task-context baseline
+(`log_question_context_unknown`) while preserving the caller's `sourceContext`.
+Default full-log triage retains its declared whole-source baseline.
+
 ## Practical decisions
 
 1. Delegate first reading of an unread, bounded task; send paths rather than copied files.

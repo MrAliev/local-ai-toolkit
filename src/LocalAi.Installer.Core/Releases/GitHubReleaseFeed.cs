@@ -159,34 +159,45 @@ public sealed class GitHubReleaseFeed(
         ArgumentException.ThrowIfNullOrWhiteSpace(workingDirectory);
 
         Directory.CreateDirectory(workingDirectory);
-        await DownloadAssetAsync(
-                tag, ManifestAsset, workingDirectory, DocumentTimeout, cancellationToken)
-            .ConfigureAwait(false);
-        await DownloadAssetAsync(
-                tag, SignatureAsset, workingDirectory, DocumentTimeout, cancellationToken)
-            .ConfigureAwait(false);
-
-        var manifestJson = await ReadAsync(workingDirectory, ManifestAsset, tag)
-            .ConfigureAwait(false);
-        var signature = await ReadAsync(workingDirectory, SignatureAsset, tag)
-            .ConfigureAwait(false);
-
+        // Separate requests (including different feed instances) may share caller storage.
+        // Their metadata must remain paired even when downloads complete out of order.
+        var metadataDirectory = Path.Combine(workingDirectory, ".localai-release-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(metadataDirectory);
         try
         {
-            using var verifier = ReleaseTrustAnchor.CreateManifestVerifier();
-            return new ResolvedRelease(
-                verifier.Verify(manifestJson, signature),
-                manifestJson,
-                signature);
-        }
-        catch (ReleaseVerificationException exception)
-        {
-            throw new ReleaseResolutionException(
-                $"The manifest for release '{tag}' failed verification and will not be used.",
-                exception,
-                ReleaseRefusal.Rejected(
+            await DownloadAssetAsync(
+                    tag, ManifestAsset, metadataDirectory, DocumentTimeout, cancellationToken)
+                .ConfigureAwait(false);
+            await DownloadAssetAsync(
+                    tag, SignatureAsset, metadataDirectory, DocumentTimeout, cancellationToken)
+                .ConfigureAwait(false);
+
+            var manifestJson = await ReadAsync(metadataDirectory, ManifestAsset, tag)
+                .ConfigureAwait(false);
+            var signature = await ReadAsync(metadataDirectory, SignatureAsset, tag)
+                .ConfigureAwait(false);
+
+            try
+            {
+                using var verifier = ReleaseTrustAnchor.CreateManifestVerifier();
+                return new ResolvedRelease(
+                    verifier.Verify(manifestJson, signature),
+                    manifestJson,
+                    signature);
+            }
+            catch (ReleaseVerificationException exception)
+            {
+                throw new ReleaseResolutionException(
+                    $"The manifest for release '{tag}' failed verification and will not be used.",
                     exception,
-                    new(ReleaseRefusalKind.ManifestRejectedOnGitHub, Release: tag)));
+                    ReleaseRefusal.Rejected(
+                        exception,
+                        new(ReleaseRefusalKind.ManifestRejectedOnGitHub, Release: tag)));
+            }
+        }
+        finally
+        {
+            DeleteMetadataDirectory(metadataDirectory);
         }
     }
 
@@ -584,6 +595,21 @@ public sealed class GitHubReleaseFeed(
             "and that the release exists. " +
             $"Primary: {primaryDetail} Fallback: {fallbackDetail}",
             inner);
+
+    private static void DeleteMetadataDirectory(string directory)
+    {
+        foreach (var asset in new[] { ManifestAsset, SignatureAsset })
+        {
+            try { File.Delete(Path.Combine(directory, asset)); }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
+
+        // Never recursively remove caller storage or unexpected contents.
+        try { Directory.Delete(directory); }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+    }
 
     private static void DeleteIfExists(string path)
     {

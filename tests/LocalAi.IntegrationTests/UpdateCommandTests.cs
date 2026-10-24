@@ -146,7 +146,7 @@ public sealed class UpdateCommandTests : IDisposable
     public async Task Cancelling_the_wait_leaves_no_working_directory_behind()
     {
         Queue(1);
-        var before = TemporaryUpdateDirectories();
+        var feed = new StubFeed("v0.1.51", "0.1.51", Directory51);
         using var cancellation = new CancellationTokenSource();
 
         var run = UpdateCommand.ExecuteAsync(
@@ -154,13 +154,16 @@ public sealed class UpdateCommandTests : IDisposable
             root,
             output,
             error,
-            new StubFeed("v0.1.51", "0.1.51", Directory51),
+            feed,
             processRunner: null,
             cancellation.Token);
+        // TEMP is shared with other test processes; observe this operation's directory.
+        var working = Assert.IsType<string>(feed.ResolvedWorkingDirectory);
+        Assert.True(Directory.Exists(working));
         await cancellation.CancelAsync();
         await Record.ExceptionAsync(() => run);
 
-        Assert.Equal(before, TemporaryUpdateDirectories());
+        Assert.False(Directory.Exists(working));
     }
 
     /// <summary>
@@ -193,9 +196,6 @@ public sealed class UpdateCommandTests : IDisposable
     }
 
     /// <summary>Every working directory this command could have left in the temp root.</summary>
-    private static string[] TemporaryUpdateDirectories() =>
-        Directory.GetDirectories(Path.GetTempPath(), "localai-update-*");
-
     [Fact]
     public async Task An_unknown_option_changes_nothing()
     {
@@ -315,6 +315,8 @@ public sealed class UpdateCommandTests : IDisposable
     private sealed class StubFeed(string tag, string version, string versionDirectory)
         : IReleaseFeed
     {
+        public string? ResolvedWorkingDirectory { get; private set; }
+
         public Action? OnResolve { get; init; }
 
         public Action? OnDownload { get; init; }
@@ -329,6 +331,7 @@ public sealed class UpdateCommandTests : IDisposable
             string workingDirectory,
             CancellationToken cancellationToken = default)
         {
+            ResolvedWorkingDirectory = workingDirectory;
             OnResolve?.Invoke();
             var manifest = new ReleaseManifest(
                 1,

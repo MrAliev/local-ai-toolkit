@@ -64,7 +64,7 @@ public sealed partial class DurableQueue : ISelectableBrokerQueue
     {
         cancellationToken.ThrowIfCancellationRequested();
         using var mutex = EnterMutex(cancellationToken, checkAdmission: true);
-        ThrowIfAdmissionPaused();
+        ThrowIfAdmissionPaused(cancellationToken);
         MaintainActiveRoot(cancellationToken);
         RecoverExpiredLeases(_timeProvider.GetUtcNow());
         return Task.FromResult(ReadEntries().Count(entry =>
@@ -79,7 +79,7 @@ public sealed partial class DurableQueue : ISelectableBrokerQueue
         cancellationToken.ThrowIfCancellationRequested();
 
         using var mutex = EnterMutex(cancellationToken, checkAdmission: true);
-        ThrowIfAdmissionPaused();
+        ThrowIfAdmissionPaused(cancellationToken);
         MaintainActiveRoot(cancellationToken);
         foreach (var entry in ReadEntries())
         {
@@ -1205,7 +1205,7 @@ public sealed partial class DurableQueue : ISelectableBrokerQueue
                 {
                     // The updater may close admission between a caller's first check
                     // and this mutex acquisition. Recheck while waiting as well.
-                    ThrowIfAdmissionPaused();
+                    ThrowIfAdmissionPaused(cancellationToken);
                 }
                 try
                 {

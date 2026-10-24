@@ -2,6 +2,7 @@ using System.Globalization;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
+using System.Text.Json;
 using CodeSearch.Core.Chunking;
 using CodeSearch.Core.Embedding;
 using CodeSearch.Core.Indexing;
@@ -10,6 +11,7 @@ using CodeSearch.Core.Search;
 using CodeSearch.Mcp.Resources;
 using CodeSearch.Core.Semantics;
 using LocalAi.Contracts;
+using LocalAi.Contracts.Localization;
 using LocalAi.Repository;
 using ModelContextProtocol.Server;
 
@@ -1052,6 +1054,12 @@ public static class CodeSearchTools
         the refusal names that build instead, because a second sync would exit 75 sync_busy.
         Relay whichever it gives you; the refusal is a decision, not a transient failure, so
         calling again straight away changes nothing.
+        Progress names the originating operation and requested root, current worktree and
+        pass. Chunk rates and estimates belong to the current pass; whole-run totals and ETA
+        remain UNKNOWN until known. A timed-out wait does not prove backend completion.
+        Use the operation ID reported by progress with
+        localai sync cancel --root <requested-root> --operation <operation-id>
+        to cancel only that sync; shared services and other operations are not stopped.
         """)]
     public static async Task<string> IndexRefresh(
         SearchService service,
@@ -1095,7 +1103,24 @@ public static class CodeSearchTools
 
         UsageCall.Current?.UnknownInference();
         var start = SyncStartInfo(executable, root, InlineRefreshFileLimit);
-        var (exitCode, output, error) = await run(start, cancellationToken);
+        var operationId = Guid.NewGuid();
+        start.ArgumentList.Add("--operation");
+        start.ArgumentList.Add(operationId.ToString("D"));
+        (int exitCode, string output, string error) result;
+        try
+        {
+            result = await run(start, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // A client timeout does not prove that the shared broker has finished its job.
+            return $"SYNC_WAIT_CANCELLED operation={operationId:D} backend_completion=UNKNOWN\n" +
+                OutputCulture.Pick("Observe: ", "Наблюдение: ") +
+                $"localai repo status --root {JsonSerializer.Serialize(root)} --follow\n" +
+                OutputCulture.Pick("Cancel this sync: ", "Отмена этой синхронизации: ") +
+                $"localai sync cancel --root {JsonSerializer.Serialize(root)} --operation {operationId:D}";
+        }
+        var (exitCode, output, error) = result;
         if (exitCode == TryAgainLaterExitCode && notice.WhileRunning(root) is { } won)
         {
             return BuildRunningRefusal(root, won);
@@ -1147,7 +1172,27 @@ public static class CodeSearchTools
         }
         catch (OperationCanceledException)
         {
-            TryKill(process);
+            // Ask the exact originating operation to cancel cooperatively before terminating
+            // this child. Killing the CLI alone cannot cancel work already sent to the broker.
+            var idIndex = start.ArgumentList.IndexOf("--operation");
+            var rootIndex = start.ArgumentList.IndexOf("--root");
+            if (idIndex >= 0 && idIndex + 1 < start.ArgumentList.Count &&
+                rootIndex >= 0 && rootIndex + 1 < start.ArgumentList.Count &&
+                Guid.TryParse(start.ArgumentList[idIndex + 1], out var operationId))
+            {
+                try
+                {
+                    var identity = RuntimeIndexLayout.Inspect(start.ArgumentList[rootIndex + 1]);
+                    new RepositorySyncOperationStore(identity.RepositoryRuntimeRoot).RequestCancellation(operationId);
+                }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
+                {
+                    // The reported state remains UNKNOWN when cancellation could not be delivered.
+                }
+            }
+            using var grace = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            try { await process.WaitForExitAsync(grace.Token); }
+            catch (OperationCanceledException) { TryKill(process); }
             await Task.WhenAll(stdout, stderr).ConfigureAwait(false);
             throw;
         }

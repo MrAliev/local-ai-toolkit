@@ -15,6 +15,8 @@ public sealed class CliHelpTests
     [InlineData("en", "-h", "localai sync")]
     [InlineData("en", "sync --help", "--all-worktrees")]
     [InlineData("ru", "sync --help", "--all-worktrees")]
+    [InlineData("en", "sync cancel --help", "localai sync cancel --root dir --operation operation-id")]
+    [InlineData("ru", "sync cancel --help", "localai sync cancel --root dir --operation operation-id")]
     [InlineData("en", "docs prune --help", "--dry-run | --apply")]
     [InlineData("ru", "docs pin --help", "--package")]
     [InlineData("en", "docs unpin --help", "--package")]
@@ -53,6 +55,36 @@ public sealed class CliHelpTests
 
         Assert.Equal(0, result.Exit);
         Assert.Contains(expected, result.Output);
+    }
+
+    [Theory]
+    [InlineData("en", "Usage:")]
+    [InlineData("ru", "Использование:")]
+    public async Task Sync_cancel_help_with_an_operation_id_never_requests_cancellation(string language, string expected)
+    {
+        using var outside = new TemporaryDirectory("cli-sync-cancel-help-outside-git");
+        var result = await Run(language,
+            "sync cancel --root . --operation 11111111-1111-1111-1111-111111111111 --help", outside.Path);
+
+        Assert.Equal(0, result.Exit);
+        Assert.Contains(expected, result.Output);
+        Assert.Contains("localai sync cancel --root dir --operation operation-id", result.Output);
+        Assert.DoesNotContain("SYNC_CANCEL_", result.Output);
+    }
+
+    [Theory]
+    [InlineData("en", "sync cancel", "Usage: localai sync cancel")]
+    [InlineData("ru", "sync cancel", "Использование: localai sync cancel")]
+    [InlineData("en", "sync --operation invalid", "--operation requires a nonempty GUID.")]
+    [InlineData("ru", "sync --operation invalid", "для --operation требуется непустой идентификатор GUID.")]
+    public async Task Invalid_sync_operation_arguments_have_localized_diagnostics(string language, string arguments, string expected)
+    {
+        using var outside = new TemporaryDirectory("cli-sync-cancel-invalid-outside-git");
+        var result = await Run(language, arguments, outside.Path);
+
+        Assert.Equal(64, result.Exit);
+        Assert.Contains(expected, result.Error);
+        Assert.DoesNotContain("SYNC_CANCEL_REQUESTED", result.Output);
     }
 
     private static async Task<(int Exit, string Output, string Error)> Run(

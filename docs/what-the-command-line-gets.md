@@ -51,8 +51,9 @@ the requested tree can use the new generation, separately from the final sync du
 Other worktrees continue using the previous generation until their overlays are ready.
 With `--all-worktrees`, maintenance continues in the same sync process; do not start
 another sync while it runs.
+Admission uses one upper-bound estimate for the base and all selected worktree passes.
 An interrupted run keeps completed worktrees usable and can be restarted. An MCP wait
-timeout alone does not prove that the sync failed: observe `localai repo status --follow`.
+timeout leaves the backend state unknown: observe `localai repo status --follow`.
 
 `codesearch evaluate --cases …` resolves C# symbol targets to their source declarations
 before querying. Split chunks such as `[1/6]` and `[2/6]` belong to a single target. Use the
