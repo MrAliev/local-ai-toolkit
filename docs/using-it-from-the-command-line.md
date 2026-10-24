@@ -252,12 +252,20 @@ the model; repeated source lines are not deduplicated. MSBuild summary totals ar
 separately. The report includes a source hash and original line numbers with bounded diagnostic
 and summary samples. Sample limits do not reduce counts; lines exceeding the parser limit
 explicitly mark the counts as potentially incomplete. Model-reported diagnostic counts are
-checked against the source. Incorrect counts, omitted errors or invented codes reject the model
-diagnosis and produce the deterministic source report. No recognized diagnostics does not mean
+checked against the source. Incorrect counts, omitted errors or invented codes reject the model's
+diagnostic inventory and produce the deterministic source report. No recognized diagnostics does not mean
 that the build succeeded.
 
-For compiler diagnostic triage, fragments and reductions request a JSON inventory rather
-than a prose diagnosis.
+For a custom question, compiler map/reduce prompts request an envelope with `inventory`
+and `requestedAnswer`. Default triage without a custom question retains the original
+three-field inventory object without an outer envelope.
+The strict three-field contract, source reconciliation, repair and deterministic rendering
+apply only to the nested `inventory`; source verification remains required.
+The requested answer is displayed separately, labelled model-generated and not verified as
+compiler evidence. An inventory validation pass does not verify that answer. A missing or
+invalid answer is explicitly marked unavailable. Repair fixes only `inventory` without
+replacing `requestedAnswer`.
+
 One enclosing JSON code fence may be removed, followed by the same source reconciliation.
 A malformed inventory can receive at most one bounded format retry through the broker, using
 compact source counts and the already accepted model/context. Incorrect semantic counts are
