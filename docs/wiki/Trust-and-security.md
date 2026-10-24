@@ -6,8 +6,8 @@
 | --- | --- |
 | Local inference | The broker uses the configured backend; a caller may forward returned data |
 | Package integrity | ECDSA-signed manifest and package hashes |
-| Release-asset attestation | Records published bytes; not automatically source-build provenance |
-| Windows publisher identity | SignPath onboarding planned; no certificate is claimed here |
+| Release-asset attestation | Records published bytes; does not by itself prove a build from the declared source |
+| Windows publisher identity | SignPath onboarding remains planned in [#210](https://github.com/MrAliev/local-ai-toolkit/issues/210); no publisher certificate is confirmed here |
 
 ```mermaid
 ---
