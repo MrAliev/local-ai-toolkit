@@ -1,6 +1,7 @@
 using System.Globalization;
 using CodeSearch.Mcp.Resources;
 using LocalAi.Contracts;
+using LocalAi.Repository;
 
 namespace CodeSearch.Mcp;
 
@@ -33,7 +34,8 @@ public enum SyncNoticeAudience
 public sealed record SyncSighting(
     string RepositoryId,
     bool BuildHoldsTheGate,
-    RepositoryIndexProgress? Progress)
+    RepositoryIndexProgress? Progress,
+    RepositorySyncOperation? Operation = null)
 {
     /// <summary>
     /// A recorded phase past which nothing more will be written. Not a claim that the process is
@@ -189,7 +191,8 @@ public sealed class SyncNotice(Func<string?, SyncSighting?> look)
                 ToldWhereAnswersComeFrom =
                     said.ToldWhereAnswersComeFrom || audience is SyncNoticeAudience.Answer,
             };
-            return line + explain + Separator(separated);
+            return line + (sighting.Operation is { } operation ? operation.Describe() + "\n" : string.Empty)
+                + explain + Separator(separated);
         }
     }
 

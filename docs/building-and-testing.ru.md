@@ -6,7 +6,8 @@
 dotnet test LocalAi.slnx --configuration Release --max-parallel-test-modules 1 --timeout 20m
 ```
 
-Это ответ перед pull request. Пока идёт работа, быстрее гонять один тестовый проект:
+Для проверки перед pull request используйте команду выше. Во время разработки быстрее
+запускать отдельный тестовый проект:
 `dotnet test tests/<name>/<name>.csproj --configuration Release`.
 
 Тест никогда не проверяет, насколько быстра машина: ждать надо наступления условия, а не

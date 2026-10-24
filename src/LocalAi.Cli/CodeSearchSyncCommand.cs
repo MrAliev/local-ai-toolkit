@@ -96,7 +96,8 @@ public static class CodeSearchSyncCommand
         bool requireSemantics = false,
         int? refuseInlineOverFiles = null,
         IEmbeddingClient? embedder = null,
-        bool allWorktrees = false)
+        bool allWorktrees = false,
+        Guid? operationId = null)
     {
         // Before the gate, so the figure is what the caller waited rather than what the work
         // took: a run that spent four minutes queued behind another one waited four minutes.
@@ -119,12 +120,19 @@ public static class CodeSearchSyncCommand
             SyncGateWaitBudget,
             cancellationToken)
             ?? throw new RepositorySyncBusyException(requested.RepositoryId);
+        using var operation = new SyncOperationScope(requested.RepositoryRuntimeRoot, requested.RepositoryId,
+            requested.WorkingRoot.Value, operationId, cancellationToken);
+        cancellationToken = operation.Token;
         var progressStore = new RepositoryIndexProgressStore(
             requested.RepositoryRuntimeRoot);
         var manifestStore = new RepositoryManifestStore(
             requested.RepositoryRuntimeRoot);
         error = TextWriter.Synchronized(error);
-        using var reporter = new SyncProgressReporter(progressStore.Save, error);
+        using var reporter = new SyncProgressReporter(progress =>
+        {
+            progressStore.Save(progress);
+            operation.Report(progress);
+        }, error, operation: operation.Describe);
         var lastProgress = new RepositoryIndexProgress(
             requested.RepositoryId,
             RepositoryIndexProgressPhase.Planning,
@@ -141,40 +149,6 @@ public static class CodeSearchSyncCommand
         reporter.Report(lastProgress);
         // Every embedding record this run writes, where a follow loop sees one an interval (#774).
         var embedded = EmbeddedChunks.None;
-
-        // Before the lease does any work, and long before the semantic phase: this is the only
-        // point where declining is free. Scanning and hashing the tree costs seconds and needs
-        // no model; everything after it — Roslyn loading the solution, the SCIP adapters, the
-        // embedding — is what a bounded caller cannot afford to have started.
-        //
-        // Counted in files because chunk counts do not exist yet: C# is cut on the definitions
-        // the semantic phase produces, so asking for them here would mean paying for it.
-        if (refuseInlineOverFiles is { } fileLimit)
-        {
-            var currentBase = new GenerationStore(requested.RepositoryRuntimeRoot).ReadCurrent();
-            var changedFiles = IndexBuilder.CountChangedFiles(
-                requested.WorkingRoot.Value,
-                currentBase is null
-                    ? null
-                    : new GenerationStore(requested.RepositoryRuntimeRoot)
-                        .IndexPath(currentBase.GenerationId));
-            if (changedFiles > fileLimit)
-            {
-                // Planning wrote a record before the count was known. Nothing ran, so nothing is
-                // owed a progress line: left behind, it reads to every later caller as a build
-                // that stopped part-way, and the installed instructions tell an agent to relay
-                // that as a build needing to be started again.
-                progressStore.Clear();
-                return new CodeSearchSyncResult(
-                    requested.RepositoryId,
-                    string.Empty,
-                    string.Empty,
-                    0,
-                    false,
-                    0,
-                    changedFiles);
-            }
-        }
 
         void ReportProgress(
             RepositoryIndexProgressPhase phase,
@@ -263,6 +237,76 @@ public static class CodeSearchSyncCommand
                 CurrentNormalizationVersion,
                 1,
                 CurrentSemanticGenerationVersion);
+            var store = new GenerationStore(requested.RepositoryRuntimeRoot);
+            var current = store.ReadCurrent();
+            var requestedCurrent = WorktreeGenerationPublications.ReadCurrent(requested);
+            var reusableCurrent = !includeOverlays || allWorktrees ? current : requestedCurrent ?? current;
+            var generationChanged = !string.Equals(
+                reusableCurrent?.GenerationId,
+                generationIdentity.Id,
+                StringComparison.Ordinal);
+
+            var generation = TryReadManifest(store, generationIdentity.Id);
+            // Replacing the shared base must not turn one worktree's refresh into maintenance
+            // of every linked tree. Other trees can refresh against the new base on demand.
+            var targets = includeOverlays
+                ? allWorktrees
+                    ? worktrees
+                    : worktrees.Where(
+                        item => FsPath.From(item.Path) == requested.WorkingRoot).ToArray()
+                : [];
+            var overlaysBuilt = 0;
+            var present = SelectPresentWorktrees(
+                targets.Where(item => !item.IsPrunable),
+                path => error.WriteLine(CliText.WorktreeGone(path)));
+            var worktreesSkipped = present.Skipped;
+            var orderedWorktrees = present.Worktrees.OrderBy(item =>
+                FsPath.From(item.Path) == requested.WorkingRoot ? 0 : 1).ToArray();
+            error.WriteLine($"SYNC_PLAN requested={JsonSerializer.Serialize(requested.WorkingRoot.Value)} " +
+                $"generation={generationIdentity.Id} pending={JsonSerializer.Serialize(orderedWorktrees.Select(item => item.Path))} " +
+                $"scope={(!includeOverlays ? "base-only" : allWorktrees ? "all-worktrees" : "requested-worktree")} worktrees={orderedWorktrees.Length}");
+            operation.Pass(1, orderedWorktrees.Length + 1, 0);
+            ReportPhase(RepositoryIndexProgressPhase.Planning, mainline.Identity.WorkingRoot.Value);
+            if (refuseInlineOverFiles is { } fileLimit)
+            {
+                // A conservative whole-operation budget, counted per pass. Semantics may load
+                // a whole tree even when its content delta is empty. A new base is read from
+                // the same committed snapshot as the build, never the requested dirty tree.
+                long plannedFiles = 0;
+                if (generation is null)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    using var snapshot = CommitSnapshot.Create(mainline.Identity.WorkingRoot.Value,
+                        mainline.Identity.HeadCommit);
+                    plannedFiles += IndexBuilder.CountChangedFiles(snapshot.Root, null);
+                }
+                foreach (var tree in orderedWorktrees)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var identity = RuntimeIndexLayout.Inspect(tree.Path, runtimeRoot);
+                    if (identity.HeadTree == generationIdentity.DevTree && identity.DirtyHash is null)
+                        continue;
+                    var semanticCurrent = generation is not null && IsCurrentSemanticOverlay(
+                        RuntimeIndexLayout.SemanticOverlayPath(identity, generationIdentity.Id), identity, generationIdentity);
+                    var corpusPresent = File.Exists(RuntimeIndexLayout.OverlayPath(identity, generationIdentity.Id));
+                    if (!semanticCurrent)
+                        plannedFiles += IndexBuilder.CountChangedFiles(tree.Path, null);
+                    else if (!corpusPresent)
+                        plannedFiles += IndexBuilder.CountChangedFiles(tree.Path, store.IndexPath(generationIdentity.Id));
+                }
+                var upperBound = (int)Math.Min(int.MaxValue, plannedFiles);
+                error.WriteLine($"SYNC_ADMISSION estimate=upper-bound files={upperBound} limit={fileLimit} " +
+                    $"scope={(!includeOverlays ? "base-only" : allWorktrees ? "all-worktrees" : "requested-worktree")} " +
+                    $"base_pass={(generation is null ? 1 : 0)} worktree_passes={orderedWorktrees.Length}");
+                if (plannedFiles > fileLimit)
+                {
+                    reporter.Dispose();
+                    progressStore.Clear();
+                    operation.Refused();
+                    return new CodeSearchSyncResult(requested.RepositoryId, string.Empty, string.Empty,
+                        0, false, 0, upperBound);
+                }
+            }
             var commonDirectory = RepositoryIdentity.FromCommonDirectory(
                 RepoLocator.GitOutputOrThrow(
                     requested.WorkingRoot.Value,
@@ -285,16 +329,6 @@ public static class CodeSearchSyncCommand
                     .Select(item => new RepositoryWorktree(item.Path, item.Head, item.Branch))
                     .ToArray(),
                 DateTimeOffset.UtcNow));
-            var store = new GenerationStore(requested.RepositoryRuntimeRoot);
-            var current = store.ReadCurrent();
-            var requestedCurrent = WorktreeGenerationPublications.ReadCurrent(requested);
-            var reusableCurrent = !includeOverlays || allWorktrees ? current : requestedCurrent ?? current;
-            var generationChanged = !string.Equals(
-                reusableCurrent?.GenerationId,
-                generationIdentity.Id,
-                StringComparison.Ordinal);
-
-            var generation = TryReadManifest(store, generationIdentity.Id);
             error.WriteLine($"SYNC_BASE generation={generationIdentity.Id} action={(generation is null ? "build" : "reuse")}");
             if (generation is null)
             {
@@ -328,24 +362,6 @@ public static class CodeSearchSyncCommand
                     cancellationToken);
             }
 
-            // Replacing the shared base must not turn one worktree's refresh into maintenance
-            // of every linked tree. Other trees can refresh against the new base on demand.
-            var targets = includeOverlays
-                ? allWorktrees
-                    ? worktrees
-                    : worktrees.Where(
-                        item => FsPath.From(item.Path) == requested.WorkingRoot).ToArray()
-                : [];
-            var overlaysBuilt = 0;
-            var present = SelectPresentWorktrees(
-                targets.Where(item => !item.IsPrunable),
-                path => error.WriteLine(CliText.WorktreeGone(path)));
-            var worktreesSkipped = present.Skipped;
-            var orderedWorktrees = present.Worktrees.OrderBy(item =>
-                FsPath.From(item.Path) == requested.WorkingRoot ? 0 : 1).ToArray();
-            error.WriteLine($"SYNC_PLAN requested={JsonSerializer.Serialize(requested.WorkingRoot.Value)} " +
-                $"generation={generation.Identity.Id} pending={JsonSerializer.Serialize(orderedWorktrees.Select(item => item.Path))} " +
-                $"scope={(!includeOverlays ? "base-only" : allWorktrees ? "all-worktrees" : "requested-worktree")} worktrees={orderedWorktrees.Length}");
             var activeReady = false;
             var maintenanceIncomplete = false;
             void PublishReady(WorkingIndexIdentity identity)
@@ -387,8 +403,12 @@ public static class CodeSearchSyncCommand
                             $"generation={generation.Identity.Id} seconds={Seconds(elapsed)} maintenance=pending");
                 }
             }
+            var completedPasses = 1;
             foreach (var worktree in orderedWorktrees)
             {
+                operation.Pass(completedPasses + 1, orderedWorktrees.Length + 1, completedPasses);
+                completedPasses++;
+                ReportPhase(RepositoryIndexProgressPhase.Planning, worktree.Path);
                 cancellationToken.ThrowIfCancellationRequested();
                 WorkingIndexIdentity identity;
                 try
@@ -635,6 +655,7 @@ public static class CodeSearchSyncCommand
                 throw new InvalidOperationException("active_worktree_not_ready: the previous repository generation was preserved.");
             if (maintenanceIncomplete)
                 throw new InvalidOperationException("worktree_changed: maintenance is incomplete; the previous repository generation was preserved.");
+            operation.Pass(orderedWorktrees.Length + 1, orderedWorktrees.Length + 1, completedPasses);
             ReportStep(
                 RepositoryIndexProgressPhase.Publishing,
                 requested.WorkingRoot.Value,
