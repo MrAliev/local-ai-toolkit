@@ -25,9 +25,21 @@ public sealed class UsageCall : IDisposable
     private string? cacheReason = "no_result_cache";
     private bool pendingInference;
     private UsageReport? completed;
+    private Func<UsageReport, string>? cliResponse;
     public static UsageCall? Current => Ambient.Value;
     public Guid CallId => initial.Identity.CallId;
     public RuntimeCloudComparison Comparison { get; } = new();
+    public Func<UsageReport, string>? CliResponse { get { lock (gate) return cliResponse; } }
+
+    /// <summary>Defer only the final CLI result, so its usage fields and notice can be sized together.
+    /// The renderer must be pure; progress continues through the ordinary writers.</summary>
+    public void DeferCliResponse(Func<UsageReport, string> render) => Change(() =>
+    {
+        ArgumentNullException.ThrowIfNull(render);
+        if (initial.Identity.Surface != UsageSurface.Cli || cliResponse is not null)
+            throw new InvalidOperationException("A CLI call can defer exactly one final response.");
+        cliResponse = render;
+    });
 
     public UsageCall(UsageSurface surface, string component, string operation, Guid? callId = null)
     {

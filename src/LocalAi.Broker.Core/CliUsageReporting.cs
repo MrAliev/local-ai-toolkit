@@ -52,19 +52,23 @@ public static class CliUsageReporting
         await UsageEvidence.CollectAsync(call);
         var scenario = call.Comparison.Scenario(JsonSerializer.Serialize(arguments));
         var initial = call.Complete();
-        var beforeNotice = stdout.Captured is { } capturedOut && stderr.Captured is { } capturedError
-            ? capturedOut + capturedError : null;
-        var report = beforeNotice is null
-            ? RuntimeCloudComparison.MarkConditional(CloudTokenMethodology.Apply(initial, scenario, null, call.Comparison.Profile))
-            : UsagePayload.Finalize(initial,
-                value => beforeNotice + (legacyModelProtocol ? string.Empty : UsageNotice.Render(value) + stderr.NewLine),
-                value => value, scenario, call.Comparison.Profile).Report;
+        var response = call.CliResponse;
+        var capturedOut = stdout.Captured;
+        var capturedError = stderr.Captured;
+        var final = UsagePayload.Finalize(initial,
+            value => (Response: response?.Invoke(value) ?? string.Empty,
+                Notice: legacyModelProtocol ? string.Empty : UsageNotice.Render(value) + stderr.NewLine),
+            value => (capturedOut ?? string.Empty) + value.Response + (capturedError ?? string.Empty) + value.Notice,
+            scenario, call.Comparison.Profile,
+            value => capturedOut is null || capturedError is null ? null
+                : capturedOut + value.Response + capturedError + value.Notice);
+        var report = final.Report;
         try
         {
             // The installer's version-one model protocol treats extra stderr as corruption.
             // Its canonical report remains available in the usage store by call ID.
-            if (!legacyModelProtocol)
-                stderr.WriteLine(UsageNotice.Render(report));
+            if (response is not null) stdout.Write(final.Value.Response);
+            if (!legacyModelProtocol) stderr.Write(final.Value.Notice);
             stdout.Flush(); stderr.Flush();
             var volumes = report.Volumes.ToDictionary();
             volumes[UsageVolume.ResponseBytes] = UsageValue.Measured(checked(stdout.Bytes + stderr.Bytes));

@@ -9,6 +9,11 @@ public sealed record UsagePayload<T>(UsageReport Report, T Value);
 /// </summary>
 public static class UsagePayload
 {
+    /// <summary>Compatibility projection for nullable 32-bit CLI estimate fields. No legacy fallback.</summary>
+    public static int? LegacySavedTokensEstimate(UsageReport? report) =>
+        report?.ContextEstimate?.SavedTokens is { Status: UsageValueStatus.Estimated or UsageValueStatus.Measured,
+            Value: >= int.MinValue and <= int.MaxValue } saved ? (int)saved.Value.Value : null;
+
     public static UsagePayload<T> Finalize<T>(UsageReport report, Func<UsageReport, T> render, Func<T, string> serialize,
         CloudTokenScenario? scenario = null, ICloudTokenProfile? profile = null, Func<T, string?>? modelVisibleResponse = null)
     {
@@ -22,7 +27,8 @@ public static class UsagePayload
                 CloudTokenMethodology.Apply(report, scenario, serialized, profile, visible));
             if (measured.Volumes[UsageVolume.ResponseBytes] == report.Volumes[UsageVolume.ResponseBytes]
                 && measured.Volumes[UsageVolume.ResponseCharacters] == report.Volumes[UsageVolume.ResponseCharacters]
-                && measured.CloudTokens.All(pair => pair.Value == report.CloudTokens[pair.Key]))
+                && measured.CloudTokens.All(pair => pair.Value == report.CloudTokens[pair.Key])
+                && measured.ContextEstimate == report.ContextEstimate)
                 return new(report, payload);
             report = measured;
         }
@@ -32,7 +38,12 @@ public static class UsagePayload
         var tokens = report.CloudTokens.ToDictionary();
         tokens[UsageCloudTokens.InputWithDelegation] = UsageValue.Unknown("response_size_unstable");
         tokens[UsageCloudTokens.InputSaved] = UsageValue.Unknown("response_size_unstable");
-        report = report with { Volumes = volumes, CloudTokens = tokens };
+        report = report with { Volumes = volumes, CloudTokens = tokens,
+            ContextEstimate = report.ContextEstimate is { } estimate ? estimate with
+            {
+                ReturnedTokens = UsageValue.Unknown("response_size_unstable"),
+                SavedTokens = UsageValue.Unknown("response_size_unstable")
+            } : null };
         return new(report, render(report));
     }
 }

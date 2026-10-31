@@ -27,4 +27,6 @@
   <data name="UsageSavingsNotApplicable" xml:space="preserve"><value>Для этой операции экономия токенов неприменима.</value></data>
   <data name="UsageRequiredContextUnknown" xml:space="preserve"><value>Запрос и ответ: примерно {0} токенов входного контекста. Экономия неизвестна: необходимый исходный контекст не установлен.</value></data>
   <data name="UsageRequestContextScenario" xml:space="preserve"><value>По сравнению с указанным контекстом задачи в {0}; без зачёта предполагаемой облачной генерации. Это не расход аккаунта.</value></data>
+<data name="UsageContextFormula" xml:space="preserve"><value>Вход ≈{0}, возвращено ≈{1} токенов.</value></data>
+<data name="UsageContextCounterfactual" xml:space="preserve"><value>Расчёт: полный вход операции минус возвращённый облачному агенту контекст; условная оценка, не расход аккаунта.</value></data>
 </root>
