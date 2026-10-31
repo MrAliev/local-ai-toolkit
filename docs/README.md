@@ -31,6 +31,7 @@ if you would rather work on your own.
 - [What the command line gets](what-the-command-line-gets.md)
 - [Code search is not text search](code-search-is-not-text-search.md)
 - [With a cloud agent: what stops costing tokens](with-a-cloud-agent-what-stops-costing-tokens.md)
+  - [Per-operation context estimate](with-a-cloud-agent-what-stops-costing-tokens.md#per-operation-context-estimate)
   - [It works by default, and you can see it](with-a-cloud-agent-what-stops-costing-tokens.md#it-works-by-default-and-you-can-see-it)
   - [If something does not work the way you want](with-a-cloud-agent-what-stops-costing-tokens.md#if-something-does-not-work-the-way-you-want)
 - [From the command line: not tokens, but time](from-the-command-line-not-tokens-but-time.md)

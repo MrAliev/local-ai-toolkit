@@ -30,6 +30,7 @@
 - [Что доступно из командной строки](what-the-command-line-gets.ru.md)
 - [Поиск по коду — не текстовый поиск](code-search-is-not-text-search.ru.md)
 - [С облачным агентом: на что теперь не тратятся токены](with-a-cloud-agent-what-stops-costing-tokens.ru.md)
+  - [Оценка контекста одной операции](with-a-cloud-agent-what-stops-costing-tokens.ru.md#оценка-контекста-одной-операции)
   - [Это работает по умолчанию, и Вы это видите](with-a-cloud-agent-what-stops-costing-tokens.ru.md#это-работает-по-умолчанию-и-вы-это-видите)
   - [Если что-то работает не так, как Вам нужно](with-a-cloud-agent-what-stops-costing-tokens.ru.md#если-что-то-работает-не-так-как-вам-нужно)
 - [Из консоли: не про токены, а про время](from-the-command-line-not-tokens-but-time.ru.md)

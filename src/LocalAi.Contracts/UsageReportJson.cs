@@ -36,7 +36,10 @@ public static class UsageReportJson
     private static void Validate(UsageReport? report)
     {
         Require(report is not null, "report_required");
-        Require(report!.SchemaVersion == UsageReport.CurrentSchemaVersion, "unsupported_usage_schema");
+        Require(report!.SchemaVersion is UsageReport.CurrentSchemaVersion or UsageReport.ContextEstimateSchemaVersion,
+            "unsupported_usage_schema");
+        Require((report.ContextEstimate is not null) == (report.SchemaVersion == UsageReport.ContextEstimateSchemaVersion),
+            "context_estimate_schema_required");
         Named(report.MethodologyVersion, "methodology_required");
         var identity = report.Identity;
         Require(identity is not null, "identity_required");
@@ -101,6 +104,24 @@ public static class UsageReportJson
         }
         Difference(report.CloudTokens, UsageCloudTokens.InputWithoutDelegation, UsageCloudTokens.InputWithDelegation, UsageCloudTokens.InputSaved);
         Difference(report.CloudTokens, UsageCloudTokens.OutputWithoutDelegation, UsageCloudTokens.OutputWithDelegation, UsageCloudTokens.OutputSaved);
+        if (report.ContextEstimate is { } estimate)
+        {
+            Require(report.Models.State == UsageModelState.Called && report.ComparisonKind != UsageComparisonKind.NotApplicable,
+                "context_estimate_without_model_operation");
+            Require(estimate.Methodology == "cloud-agent-context-v1", "unsupported_context_methodology");
+            Named(estimate.TokenizerProfile, "context_tokenizer_required");
+            Value(estimate.InputTokens, false); Value(estimate.ReturnedTokens, false); Value(estimate.SavedTokens, true);
+            if (report.Outcome.Delivery is UsageDelivery.Failed or UsageDelivery.NotAttempted)
+                Require(estimate.ReturnedTokens.Status == UsageValueStatus.Unknown
+                    && estimate.SavedTokens.Status == UsageValueStatus.Unknown, "undelivered_context_estimate");
+            if (Known(estimate.SavedTokens))
+            {
+                Require(Known(estimate.InputTokens) && Known(estimate.ReturnedTokens), "context_sides_required");
+                Require(estimate.SavedTokens.Value == estimate.InputTokens.Value - estimate.ReturnedTokens.Value,
+                    "inconsistent_context_difference");
+                Require(estimate.SavedTokens.Status == UsageValueStatus.Estimated, "context_difference_is_estimate");
+            }
+        }
     }
 
     private static void Difference(IReadOnlyDictionary<UsageCloudTokens, UsageValue> values, UsageCloudTokens beforeKey, UsageCloudTokens afterKey, UsageCloudTokens savedKey)

@@ -24,6 +24,16 @@ public static class UsageNotice
 
     private static string Savings(UsageReport report)
     {
+        if (report.ContextEstimate is { } estimate)
+        {
+            if (estimate.InputTokens.Value is not { } inputTokens || estimate.ReturnedTokens.Value is not { } returned
+                || estimate.SavedTokens.Value is not { } savedTokens) return Catalogue.Get("UsageSavingsUnknown");
+            var contextAmount = Math.Abs((decimal)savedTokens).ToString("0", CultureInfo.InvariantCulture);
+            var summary = savedTokens > 0 ? Catalogue.Format("UsageSavingsPositive", contextAmount)
+                : savedTokens < 0 ? Catalogue.Format("UsageSavingsAdditional", contextAmount) : Catalogue.Get("UsageSavingsZero");
+            return summary + " " + Catalogue.Format("UsageContextFormula", inputTokens.ToString(CultureInfo.InvariantCulture),
+                returned.ToString(CultureInfo.InvariantCulture));
+        }
         if (report.Comparison.ScenarioId?.StartsWith("runtime-request-context-v2:", StringComparison.Ordinal) == true
             && report.CloudTokens[UsageCloudTokens.InputWithoutDelegation].Reason is
                 "retrieval_baseline_not_established" or "source_observation_overlap_unknown" or "request_context_not_declared")
@@ -59,6 +69,7 @@ public static class UsageNotice
 
     private static string Scenario(UsageReport report)
     {
+        if (report.ContextEstimate is not null) return " " + Catalogue.Get("UsageContextCounterfactual");
         if (report.CloudTokens[UsageCloudTokens.InputWithoutDelegation].Reason is
             "retrieval_baseline_not_established" or "source_observation_overlap_unknown" or "request_context_not_declared") return string.Empty;
         var prefix = report.Comparison.ScenarioId?.StartsWith("runtime-request-context-v2:", StringComparison.Ordinal) == true

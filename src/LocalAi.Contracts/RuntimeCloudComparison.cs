@@ -69,6 +69,8 @@ public sealed class RuntimeCloudComparison
     private CloudContextBasis basis = CloudContextBasis.Unknown;
     private string? unknownBaselineReason;
     private bool sourceObserved;
+    private bool actualContextObserved;
+    private string? contextIncompleteReason;
     private string? notApplicableReason;
     private bool evidenceLimitReached;
     public ICloudTokenProfile Profile => O200kCloudTokenProfile.Instance;
@@ -85,7 +87,8 @@ public sealed class RuntimeCloudComparison
         lock (gate)
         {
             sourceObserved = true;
-            if (unknownBaselineReason is not null || evidenceLimitReached) return;
+            actualContextObserved = true;
+            if (evidenceLimitReached) return;
             var snapshot = Hash(text);
             var identityKey = Hash(identity);
             if (sourceSnapshots.TryGetValue(identityKey, out var previous) && previous != snapshot)
@@ -93,6 +96,7 @@ public sealed class RuntimeCloudComparison
                 // Without offsets/snapshot provenance, different slices can overlap. Do not
                 // add them as distinct required context or guess which revision is intended.
                 unknownBaselineReason = "source_observation_overlap_unknown";
+                contextIncompleteReason ??= "source_observation_overlap_unknown";
                 return;
             }
             var id = Hash(identity + "\0" + snapshot);
@@ -119,11 +123,13 @@ public sealed class RuntimeCloudComparison
         lock (gate)
         {
             sourceObserved = true;
-            if (unknownBaselineReason is not null || evidenceLimitReached) return;
+            actualContextObserved = true;
+            if (evidenceLimitReached) return;
             var snapshot = $"image:{width}:{height}:{detail}";
             if (sourceSnapshots.TryGetValue(id, out var previous) && previous != snapshot)
             {
                 unknownBaselineReason = "source_observation_overlap_unknown";
+                contextIncompleteReason ??= "source_observation_overlap_unknown";
                 return;
             }
             Record(id, new CloudImageSource(id, width, height, detail));
@@ -143,12 +149,13 @@ public sealed class RuntimeCloudComparison
             sourceSnapshots.Clear();
             sources["limit"] = new CloudCountedTextSource("limit", UsageValue.Unknown("source_evidence_limit"), Profile.TextProfileId);
             evidenceLimitReached = true;
+            contextIncompleteReason ??= "source_evidence_limit";
             return;
         }
         sources[id] = source;
     }
 
-    public void NoSource() { lock (gate) sourceObserved = true; }
+    public void NoSource() { lock (gate) { sourceObserved = true; actualContextObserved = true; } }
     public void NotApplicable(string reason)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(reason);
@@ -179,7 +186,11 @@ public sealed class RuntimeCloudComparison
                 _ => throw new InvalidOperationException("Unsupported observation."),
             }).ToArray();
             return new("runtime-request-context-v2:" + context + ":" + basis, snapshot,
-                string.Empty, request, request);
+                string.Empty, request, request)
+            {
+                ContextSources = sources.Values.ToArray(),
+                ContextIncompleteReason = contextIncompleteReason ?? (actualContextObserved ? null : "source_reading_unknown"),
+            };
         }
     }
 

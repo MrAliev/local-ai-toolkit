@@ -15,6 +15,19 @@ namespace LocalAi.IntegrationTests;
 /// </summary>
 public sealed class MachineReadableOutputTests
 {
+    [Theory]
+    [InlineData(null)]
+    [InlineData(-846)]
+    [InlineData(0)]
+    public void Local_model_estimates_keep_unknown_negative_and_zero_on_the_wire(int? estimate)
+    {
+        using var document = JsonDocument.Parse(MachineOutput.Answer("triage",
+            new LocalModelData("answer", "fixture", "fixture", "None", 0, 0, estimate, false)));
+        var value = document.RootElement.GetProperty("data").GetProperty("savedTokensEstimate");
+        if (estimate is null) Assert.Equal(JsonValueKind.Null, value.ValueKind);
+        else Assert.Equal(estimate, value.GetInt32());
+    }
+
     /// <summary>
     /// Deciding and applying are separate, the way <c>OutputCulture.Resolve</c> and
     /// <c>OutputCulture.Apply</c> are: a pure answer anything may ask for, and the process-wide
