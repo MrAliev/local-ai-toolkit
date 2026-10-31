@@ -27,4 +27,6 @@
   <data name="UsageSavingsNotApplicable" xml:space="preserve"><value>Token savings do not apply to this operation.</value></data>
   <data name="UsageRequiredContextUnknown" xml:space="preserve"><value>Approximately {0} tokens of request/response input context. Savings are unknown: the necessary source context is not established.</value></data>
   <data name="UsageRequestContextScenario" xml:space="preserve"><value>Compared with the supplied task context in {0}; no credit for assumed cloud generation, not account usage.</value></data>
+<data name="UsageContextFormula" xml:space="preserve"><value>Input ≈{0}, returned ≈{1} tokens.</value></data>
+<data name="UsageContextCounterfactual" xml:space="preserve"><value>Full operation input minus the context returned to the cloud agent; a hypothetical estimate, not account usage.</value></data>
 </root>

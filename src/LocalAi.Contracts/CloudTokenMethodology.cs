@@ -28,6 +28,9 @@ public sealed record CloudTokenScenario(string Id, IReadOnlyList<CloudSource> So
     string? OutputWithoutDelegation, string? AdditionalInputWithDelegation, string? OutputWithDelegation)
 {
     public string? NotApplicableReason { get; init; }
+    // Actual observed units, before legacy cloud-history/baseline filtering.
+    public IReadOnlyList<CloudSource>? ContextSources { get; init; }
+    public string? ContextIncompleteReason { get; init; }
 }
 
 /// <summary>
@@ -125,13 +128,39 @@ public static class CloudTokenMethodology
                 tokens[UsageCloudTokens.OutputSaved] = Difference(tokens[UsageCloudTokens.OutputWithoutDelegation], tokens[UsageCloudTokens.OutputWithDelegation]);
             }
         }
+        var contextEstimate = EstimateContext(report, scenario, profile, modelVisibleResponse);
         return report with
         {
+            SchemaVersion = contextEstimate is null ? report.SchemaVersion : UsageReport.ContextEstimateSchemaVersion,
             MethodologyVersion = Version,
             Comparison = new(scenario?.Id, profile?.TextProfileId, profile?.VisionProfileId),
             Volumes = new ReadOnlyDictionary<UsageVolume, UsageValue>(volumes),
             CloudTokens = new ReadOnlyDictionary<UsageCloudTokens, UsageValue>(tokens),
+            ContextEstimate = contextEstimate,
         };
+    }
+
+    private static CloudContextEstimate? EstimateContext(UsageReport report, CloudTokenScenario? scenario,
+        ICloudTokenProfile? profile, string? visible)
+    {
+        if (report.Models.State != UsageModelState.Called || report.ComparisonKind == UsageComparisonKind.NotApplicable
+            || scenario?.NotApplicableReason is not null) return null;
+        profile ??= HeuristicCloudTokenProfile.Instance;
+        var input = scenario is null ? UsageValue.Unknown("source_reading_unknown")
+            : scenario.ContextIncompleteReason is { } reason ? UsageValue.Unknown(reason)
+            : Sum([CountSources((scenario.ContextSources ?? scenario.Sources).Select(source => source switch
+                {
+                    CloudTextSource text => (CloudSource)(text with { Presence = CloudContextPresence.NotPresent }),
+                    CloudCountedTextSource text => text with { Presence = CloudContextPresence.NotPresent },
+                    CloudImageSource image => image with { Presence = CloudContextPresence.NotPresent },
+                    _ => source
+                }).ToArray(), profile), Text(scenario.AdditionalInputWithDelegation, profile)]);
+        var returned = report.Outcome.Delivery is UsageDelivery.Failed or UsageDelivery.NotAttempted
+            ? UsageValue.Unknown("result_not_delivered") : Text(visible, profile);
+        var difference = Difference(input, returned);
+        if (difference is { Status: UsageValueStatus.Measured, Value: { } count })
+            difference = UsageValue.Estimated(count, "cloud-agent-context-v1", rangeReason: "conditional_scenario");
+        return new("cloud-agent-context-v1", profile.TextProfileId, profile.VisionProfileId, input, returned, difference);
     }
 
     public static UsageValue Difference(UsageValue withoutDelegation, UsageValue withDelegation)

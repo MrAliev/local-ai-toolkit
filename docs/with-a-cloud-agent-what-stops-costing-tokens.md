@@ -4,8 +4,21 @@
 
 **On this page**
 
+- [Per-operation context estimate](#per-operation-context-estimate)
 - [It works by default, and you can see it](#it-works-by-default-and-you-can-see-it)
 - [If something does not work the way you want](#if-something-does-not-work-the-way-you-want)
+
+## Per-operation context estimate
+
+After a local model call, the main notice estimates **full operation input minus the context returned to the cloud agent**. Input includes the observed source material and request instructions. Output includes the complete visible response, its wrappers and notice. Both sides use the same named cloud-token profile; backend prompt/eval counters are separate diagnostics.
+
+This hypothetical comparison treats the supplied material as input even when `sourceContext` is `AlreadyPresent` or `Unknown`. That flag remains truthful diagnostic metadata. The estimate does not justify redundant local calls. Retries and overlapping source ranges do not earn duplicate credit. Negative and zero differences are valid results.
+
+Usage schema 2 adds `contextEstimate` with `inputTokens`, `returnedTokens`, `savedTokens`, methodology and tokenizer/vision profiles. Historical schema 1 records and the original `cloudTokens` comparisons keep their meanings. The original comparison fields described below remain available for diagnostics; the main notice prefers the new estimate after a model call.
+
+The CLI JSON fields `savedTokensEstimate` and translation's `netContextTokensSavedEstimate` use this same difference, including negative values. They are `null` when the estimate is unavailable or outside their legacy 32-bit range; the usage report retains the full value. The final JSON and notice are counted together before delivery, while progress remains live.
+
+The count measures a prepared visible response when delivery is not yet established. Failed or unattempted delivery leaves the returned count and difference unknown. Missing/conflicting source evidence and unsupported image accounting remain explicit unknowns, not fabricated zeroes. Administrative calls and model loading without a task do not gain this estimate. A numerical difference is not proof that the model's answer is correct and is not measured provider billing.
 
 It is not only about volume. A question asked in words rarely maps onto a keyword — and a
 keyword is exactly what an agent is reduced to searching for when there is no index.

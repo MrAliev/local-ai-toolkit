@@ -24,10 +24,10 @@ public sealed record LocalModelData(
     long QueuedMs,
     [property: JsonRequired, JsonPropertyName("ranMs"), JsonPropertyOrder(5)]
     long RanMs,
-    /// An estimate, and named so. The estimator works from characters, and a caller printing
-    /// "27431 tokens saved" from it would be reporting false precision.
+    /// Full hypothetical cloud input minus the complete returned context. Null when unavailable
+    /// or outside this legacy field's 32-bit range; the usage report retains the full value.
     [property: JsonRequired, JsonPropertyName("savedTokensEstimate"), JsonPropertyOrder(6)]
-    int SavedTokensEstimate,
+    int? SavedTokensEstimate,
     [property: JsonRequired, JsonPropertyName("truncated"), JsonPropertyOrder(7)]
     bool Truncated,
     /// How much of the model was in video memory, when some of it was not. The verdict alone says
@@ -125,7 +125,7 @@ internal static class LocalModelRun
             }
             if (machineReadable)
             {
-                streams.Out.WriteLine(MachineOutput.Answer(command, Describe(origin, result)));
+                WriteResponse(streams, report => MachineOutput.Answer(command, Describe(origin, result, report)));
                 return 0;
             }
 
@@ -210,7 +210,7 @@ internal static class LocalModelRun
 
             if (machineReadable)
             {
-                streams.Out.WriteLine(MachineOutput.Answer("translate", Describe(origin, result)));
+                WriteResponse(streams, report => MachineOutput.Answer("translate", Describe(origin, result, report)));
                 return 0;
             }
 
@@ -315,7 +315,14 @@ internal static class LocalModelRun
             _ => null,
         };
 
-    private static LocalModelData Describe(string origin, LocalResult result) =>
+    private static void WriteResponse(CommandStreams streams, Func<UsageReport?, string> render)
+    {
+        if (UsageCall.Current is { } call)
+            call.DeferCliResponse(report => render(report) + streams.Out.NewLine);
+        else streams.Out.WriteLine(render(null));
+    }
+
+    private static LocalModelData Describe(string origin, LocalResult result, UsageReport? report) =>
         new(
             result.Answer,
             origin,
@@ -323,14 +330,14 @@ internal static class LocalModelRun
             (result.Receipt.Routing?.ResidencyShortfall ?? ResidencyShortfall.None).ToString(),
             (long)result.Receipt.QueueDuration.TotalMilliseconds,
             (long)result.Receipt.ExecutionDuration.TotalMilliseconds,
-            result.SavedTokens,
+            UsagePayload.LegacySavedTokensEstimate(report),
             result.Truncated,
             Vram(result.Receipt),
             result.Validation,
             result.CompilerDiagnostics,
             result.DiagnosticVerification);
 
-    private static TranslationData Describe(string origin, LocalTranslationResult result) =>
+    private static TranslationData Describe(string origin, LocalTranslationResult result, UsageReport? report) =>
         new(
             result.Answer,
             origin,
@@ -340,9 +347,9 @@ internal static class LocalModelRun
                 : null,
             (long)(result.Receipt?.QueueDuration.TotalMilliseconds ?? 0),
             (long)(result.Receipt?.ExecutionDuration.TotalMilliseconds ?? 0),
-            result.SavedTokens,
+            UsagePayload.LegacySavedTokensEstimate(report),
             result.LocalTokensProcessed,
-            result.NetCloudContextTokensSaved,
+            UsagePayload.LegacySavedTokensEstimate(report),
             Vram(result.Receipt),
             result.NoTranslatableText || result.FromCheckpoint ? 0 : null,
             result.NoTranslatableText ? "no_translatable_text" : result.FromCheckpoint ? "translation_checkpoint" : null);

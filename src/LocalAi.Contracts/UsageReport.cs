@@ -50,6 +50,10 @@ public sealed record UsageModels(UsageModelState State, UsageValue Calls, IReadO
 
 public sealed record UsageComparison(string? ScenarioId, string? TokenizerProfile, string? VisionProfile);
 
+/// <summary>Full hypothetical cloud input minus the text returned to the cloud agent.</summary>
+public sealed record CloudContextEstimate(string Methodology, string TokenizerProfile, string? VisionProfile,
+    UsageValue InputTokens, UsageValue ReturnedTokens, UsageValue SavedTokens);
+
 /// <summary>
 /// One application-owned record per surface call. Attempts/jobs are links, not additional
 /// delivered answers. This schema is independent of MachineEnvelope and LocalUsageReceipt;
@@ -60,7 +64,12 @@ public sealed record UsageReport(int SchemaVersion, string MethodologyVersion, U
     IReadOnlyDictionary<UsageVolume, UsageValue> Volumes, UsageComparisonKind ComparisonKind,
     UsageComparison Comparison, IReadOnlyDictionary<UsageCloudTokens, UsageValue> CloudTokens)
 {
+    // Optional so old persisted reports retain their original comparison semantics.
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public CloudContextEstimate? ContextEstimate { get; init; }
+
     public const int CurrentSchemaVersion = 1;
+    public const int ContextEstimateSchemaVersion = 2;
     // Versions the status, unit and difference rules, not a calibrated estimation algorithm.
     public const string CurrentMethodologyVersion = "usage-contract-v1";
 
