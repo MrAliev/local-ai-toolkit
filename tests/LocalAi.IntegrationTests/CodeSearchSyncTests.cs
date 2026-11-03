@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.Text.Json;
+using CodeSearch.Core;
+using CodeSearch.Core.Indexing;
 using CodeSearch.Core.Semantics;
 using LocalAi.Cli;
 using LocalAi.Contracts;
@@ -61,6 +63,96 @@ public sealed class CodeSearchSyncTests : IDisposable
         Assert.Equal(
             LocalAi.Contracts.RepositoryIndexState.Initializing,
             manifest.State);
+    }
+
+    [Theory]
+    [InlineData(false, "refs/heads/main")]
+    [InlineData(true, "refs/heads/dev")]
+    public void Mainline_does_not_inherit_the_requested_semantic_dirty_hash(bool createDev, string expectedRef)
+    {
+        Directory.CreateDirectory(_root);
+        Git("init", "--initial-branch=main", ".");
+        Git("config", "user.email", "localai-tests@example.invalid");
+        Git("config", "user.name", "Local AI Tests");
+        Git("commit", "--allow-empty", "-m", "main");
+        if (createDev) Git("branch", "dev");
+        Git("switch", "-c", "feature");
+        File.WriteAllText(Path.Combine(_root, "Scratch.cs"), "public class Scratch { }");
+        File.WriteAllText(Path.Combine(_root, "notes.md"), "Uncommitted notes.");
+        var requested = RuntimeIndexLayout.Inspect(_root, _runtimeRoot);
+        Assert.NotNull(requested.DirtyHash);
+        Assert.NotNull(requested.SemanticDirtyHash);
+
+        var mainline = CodeSearchSyncCommand.ResolveMainline(requested, configuredRef: null);
+
+        Assert.Equal(expectedRef, mainline.Ref);
+        Assert.Equal(Git("rev-parse", expectedRef), mainline.Identity.HeadCommit);
+        Assert.Equal(Git("rev-parse", expectedRef + "^{tree}"), mainline.Identity.HeadTree);
+        Assert.Null(mainline.Identity.DirtyHash);
+        Assert.Null(mainline.Identity.SemanticDirtyHash);
+    }
+
+    [Fact]
+    public async Task Sync_does_not_reuse_a_legacy_base_with_worktree_semantic_state()
+    {
+        Directory.CreateDirectory(_root);
+        Directory.CreateDirectory(_runtimeRoot);
+        Git("init", "--initial-branch=main", ".");
+        Git("config", "user.email", "localai-tests@example.invalid");
+        Git("config", "user.name", "Local AI Tests");
+        Git("commit", "--allow-empty", "-m", "main");
+        var identity = RuntimeIndexLayout.Inspect(_root, _runtimeRoot);
+        var legacy = new GenerationIdentity(
+            identity.RepositoryId, identity.HeadCommit, identity.HeadTree,
+            CodeSearchSyncCommand.DefaultModel, CodeSearchSyncCommand.DefaultDimension,
+            CodeSearchSyncCommand.CurrentChunkFormatVersion, CodeIndex.CurrentVersion,
+            CodeSearchSyncCommand.CurrentNormalizationVersion, 1, SemanticIndexVersion: 11);
+        var indexPath = Path.Combine(_runtimeRoot, "legacy.cidx");
+        var semanticPath = Path.Combine(_runtimeRoot, "legacy.sidx");
+        new CodeIndex
+        {
+            Root = _root,
+            RepositoryId = identity.RepositoryId,
+            GenerationId = legacy.Id,
+            GitCommit = identity.HeadCommit,
+            GitTree = identity.HeadTree,
+            Model = legacy.EmbeddingModel,
+            Dim = legacy.EmbeddingDimension,
+            IndexedAtUtc = DateTime.UnixEpoch,
+            Files = [],
+            Chunks = [],
+            Vectors = [],
+        }.Save(indexPath);
+        (SemanticIndexCovering() with
+        {
+            RepositoryId = identity.RepositoryId,
+            GenerationId = legacy.Id,
+            GitTree = identity.HeadTree,
+            BaseCommit = identity.HeadCommit,
+            DirtyHash = "legacy-worktree-semantic-state",
+        }).Save(semanticPath);
+        var store = new GenerationStore(identity.RepositoryRuntimeRoot);
+        var oldManifest = store.PublishIndex(indexPath, legacy, semanticPath);
+        store.SetCurrent(oldManifest);
+        var publishedSemanticPath = store.SemanticIndexPath(legacy.Id);
+        var original = File.ReadAllBytes(publishedSemanticPath);
+        using var oldReader = File.Open(publishedSemanticPath, FileMode.Open, FileAccess.Read,
+            FileShare.ReadWrite | FileShare.Delete);
+
+        await CodeSearchSyncCommand.ExecuteAsync(_root, TextWriter.Null,
+            includeOverlays: false, cancellationToken: TestContext.Current.CancellationToken,
+            runtimeRoot: _runtimeRoot);
+
+        var current = store.ReadCurrent()!;
+        Assert.NotEqual(legacy.Id, current.GenerationId);
+        var rebuilt = SemanticIndex.Load(store.SemanticIndexPath(current.GenerationId));
+        Assert.Equal(identity.RepositoryId, rebuilt.RepositoryId);
+        Assert.Equal(identity.HeadTree, rebuilt.GitTree);
+        Assert.Equal(identity.HeadCommit, rebuilt.BaseCommit);
+        Assert.Null(rebuilt.DirtyHash);
+        var stillVisibleToTheReader = new byte[original.Length];
+        oldReader.ReadExactly(stillVisibleToTheReader);
+        Assert.Equal(original, stillVisibleToTheReader);
     }
 
     [Fact]
