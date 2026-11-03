@@ -66,7 +66,9 @@ public static class CodeSearchSyncCommand
     // Bump whenever semantic extraction changes even if the SIDX binary format does not.
     // Generations are immutable, so changing relationships without changing this value
     // would keep serving the previous semantic graph for an already indexed commit.
-    public const int CurrentSemanticGenerationVersion = 11;
+    // Version 12 separates the committed snapshot from the requesting worktree's semantic
+    // state. Earlier generations may carry that dirty hash and must not be reused in place.
+    public const int CurrentSemanticGenerationVersion = 12;
 
     // Long enough to ride out another run's short publish transaction, far too short to
     // queue behind its embedding phase: a blocked caller exits with the named busy outcome.
@@ -923,7 +925,7 @@ public static class CodeSearchSyncCommand
         }
     }
 
-    private static Mainline ResolveMainline(
+    internal static Mainline ResolveMainline(
         WorkingIndexIdentity requested,
         string? configuredRef)
     {
@@ -962,7 +964,8 @@ public static class CodeSearchSyncCommand
                 {
                     HeadCommit = commit,
                     HeadTree = tree,
-                    DirtyHash = null
+                    DirtyHash = null,
+                    SemanticDirtyHash = null
                 });
         }
 
@@ -2092,7 +2095,7 @@ public static class CodeSearchSyncCommand
             : Encoding.UTF8.GetString(output).Trim();
     }
 
-    private sealed record Mainline(
+    internal sealed record Mainline(
         string Ref,
         WorkingIndexIdentity Identity);
 }

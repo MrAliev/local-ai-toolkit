@@ -548,7 +548,7 @@ public sealed class SearchService : IDisposable
             var path = RuntimeIndexLayout.SemanticOverlayPath(identity, index.GenerationId);
             return !File.Exists(path) ? (false, null)
                 : (true, SemanticIndexOverlay.StatusHeaderMatches(path, identity.RepositoryId,
-                    index.GenerationId, index.GitTree, identity.HeadTree, identity.DirtyHash));
+                    index.GenerationId, index.GitTree, identity.HeadTree, identity.SemanticDirtyHash));
         }
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException or ArgumentException)
