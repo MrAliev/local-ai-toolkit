@@ -578,6 +578,55 @@ public sealed class UntrustedContentMcpTests : IDisposable
         Assert.Contains("sync --root", status, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    public void Status_binds_a_semantic_overlay_to_its_own_hash(bool changesCode, bool matchingSemanticHash)
+    {
+        PublishGenerationWithCoveringSemanticIndex();
+        File.WriteAllText(Path.Combine(_root, "notes.md"), "Only the search corpus sees these notes.");
+        if (changesCode)
+            File.WriteAllText(Path.Combine(_root, "Example.cs"), "public class Changed { }");
+        var current = RuntimeIndexLayout.Inspect(_root, _runtimeRoot);
+        Assert.NotNull(current.DirtyHash);
+        Assert.NotEqual(current.DirtyHash, current.SemanticDirtyHash);
+        var generationId = new GenerationStore(_identity.RepositoryRuntimeRoot).ReadCurrent()!.GenerationId;
+        var path = RuntimeIndexLayout.SemanticOverlayPath(current, generationId);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        var storedHash = matchingSemanticHash ? current.SemanticDirtyHash : "another-semantic-state";
+        new SemanticIndexOverlay
+        {
+            RepositoryId = current.RepositoryId,
+            GenerationId = generationId,
+            BaseGitTree = _identity.HeadTree,
+            GitTree = current.HeadTree,
+            DirtyHash = storedHash,
+            DeletedDocuments = [],
+            Changed = new SemanticIndex
+            {
+                RepositoryId = current.RepositoryId,
+                GenerationId = generationId,
+                GitTree = current.HeadTree,
+                DirtyHash = storedHash,
+                BaseCommit = current.HeadCommit,
+                IndexedAtUtc = DateTime.UnixEpoch,
+                Documents = [new SemanticDocument { RelPath = "Example.cs", Hash = new byte[32] }],
+                Symbols = [],
+                Occurrences = [],
+                Relationships = [],
+            },
+        }.Save(path);
+
+        var status = _service.Status(_root);
+
+        Assert.True(status.SemanticIndexHeaderReadable);
+        Assert.True(status.SemanticOverlayPresent);
+        Assert.Equal(matchingSemanticHash, status.SemanticOverlayHeaderReadable);
+        Assert.Equal(matchingSemanticHash ? "HeaderOnly" : "Unknown", status.NavigationState);
+    }
+
     [Fact]
     public void An_unreadable_semantic_header_is_unknown_in_MCP_and_CLI_without_pretending_the_file_is_missing()
     {
