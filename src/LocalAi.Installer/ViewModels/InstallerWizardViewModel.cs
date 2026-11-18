@@ -464,11 +464,9 @@ public sealed class InstallerWizardViewModel : ObservableObject
     /// and "transaction.lock", so an extra folder made the layout unrecognisable to the
     /// installer's own validation — after the package had already been downloaded.
     /// </summary>
-    internal string ScratchRoot { get; init; } = DefaultScratchRoot;
+    internal string? ScratchRoot { get; init; }
 
-    public static string DefaultScratchRoot => Path.Combine(
-        Path.GetTempPath(),
-        "LocalAi-installer");
+    public static string DefaultScratchRoot => InstallerScratchDirectory.DefaultPackageRoot;
 
     /// <summary>Stands in for the public model registry in a test, which must not go online.</summary>
     internal IModelSizeSource? ModelSizeSource { get; init; }
@@ -3226,7 +3224,9 @@ public sealed class InstallerWizardViewModel : ObservableObject
         var namesBefore = ReadReleaseNamesBeforeRun();
         // Gone when this method returns or throws; a process that ends first leaves it for the
         // next start to remove.
-        using var scratch = InstallerScratchDirectory.Claim(ScratchRoot);
+        using var scratch = ScratchRoot is { } root
+            ? InstallerScratchDirectory.Claim(root)
+            : InstallerScratchDirectory.ClaimPackageRun();
         // The intent covers the download too, but the download only touches the temp
         // directory; the effect the journal exists for is the activation. The callback
         // below closes this step at the exact moment activation finishes, so a process

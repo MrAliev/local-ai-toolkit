@@ -20,6 +20,7 @@ public sealed class InstallerScratchDirectory : IDisposable
     public const string MarkerFileName = ".localai-installer-run";
 
     private const string Prefix = "run-";
+    private const string PackageContainerName = "LocalAi-installer";
 
     private static readonly byte[] MarkerContent =
         Encoding.ASCII.GetBytes("LocalAi installer run directory\n");
@@ -35,6 +36,37 @@ public sealed class InstallerScratchDirectory : IDisposable
     }
 
     public string Path { get; }
+
+    public static string DefaultPackageRoot =>
+        System.IO.Path.Combine(System.IO.Path.GetTempPath(), PackageContainerName);
+
+    /// <summary>Reserves a fresh workspace and places it in the usual package staging folder.</summary>
+    public static InstallerScratchDirectory ClaimPackageRun()
+    {
+        var reserved = Directory.CreateTempSubdirectory("LocalAi-installer-reserve-");
+        var ownedPath = reserved.FullName;
+        try
+        {
+            var tempRoot = reserved.Parent ?? throw new IOException("The temporary directory has no parent.");
+            var packageRoot = tempRoot.CreateSubdirectory(PackageContainerName);
+            if (packageRoot.Attributes.HasFlag(FileAttributes.ReparsePoint))
+            {
+                throw new IOException("The installer package staging directory cannot be a link.");
+            }
+
+            // Move an exclusively acquired directory on the same volume. A pre-existing
+            // destination is an error, and remains outside this call's cleanup scope.
+            var destination = System.IO.Path.Combine(packageRoot.FullName, Prefix + Guid.NewGuid().ToString("N"));
+            Directory.Move(ownedPath, destination);
+            ownedPath = destination;
+            return OpenMarker(ownedPath);
+        }
+        catch
+        {
+            TryRemove(ownedPath);
+            throw;
+        }
+    }
 
     public static InstallerScratchDirectory Claim(string root) => Claim(root, Prefix);
 
@@ -87,9 +119,11 @@ public sealed class InstallerScratchDirectory : IDisposable
     /// Removes the directories of runs that have ended. Never throws: a directory that will not
     /// go now is tried again at the next start.
     /// </summary>
-    public static void RemoveLeftovers(string root) => RemoveLeftovers(root, Prefix);
+    public static void RemoveLeftovers(string root) => RemoveLeftovers(root, Prefix, requirePlainRoot: true);
 
-    public static void RemoveLeftovers(string root, string prefix)
+    public static void RemoveLeftovers(string root, string prefix) => RemoveLeftovers(root, prefix, requirePlainRoot: false);
+
+    private static void RemoveLeftovers(string root, string prefix, bool requirePlainRoot)
     {
         try
         {
@@ -98,7 +132,13 @@ public sealed class InstallerScratchDirectory : IDisposable
                 return;
             }
 
-            foreach (var directory in new DirectoryInfo(root).EnumerateDirectories(prefix + "*"))
+            var container = new DirectoryInfo(root);
+            if (requirePlainRoot && container.Attributes.HasFlag(FileAttributes.ReparsePoint))
+            {
+                return;
+            }
+
+            foreach (var directory in container.EnumerateDirectories(prefix + "*"))
             {
                 if (!directory.Attributes.HasFlag(FileAttributes.ReparsePoint) &&
                     IsLeftover(directory.FullName))
