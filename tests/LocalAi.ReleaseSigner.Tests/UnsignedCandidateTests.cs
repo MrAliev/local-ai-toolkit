@@ -86,6 +86,27 @@ public sealed class UnsignedCandidateTests
     }
 
     [Theory]
+    [InlineData("both-reject", 0, 2)]
+    [InlineData("accept-source", 1, 1)]
+    [InlineData("accept-signer", 1, 2)]
+    public async Task The_workflow_treats_only_two_expected_rejections_as_success(string scenario, int expectedExit, int expectedCalls)
+    {
+        using var fixture = new CandidateFixture();
+        var lines = File.ReadAllLines(Path.Combine(RepositoryRoot(), ".github", "workflows", "build-unsigned-candidate.yml"));
+        var start = Array.FindIndex(lines, line => line == "      - name: Reject attestations from another source or signer");
+        Assert.True(start >= 0);
+        var run = Array.FindIndex(lines, start, line => line == "        run: |");
+        Assert.True(run > start);
+        var end = Array.FindIndex(lines, run + 1, line => line.StartsWith("      - name:", StringComparison.Ordinal));
+        Assert.True(end > run);
+        var step = string.Join(Environment.NewLine, lines.Skip(run + 1).Take(end - run - 1)
+            .Select(line => string.IsNullOrWhiteSpace(line) ? "" : line[10..]));
+        var result = await fixture.RunNegativeControlStep(step, scenario);
+        Assert.True(result.ExitCode == expectedExit, $"Expected exit {expectedExit}, got {result.ExitCode}. {result.Output}");
+        Assert.Equal(expectedCalls, result.Calls);
+    }
+
+    [Theory]
     [InlineData("GITHUB_REPOSITORY", "fork/local-ai-toolkit")]
     [InlineData("GITHUB_REF", "refs/heads/unreviewed")]
     [InlineData("GITHUB_EVENT_NAME", "pull_request_target")]
@@ -233,6 +254,42 @@ public sealed class UnsignedCandidateTests
             var stderr = process.StandardError.ReadToEndAsync(TestContext.Current.CancellationToken);
             await process.WaitForExitAsync(TestContext.Current.CancellationToken);
             return (process.ExitCode, await stdout + await stderr);
+        }
+
+        public async Task<(int ExitCode, string Output, int Calls)> RunNegativeControlStep(string step, string scenario)
+        {
+            var harness = Path.Combine(Root, "control-step.ps1");
+            var calls = Path.Combine(Root, "control-calls.txt");
+            // Execute the actual workflow body with the documented GitHub pwsh suffix.
+            // The fake supplies exit codes only; it does not establish attestation validity.
+            File.WriteAllText(harness, """
+                $ErrorActionPreference = 'Stop'
+                $global:controlInvocations = 0
+                function global:gh {
+                    $global:controlInvocations++
+                    $global:LASTEXITCODE = if (
+                        ($env:CONTROL_SCENARIO -eq 'accept-source' -and $global:controlInvocations -eq 1) -or
+                        ($env:CONTROL_SCENARIO -eq 'accept-signer' -and $global:controlInvocations -eq 2)) { 0 } else { 1 }
+                    Set-Content -LiteralPath $env:CONTROL_CALLS_PATH -Value $global:controlInvocations
+                }
+
+                """ + step + Environment.NewLine + """
+                if ((Test-Path -LiteralPath variable:\LASTEXITCODE)) { exit $LASTEXITCODE }
+                """);
+            var start = new ProcessStartInfo("pwsh")
+            {
+                WorkingDirectory = Root, RedirectStandardOutput = true, RedirectStandardError = true,
+                UseShellExecute = false, CreateNoWindow = true,
+            };
+            foreach (var argument in new[] { "-NoProfile", "-File", harness }) start.ArgumentList.Add(argument);
+            start.Environment["CONTROL_SCENARIO"] = scenario;
+            start.Environment["CONTROL_CALLS_PATH"] = calls;
+            start.Environment["EXPECTED_SOURCE"] = Sha;
+            using var process = Process.Start(start)!;
+            var stdout = process.StandardOutput.ReadToEndAsync(TestContext.Current.CancellationToken);
+            var stderr = process.StandardError.ReadToEndAsync(TestContext.Current.CancellationToken);
+            await process.WaitForExitAsync(TestContext.Current.CancellationToken);
+            return (process.ExitCode, await stdout + await stderr, int.Parse(File.ReadAllText(calls).Trim()));
         }
 
         public void Dispose() => Directory.Delete(Root, recursive: true);

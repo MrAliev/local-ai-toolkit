@@ -123,6 +123,9 @@ jobs:
           if ($LASTEXITCODE -eq 0) { throw 'Verification accepted an unrelated source.' }
           & gh @common --source-digest $env:EXPECTED_SOURCE --signer-workflow 'MrAliev/local-ai-toolkit/.github/workflows/not-the-candidate.yml' *> publish/candidate-verification/wrong-signer.log
           if ($LASTEXITCODE -eq 0) { throw 'Verification accepted an unrelated signer workflow.' }
+          # Both nonzero exits are expected. The runner otherwise propagates the last
+          # native exit code, even though both rejection controls passed.
+          exit 0
 
       - name: Require both release evidence workflows to be active
         # Acceptance also requires the independent receipt workflow to be enabled.
