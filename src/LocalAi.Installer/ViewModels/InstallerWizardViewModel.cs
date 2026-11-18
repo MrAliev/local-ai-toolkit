@@ -2713,7 +2713,8 @@ public sealed class InstallerWizardViewModel : ObservableObject
             // "latest" is not a tag GitHub knows; resolve it to the newest published one so
             // the field can keep its convenient default.
             var tag = await feed.ResolveTagAsync(package.ReleaseVersion, cancellationToken);
-            var release = await feed.ResolveAsync(tag, ScratchRoot, cancellationToken);
+            using var metadata = InstallerScratchDirectory.ClaimTemporary("localai-release-metadata-");
+            var release = await feed.ResolveAsync(tag, metadata.Path, cancellationToken);
             if (mine != resolveGeneration ||
                 asked != (package.ReleaseVersion, package.SourceFolder))
             {
@@ -2922,7 +2923,8 @@ public sealed class InstallerWizardViewModel : ObservableObject
             // Resolved first, then recorded: assigning the tag before this await left the
             // wizard pointing at a release whose manifest had failed to verify, so the run
             // downloaded that asset and checked it against the previous manifest's hash.
-            var release = await feed.ResolveAsync(newest, ScratchRoot, cancellationToken);
+            using var metadata = InstallerScratchDirectory.ClaimTemporary("localai-release-metadata-");
+            var release = await feed.ResolveAsync(newest, metadata.Path, cancellationToken);
             resolvedTag = newest;
             package.SelectResolvedRelease(release, newest);
         }

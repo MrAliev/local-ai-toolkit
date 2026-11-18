@@ -44,6 +44,26 @@ public sealed class InstallerScratchDirectory : IDisposable
         ArgumentException.ThrowIfNullOrWhiteSpace(prefix);
         var path = System.IO.Path.Combine(root, prefix + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(path);
+        return OpenMarker(path);
+    }
+
+    /// <summary>Owns a newly created system temporary directory for one release operation.</summary>
+    public static InstallerScratchDirectory ClaimTemporary(string prefix)
+    {
+        var path = Directory.CreateTempSubdirectory(prefix).FullName;
+        try
+        {
+            return OpenMarker(path);
+        }
+        catch
+        {
+            TryRemove(path);
+            throw;
+        }
+    }
+
+    private static InstallerScratchDirectory OpenMarker(string path)
+    {
         var marker = new FileStream(
             System.IO.Path.Combine(path, MarkerFileName),
             FileMode.CreateNew,

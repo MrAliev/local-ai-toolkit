@@ -166,6 +166,25 @@ public sealed class UpdateCommandTests : IDisposable
         Assert.False(Directory.Exists(working));
     }
 
+    [Fact]
+    public async Task Cancellation_during_release_resolution_releases_the_working_directory()
+    {
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        var feed = new StubFeed("v0.1.51", "0.1.51", Directory51)
+        {
+            OnResolve = () =>
+            {
+                cancellation.Cancel();
+                cancellation.Token.ThrowIfCancellationRequested();
+            }
+        };
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            UpdateCommand.ExecuteAsync([], root, output, error, feed, processRunner: null, cancellation.Token));
+
+        Assert.False(Directory.Exists(Assert.IsType<string>(feed.ResolvedWorkingDirectory)));
+    }
+
     /// <summary>
     /// And it says the one thing the reader needs: the installed version is untouched. The
     /// cancellation escaped to the entry point's guard, which prints `localai: cancelled.` — true
