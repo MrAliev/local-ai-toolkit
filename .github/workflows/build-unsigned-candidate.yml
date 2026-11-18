@@ -1,7 +1,7 @@
 name: Build unsigned candidate
 
-# Groundwork for a future trusted SignPath build. This workflow does not sign,
-# package an installable release, or publish any release assets.
+# Build unsigned PE files and verify their build provenance. This does not use a
+# production signing certificate, package an installable release, or publish assets.
 on:
   workflow_dispatch:
     inputs:
@@ -22,6 +22,13 @@ jobs:
     if: github.repository == 'MrAliev/local-ai-toolkit' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
     runs-on: windows-2025
     timeout-minutes: 40
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    outputs:
+      artifact-id: ${{ steps.candidate.outputs.artifact-id }}
+      artifact-digest: ${{ steps.candidate.outputs.artifact-digest }}
     env:
       DOTNET_NOLOGO: 'true'
       DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
@@ -44,6 +51,12 @@ jobs:
           CANDIDATE_VERSION: ${{ inputs.version }}
         run: ./scripts/build-localai-unsigned-candidate.ps1 -ReleaseVersion $env:CANDIDATE_VERSION
 
+      - name: Attest the manifest binding the seven built files
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: publish/unsigned-candidate/artifact/unsigned-candidate.json
+          create-storage-record: false
+
       - name: Upload the unsigned candidate
         id: candidate
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
@@ -53,6 +66,7 @@ jobs:
           if-no-files-found: error
           compression-level: 0
           retention-days: 7
+          archive: true
 
       - name: Record the candidate artifact
         shell: pwsh
@@ -65,5 +79,81 @@ jobs:
           Source commit: $env:GITHUB_SHA
           GitHub artifact ID: $env:CANDIDATE_ARTIFACT_ID
           GitHub artifact digest: $env:CANDIDATE_ARTIFACT_DIGEST
-          Checksums in unsigned-candidate.json describe the uploaded bytes; they are not a signing or build-provenance claim.
+          The verification job must succeed for this exact artifact and source before the candidate is accepted.
+          This does not establish Authenticode or the signing/key-custody conditions of issue 210.
           "@ | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
+
+  verify-candidate:
+    needs: build-unsigned-candidate
+    if: github.repository == 'MrAliev/local-ai-toolkit' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
+    runs-on: windows-2025
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+      attestations: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      EXPECTED_SOURCE: ${{ github.sha }}
+      CANDIDATE_VERSION: ${{ inputs.version }}
+    steps:
+      - name: Check out the verifier at the selected source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Download exactly the produced artifact
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          artifact-ids: ${{ needs.build-unsigned-candidate.outputs.artifact-id }}
+          path: candidate
+
+      - name: Reject attestations from another source or signer
+        shell: pwsh
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $false
+          New-Item -ItemType Directory -Path publish/candidate-verification -Force | Out-Null
+          $subject = 'candidate/unsigned-candidate.json'
+          $common = @('attestation', 'verify', $subject, '--hostname', 'github.com',
+            '--repo', 'MrAliev/local-ai-toolkit', '--predicate-type', 'https://slsa.dev/provenance/v1',
+            '--source-ref', 'refs/heads/main', '--deny-self-hosted-runners', '--format', 'json')
+          & gh @common --source-digest ('0' * 40) --signer-workflow 'MrAliev/local-ai-toolkit/.github/workflows/build-unsigned-candidate.yml' *> publish/candidate-verification/wrong-source.log
+          if ($LASTEXITCODE -eq 0) { throw 'Verification accepted an unrelated source.' }
+          & gh @common --source-digest $env:EXPECTED_SOURCE --signer-workflow 'MrAliev/local-ai-toolkit/.github/workflows/not-the-candidate.yml' *> publish/candidate-verification/wrong-signer.log
+          if ($LASTEXITCODE -eq 0) { throw 'Verification accepted an unrelated signer workflow.' }
+
+      - name: Require both release evidence workflows to be active
+        # Acceptance also requires the independent receipt workflow to be enabled.
+        # A successful upload cannot substitute for this or the verifier below.
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $false
+          $states = foreach ($workflow in @('build-unsigned-candidate.yml', 'attest-release.yml')) {
+            $state = & gh api "repos/MrAliev/local-ai-toolkit/actions/workflows/$workflow" --jq .state
+            if ($LASTEXITCODE -ne 0 -or $state -cne 'active') { throw "Release evidence workflow is not active: $workflow" }
+            [ordered]@{ workflow = $workflow; state = $state }
+          }
+          ConvertTo-Json -InputObject @($states) -Depth 3 | Set-Content -LiteralPath publish/candidate-verification/workflow-states.json -Encoding utf8
+
+      - name: Verify the candidate bytes and their build provenance
+        shell: pwsh
+        run: >-
+          ./scripts/verify-localai-unsigned-candidate.ps1
+          -ArtifactRoot candidate
+          -ExpectedSource $env:EXPECTED_SOURCE
+          -ExpectedVersion $env:CANDIDATE_VERSION
+          -ExpectedRunId $env:GITHUB_RUN_ID
+          -ExpectedRunAttempt $env:GITHUB_RUN_ATTEMPT
+          -EvidencePath publish/candidate-verification/verified-candidate.json
+
+      - name: Upload verification evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: localai-candidate-verification-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: publish/candidate-verification/
+          if-no-files-found: error
+          retention-days: 7

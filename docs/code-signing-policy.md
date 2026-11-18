@@ -58,6 +58,57 @@ These are the intended signing requirements, not a statement that onboarding or 
 verification is already complete. [Publication and signing](publication.md) records the
 application, trusted CI build, real certificate policy and renewal checks still needed.
 
+## Release evidence
+
+Two workflows make different, limited claims. Neither uses a production signing key,
+publishes a release, installs a candidate, or closes [issue 210](https://github.com/MrAliev/local-ai-toolkit/issues/210).
+
+1. **`Build unsigned candidate`** builds the seven own Windows executables from a clean
+   checkout of the selected `main` commit. Its `localai.unsigned-candidate.v2` manifest
+   binds source commit/tree, workflow/run/attempt, version, runtime identifier, and every
+   file's size and SHA-256. The build job attests that manifest with SLSA build provenance.
+   A separate job downloads the exact artifact ID, checks the complete inventory and
+   every hash, and verifies the attestation against the expected repository, source SHA,
+   signer workflow/SHA, branch, predicate type, and GitHub-hosted runner. Wrong-source
+   and wrong-signer controls must fail. Accept the candidate only when **both jobs in
+   that exact run succeed**, and preserve its source, run/attempt, artifact ID/digest,
+   manifest and verification evidence. An upload by itself is not acceptance.
+2. **`Attest release assets`** downloads the four supported assets of an existing
+   published release by numeric release/asset IDs. It checks names, sizes and available
+   API digests, then reads release metadata again to detect replacement during download.
+   Its custom `release-asset-receipt/v1` attestation records the observed hashes and
+   release/run identity. It explicitly records `sourceBuildVerified=false` and
+   `authenticodeVerified=false`: the workflow downloaded these bytes; it did not compile
+   them. Later verification against the expected receipt signer can detect different
+   bytes, but the receipt does not authenticate the original publisher or eliminate
+   substitution before observation.
+
+Before the next release, confirm that both workflows are **active** in GitHub, and that
+the exact-source candidate has passed its verification job. A disabled workflow, absent
+run, failed or pending verification blocks this release acceptance step. Run the receipt
+workflow after publication and preserve its successful verification for all four assets.
+For an older release, dispatch it on `main` with the numeric release ID; do not describe
+that later receipt as a historical build attestation. Existing releases are not
+retroactively claimed to satisfy the candidate gate.
+
+To verify a candidate downloaded from its recorded artifact, use the verifier from the
+same reviewed source commit, with a trusted GitHub CLI installed and authenticated:
+
+```powershell
+./scripts/verify-localai-unsigned-candidate.ps1 -ArtifactRoot <downloaded-folder> `
+  -ExpectedSource <commit> -ExpectedVersion <version> -ExpectedRunId <run-id> `
+  -ExpectedRunAttempt <attempt> -EvidencePath <outside-artifact>/verified-candidate.json
+```
+
+Expected values must come from the reviewed run, not from the downloaded manifest.
+These checks establish evidence about candidate files or observed release assets.
+They do not establish which version is installed or running on a particular machine.
+Production signing, key custody, the ECDSA package manifest, and installation/runtime
+validation remain separate acceptance requirements. Issue 210 stays open.
+
+The mechanisms follow the upstream [attestation action](https://github.com/actions/attest)
+and [GitHub CLI verifier](https://cli.github.com/manual/gh_attestation_verify).
+
 ## Privacy
 
 [Privacy](privacy.md) lists every connection Local AI makes to another computer and what
