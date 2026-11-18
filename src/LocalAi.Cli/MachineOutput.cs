@@ -35,12 +35,19 @@ internal static class MachineOutput
     /// Document queries may contain a literal --json. Their value options are scanned in pairs;
     /// existing commands retain their established flag handling.
     /// </summary>
-    public static bool Requested(IReadOnlyList<string> arguments) =>
-        arguments.FirstOrDefault() is "documents" or "diagnostics" or "hardware" or "offline" ? MachineEnvelope.RequestedAsOption(
-            arguments.FirstOrDefault() == "diagnostics"
-                ? arguments.Where(argument => argument != "--identity").ToArray()
-                : arguments)
-            : MachineEnvelope.RequestedAnywhere(arguments);
+    public static bool Requested(IReadOnlyList<string> arguments)
+    {
+        if (arguments.FirstOrDefault() != "diagnostics")
+            return arguments.FirstOrDefault() is "documents" or "hardware" or "offline"
+                ? MachineEnvelope.RequestedAsOption(arguments) : MachineEnvelope.RequestedAnywhere(arguments);
+        for (var i = 1; i < arguments.Count; i++)
+        {
+            if (arguments[i] == Flag) return true;
+            if (arguments[i] != "--identity" && arguments[i].StartsWith("--", StringComparison.Ordinal)
+                && i + 1 < arguments.Count) i++;
+        }
+        return false;
+    }
 
     /// <summary>The arguments a command sees, with the flag this class owns taken out.</summary>
     public static string[] Without(IReadOnlyList<string> arguments)

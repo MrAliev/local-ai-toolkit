@@ -36,6 +36,23 @@ public sealed class RuntimeEvidenceSurfaceTests
     }
 
     [Fact]
+    public async Task Identity_as_an_invalid_output_operand_does_not_hide_the_explicit_json_error_mode()
+    {
+        using var fixture = new Fixture();
+        string[] arguments = ["diagnostics", "--out", "--identity", "--json"];
+        Assert.True(MachineOutput.Requested(arguments));
+        Assert.Equal(["diagnostics", "--out", "--identity"], MachineOutput.Without(arguments));
+        using var stdout = new StringWriter();
+        using var stderr = new StringWriter();
+        var exit = await DiagnosticsCommand.ExecuteAsync(MachineOutput.Without(arguments)[1..], new(stdout, stderr), true, Token, fixture.Root);
+        Assert.Equal(2, exit);
+        Assert.Equal(string.Empty, stderr.ToString());
+        using var json = JsonDocument.Parse(stdout.ToString());
+        Assert.False(json.RootElement.GetProperty("ok").GetBoolean());
+        Assert.Empty(Directory.EnumerateFileSystemEntries(fixture.Root));
+    }
+
+    [Fact]
     public async Task Precise_identity_is_opt_in_and_uses_the_observed_cli_component_and_validated_index_record()
     {
         using var fixture = new Fixture();
