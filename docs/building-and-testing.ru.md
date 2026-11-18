@@ -155,6 +155,6 @@ DLL рядом с ним нужны `file`, `version`, `recordedProductVersion` 
 
 ---
 
-← [Пакеты документации](documentation-packages.ru.md) · [Оглавление](README.ru.md#оглавление) · [Лицензия](licence.ru.md) →
+← [Проверка отдельного запроса навигации](bounded-navigation-diagnostics.ru.md) · [Оглавление](README.ru.md#оглавление) · [Лицензия](licence.ru.md) →
 
 <!-- Generated from the README by DocumentationSiteTests. -->

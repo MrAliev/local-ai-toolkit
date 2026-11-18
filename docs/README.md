@@ -59,6 +59,8 @@ if you would rather work on your own.
   - [Remove it entirely](updating-and-removing.md#remove-it-entirely)
 - [Impact evidence: C# pilot](impact-evidence-c-pilot.md)
 - [Documentation packages](documentation-packages.md)
+- [Broker jobs and interrupted waits](broker-jobs-and-interrupted-waits.md)
+- [Bounded navigation diagnostics](bounded-navigation-diagnostics.md)
 - [Building and testing](building-and-testing.md)
   - [Independent quality corpora](building-and-testing.md#independent-quality-corpora)
 - [Licence](licence.md)

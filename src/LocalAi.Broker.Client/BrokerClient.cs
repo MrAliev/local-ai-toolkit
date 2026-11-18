@@ -12,7 +12,15 @@ public interface IBrokerClient
         CancellationToken cancellationToken = default);
 }
 
-public sealed class BrokerClient : IBrokerClient
+public interface IBrokerJobClient : IBrokerClient
+{
+    Task<BrokerJobHandle> SubmitAsync(LocalJobRequest request, CancellationToken cancellationToken = default);
+    Task<LocalJobResult<T>> WaitAsync<T>(Guid jobId, CancellationToken cancellationToken = default);
+    Task<JobStatus?> GetStatusAsync(Guid jobId, CancellationToken cancellationToken = default);
+    Task<JobCancellationResult> RequestCancellationAsync(BrokerJobHandle handle, CancellationToken cancellationToken = default);
+}
+
+public sealed class BrokerClient : IBrokerJobClient
 {
     private static readonly TimeSpan ProcessCheckInterval = TimeSpan.FromSeconds(5);
     private readonly DurableQueue _queue;
@@ -21,6 +29,7 @@ public sealed class BrokerClient : IBrokerClient
     private readonly TimeSpan _timeout;
     private readonly TimeSpan _pollInterval;
     private readonly TimeProvider _timeProvider;
+    private readonly Action<BrokerJobHandle>? _onSubmitted;
 
     /// <summary>
     /// Told on every poll whether the job is still queued or already running. Only the
@@ -35,10 +44,12 @@ public sealed class BrokerClient : IBrokerClient
         TimeSpan? timeout = null,
         TimeSpan? pollInterval = null,
         ILocalRunObserver? observer = null,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        Action<BrokerJobHandle>? onSubmitted = null)
     {
         _timeProvider = timeProvider ?? TimeProvider.System;
         _observer = observer;
+        _onSubmitted = onSubmitted;
         _queue = queue ?? throw new ArgumentNullException(nameof(queue));
         _process = process ?? throw new ArgumentNullException(nameof(process));
         _delay = delay ?? Task.Delay;
@@ -59,42 +70,99 @@ public sealed class BrokerClient : IBrokerClient
         LocalJobRequest request,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(request);
-
-        await _process.EnsureRunningAsync(cancellationToken);
-        var queued = await _queue.EnqueueAsync(request, cancellationToken);
+        var handle = await SubmitAsync(request, cancellationToken);
         var usage = UsageCall.Current;
-        var inference = request.Payload is ChatJobPayload or EmbedJobPayload
-            or NativeOllamaJobPayload { Operation: NativeOllamaOperation.Chat or NativeOllamaOperation.Generate or NativeOllamaOperation.Embed };
-        usage?.LinkJob(queued.JobId, (request.Payload as ChatJobPayload)?.Workflow?.WorkflowId, inference);
+        var inference = IsInference(request);
         var embedding = request.Payload as EmbedJobPayload;
-        if (inference) usage?.RegisterJobEvidence(_queue.RuntimeRoot, queued.JobId,
-            expectedModel: embedding?.Model, expectedContextTokens: embedding?.RequestedContextTokens);
         LocalUsageReceipt? receipt = null;
-
-        using var deadline = new CancellationTokenSource(_timeout, _timeProvider);
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, deadline.Token);
         try
         {
-            var result = await AwaitAsync<T>(queued.JobId, timeout.Token);
+            var result = await WaitAsync<T>(handle.JobId, cancellationToken);
             receipt = result.Receipt;
             return result;
-        }
-        catch (OperationCanceledException)
-            when (!cancellationToken.IsCancellationRequested &&
-                _process.ReadBackendState() is { Reachable: false } backend)
-        {
-            // The job never ran, and the reason is not in the job. Reporting the wait as a bare
-            // cancellation left "the tool hung and gave up", which nobody can act on.
-            throw new BrokerBackendUnreachableException(backend.Endpoint);
         }
         finally
         {
             if (usage is not null && inference)
-                usage.RegisterJobEvidence(_queue.RuntimeRoot, queued.JobId, receipt,
+                usage.RegisterJobEvidence(_queue.RuntimeRoot, handle.JobId, receipt,
                     expectedModel: embedding?.Model, expectedContextTokens: embedding?.RequestedContextTokens);
         }
     }
+
+    public async Task<BrokerJobHandle> SubmitAsync(
+        LocalJobRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        await _process.EnsureRunningAsync(cancellationToken);
+        var queued = await _queue.EnqueueOwnedAsync(request, cancellationToken);
+        var usage = UsageCall.Current;
+        var inference = IsInference(request);
+        usage?.LinkJob(queued.JobId, (request.Payload as ChatJobPayload)?.Workflow?.WorkflowId, inference);
+        var embedding = request.Payload as EmbedJobPayload;
+        if (inference) usage?.RegisterJobEvidence(_queue.RuntimeRoot, queued.JobId,
+            expectedModel: embedding?.Model, expectedContextTokens: embedding?.RequestedContextTokens);
+        // A failed private persistence sink does not revoke an already durable submission.
+        // Return its identity in the exception so the caller can still query/reattach.
+        try { _onSubmitted?.Invoke(queued); }
+        catch (Exception exception)
+        {
+            throw new BrokerJobSubmissionNotificationException(queued.JobId, exception);
+        }
+        _observer?.Report(new BrokerJobSubmitted(queued.JobId, queued.JoinedExisting));
+        return queued;
+    }
+
+    public async Task<LocalJobResult<T>> WaitAsync<T>(
+        Guid jobId,
+        CancellationToken cancellationToken = default)
+    {
+        if (jobId == Guid.Empty) throw new ArgumentException("Job ID cannot be empty.", nameof(jobId));
+        using var deadline = new CancellationTokenSource(_timeout, _timeProvider);
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, deadline.Token);
+        try
+        {
+            return await AwaitAsync<T>(jobId, timeout.Token);
+        }
+        catch (OperationCanceledException exception)
+            when (exception is not BrokerJobCancelledException &&
+                !cancellationToken.IsCancellationRequested && deadline.IsCancellationRequested &&
+                _process.ReadBackendState() is { Reachable: false } backend)
+        {
+            // The job never ran, and the reason is not in the job. Reporting the wait as a bare
+            // cancellation left "the tool hung and gave up", which nobody can act on.
+            throw new BrokerBackendUnreachableException(backend.Endpoint, jobId);
+        }
+        catch (OperationCanceledException exception)
+            when (exception is not BrokerJobCancelledException && cancellationToken.IsCancellationRequested)
+        {
+            throw new BrokerJobWaitCancelledException(jobId, cancellationToken);
+        }
+        catch (OperationCanceledException exception)
+            when (exception is not BrokerJobCancelledException && deadline.IsCancellationRequested)
+        {
+            throw new BrokerJobWaitTimeoutException(jobId, _timeout);
+        }
+    }
+
+    public Task<JobStatus?> GetStatusAsync(Guid jobId, CancellationToken cancellationToken = default) =>
+        _queue.GetStatusAsync(jobId, cancellationToken);
+
+    public Task<JobCancellationResult> RequestCancellationAsync(
+        BrokerJobHandle handle,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(handle);
+        cancellationToken.ThrowIfCancellationRequested();
+        return _process.SupportsJobCancellation()
+            ? _queue.RequestCancellationAsync(handle, cancellationToken)
+            : Task.FromResult(JobCancellationResult.Unsupported);
+    }
+
+    private static bool IsInference(LocalJobRequest request) =>
+        request.Payload is ChatJobPayload or EmbedJobPayload
+            or NativeOllamaJobPayload { Operation: NativeOllamaOperation.Chat or NativeOllamaOperation.Generate or NativeOllamaOperation.Embed };
 
     private async Task<LocalJobResult<T>> AwaitAsync<T>(
         Guid jobId,
@@ -200,12 +268,31 @@ public sealed class BrokerClient : IBrokerClient
 /// right to keep waiting -- a backend that is down at boot usually comes up -- but somebody has
 /// to be told why nothing happened.
 /// </summary>
-public sealed class BrokerBackendUnreachableException(string endpoint)
+public sealed class BrokerBackendUnreachableException(string endpoint, Guid? jobId = null)
     : InvalidOperationException(
         $"Ollama is not answering at {endpoint}, so the job never ran. Start Ollama and try " +
         "again; queued work is kept and runs as soon as it answers.")
 {
     public string Endpoint { get; } = endpoint;
+    public Guid? JobId { get; } = jobId;
+}
+
+public sealed class BrokerJobWaitTimeoutException(Guid jobId, TimeSpan timeout)
+    : TimeoutException($"Stopped waiting for broker job '{jobId}' after {timeout}. The durable job is kept; query its status or wait again.")
+{
+    public Guid JobId { get; } = jobId;
+}
+
+public sealed class BrokerJobWaitCancelledException(Guid jobId, CancellationToken cancellationToken)
+    : OperationCanceledException($"Stopped waiting for broker job '{jobId}'. The durable job is kept.", cancellationToken)
+{
+    public Guid JobId { get; } = jobId;
+}
+
+public sealed class BrokerJobSubmissionNotificationException(Guid jobId, Exception innerException)
+    : InvalidOperationException($"Broker job '{jobId}' was submitted, but its private handle sink failed. The durable job is kept.", innerException)
+{
+    public Guid JobId { get; } = jobId;
 }
 
 public sealed class BrokerJobFailedException(

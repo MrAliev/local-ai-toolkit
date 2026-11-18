@@ -337,4 +337,13 @@
   <data name="ImpactQuestion_type-contract" xml:space="preserve"><value>Потребуется ли изменить это объявление при изменении выбранного типа?</value></data>
   <data name="ImpactQuestion_test-coverage" xml:space="preserve"><value>Какие тесты проверят изменение, затрагивающее эту связь?</value></data>
   <data name="ImpactQuestion_insufficient-context" xml:space="preserve"><value>Вопрос не выбран: модель отметила переданный контекст как недостаточный.</value></data>
+  <data name="NoPreciseReferencesForQuery" xml:space="preserve">
+    <value>Семантический индекс не вернул точных ссылок для этого запроса; результаты ниже — ограниченные текстовые совпадения.</value>
+  </data>
+  <data name="NavigationProbeUnavailable" xml:space="preserve">
+    <value>Навигационный запрос не выполнялся: его шлюз недоступен; готовность запроса и покрытие неизвестны.</value>
+  </data>
+  <data name="NavigationProbeNoLocations" xml:space="preserve">
+    <value>Этот запрос не вернул позиций; это не доказывает отсутствие ссылок или определений.</value>
+  </data>
 </root>

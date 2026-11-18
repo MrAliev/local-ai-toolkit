@@ -1296,6 +1296,7 @@ public sealed class BrokerModelInstallerTests : IDisposable
                 Pull("model-a", "signed-7"),
                 """
                 {"schemaVersion":1,"operation":"pull","model":"model-a","phase":"preparing"}
+                {"schemaVersion":1,"operation":"pull","model":"model-a","phase":"other","status":"broker_job:11111111-2222-3333-4444-555555555555;joined=false"}
                 {"schemaVersion":1,"operation":"pull","model":"model-a","phase":"downloading","completedBytes":1,"totalBytes":2}
                 """,
                 false,

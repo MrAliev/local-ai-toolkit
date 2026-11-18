@@ -19,6 +19,9 @@ public interface ILocalRunObserver
 /// <summary>One thing that happened during a run, named rather than worded.</summary>
 public abstract record LocalRunStep;
 
+/// <summary>The durable, canonical job identity, before the caller starts waiting.</summary>
+public sealed record BrokerJobSubmitted(Guid JobId, bool JoinedExisting) : LocalRunStep;
+
 /// <summary>
 /// The job is in the broker and has not finished. Reported on every poll of the queue — ten
 /// times a second — so the console can tell waiting apart from working without a clock of its

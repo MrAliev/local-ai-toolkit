@@ -54,7 +54,7 @@ internal static class SemanticImpactCommand
             SemanticImpactReport Read() => gateway.AnalyzeImpact(path, position.Line,
                 position.Utf16Column, limit, options.GetValueOrDefault("--root"), cancellationToken);
             var explained = explain ? await (explanationService ?? new SemanticImpactExplanation(
-                    () => BrokerClientFactory.CreateDefault(runtimeRoot))).ExplainAsync(Read, options.GetValueOrDefault("--model"), cancellationToken)
+                    () => CliBrokerJobs.Create(runtimeRoot))).ExplainAsync(Read, options.GetValueOrDefault("--model"), cancellationToken)
                 : null;
             var report = explained?.Report ?? Read();
             cancellationToken.ThrowIfCancellationRequested();

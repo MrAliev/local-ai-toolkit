@@ -262,6 +262,7 @@ public sealed class BrokerHost
         var executionStartedAtUtc = _timeProvider.GetUtcNow();
         DateTimeOffset? lastProbeAtUtc = null;
         var consecutiveUnhealthyProbes = 0;
+        var callerCancellationRequested = false;
         Task<BrokerExecutionResult> execution;
         try
         {
@@ -294,11 +295,21 @@ public sealed class BrokerHost
                 }
 
                 await heartbeatDelay;
-                await _queue.HeartbeatAsync(
+                var heartbeat = await _queue.HeartbeatAsync(
                     lease.Request.JobId,
                     _workerId,
                     lease.LeaseId,
                     hostCancellation);
+
+                if (heartbeat.CancellationRequested && !callerCancellationRequested)
+                {
+                    callerCancellationRequested = true;
+                    attemptCancellation.Cancel();
+                }
+
+                // Keep this lease alive until the executor has actually stopped. The host
+                // token stays untouched, so another client's queued job can run afterwards.
+                if (callerCancellationRequested) continue;
 
                 var now = _timeProvider.GetUtcNow();
                 if (_backendProbe is null ||
@@ -360,6 +371,11 @@ public sealed class BrokerHost
         try
         {
             result = await execution;
+        }
+        catch (OperationCanceledException) when (callerCancellationRequested && !hostCancellation.IsCancellationRequested)
+        {
+            await TryCancelAsync(lease);
+            return;
         }
         catch (OperationCanceledException) when (hostCancellation.IsCancellationRequested)
         {

@@ -203,7 +203,10 @@ public sealed class BrokerClientTests
                 Assert.True(recoveryToken.IsCancellationRequested);
             }
             else stop.Cancel();
-            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pending);
+            if (deadlineExpires)
+                await Assert.ThrowsAsync<BrokerJobWaitTimeoutException>(() => pending);
+            else
+                await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pending);
             Assert.Equal(LocalJobState.Queued,
                 (await queue.GetStatusAsync(request.JobId, TestContext.Current.CancellationToken))!.State);
         }
@@ -211,7 +214,7 @@ public sealed class BrokerClientTests
         {
             stop.Cancel();
             try { await pending; }
-            catch (OperationCanceledException) { }
+            catch (Exception exception) when (exception is OperationCanceledException or BrokerJobWaitTimeoutException) { }
         }
     }
 
@@ -315,8 +318,7 @@ public sealed class BrokerClientTests
         /// </summary>
         private static readonly TimeSpan ClientTimeout = TimeSpan.FromMinutes(5);
 
-        private readonly string _root =
-            Path.Combine(Path.GetTempPath(), "localai-client-" + Guid.NewGuid().ToString("N"));
+        private readonly string _root = Directory.CreateTempSubdirectory("localai-client-").FullName;
 
         public BrokerClientFixture()
         {

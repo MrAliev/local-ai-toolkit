@@ -110,6 +110,18 @@ public sealed record BrokerProcessState(
     BrokerCompatibility? Compatibility = null,
     BrokerBackendState? Backend = null);
 
+/// <summary>Optional feature evidence, tied to the owner of the current host heartbeat.</summary>
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+public sealed record BrokerJobCancellationCapability(
+    [property: JsonRequired] int ProcessId,
+    [property: JsonRequired] DateTimeOffset StartedAtUtc)
+{
+    public const string FileName = "host-job-cancellation.json";
+
+    public bool Matches(BrokerProcessState host) =>
+        ProcessId == host.ProcessId && StartedAtUtc == host.StartedAtUtc;
+}
+
 [JsonPolymorphic(
     TypeDiscriminatorPropertyName = "$type",
     UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FailSerialization)]

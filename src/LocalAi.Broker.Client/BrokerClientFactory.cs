@@ -14,7 +14,8 @@ public static class BrokerClientFactory
     public static BrokerClient CreateDefault(
         string? runtimeRoot = null,
         ILocalRunObserver? observer = null,
-        TimeSpan? deadline = null)
+        TimeSpan? deadline = null,
+        Action<BrokerJobHandle>? onSubmitted = null)
     {
         var root = runtimeRoot ?? ModelResidencyPolicyStore.DefaultRuntimeRoot;
         new RuntimeAcl().Ensure(root);
@@ -22,6 +23,7 @@ public static class BrokerClientFactory
             new DurableQueue(root),
             BrokerProcess.CreateDefault(root),
             timeout: deadline,
-            observer: observer);
+            observer: observer,
+            onSubmitted: onSubmitted);
     }
 }

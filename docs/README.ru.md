@@ -58,6 +58,8 @@
   - [Удалить целиком](updating-and-removing.ru.md#удалить-целиком)
 - [Данные для анализа влияния: пилот C#](impact-evidence-c-pilot.ru.md)
 - [Пакеты документации](documentation-packages.ru.md)
+- [Задания брокера и прерванное ожидание](broker-jobs-and-interrupted-waits.ru.md)
+- [Проверка отдельного запроса навигации](bounded-navigation-diagnostics.ru.md)
 - [Собрать и проверить](building-and-testing.ru.md)
   - [Независимые корпуса для проверки качества](building-and-testing.ru.md#независимые-корпуса-для-проверки-качества)
 - [Лицензия](licence.ru.md)

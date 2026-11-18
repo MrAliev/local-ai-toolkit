@@ -604,7 +604,7 @@ public static class CodeSearchSyncCommand
                     var builder = new IndexBuilder(
                         embedder ?? new BrokerEmbeddingClient(
                             generation.Identity.EmbeddingModel,
-                            BrokerClientFactory.CreateDefault()),
+                            CliBrokerJobs.Create()),
                         error.WriteLine,
                         progress => ReportProgress(
                             RepositoryIndexProgressPhase.EmbeddingOverlay,
@@ -1104,7 +1104,7 @@ public static class CodeSearchSyncCommand
             var builder = new IndexBuilder(
                 embedder ?? new BrokerEmbeddingClient(
                     generation.EmbeddingModel,
-                    BrokerClientFactory.CreateDefault()),
+                    CliBrokerJobs.Create()),
                 error.WriteLine,
                 progress,
                 // The definition bodies the phase above just produced. This is the whole reason

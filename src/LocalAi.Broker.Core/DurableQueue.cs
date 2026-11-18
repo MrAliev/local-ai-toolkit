@@ -73,7 +73,13 @@ public sealed partial class DurableQueue : ISelectableBrokerQueue
 
     public Task<EnqueueResult> EnqueueAsync(
         LocalJobRequest request,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        EnqueueCore(request, null, cancellationToken);
+
+    private Task<EnqueueResult> EnqueueCore(
+        LocalJobRequest request,
+        string? controlTokenHash,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
@@ -132,6 +138,11 @@ public sealed partial class DurableQueue : ISelectableBrokerQueue
             0,
             null);
         AtomicWriteJson(GetStatePath(stagingDirectory), state);
+        if (controlTokenHash is not null)
+        {
+            AtomicWriteJson(GetControlPath(stagingDirectory),
+                new JobControlDocument(1, request.JobId, controlTokenHash, null));
+        }
         MoveDirectory(stagingDirectory, jobDirectory, cancellationToken);
         return Task.FromResult(new EnqueueResult(request.JobId, sequence, JoinedExisting: false));
     }
@@ -236,7 +247,8 @@ public sealed partial class DurableQueue : ISelectableBrokerQueue
             HeartbeatAtUtc = now,
             LeaseExpiresAtUtc = expires
         });
-        return Task.FromResult(new LeaseHeartbeat(jobId, workerId, leaseId, now, expires));
+        return Task.FromResult(new LeaseHeartbeat(jobId, workerId, leaseId, now, expires,
+            ReadControl(entry)?.CancellationRequestedAtUtc is not null));
     }
 
     /// <summary>
@@ -520,7 +532,8 @@ public sealed partial class DurableQueue : ISelectableBrokerQueue
             var entry = new JobEntry(directory, state);
             var failure = ReadFailure(entry);
             return Task.FromResult<JobStatus?>(new JobStatus(
-                state.JobId, state.State, state.FailureCode, failure?.Reason, ReadProgress(entry), failure?.Outcome));
+                state.JobId, state.State, state.FailureCode, failure?.Reason, ReadProgress(entry), failure?.Outcome,
+                ReadControl(entry)?.CancellationRequestedAtUtc is not null));
         }
         return Task.FromResult<JobStatus?>(null);
     }
@@ -639,9 +652,20 @@ public sealed partial class DurableQueue : ISelectableBrokerQueue
     private void RecoverExpiredLeases(DateTimeOffset now)
     {
         foreach (var entry in ReadEntries().Where(entry =>
-                     entry.State.State == LocalJobState.Running &&
-                     entry.State.LeaseExpiresAtUtc <= now))
+                     entry.State.State == LocalJobState.Queued ||
+                     entry.State.State == LocalJobState.Running && entry.State.LeaseExpiresAtUtc <= now))
         {
+            // A durable cancellation must survive worker loss or a requeued attempt.
+            // Do not restart an executor merely to discover this marker at its first heartbeat.
+            // Active leases remain cooperative: only the current worker can finish that attempt.
+            if (ReadControl(entry)?.CancellationRequestedAtUtc is not null)
+            {
+                WriteState(entry.Directory, ToTerminal(entry.State, LocalJobState.Cancelled, now, null));
+                Archive(entry.Directory, entry.State.JobId, CancellationToken.None);
+                continue;
+            }
+            if (entry.State.State != LocalJobState.Running) continue;
+
             WriteState(entry.Directory, entry.State with
             {
                 State = LocalJobState.Queued,
@@ -1316,7 +1340,8 @@ public sealed record LeaseHeartbeat(
     string WorkerId,
     Guid LeaseId,
     DateTimeOffset HeartbeatAtUtc,
-    DateTimeOffset LeaseExpiresAtUtc);
+    DateTimeOffset LeaseExpiresAtUtc,
+    bool CancellationRequested = false);
 
 public sealed record JobResponse(
     [property: JsonRequired] int SchemaVersion,
@@ -1376,7 +1401,8 @@ public sealed record JobStatus(
     string? FailureCode,
     string? FailureReason,
     JobProgress? Progress,
-    ModelExecutionOutcome? FailureOutcome);
+    ModelExecutionOutcome? FailureOutcome,
+    bool CancellationRequested = false);
 
 public sealed record JobDiagnostic(
     Guid JobId,
