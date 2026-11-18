@@ -205,7 +205,24 @@ public sealed class HeuristicSemanticNavigationTests : IDisposable
         SemanticOccurrenceRoles.Reference,
         NavigationPrecision.Heuristic);
 
-    private SemanticNavigationGateway Gateway(FakeHeuristic heuristic, bool withOccurrence)
+    [Fact]
+    public async Task A_resolved_definition_with_no_precise_references_does_not_claim_the_symbol_is_missing()
+    {
+        var gateway = Gateway(new FakeHeuristic([HeuristicLocation]), withOccurrence: true, withReferences: false);
+        var definition = await gateway.ResolveDefinitionAsync("Def.cs", 0, 1, _root, Ct);
+        Assert.Null(definition.Degradation);
+        Assert.Single(definition.Locations);
+
+        var references = await gateway.ResolveReferencesAsync("Def.cs", 0, 1, false, _root, Ct);
+        Assert.Equal(CodeSearch.Core.Resources.IndexText.NoPreciseReferencesForQuery, references.Degradation!.Fact);
+        Assert.Equal(NavigationPrecision.Heuristic, Assert.Single(references.Locations).Precision);
+
+        var includingDefinition = await gateway.ResolveReferencesAsync("Def.cs", 0, 1, true, _root, Ct);
+        Assert.Null(includingDefinition.Degradation);
+        Assert.Equal(NavigationPrecision.Precise, Assert.Single(includingDefinition.Locations).Precision);
+    }
+
+    private SemanticNavigationGateway Gateway(FakeHeuristic heuristic, bool withOccurrence, bool withReferences = true)
     {
         var index = new SemanticIndex
         {
@@ -226,10 +243,10 @@ public sealed class HeuristicSemanticNavigationTests : IDisposable
             ],
             Occurrences = withOccurrence
                 ?
-                [
+                withReferences ? [
                     Occurrence("Def.cs", SemanticOccurrenceRoles.Definition),
                     Occurrence("Use.cs", SemanticOccurrenceRoles.Reference),
-                ]
+                ] : [Occurrence("Def.cs", SemanticOccurrenceRoles.Definition)]
                 : [],
             Relationships = [],
         };

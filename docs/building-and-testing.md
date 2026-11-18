@@ -146,6 +146,6 @@ generative task was started. The original OCR invocation metadata arrays are pre
 
 ---
 
-← [Documentation packages](documentation-packages.md) · [Contents](README.md#contents) · [Licence](licence.md) →
+← [Bounded navigation diagnostics](bounded-navigation-diagnostics.md) · [Contents](README.md#contents) · [Licence](licence.md) →
 
 <!-- Generated from the README by DocumentationSiteTests. -->

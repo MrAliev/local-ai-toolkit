@@ -122,7 +122,7 @@ internal static class DocumentationCommand
             generate ??= (content, token) =>
             {
                 generator ??= new DocumentationGenerator(new BrokerDocumentationModel(
-                    new BrokerLocalModelClient(BrokerClientFactory.CreateDefault(runtimeRoot, new LocalRunProgress(streams.Error, () => DateTimeOffset.UtcNow))),
+                    new BrokerLocalModelClient(CliBrokerJobs.Create(runtimeRoot, new LocalRunProgress(streams.Error, () => DateTimeOffset.UtcNow))),
                     receipt => streams.Error.WriteLine(DocumentationNotice.Format(receipt.Model, receipt.QueueDuration, receipt.ExecutionDuration,
                         receipt.Routing?.ResidencyShortfall ?? LocalAi.Contracts.ResidencyShortfall.None, receipt.Routing?.VramResidentPercent))));
                 return generator.GenerateAsync(content, token);

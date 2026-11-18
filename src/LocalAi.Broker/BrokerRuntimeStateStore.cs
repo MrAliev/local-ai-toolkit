@@ -6,6 +6,7 @@ namespace LocalAi.Broker;
 public sealed class BrokerRuntimeStateStore
 {
     private readonly string _statePath;
+    private readonly string _jobCancellationPath;
 
     public BrokerRuntimeStateStore(string runtimeRoot)
     {
@@ -13,6 +14,7 @@ public sealed class BrokerRuntimeStateStore
         var root = Path.GetFullPath(runtimeRoot);
         Directory.CreateDirectory(root);
         _statePath = Path.Combine(root, "host.json");
+        _jobCancellationPath = Path.Combine(root, BrokerJobCancellationCapability.FileName);
     }
 
     /// <summary>
@@ -24,6 +26,13 @@ public sealed class BrokerRuntimeStateStore
     public static TimeSpan DefaultRetryBudget { get; } = TimeSpan.FromSeconds(2);
 
     public void Publish(BrokerProcessState state) => Publish(state, DefaultRetryBudget);
+
+    public void PublishJobCancellation(BrokerProcessState owner) =>
+        AtomicFile.WriteJson(
+            _jobCancellationPath,
+            new BrokerJobCancellationCapability(owner.ProcessId, owner.StartedAtUtc),
+            LocalAiJson.Strict,
+            AtomicWrite.Recomputable.Retrying(DefaultRetryBudget));
 
     /// <param name="retryBudget">
     /// A duration rather than a number of attempts. Six attempts with a rising sleep came to

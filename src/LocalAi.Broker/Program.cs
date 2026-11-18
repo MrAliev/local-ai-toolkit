@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.Json;
 using LocalAi.Broker;
 using LocalAi.Contracts;
 
@@ -179,6 +180,16 @@ internal static class BrokerProgram
             // this instead of killing the process, so the job in flight is finished and
             // reported rather than abandoned half way through an inference.
             var drain = new DrainSignal();
+            // Keep host.json and release compatibility unchanged. A leftover advertisement
+            // cannot grant capability to a different broker process.
+            try
+            {
+                stateStore.PublishJobCancellation(owner);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
+            {
+                Console.Error.WriteLine($"Local AI broker could not advertise job cancellation: {exception.GetType().Name}.");
+            }
             var heartbeat = new HeartbeatLoop(
                 owner,
                 runtimeRoot,

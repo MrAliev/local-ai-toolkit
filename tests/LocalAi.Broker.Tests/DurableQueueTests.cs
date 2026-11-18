@@ -573,11 +573,7 @@ internal sealed class TemporaryRuntimeRoot : IDisposable
 {
     public TemporaryRuntimeRoot()
     {
-        Path = System.IO.Path.Combine(
-            System.IO.Path.GetTempPath(),
-            "LocalAi.Broker.Tests",
-            Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(Path);
+        Path = Directory.CreateTempSubdirectory("LocalAi.Broker.Tests-").FullName;
     }
 
     public string Path { get; }

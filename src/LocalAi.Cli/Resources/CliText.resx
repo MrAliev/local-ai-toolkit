@@ -1257,4 +1257,13 @@ To keep a worktree whatever its branch: git worktree lock &lt;path&gt;</value>
   <data name="DoctorRepositorySyncNone" xml:space="preserve"><value>No repository-wide sync progress recorded.</value></data>
   <data name="DoctorRepositorySyncUnknown" xml:space="preserve"><value>Repository-wide sync progress could not be verified; the worktree facts above remain available.</value></data>
   <data name="DoctorNavigationHeaderOnly" xml:space="preserve"><value>HeaderOnly (headers match; full integrity and navigation readiness were not checked)</value></data>
+  <data name="JobSubmitted" xml:space="preserve"><value>Broker job {0} (joined={1}). Ctrl+C stops waiting; it does not cancel the job. Use localai job status {0} or localai job wait {0}.</value></data>
+  <data name="JobWaitDetached" xml:space="preserve"><value>Stopped waiting for broker job {0}; the job is kept. Use localai job status {0} or localai job wait {0}. This resumes one broker job, not the original multi-step command.</value></data>
+  <data name="JobCancelled" xml:space="preserve"><value>Broker job {0} is cancelled.</value></data>
+  <data name="JobHandleNotSaved" xml:space="preserve"><value>Private ownership information for broker job {0} could not be saved or read. The job is kept; its status can still be queried.</value></data>
+  <data name="JobArguments" xml:space="preserve"><value>Use localai job status|wait|cancel job-id. Only wait accepts --timeout-seconds (1–86400). These commands concern one broker job, not an entire multi-step workflow.</value></data>
+  <data name="JobNotFound" xml:space="preserve"><value>No durable job with this ID was found.</value></data>
+  <data name="JobNotOwner" xml:space="preserve"><value>No valid locally saved owner handle is available for this job. Joining or knowing its ID does not grant cancellation authority.</value></data>
+  <data name="JobCancelUnsupported" xml:space="preserve"><value>The running broker does not confirm support for owned cancellation. No cancellation was requested and the shared broker was not restarted.</value></data>
+  <data name="JobFailed" xml:space="preserve"><value>The broker job failed. Use job status to inspect its recorded failure code.</value></data>
 </root>

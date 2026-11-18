@@ -17,6 +17,15 @@ namespace LocalAi.Cli.Resources;
 /// </summary>
 public static class CliText
 {
+    public static string JobSubmitted(Guid id, bool joined) => Catalogue.Format(nameof(JobSubmitted), id, joined);
+    public static string JobWaitDetached(Guid id) => Catalogue.Format(nameof(JobWaitDetached), id);
+    public static string JobCancelled(Guid id) => Catalogue.Format(nameof(JobCancelled), id);
+    public static string JobHandleNotSaved(Guid id) => Catalogue.Format(nameof(JobHandleNotSaved), id);
+    public static string JobArguments => Catalogue.Get(nameof(JobArguments));
+    public static string JobNotFound => Catalogue.Get(nameof(JobNotFound));
+    public static string JobNotOwner => Catalogue.Get(nameof(JobNotOwner));
+    public static string JobCancelUnsupported => Catalogue.Get(nameof(JobCancelUnsupported));
+    public static string JobFailed => Catalogue.Get(nameof(JobFailed));
     public static string UsageReportArguments => Catalogue.Get(nameof(UsageReportArguments));
     public static string UsageReportNotFound(Guid id) => Catalogue.Format(nameof(UsageReportNotFound), id);
     public static TextCatalogue Catalogue { get; } = new(

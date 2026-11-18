@@ -25,6 +25,8 @@ public static class CodeSearchText
         typeof(CodeSearchText).Assembly);
 
     public static string NoDefinition => Catalogue.Get(nameof(NoDefinition));
+    public static string NavigationProbeParametersInvalid => Catalogue.Get(nameof(NavigationProbeParametersInvalid));
+    public static string NavigationProbeRuntimeEvidenceConflict => Catalogue.Get(nameof(NavigationProbeRuntimeEvidenceConflict));
 
     public static string NoReferences => Catalogue.Get(nameof(NoReferences));
 

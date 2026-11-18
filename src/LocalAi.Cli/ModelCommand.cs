@@ -61,7 +61,7 @@ public static class ModelCommand
             {
                 token.ThrowIfCancellationRequested();
                 return new BrokerLocalModelClient(
-                    BrokerClientFactory.CreateDefault(
+                    CliBrokerJobs.Create(
                         runtimeRoot: runtimeRoot, observer: observer,
                         deadline: deadline));
             },
@@ -112,6 +112,11 @@ public static class ModelCommand
                     cancellationToken) ??
                 throw new InvalidOperationException();
             cancellationToken.ThrowIfCancellationRequested();
+        }
+        catch (Exception exception) when (JobFailure(exception) is not null)
+        {
+            var failure = JobFailure(exception)!.Value;
+            return await WriteJobErrorAsync(output, error, request, failure.Id, failure.Code, failure.Exit);
         }
         catch (OperationCanceledException)
         {
@@ -174,6 +179,11 @@ public static class ModelCommand
                         ? "residency_rejected"
                         : "trial_load_failed"));
             return RejectedExitCode;
+        }
+        catch (Exception exception) when (JobFailure(exception) is not null)
+        {
+            var failure = JobFailure(exception)!.Value;
+            return await WriteJobErrorAsync(output, error, request, failure.Id, failure.Code, failure.Exit);
         }
         catch (OperationCanceledException)
         {
@@ -483,6 +493,32 @@ public static class ModelCommand
 
     private static Task WriteAsync<T>(TextWriter output, T response) =>
         output.WriteLineAsync(JsonSerializer.Serialize(response, LocalAiJson.Strict));
+
+    private static (Guid Id, string Code, int Exit)? JobFailure(Exception exception) => exception switch
+    {
+        BrokerJobWaitCancelledException detached => (detached.JobId, "job_wait_detached", CancelledExitCode),
+        BrokerJobWaitTimeoutException timedOut => (timedOut.JobId, "job_wait_timeout", 75),
+        BrokerJobCancelledException cancelled => (cancelled.JobId, "job_cancelled", CancelledExitCode),
+        BrokerJobSubmissionNotificationException submitted => (submitted.JobId, "job_handle_not_saved", 73),
+        _ => null,
+    };
+
+    private static async Task<int> WriteJobErrorAsync(TextWriter output, TextWriter? error, Request request,
+        Guid id, string code, int exitCode)
+    {
+        if (exitCode == CancelledExitCode) UsageCall.Current?.Cancelled();
+        else UsageCall.Current?.Failed(code);
+        if (!request.ProgressJson)
+            (error ?? Console.Error).WriteLine(code switch
+            {
+                "job_cancelled" => CliText.JobCancelled(id),
+                "job_handle_not_saved" => CliText.JobHandleNotSaved(id),
+                _ => CliText.JobWaitDetached(id),
+            });
+        await WriteAsync(output, new { schemaVersion = SchemaVersion, operation = request.Operation,
+            ok = false, code, jobId = id, scope = "broker-job" });
+        return exitCode;
+    }
 
     private static async Task<int> WriteErrorAsync(
         TextWriter output,

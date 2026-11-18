@@ -41,7 +41,7 @@ public static class NativeCommand
             LocalJobPriority.Foreground,
             parsedOperation,
             body);
-        var result = await BrokerClientFactory.CreateDefault()
+        var result = await CliBrokerJobs.Create()
             .ExecuteAsync<NativeOllamaJobOutput>(request, cancellationToken);
         return result.Value.Response;
     }

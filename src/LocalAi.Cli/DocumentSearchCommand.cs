@@ -45,7 +45,7 @@ internal static class DocumentSearchCommand
             if (indexing)
             {
                 var observer = new LocalRunProgress(streams.Error, static () => DateTimeOffset.UtcNow);
-                tasks ??= new LocalTasks(new BrokerLocalModelClient(BrokerClientFactory.CreateDefault(observer: observer)), observer);
+                tasks ??= new LocalTasks(new BrokerLocalModelClient(CliBrokerJobs.Create(observer: observer)), observer);
                 var mode = options.GetValueOrDefault("--pdf-mode", "Ocr");
                 var summary = await DocumentSearchIndex.RefreshAsync(tasks, options["--source"], index, options.GetValueOrDefault("--model"), cancellationToken, mode);
                 result = summary;
