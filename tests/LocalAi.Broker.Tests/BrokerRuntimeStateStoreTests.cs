@@ -119,10 +119,7 @@ public sealed class BrokerRuntimeStateStoreTests
     {
         public RuntimeStateFixture()
         {
-            Root = Path.Combine(
-                Path.GetTempPath(),
-                "localai-state-" + Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(Root);
+            Root = Directory.CreateTempSubdirectory("localai-state-").FullName;
             Store = new BrokerRuntimeStateStore(Root);
         }
 
