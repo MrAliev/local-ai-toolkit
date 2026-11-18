@@ -6,12 +6,10 @@ namespace LocalAi.Installer.Core.Tests;
 
 public sealed class GitHubReleaseMetadataIsolationTests : IDisposable
 {
-    private readonly string root = Path.Combine(
-        Path.GetTempPath(), "LocalAi-release-metadata-" + Guid.NewGuid().ToString("N"));
+    private readonly string root = Directory.CreateTempSubdirectory("LocalAi-release-metadata-").FullName;
 
     public GitHubReleaseMetadataIsolationTests()
     {
-        Directory.CreateDirectory(root);
         File.WriteAllText(Path.Combine(root, "caller-owned.txt"), "keep");
     }
 
