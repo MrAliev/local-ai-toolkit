@@ -43,12 +43,11 @@ public sealed class ModelAwareScheduler
     {
         ArgumentNullException.ThrowIfNull(candidates);
         var queued = candidates.ToDictionary(candidate => candidate.JobId);
-        var inferenceIsQueued = queued.Values.Any(
-            candidate => !candidate.IsMaintenance);
         var eligible = queued.Values
             .Where(candidate => candidate.IsDependencyReady)
             .ToDictionary(candidate => candidate.JobId);
-        if (inferenceIsQueued)
+        // Only ready work holds maintenance back. A blocked workflow cannot use the broker.
+        if (eligible.Values.Any(candidate => !candidate.IsMaintenance))
         {
             eligible = eligible
                 .Where(pair => !pair.Value.IsMaintenance)

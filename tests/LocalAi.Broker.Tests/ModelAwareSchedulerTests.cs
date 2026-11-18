@@ -257,7 +257,7 @@ public sealed class ModelAwareSchedulerTests
     }
 
     [Fact]
-    public void Maintenance_waits_until_no_inference_job_is_queued()
+    public void Maintenance_waits_until_no_ready_inference_job_is_queued()
     {
         var scheduler = new ModelAwareScheduler(_time);
         var maintenance = Job(1, "maintenance", seconds: 1) with
@@ -274,7 +274,7 @@ public sealed class ModelAwareSchedulerTests
     }
 
     [Fact]
-    public void Maintenance_waits_for_dependency_blocked_inference_work()
+    public void Maintenance_runs_when_only_dependency_blocked_inference_work_is_queued()
     {
         var scheduler = new ModelAwareScheduler(_time);
         var maintenance = Job(1, "maintenance", seconds: 1) with
@@ -291,7 +291,89 @@ public sealed class ModelAwareSchedulerTests
             [maintenance, blockedInference],
             residentModel: "maintenance");
 
-        Assert.Null(decision.JobId);
+        Assert.Equal(maintenance.JobId, decision.JobId);
+    }
+
+    [Theory]
+    [InlineData(true, true, false)]
+    [InlineData(true, false, false)]
+    [InlineData(false, true, false)]
+    [InlineData(false, false, false)]
+    [InlineData(true, true, true)]
+    [InlineData(true, false, true)]
+    [InlineData(false, true, true)]
+    [InlineData(false, false, true)]
+    public void Maintenance_eligibility_depends_on_ready_work(
+        bool inferenceReady, bool maintenanceReady, bool agedMaintenance)
+    {
+        var scheduler = new ModelAwareScheduler(_time);
+        var now = _time.GetUtcNow();
+        var maintenance = Job(1, "maintenance", seconds: 1,
+            createdAtUtc: agedMaintenance ? now.AddMinutes(-60) : now,
+            dependencyReady: maintenanceReady,
+            priority: LocalJobPriority.Interactive,
+            durationClass: LocalDurationClass.Long) with { IsMaintenance = true };
+        var inference = Job(2, "model", seconds: 20,
+            createdAtUtc: inferenceReady ? now : now.AddMinutes(-60),
+            dependencyReady: inferenceReady,
+            priority: LocalJobPriority.Background);
+
+        var decision = scheduler.Decide([maintenance, inference],
+            residentModel: inferenceReady ? "model" : "maintenance");
+
+        Guid? expected = inferenceReady ? inference.JobId :
+            maintenanceReady ? maintenance.JobId : null;
+        Assert.Equal(expected, decision.JobId);
+        Assert.Null(decision.WaitUntilUtc);
+    }
+
+    [Fact]
+    public void Ready_inference_suppresses_aged_maintenance_in_a_frozen_snapshot()
+    {
+        var scheduler = new ModelAwareScheduler(_time);
+        var first = Job(1, "model", seconds: 1) with { IsMaintenance = true };
+        var second = Job(2, "model", seconds: 2) with { IsMaintenance = true };
+        Assert.Equal(first.JobId,
+            scheduler.Decide([first, second], residentModel: "model").JobId);
+        _time.Advance(TimeSpan.FromMinutes(15));
+        var inference = Job(3, "model", seconds: 30,
+            priority: LocalJobPriority.Background);
+
+        var decision = scheduler.Decide([second, inference], residentModel: "model");
+
+        Assert.Equal(inference.JobId, decision.JobId);
+    }
+
+    [Fact]
+    public void A_blocked_inference_snapshot_does_not_hold_ready_maintenance()
+    {
+        var scheduler = new ModelAwareScheduler(_time);
+        var first = Job(1, "model", seconds: 1);
+        var second = Job(2, "model", seconds: 2);
+        Assert.Equal(first.JobId,
+            scheduler.Decide([first, second], residentModel: "model").JobId);
+        var blocked = second with { IsDependencyReady = false };
+        var maintenance = Job(3, "model", seconds: 30) with { IsMaintenance = true };
+
+        var decision = scheduler.Decide([blocked, maintenance], residentModel: "model");
+
+        Assert.Equal(maintenance.JobId, decision.JobId);
+    }
+
+    [Fact]
+    public void Maintenance_gathers_before_switching_models_when_inference_is_blocked()
+    {
+        var scheduler = new ModelAwareScheduler(_time);
+        var blocked = Job(1, "resident", seconds: 1, dependencyReady: false);
+        var maintenance = Job(2, "cold", seconds: 30) with { IsMaintenance = true };
+
+        var first = scheduler.Decide([blocked, maintenance], residentModel: "resident");
+
+        Assert.Null(first.JobId);
+        Assert.Equal(_time.GetUtcNow().AddSeconds(2), first.WaitUntilUtc);
+        _time.Advance(TimeSpan.FromSeconds(2));
+        Assert.Equal(maintenance.JobId,
+            scheduler.Decide([blocked, maintenance], residentModel: "resident").JobId);
     }
 
     /// <summary>
