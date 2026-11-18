@@ -104,18 +104,17 @@ public sealed class SystemEnvironmentProbeTests
 
         var probe = new SystemEnvironmentProbe();
         var runner = new SystemProcessRunner();
-        var executable = probe.ResolveExecutable(command);
+        var executable = command == "scip-python"
+            ? Environment.GetEnvironmentVariable("LOCALAI_SCIP_PYTHON_EXECUTABLE") ?? probe.ResolveExecutable(command)
+            : probe.ResolveExecutable(command);
         if (executable is null)
         {
             Assert.Skip($"Install {command} to run the real version probe.");
         }
 
-        // A tool that is installed and cannot run is a property of this machine, not of the
-        // probe under test. scip-python 0.6.6 dies on load under Windows whenever it has to
-        // build a virtual environment, so it answers its own --version with a crash on a
-        // clean runner and works on a developer machine that already has an interpreter it
-        // accepts. The exclusion is declared by name in LOCALAI_STRICT_FIXTURES_EXCEPT; what
-        // this test owns is that the shim resolves and the probe reaches the tool at all.
+        // CI passes the prepared private Python shim explicitly, just as the semantic
+        // fixtures do. Its other npm shims need not shadow unrelated tools on PATH.
+        // An installed tool that cannot start is a failure unless explicitly excused.
         await ScipVersionProbe.VerifyAsync(
             command, executable, expectedVersion, runner, FixturePrerequisite.Excused,
             probe.ResolveExecutable, TestContext.Current.CancellationToken);

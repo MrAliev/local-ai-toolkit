@@ -110,7 +110,6 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Python is unavailable.' }
           Get-FileHash -LiteralPath (Join-Path $env:LOCALAI_SCIP_PYTHON_FIXTURE 'node_modules/@sourcegraph/scip-python/dist/scip-python.js') -Algorithm SHA256
           "LOCALAI_SCIP_PYTHON_EXECUTABLE=$command" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          $shimDirectory | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Test
         shell: pwsh
