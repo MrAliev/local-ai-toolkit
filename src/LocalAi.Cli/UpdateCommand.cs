@@ -90,23 +90,19 @@ public static class UpdateCommand
         var releases = feed ?? owned!;
         string tag;
         ResolvedRelease resolved;
-        var working = Path.Combine(
-            Path.GetTempPath(),
-            "localai-update-" + Guid.NewGuid().ToString("N"));
+        using var working = InstallerScratchDirectory.ClaimTemporary("localai-update-");
         try
         {
             output.WriteLine(CliText.UpdateLookingForRelease);
             tag = await releases.ResolveTagAsync("latest", cancellationToken)
                 .ConfigureAwait(false);
-            Directory.CreateDirectory(working);
-            resolved = await releases.ResolveAsync(tag, working, cancellationToken)
+            resolved = await releases.ResolveAsync(tag, working.Path, cancellationToken)
                 .ConfigureAwait(false);
         }
         catch (ReleaseResolutionException exception)
         {
             // Includes a manifest that did not verify: what cannot be proven is not installed.
             error.WriteLine(exception.Message);
-            Delete(working);
             return 1;
         }
 
@@ -114,7 +110,6 @@ public static class UpdateCommand
         if (!force && IsCurrent(resolved.Manifest, installed))
         {
             output.WriteLine(CliText.UpdateNothingToInstall(available));
-            Delete(working);
             return 0;
         }
 
@@ -124,11 +119,8 @@ public static class UpdateCommand
             CliText.UpdateAvailable(available, installed.DisplayName, null).TrimEnd());
         try
         {
-            // Inside the block that owns the working directory, not before it. Waiting on the
-            // queue is the one part of this command that can take minutes, so it is the part
-            // somebody interrupts - and cancelling used to throw past the only code that deletes
-            // the directory, leaving a working directory in the temp root on every abandoned
-            // wait with nothing to collect them (#319).
+            // The same owned directory covers release resolution and the queue wait, so an
+            // interrupted update cleans up the downloaded files at either stage (#319).
             if (!await QueueIsQuietAsync(runtimeRoot, wait, output, error, cancellationToken)
                 .ConfigureAwait(false))
             {
@@ -143,7 +135,7 @@ public static class UpdateCommand
             var lastReported = -1L;
             var result = await service.InstallAsync(
                     resolved,
-                    working,
+                    working.Path,
                     tag,
                     new Progress<long>(bytes => ReportDownload(
                         output,
@@ -190,10 +182,6 @@ public static class UpdateCommand
         {
             error.WriteLine(CliText.UpdateFailed(exception.Message));
             return 1;
-        }
-        finally
-        {
-            Delete(working);
         }
     }
 
@@ -336,19 +324,4 @@ public static class UpdateCommand
                 null,
                 manifest.VersionDirectory),
             installed) == UpdateAvailability.UpToDate;
-
-    private static void Delete(string directory)
-    {
-        try
-        {
-            if (Directory.Exists(directory))
-            {
-                Directory.Delete(directory, recursive: true);
-            }
-        }
-        catch (Exception exception) when (
-            exception is IOException or UnauthorizedAccessException)
-        {
-        }
-    }
 }

@@ -24,14 +24,11 @@ internal sealed class TemporaryDirectory : IDisposable
 {
     /// <param name="name">
     /// Names the fixture in a directory listing, so one that does leak can be traced back to
-    /// what made it. A GUID is appended: tests in one assembly run in parallel.
+    /// what made it. The framework assigns a unique suffix so parallel tests get distinct directories.
     /// </param>
     internal TemporaryDirectory(string name)
     {
-        Path = System.IO.Path.Combine(
-            System.IO.Path.GetTempPath(),
-            name + "-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(Path);
+        Path = Directory.CreateTempSubdirectory(name + "-").FullName;
     }
 
     internal string Path { get; }
