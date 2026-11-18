@@ -116,6 +116,129 @@ public sealed class ModelAwareSchedulerTests
         Assert.Equal(starved.JobId, decision.JobId);
     }
 
+    [Theory]
+    [InlineData(LocalJobPriority.Foreground)]
+    [InlineData(LocalJobPriority.Interactive)]
+    public void Aged_background_job_precedes_new_higher_priority_work_for_the_same_model(
+        LocalJobPriority priority)
+    {
+        var scheduler = new ModelAwareScheduler(_time);
+        var aged = Job(1, "model", seconds: 30,
+            createdAtUtc: _time.GetUtcNow().AddMinutes(-60),
+            priority: LocalJobPriority.Background);
+        var foreground = Job(2, "model", seconds: 1, priority: priority);
+
+        var decision = scheduler.Decide([foreground, aged], residentModel: "model");
+
+        Assert.Equal(aged.JobId, decision.JobId);
+        Assert.Null(decision.WaitUntilUtc);
+    }
+
+    [Fact]
+    public void Aged_jobs_make_progress_despite_continuous_foreground_arrivals()
+    {
+        var scheduler = new ModelAwareScheduler(_time);
+        var pending = Enumerable.Range(1, 10)
+            .Select(sequence => Job(sequence, "model", seconds: 30,
+                createdAtUtc: _time.GetUtcNow().AddMinutes(-60).AddSeconds(sequence),
+                priority: LocalJobPriority.Background))
+            .ToList();
+
+        for (var sequence = 1; sequence <= 10; sequence++)
+        {
+            pending.Add(Job(100 + sequence, "model", seconds: 1,
+                priority: LocalJobPriority.Interactive));
+
+            var decision = scheduler.Decide(pending, residentModel: "model");
+
+            Assert.Equal(JobId(sequence), decision.JobId);
+            pending.RemoveAll(candidate => candidate.JobId == decision.JobId);
+            _time.Advance(TimeSpan.FromSeconds(1));
+        }
+    }
+
+    [Fact]
+    public void Aged_jobs_are_ordered_by_creation_then_priority_then_sequence()
+    {
+        var scheduler = new ModelAwareScheduler(_time);
+        var oldest = _time.GetUtcNow().AddMinutes(-60);
+        var younger = _time.GetUtcNow().AddMinutes(-30);
+        var pending = new List<ScheduledJobCandidate>
+        {
+            Job(1, "resident", seconds: 1, createdAtUtc: younger,
+                priority: LocalJobPriority.Background),
+            Job(3, "resident", seconds: 2, createdAtUtc: younger),
+            Job(2, "resident", seconds: 20, createdAtUtc: younger),
+            Job(4, "cold", seconds: 30, createdAtUtc: oldest,
+                priority: LocalJobPriority.Background)
+        };
+
+        foreach (var sequence in new[] { 4, 2, 3, 1 })
+        {
+            var decision = scheduler.Decide(pending, residentModel: "resident");
+            Assert.Equal(JobId(sequence), decision.JobId);
+            Assert.Null(decision.WaitUntilUtc);
+            pending.RemoveAll(candidate => candidate.JobId == decision.JobId);
+        }
+    }
+
+    [Theory]
+    [InlineData("resident")]
+    [InlineData("cold")]
+    public void A_job_reaching_the_age_limit_interrupts_an_existing_snapshot(string model)
+    {
+        var scheduler = new ModelAwareScheduler(_time);
+        var first = Job(1, "resident", seconds: 1);
+        var second = Job(2, "resident", seconds: 2);
+        var aging = Job(3, model, seconds: 30,
+            createdAtUtc: _time.GetUtcNow().AddMinutes(-14),
+            priority: LocalJobPriority.Background);
+
+        Assert.Equal(first.JobId,
+            scheduler.Decide([first, second, aging], residentModel: "resident").JobId);
+        _time.Advance(TimeSpan.FromMinutes(1));
+
+        var decision = scheduler.Decide([second, aging], residentModel: "resident");
+
+        Assert.Equal(aging.JobId, decision.JobId);
+        Assert.Equal(model, decision.Model);
+        Assert.Null(decision.WaitUntilUtc);
+
+        var late = Job(4, "resident", seconds: 1);
+        var next = scheduler.Decide([second, late], residentModel: model);
+        if (model == "cold")
+        {
+            Assert.Null(next.JobId);
+            Assert.Equal(_time.GetUtcNow().AddSeconds(2), next.WaitUntilUtc);
+            _time.Advance(TimeSpan.FromSeconds(2));
+            next = scheduler.Decide([second, late], residentModel: model);
+        }
+
+        Assert.Equal(late.JobId, next.JobId);
+    }
+
+    [Fact]
+    public void Serving_an_aged_job_clears_an_unfinished_gather_window()
+    {
+        var scheduler = new ModelAwareScheduler(_time);
+        var cold = Job(1, "cold", seconds: 1);
+        Assert.Null(scheduler.Decide([cold], residentModel: "resident").JobId);
+        _time.Advance(TimeSpan.FromSeconds(1));
+        var aged = Job(2, "resident", seconds: 30,
+            createdAtUtc: _time.GetUtcNow().AddMinutes(-15),
+            priority: LocalJobPriority.Background);
+
+        Assert.Equal(aged.JobId,
+            scheduler.Decide([cold, aged], residentModel: "resident").JobId);
+        var next = scheduler.Decide([cold], residentModel: "resident");
+
+        Assert.Null(next.JobId);
+        Assert.Equal(_time.GetUtcNow().AddSeconds(2), next.WaitUntilUtc);
+        _time.Advance(TimeSpan.FromSeconds(2));
+        Assert.Equal(cold.JobId,
+            scheduler.Decide([cold], residentModel: "resident").JobId);
+    }
+
     [Fact]
     public void Dependency_not_ready_is_not_scheduled()
     {
@@ -123,7 +246,9 @@ public sealed class ModelAwareSchedulerTests
 
         var decision = scheduler.Decide(
             [
-                Job(1, "model", seconds: 1, dependencyReady: false),
+                Job(1, "model", seconds: 1,
+                    createdAtUtc: _time.GetUtcNow().AddMinutes(-60),
+                    dependencyReady: false),
                 Job(2, "model", seconds: 2)
             ],
             residentModel: "model");

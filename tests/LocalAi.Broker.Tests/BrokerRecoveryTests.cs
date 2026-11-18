@@ -124,6 +124,66 @@ public sealed class BrokerRecoveryTests
     }
 
     [Fact]
+    public async Task BrokerHost_dispatches_an_aged_job_before_fresh_interactive_work_for_the_same_model()
+    {
+        using var root = new TemporaryRuntimeRoot();
+        var clock = new ManualTimeProvider(
+            new DateTimeOffset(2026, 7, 29, 8, 0, 0, TimeSpan.Zero));
+        var queue = new DurableQueue(root.Path, clock);
+        var backgroundTemplate = LocalJobRequestFactory.CreateEmbed(
+            "aged-background", LocalJobPriority.Background, "test-model", ["input"]);
+        var background = new LocalJobRequest(
+            backgroundTemplate.JobId, backgroundTemplate.DeduplicationKey,
+            backgroundTemplate.Priority, backgroundTemplate.Payload, clock.GetUtcNow());
+        await queue.EnqueueAsync(background);
+        clock.Advance(TimeSpan.FromMinutes(15));
+        var interactiveTemplate = LocalJobRequestFactory.CreateEmbed(
+            "fresh-interactive", LocalJobPriority.Interactive, "test-model", ["input"]);
+        var interactive = new LocalJobRequest(
+            interactiveTemplate.JobId, interactiveTemplate.DeduplicationKey,
+            interactiveTemplate.Priority, interactiveTemplate.Payload, clock.GetUtcNow());
+        await queue.EnqueueAsync(interactive);
+        var executed = new List<Guid>();
+        using var stop = new CancellationTokenSource(Guard);
+
+        var host = new BrokerHost(
+            queue,
+            "aging-worker",
+            (request, _, _) =>
+            {
+                executed.Add(request.JobId);
+                return Task.FromResult(new BrokerExecutionResult(
+                    JsonSerializer.SerializeToElement(new { request.JobId })));
+            },
+            clock,
+            idleDelay: (delay, _) =>
+            {
+                if (executed.Count >= 2)
+                {
+                    stop.Cancel();
+                }
+                clock.Advance(delay);
+                return Task.CompletedTask;
+            },
+            scheduler: new ModelAwareScheduler(clock),
+            scheduleMetadata: static (candidates, _) =>
+                Task.FromResult<IReadOnlyList<ScheduledJobCandidate>>(
+                    candidates.Select(candidate => new ScheduledJobCandidate(
+                        candidate.Request.JobId, candidate.Sequence,
+                        candidate.Request.Priority, candidate.CreatedAtUtc,
+                        "test-model", TimeSpan.FromSeconds(1),
+                        LocalDurationClass.Short, IsDependencyReady: true)).ToArray()),
+            residentModel: () => "test-model");
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => host.RunAsync(stop.Token));
+
+        Assert.Equal(new[] { background.JobId, interactive.JobId }, executed);
+        Assert.Equal(LocalJobState.Succeeded, (await queue.GetStatusAsync(background.JobId))!.State);
+        Assert.Equal(LocalJobState.Succeeded, (await queue.GetStatusAsync(interactive.JobId))!.State);
+        Assert.Empty(await queue.ListQueuedAsync());
+    }
+
+    [Fact]
     public async Task BrokerHost_unloads_resident_model_immediately_when_queue_is_empty()
     {
         using var root = new TemporaryRuntimeRoot();

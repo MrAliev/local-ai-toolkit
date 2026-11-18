@@ -55,6 +55,23 @@ public sealed class ModelAwareScheduler
                 .ToDictionary();
         }
 
+        var now = _timeProvider.GetUtcNow();
+        var starved = eligible.Values
+            .Where(candidate => now - candidate.CreatedAtUtc >= StarvationAge)
+            .OrderBy(candidate => candidate.CreatedAtUtc)
+            .ThenBy(candidate => candidate.Priority)
+            .ThenBy(candidate => candidate.Sequence)
+            .FirstOrDefault();
+        if (starved is not null)
+        {
+            // Aging protects this job, not just its model. It must win before a frozen
+            // snapshot or a new, higher-priority job can send it to the back again.
+            _snapshot.Clear();
+            _snapshotModel = null;
+            _gatherDeadline = null;
+            return new ScheduleDecision(starved.JobId, starved.Model, null);
+        }
+
         // The snapshot is a decision already taken, and it must not outrank the reason to take
         // one again. Work someone is waiting on arrives after a group was frozen, and every job
         // left in the snapshot is one it would otherwise wait behind — a build's snapshot is
@@ -88,14 +105,7 @@ public sealed class ModelAwareScheduler
             return ScheduleDecision.Empty;
         }
 
-        var now = _timeProvider.GetUtcNow();
         var jobs = eligible.Values.ToArray();
-        var starved = jobs
-            .Where(candidate => now - candidate.CreatedAtUtc >= StarvationAge)
-            .OrderBy(candidate => candidate.CreatedAtUtc)
-            .ThenBy(candidate => candidate.Priority)
-            .ThenBy(candidate => candidate.Sequence)
-            .FirstOrDefault();
         // Priority first, and affinity second. An index build is thousands of Background jobs
         // for one model, so affinity read first meant a Foreground question waited out the
         // build: every batch won against it, one at a time, for as long as the build fed the
@@ -105,7 +115,7 @@ public sealed class ModelAwareScheduler
         // models before it preflights — and that is the trade being made on purpose, not an
         // oversight. Among work of equal urgency, affinity still decides, and then the shortest
         // job, so nothing pays for a swap that nobody was waiting on.
-        var selectedModel = starved is not null ? starved.Model : jobs
+        var selectedModel = jobs
             .GroupBy(candidate => candidate.Model, StringComparer.Ordinal)
             .OrderBy(group => group.Min(candidate => candidate.Priority))
             .ThenByDescending(group =>
@@ -139,8 +149,7 @@ public sealed class ModelAwareScheduler
         // at every selection. On a machine watching video memory it showed as the card going quiet
         // for two seconds with the model still loaded, over and over. Ordering already puts the
         // shorter job first among everything actually queued at the moment of choosing.
-        var requiresGatherWindow = starved is null && switchesModel;
-        if (requiresGatherWindow)
+        if (switchesModel)
         {
             // Two seconds, and deliberately not the idle keep-alive. The keep-alive says how
             // long a model is worth holding when nothing wants it; a queued job for another
