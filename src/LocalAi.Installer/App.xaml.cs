@@ -79,7 +79,7 @@ public partial class App : Application
         _ = Task.Run(() =>
         {
             InstallerScratchDirectory.RemovePackageLeftovers();
-            UninstallerRelaunch.RemoveLeftovers(Path.GetTempPath());
+            UninstallerRelaunch.RemoveLeftovers();
         });
 
         Window window = IsUninstallRequested(e.Args)
