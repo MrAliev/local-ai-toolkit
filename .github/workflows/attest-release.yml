@@ -1,38 +1,79 @@
-# The independent-channel half of #210/R1. The manifest inside a release is ECDSA-signed
-# and the installer verifies it — but the installer executable itself is the trust root a
-# first download has, and the SHA-256 published beside it lives in the same channel it
-# would be guarding. This workflow freezes the digest of every published asset in GitHub's
-# attestation log (Sigstore-backed) the moment the release is published: a later swap of
-# an asset on the release page fails `gh attestation verify` against a log the release
-# page cannot rewrite. It narrows the exposure to the moments between upload and this run;
-# closing it completely is what Authenticode signing is for, and that half of #210 stays
-# open until a certificate exists.
+# A receipt records the exact bytes downloaded from a published release. It is
+# deliberately not build provenance, Authenticode, or completion of issue 210.
 name: Attest release assets
 
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      release_id:
+        description: 'Numeric ID of an existing published release'
+        required: true
+        type: string
 
 permissions:
   contents: read
-  id-token: write
-  attestations: write
+
+concurrency:
+  group: release-asset-receipt-${{ github.event.release.id || inputs.release_id }}
+  cancel-in-progress: false
 
 jobs:
   attest:
+    if: github.repository == 'MrAliev/local-ai-toolkit' && (github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'))
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RECEIPT_RELEASE_ID: ${{ github.event.release.id || inputs.release_id }}
     steps:
-      - name: Download the published assets
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          mkdir assets
-          gh release download "${{ github.event.release.tag_name }}" \
-            --repo "${{ github.repository }}" --dir assets
-          ls -l assets
-
-      - name: Attest every asset
-        uses: actions/attest-build-provenance@v4
+      - name: Check out the receipt implementation
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          subject-path: assets/*
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Download and validate the four published assets
+        shell: pwsh
+        run: ./scripts/record-localai-release-receipt.ps1 -ReleaseId $env:RECEIPT_RELEASE_ID -Repository $env:GITHUB_REPOSITORY -OutputRoot publish/release-asset-receipt
+
+      - name: Attest the observed release bytes
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: publish/release-asset-receipt/assets/*
+          predicate-type: https://github.com/MrAliev/local-ai-toolkit/attestations/release-asset-receipt/v1
+          predicate-path: publish/release-asset-receipt/receipt-predicate.json
+          create-storage-record: false
+
+      - name: Verify the receipt for every downloaded asset
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $false
+          $evidence = 'publish/release-receipt-verification'
+          New-Item -ItemType Directory -Path $evidence -Force | Out-Null
+          foreach ($asset in Get-ChildItem -LiteralPath publish/release-asset-receipt/assets -File) {
+            & gh attestation verify $asset.FullName --hostname github.com --repo MrAliev/local-ai-toolkit --signer-workflow MrAliev/local-ai-toolkit/.github/workflows/attest-release.yml --source-digest $env:GITHUB_SHA --signer-digest $env:GITHUB_SHA --source-ref $env:GITHUB_REF --predicate-type https://github.com/MrAliev/local-ai-toolkit/attestations/release-asset-receipt/v1 --deny-self-hosted-runners --format json > "$evidence/$($asset.Name).json"
+            if ($LASTEXITCODE -ne 0) { throw "Receipt verification failed for $($asset.Name)." }
+          }
+          @"
+          Release asset receipt verified for release ID $env:RECEIPT_RELEASE_ID.
+          This records observed bytes, not compilation from the release's claimed source.
+          Source-build verification and Authenticode verification are false; issue 210 remains open.
+          "@ | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
+
+      - name: Upload the receipt and verification evidence
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: localai-release-receipt-${{ github.event.release.id || inputs.release_id }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            publish/release-asset-receipt/receipt-predicate.json
+            publish/release-receipt-verification/
+          if-no-files-found: error
+          retention-days: 30

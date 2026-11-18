@@ -13,12 +13,31 @@ if ($env:GITHUB_REPOSITORY -cne 'MrAliev/local-ai-toolkit' -or
     $env:GITHUB_EVENT_NAME -cne 'workflow_dispatch' -or
     $env:GITHUB_SHA -cnotmatch '^[0-9a-f]{40}$' -or
     $env:GITHUB_RUN_ID -cnotmatch '^[1-9][0-9]*$' -or
-    $env:GITHUB_RUN_ATTEMPT -cnotmatch '^[1-9][0-9]*$') {
+    $env:GITHUB_RUN_ATTEMPT -cnotmatch '^[1-9][0-9]*$' -or
+    $env:GITHUB_WORKFLOW_REF -cne 'MrAliev/local-ai-toolkit/.github/workflows/build-unsigned-candidate.yml@refs/heads/main') {
     throw 'An unsigned candidate must run in the trusted main workflow context.'
 }
-$head = [string](& git -C $root rev-parse --verify HEAD)
-if ($LASTEXITCODE -ne 0 -or $head.Trim() -cne $env:GITHUB_SHA) {
-    throw 'The checked out commit must match the trusted main workflow SHA.'
+function Assert-CandidateSource {
+    $head = [string](& git -C $root rev-parse --verify HEAD)
+    if ($LASTEXITCODE -ne 0 -or $head.Trim() -cne $env:GITHUB_SHA) {
+        throw 'The checked out commit must match the trusted main workflow SHA.'
+    }
+    $tree = [string](& git -C $root rev-parse --verify 'HEAD^{tree}')
+    if ($LASTEXITCODE -ne 0 -or $tree.Trim() -cnotmatch '^[0-9a-f]{40}$') {
+        throw 'The trusted main workflow source tree could not be verified.'
+    }
+    $dirty = @(& git -C $root status --porcelain=v1 --untracked-files=all)
+    if ($LASTEXITCODE -ne 0 -or $dirty.Count -ne 0) {
+        throw 'The trusted main workflow requires a clean source checkout.'
+    }
+    return $tree.Trim()
+}
+$sourceTree = Assert-CandidateSource
+$runId = 0L
+$runAttempt = 0L
+if (-not [long]::TryParse($env:GITHUB_RUN_ID, [ref]$runId) -or
+    -not [long]::TryParse($env:GITHUB_RUN_ATTEMPT, [ref]$runAttempt)) {
+    throw 'The trusted main workflow run identity is invalid.'
 }
 
 # SemVer without build metadata, with numeric components usable in Windows file
@@ -98,14 +117,23 @@ foreach ($entry in $projects.GetEnumerator()) {
         sha256 = (Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash.ToLowerInvariant()
     }
 }
+if ((Assert-CandidateSource) -cne $sourceTree) {
+    throw 'The trusted main workflow source changed during the build.'
+}
 $metadata = [ordered]@{
-    schema = 'localai.unsigned-candidate.v1'
+    schema = 'localai.unsigned-candidate.v2'
     signed = $false
     version = $ReleaseVersion
     repository = 'https://github.com/MrAliev/local-ai-toolkit'
     sourceCommit = $env:GITHUB_SHA
+    sourceTree = $sourceTree
+    sourceRef = 'refs/heads/main'
+    sourceClean = $true
+    workflow = $env:GITHUB_WORKFLOW_REF
     workflowRun = 'https://github.com/MrAliev/local-ai-toolkit/actions/runs/' + $env:GITHUB_RUN_ID
-    runAttempt = [long]$env:GITHUB_RUN_ATTEMPT
+    runId = $runId
+    runAttempt = $runAttempt
+    runtimeIdentifier = 'win-x64'
     files = $files
 }
 $metadata | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $stagedArtifact 'unsigned-candidate.json') -Encoding utf8
