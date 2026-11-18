@@ -11,6 +11,30 @@ public sealed class RuntimeEvidenceSurfaceTests
 {
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    public async Task Identity_switch_survives_the_shared_json_argument_normalizer(int position)
+    {
+        using var fixture = new Fixture();
+        var output = Path.Combine(fixture.Root, "evidence.zip");
+        string[] arguments = position switch
+        {
+            0 => ["diagnostics", "--identity", "--json", "--out", output],
+            1 => ["diagnostics", "--json", "--identity", "--out", output],
+            _ => ["diagnostics", "--out", output, "--identity", "--json"],
+        };
+        Assert.True(MachineOutput.Requested(arguments));
+        var normalized = MachineOutput.Without(arguments);
+        using var stdout = new StringWriter();
+        using var stderr = new StringWriter();
+        var exit = await DiagnosticsCommand.ExecuteAsync(normalized[1..], new(stdout, stderr), true, Token, fixture.Root);
+        Assert.True(exit == 0, stderr.ToString());
+        using var json = JsonDocument.Parse(stdout.ToString());
+        Assert.True(json.RootElement.GetProperty("data").GetProperty("contents").TryGetProperty("runtime-evidence.json", out _));
+    }
+
     [Fact]
     public async Task Precise_identity_is_opt_in_and_uses_the_observed_cli_component_and_validated_index_record()
     {

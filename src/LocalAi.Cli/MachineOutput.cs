@@ -36,7 +36,10 @@ internal static class MachineOutput
     /// existing commands retain their established flag handling.
     /// </summary>
     public static bool Requested(IReadOnlyList<string> arguments) =>
-        arguments.FirstOrDefault() is "documents" or "diagnostics" or "hardware" or "offline" ? MachineEnvelope.RequestedAsOption(arguments)
+        arguments.FirstOrDefault() is "documents" or "diagnostics" or "hardware" or "offline" ? MachineEnvelope.RequestedAsOption(
+            arguments.FirstOrDefault() == "diagnostics"
+                ? arguments.Where(argument => argument != "--identity").ToArray()
+                : arguments)
             : MachineEnvelope.RequestedAnywhere(arguments);
 
     /// <summary>The arguments a command sees, with the flag this class owns taken out.</summary>
@@ -48,7 +51,8 @@ internal static class MachineOutput
         {
             if (arguments[i] == Flag) continue;
             result.Add(arguments[i]);
-            if (arguments[i].StartsWith("--", StringComparison.Ordinal) && i + 1 < arguments.Count)
+            if (arguments[i].StartsWith("--", StringComparison.Ordinal) && i + 1 < arguments.Count
+                && !(arguments[0] == "diagnostics" && arguments[i] == "--identity"))
                 result.Add(arguments[++i]);
         }
         return result.ToArray();
