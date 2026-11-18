@@ -438,6 +438,69 @@ public sealed class BrokerRecoveryTests
     }
 
     [Fact]
+    public async Task BrokerHost_runs_ready_maintenance_without_executing_a_blocked_workflow()
+    {
+        using var root = new TemporaryRuntimeRoot();
+        var clock = new ManualTimeProvider(
+            new DateTimeOffset(2026, 7, 29, 8, 0, 0, TimeSpan.Zero));
+        var queue = new DurableQueue(root.Path, clock);
+        var workflow = new LocalWorkflowHint(Guid.NewGuid(), 1, 2,
+            [LocalTaskProfile.Ocr, LocalTaskProfile.ImageTranslation],
+            isDependencyReady: false);
+        var blocked = LocalJobRequestFactory.CreateRoutedChat(
+            "blocked-maintenance-workflow", LocalJobPriority.Foreground,
+            LocalTaskProfile.ImageTranslation, "translate", null, [],
+            new LocalWorkloadMetadata(100, 100, 1, 1, 1_000_000, LocalDurationClass.Medium),
+            workflow, createdAtUtc: clock.GetUtcNow());
+        await queue.EnqueueAsync(blocked);
+        clock.Advance(TimeSpan.FromMinutes(16));
+        var resolver = new ScheduleMetadataResolver(
+            ModelRoutingCatalog.LoadEmbedded(), new DurationEstimator());
+        var model = Assert.IsType<string>(resolver.Resolve(
+            Assert.Single(await queue.ListQueuedAsync())).Model);
+        var maintenance = LocalJobRequestFactory.CreateModelMaintenance(
+            "ready-maintenance", LocalJobPriority.Background,
+            Enum.GetValues<ModelMaintenanceOperation>()[0], model, "test-catalog",
+            createdAtUtc: clock.GetUtcNow());
+        await queue.EnqueueAsync(maintenance);
+        var executed = new List<Guid>();
+        var idleCycles = 0;
+        using var stop = new CancellationTokenSource(Guard);
+        var host = new BrokerHost(
+            queue, "maintenance-readiness-worker",
+            (request, _, _) =>
+            {
+                executed.Add(request.JobId);
+                return Task.FromResult(new BrokerExecutionResult(
+                    JsonSerializer.SerializeToElement(new { request.JobId })));
+            },
+            clock,
+            idleDelay: (delay, _) =>
+            {
+                clock.Advance(delay);
+                if (executed.Count > 0 || ++idleCycles == 3)
+                {
+                    stop.Cancel();
+                }
+                return Task.CompletedTask;
+            },
+            scheduler: new ModelAwareScheduler(clock),
+            scheduleMetadata: (candidates, _) => Task.FromResult(
+                (IReadOnlyList<ScheduledJobCandidate>)candidates
+                    .Select(candidate => resolver.Resolve(candidate)).ToArray()),
+            residentModel: () => model);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => host.RunAsync(stop.Token));
+
+        Assert.Equal(new[] { maintenance.JobId }, executed);
+        Assert.Equal(LocalJobState.Succeeded, (await queue.GetStatusAsync(maintenance.JobId))!.State);
+        Assert.Equal(LocalJobState.Queued, (await queue.GetStatusAsync(blocked.JobId))!.State);
+        var remaining = Assert.Single(await queue.ListQueuedAsync());
+        Assert.Equal(blocked.JobId, remaining.Request.JobId);
+        Assert.False(resolver.Resolve(remaining).IsDependencyReady);
+    }
+
+    [Fact]
     public async Task BrokerHost_does_not_unload_while_dependency_blocked_work_is_queued()
     {
         using var root = new TemporaryRuntimeRoot();
