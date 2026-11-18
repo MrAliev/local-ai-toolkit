@@ -9,6 +9,17 @@ dotnet test LocalAi.slnx --configuration Release --max-parallel-test-modules 1 -
 That is the answer before a pull request. While iterating, a single test project is
 faster — `dotnet test tests/<name>/<name>.csproj --configuration Release`.
 
+Windows CI includes Python SCIP in strict fixture checks. It installs the catalog-pinned
+`@sourcegraph/scip-python@0.6.6` in a private `scip-python-fixture` npm prefix, then runs
+`dotnet run --file scripts/quality/prepare-scip-python-fixture.cs --configuration Release -- <prefix>`.
+The helper calls the installer's existing version and complete-bundle SHA-256 checks;
+it does not reproduce the patch logic or accept an unknown bundle. Its two fixes cover
+Windows path separators and interpreter selection. Other package versions need separate verification.
+
+With Python 3.12 on the runner, the real fixtures check cross-file definitions/references
+and definition body ranges. A successful `--version` probe alone is insufficient. Missing
+prerequisites or failed indexing fail CI; Python no longer has a named strict-mode exemption.
+
 A test never asserts how fast the machine is. Wait for the condition, not for a duration —
 a deadline a correct run can miss proves nothing, and reports itself as a fault in the code
 under test.
