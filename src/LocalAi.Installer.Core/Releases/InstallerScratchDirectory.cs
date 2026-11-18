@@ -67,22 +67,25 @@ public sealed class InstallerScratchDirectory : IDisposable
     }
 
     /// <summary>Best-effort cleanup of old package runs in the system temporary directory.</summary>
-    public static void RemovePackageLeftovers()
+    public static void RemovePackageLeftovers() =>
+        RemoveTemporaryLeftovers(Prefix, PackageContainerName);
+
+    internal static void RemoveTemporaryLeftovers(string prefix, string? containerName = null)
     {
         try
         {
             // The standard per-user Temp folder can be swept even when the volume
             // has no space left to reserve a new directory.
-            if (GetStandardPackageRoot() is { } standardRoot)
+            if (GetStandardTemporaryRoot() is { } standardRoot)
             {
-                RemoveLeftovers(standardRoot);
+                Sweep(standardRoot);
                 return;
             }
 
             var reserved = Directory.CreateTempSubdirectory(PackageReservationPrefix);
             try
             {
-                RemoveLeftovers(GetPackageRoot(reserved).FullName);
+                Sweep(GetTemporaryParent(reserved).FullName);
             }
             finally
             {
@@ -94,9 +97,17 @@ public sealed class InstallerScratchDirectory : IDisposable
                 System.Security.SecurityException)
         {
         }
+
+        void Sweep(string temporaryRoot)
+        {
+            var root = containerName is null
+                ? temporaryRoot
+                : System.IO.Path.Combine(temporaryRoot, containerName);
+            RemoveLeftovers(root, prefix, requirePlainRoot: containerName is not null);
+        }
     }
 
-    private static string? GetStandardPackageRoot()
+    private static string? GetStandardTemporaryRoot()
     {
         if (!OperatingSystem.IsWindows())
         {
@@ -114,15 +125,15 @@ public sealed class InstallerScratchDirectory : IDisposable
             System.IO.Path.TrimEndingDirectorySeparator(System.IO.Path.GetTempPath()),
             standardTemp,
             StringComparison.OrdinalIgnoreCase)
-            ? System.IO.Path.Combine(standardTemp, PackageContainerName)
+            ? standardTemp
             : null;
     }
 
-    private static DirectoryInfo GetPackageRoot(DirectoryInfo reserved)
-    {
-        var tempRoot = reserved.Parent ?? throw new IOException("The temporary directory has no parent.");
-        return new DirectoryInfo(System.IO.Path.Combine(tempRoot.FullName, PackageContainerName));
-    }
+    private static DirectoryInfo GetPackageRoot(DirectoryInfo reserved) =>
+        new(System.IO.Path.Combine(GetTemporaryParent(reserved).FullName, PackageContainerName));
+
+    private static DirectoryInfo GetTemporaryParent(DirectoryInfo reserved) =>
+        reserved.Parent ?? throw new IOException("The temporary directory has no parent.");
 
     public static InstallerScratchDirectory Claim(string root) => Claim(root, Prefix);
 
