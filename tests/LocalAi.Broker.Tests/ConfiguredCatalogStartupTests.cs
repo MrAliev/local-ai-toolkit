@@ -67,7 +67,7 @@ public sealed class ConfiguredCatalogStartupTests
     }
 
     private static string NewConsumerRoot() =>
-        Path.Combine(Path.GetTempPath(), "localai-development-consumer-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateTempSubdirectory("localai-development-consumer-").FullName;
 
     private static string DiagnosticsDirectoryFor(string consumer) =>
         Environment.GetEnvironmentVariable("LOCALAI_TEST_DIAGNOSTICS") is { Length: > 0 } configured
@@ -98,7 +98,6 @@ public sealed class ConfiguredCatalogStartupTests
     public void An_unwritable_evidence_directory_does_not_replace_the_cleanup_failure()
     {
         var consumer = NewConsumerRoot();
-        Directory.CreateDirectory(consumer);
         var blockedDiagnostics = Path.Combine(consumer, "evidence-is-a-file");
         File.WriteAllText(blockedDiagnostics, "fixture");
         var original = new UnauthorizedAccessException("original cleanup failure");
@@ -331,7 +330,7 @@ public sealed class ConfiguredCatalogStartupTests
             $"Owned fixture cleanup retry {attempt}: 0x{exception.HResult:X8} {exception.Message}");
 
     private static string NewRoot() =>
-        Path.Combine(Path.GetTempPath(), "localai-catalog-startup-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateTempSubdirectory("localai-catalog-startup-").FullName;
 
     private static async Task RunScenarioAsync(string root, string[] expectedMissing, string? executable = null,
         string? diagnosticsDirectory = null)
