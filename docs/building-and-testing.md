@@ -2,6 +2,11 @@
 
 [Contents](README.md#contents) · [Русская версия](building-and-testing.ru.md)
 
+**On this page**
+
+- [Independent quality corpora](#independent-quality-corpora)
+  - [Paired holdout comparison](#paired-holdout-comparison)
+
 ```powershell
 dotnet test LocalAi.slnx --configuration Release --max-parallel-test-modules 1 --timeout 20m
 ```

@@ -52,6 +52,6 @@ Roslyn snapshot Git diagnostic; one precise definition was confirmed, not full n
 
 [Evidence archive](evidence.zip) contains exact evaluation outputs, original fingerprint plan,
 comparison report, marked public protocol copy and derived runtime fingerprint subsets.
-It excludes the private original protocol, full runtime records, account/profile paths and local date
-representations; it is not a complete independently reproducible provenance package.
+It excludes the private original protocol, full runtime records, account/profile paths and local-offset date
+strings; it is not a complete independently reproducible provenance package.
 [SHA-256 manifest](evidence.sha256).

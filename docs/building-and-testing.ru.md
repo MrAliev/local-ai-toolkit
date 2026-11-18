@@ -2,6 +2,11 @@
 
 [Оглавление](README.ru.md#оглавление) · [English version](building-and-testing.md)
 
+**На этой странице**
+
+- [Независимые корпуса для проверки качества](#независимые-корпуса-для-проверки-качества)
+  - [Сравнение на парном контрольном наборе](#сравнение-на-парном-контрольном-наборе)
+
 ```powershell
 dotnet test LocalAi.slnx --configuration Release --max-parallel-test-modules 1 --timeout 20m
 ```
