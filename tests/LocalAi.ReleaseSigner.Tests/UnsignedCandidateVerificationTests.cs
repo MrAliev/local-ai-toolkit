@@ -230,7 +230,7 @@ public sealed class UnsignedCandidateVerificationTests
 
         public CandidateFixture()
         {
-            directory = Path.Combine(Path.GetTempPath(), "localai-verifier-tests-" + Guid.NewGuid().ToString("N"));
+            directory = Directory.CreateTempSubdirectory("localai-verifier-tests-").FullName;
             ArtifactRoot = Path.Combine(directory, "candidate");
             mockBin = Path.Combine(directory, "bin");
             Directory.CreateDirectory(Path.Combine(ArtifactRoot, "own-pe"));

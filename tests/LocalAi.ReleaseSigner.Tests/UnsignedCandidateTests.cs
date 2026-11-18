@@ -166,7 +166,7 @@ public sealed class UnsignedCandidateTests
 
     private sealed class CandidateFixture : IDisposable
     {
-        public string Root { get; } = Path.Combine(Path.GetTempPath(), "localai-unsigned-candidate-" + Guid.NewGuid().ToString("N"));
+        public string Root { get; } = Directory.CreateTempSubdirectory("localai-unsigned-candidate-").FullName;
 
         public CandidateFixture()
         {

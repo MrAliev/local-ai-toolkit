@@ -169,7 +169,7 @@ public sealed class ReleaseAssetReceiptTests
 
     private sealed class ReceiptFixture : IDisposable
     {
-        public string Root { get; } = Path.Combine(Path.GetTempPath(), "LocalAi.ReleaseAssetReceiptTests", Guid.NewGuid().ToString("N"));
+        public string Root { get; } = Directory.CreateTempSubdirectory("localai-receipt-tests-").FullName;
         public string OutputRoot => Path.Combine(Root, "observed");
         public string DownloadLog => Path.Combine(Root, "downloads.txt");
         private string HarnessPath => Path.Combine(Root, "harness.ps1");
@@ -230,9 +230,10 @@ public sealed class ReleaseAssetReceiptTests
 
         public void Dispose()
         {
-            var expectedParent = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "LocalAi.ReleaseAssetReceiptTests"));
+            var expectedParent = Path.GetFullPath(Path.GetTempPath()).TrimEnd(Path.DirectorySeparatorChar);
             var actualParent = Path.GetDirectoryName(Path.GetFullPath(Root));
-            if (!string.Equals(expectedParent, actualParent, StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(expectedParent, actualParent, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)
+                || !Path.GetFileName(Root).StartsWith("localai-receipt-tests-", StringComparison.Ordinal))
                 throw new InvalidOperationException("Refusing cleanup outside the test fixture directory.");
             if (Directory.Exists(Root)) Directory.Delete(Root, recursive: true);
         }
