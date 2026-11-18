@@ -1,0 +1,195 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "id": "v2-typescript-money-en",
+      "query": "Find the formatter that adds a dollar sign prefix and uses two decimal places for ordinary finite monetary amounts.",
+      "category": "en-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/formatters/money.ts",
+          "symbol": "format"
+        }
+      ]
+    },
+    {
+      "id": "v2-typescript-money-ru",
+      "query": "Найди форматтер, который добавляет знак доллара перед обычной конечной денежной суммой и использует два десятичных знака.",
+      "category": "ru-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/formatters/money.ts",
+          "symbol": "format"
+        }
+      ]
+    },
+    {
+      "id": "v2-typescript-percent-en",
+      "query": "Where is a fraction multiplied by one hundred and printed with one decimal place and a percent suffix?",
+      "category": "en-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/formatters/percent.ts",
+          "symbol": "format"
+        }
+      ]
+    },
+    {
+      "id": "v2-typescript-percent-ru",
+      "query": "Где доля умножается на сто и выводится с одним десятичным знаком и символом процента?",
+      "category": "ru-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/formatters/percent.ts",
+          "symbol": "format"
+        }
+      ]
+    },
+    {
+      "id": "v2-typescript-identifier-en",
+      "query": "Find the identifier formatting that trims surrounding whitespace and converts the text to uppercase.",
+      "category": "en-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/formatters/identifier.ts",
+          "symbol": "format"
+        }
+      ]
+    },
+    {
+      "id": "v2-typescript-identifier-ru",
+      "query": "Найди форматирование идентификатора с удалением пробелов по краям и переводом текста в верхний регистр.",
+      "category": "ru-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/formatters/identifier.ts",
+          "symbol": "format"
+        }
+      ]
+    },
+    {
+      "id": "v2-typescript-required-en",
+      "query": "Which form validator requires at least one non-whitespace character?",
+      "category": "en-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/forms/required.ts",
+          "symbol": "validate"
+        }
+      ]
+    },
+    {
+      "id": "v2-typescript-required-ru",
+      "query": "Какая проверка формы требует хотя бы один непробельный символ?",
+      "category": "ru-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/forms/required.ts",
+          "symbol": "validate"
+        }
+      ]
+    },
+    {
+      "id": "v2-typescript-length-en",
+      "query": "Find the form validator that accepts string lengths from eight through thirty-two inclusive.",
+      "category": "en-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/forms/length.ts",
+          "symbol": "validate"
+        }
+      ]
+    },
+    {
+      "id": "v2-typescript-length-ru",
+      "query": "Найди проверку формы, допускающую длину строки от восьми до тридцати двух включительно.",
+      "category": "ru-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/forms/length.ts",
+          "symbol": "validate"
+        }
+      ]
+    },
+    {
+      "id": "v2-typescript-locale-money-en",
+      "query": "Which money formatter selects decimal separators from the browser locale?",
+      "category": "no-answer",
+      "noAnswer": true,
+      "relevant": []
+    },
+    {
+      "id": "v2-typescript-locale-money-ru",
+      "query": "Какой денежный форматтер выбирает десятичный разделитель по языку браузера?",
+      "category": "no-answer",
+      "noAnswer": true,
+      "relevant": []
+    },
+    {
+      "id": "v2-typescript-exchange-rate-en",
+      "query": "Where does currency formatting convert euros to dollars using an exchange-rate feed?",
+      "category": "no-answer",
+      "noAnswer": true,
+      "relevant": []
+    },
+    {
+      "id": "v2-typescript-exchange-rate-ru",
+      "query": "Где при форматировании суммы евро переводятся в доллары по загружаемому курсу?",
+      "category": "no-answer",
+      "noAnswer": true,
+      "relevant": []
+    },
+    {
+      "id": "v2-typescript-breach-check-en",
+      "query": "Find the form validator that rejects passwords found in a breach database.",
+      "category": "no-answer",
+      "noAnswer": true,
+      "relevant": []
+    },
+    {
+      "id": "v2-typescript-breach-check-ru",
+      "query": "Найди проверку формы, отклоняющую пароли из базы утечек.",
+      "category": "no-answer",
+      "noAnswer": true,
+      "relevant": []
+    },
+    {
+      "id": "v2-typescript-check-digit-en",
+      "query": "Which identifier formatter generates a checksum digit while preserving leading zeroes?",
+      "category": "no-answer",
+      "noAnswer": true,
+      "relevant": []
+    },
+    {
+      "id": "v2-typescript-check-digit-ru",
+      "query": "Какой форматтер идентификатора вычисляет контрольную цифру, сохраняя ведущие нули?",
+      "category": "no-answer",
+      "noAnswer": true,
+      "relevant": []
+    },
+    {
+      "id": "v2-typescript-proportion-interval-en",
+      "query": "Where does percentage formatting compute a confidence interval for a sampled proportion?",
+      "category": "no-answer",
+      "noAnswer": true,
+      "relevant": []
+    },
+    {
+      "id": "v2-typescript-proportion-interval-ru",
+      "query": "Где при форматировании процентов вычисляется доверительный интервал для выборочной доли?",
+      "category": "no-answer",
+      "noAnswer": true,
+      "relevant": []
+    }
+  ]
+}
