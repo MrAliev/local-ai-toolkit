@@ -14,7 +14,7 @@ public sealed class UnsignedCandidateTests
     ];
 
     [Fact]
-    public void The_candidate_workflow_has_no_release_or_signing_authority_and_pins_its_actions()
+    public void The_candidate_workflow_only_attests_unsigned_builds_and_pins_its_actions()
     {
         var workflow = Path.Combine(RepositoryRoot(), ".github", "workflows", "build-unsigned-candidate.yml");
         Assert.True(File.Exists(workflow), "An unsigned candidate workflow is required.");
@@ -32,9 +32,18 @@ public sealed class UnsignedCandidateTests
         Assert.Contains("github.run_attempt", text);
         Assert.Contains("path: publish/unsigned-candidate/artifact/", text);
         Assert.DoesNotMatch("(?m)^\\s*(?:push|pull_request|pull_request_target|workflow_run):", text);
-        Assert.DoesNotMatch("secrets\\.|self-hosted|(?:contents|id-token|attestations):\\s*write|gh release|ReleaseSigner|submit-signing-request", text);
+        Assert.DoesNotMatch("secrets\\.|runs-on:\\s*\\[?\\s*self-hosted|contents:\\s*write|gh release|ReleaseSigner|submit-signing-request", text);
+        Assert.Contains("id-token: write", text);
+        Assert.Contains("attestations: write", text);
+        Assert.Contains("--source-digest", text);
+        Assert.Contains("--signer-workflow", text);
+        Assert.Contains("verify-localai-unsigned-candidate.ps1", text);
+        Assert.Contains("artifact-ids:", text);
+        Assert.Contains("gh api", text);
+        Assert.Contains("'build-unsigned-candidate.yml', 'attest-release.yml'", text);
+        Assert.Contains("$state -cne 'active'", text);
         var actions = Regex.Matches(text, @"uses:\s*([^\s]+)");
-        Assert.Equal(3, actions.Count);
+        Assert.Equal(7, actions.Count);
         foreach (Match action in actions) Assert.Matches(@"^actions/[a-z-]+@[0-9a-f]{40}$", action.Groups[1].Value);
     }
 
@@ -48,9 +57,15 @@ public sealed class UnsignedCandidateTests
         Assert.Equal(OwnFiles.Order(), Directory.GetFiles(Path.Combine(artifact, "own-pe")).Select(Path.GetFileName).Order());
         Assert.Equal(8, Directory.GetFiles(artifact, "*", SearchOption.AllDirectories).Length);
         using var metadata = JsonDocument.Parse(File.ReadAllText(Path.Combine(artifact, "unsigned-candidate.json")));
-        Assert.Equal("localai.unsigned-candidate.v1", metadata.RootElement.GetProperty("schema").GetString());
+        Assert.Equal("localai.unsigned-candidate.v2", metadata.RootElement.GetProperty("schema").GetString());
         Assert.False(metadata.RootElement.GetProperty("signed").GetBoolean());
         Assert.Equal(Sha, metadata.RootElement.GetProperty("sourceCommit").GetString());
+        Assert.Equal(new string('c', 40), metadata.RootElement.GetProperty("sourceTree").GetString());
+        Assert.True(metadata.RootElement.GetProperty("sourceClean").GetBoolean());
+        Assert.Equal("refs/heads/main", metadata.RootElement.GetProperty("sourceRef").GetString());
+        Assert.Equal("MrAliev/local-ai-toolkit/.github/workflows/build-unsigned-candidate.yml@refs/heads/main", metadata.RootElement.GetProperty("workflow").GetString());
+        Assert.Equal(123, metadata.RootElement.GetProperty("runId").GetInt64());
+        Assert.Equal("win-x64", metadata.RootElement.GetProperty("runtimeIdentifier").GetString());
         Assert.Equal("9.8.7-rc.1", metadata.RootElement.GetProperty("version").GetString());
         foreach (var file in metadata.RootElement.GetProperty("files").EnumerateArray())
         {
@@ -76,7 +91,11 @@ public sealed class UnsignedCandidateTests
     [InlineData("GITHUB_EVENT_NAME", "pull_request_target")]
     [InlineData("GITHUB_SHA", "not-a-commit")]
     [InlineData("GITHUB_RUN_ID", "1;Write-Output unsafe")]
+    [InlineData("GITHUB_RUN_ID", "999999999999999999999999999")]
+    [InlineData("GITHUB_RUN_ATTEMPT", "999999999999999999999999999")]
     [InlineData("FIXTURE_HEAD", "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")]
+    [InlineData("GITHUB_WORKFLOW_REF", "fork/local-ai-toolkit/.github/workflows/build-unsigned-candidate.yml@refs/heads/main")]
+    [InlineData("FIXTURE_DIRTY", " M src/unreviewed.cs")]
     public async Task An_untrusted_source_context_is_rejected_before_building(string variable, string value)
     {
         using var fixture = new CandidateFixture();
@@ -126,6 +145,17 @@ public sealed class UnsignedCandidateTests
         Assert.False(File.Exists(Path.Combine(fixture.Root, "commands.jsonl")));
     }
 
+    [Fact]
+    public async Task A_source_change_during_build_never_exposes_an_uploadable_artifact()
+    {
+        using var fixture = new CandidateFixture();
+        var result = await fixture.Run(environment: new() { ["FIXTURE_DIRTY_AFTER_BUILD"] = "1" });
+        Assert.NotEqual(0, result.ExitCode);
+        Assert.Contains("clean source checkout", result.Output);
+        Assert.Equal(7, File.ReadAllLines(Path.Combine(fixture.Root, "commands.jsonl")).Length);
+        Assert.False(Directory.Exists(Path.Combine(fixture.Root, "publish", "unsigned-candidate", "artifact")));
+    }
+
     private static string RepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
@@ -146,7 +176,13 @@ public sealed class UnsignedCandidateTests
             File.Copy(script, Path.Combine(Root, "scripts", "candidate.ps1"));
             File.WriteAllText(Path.Combine(Root, "harness.ps1"), """
                 param([string] $ReleaseVersion)
-                function global:git { $global:LASTEXITCODE = 0; $env:FIXTURE_HEAD }
+                function global:git {
+                    $global:LASTEXITCODE = 0
+                    if ($args -contains 'status') {
+                        if ($env:FIXTURE_DIRTY) { $env:FIXTURE_DIRTY }
+                    } elseif ($args -contains 'HEAD^{tree}') { 'cccccccccccccccccccccccccccccccccccccccc' }
+                    else { $env:FIXTURE_HEAD }
+                }
                 function global:Get-AuthenticodeSignature {
                     param([string] $LiteralPath)
                     if ($env:FIXTURE_SIGNATURE_STATUS) { @{ Status = $env:FIXTURE_SIGNATURE_STATUS } }
@@ -170,6 +206,7 @@ public sealed class UnsignedCandidateTests
                     }
                     [IO.File]::WriteAllText((Join-Path $output 'upstream.dll'), 'must not be submitted')
                     [IO.File]::WriteAllText((Join-Path $output 'unexpected.exe'), 'must not be submitted')
+                    if ($env:FIXTURE_DIRTY_AFTER_BUILD) { $env:FIXTURE_DIRTY = ' M src/unreviewed.cs' }
                 }
                 & (Join-Path $PSScriptRoot 'scripts/candidate.ps1') -ReleaseVersion $ReleaseVersion
                 """);
@@ -188,6 +225,7 @@ public sealed class UnsignedCandidateTests
             start.Environment["GITHUB_SHA"] = Sha;
             start.Environment["GITHUB_RUN_ID"] = "123";
             start.Environment["GITHUB_RUN_ATTEMPT"] = "1";
+            start.Environment["GITHUB_WORKFLOW_REF"] = "MrAliev/local-ai-toolkit/.github/workflows/build-unsigned-candidate.yml@refs/heads/main";
             start.Environment["FIXTURE_HEAD"] = Sha;
             if (environment is not null) foreach (var entry in environment) start.Environment[entry.Key] = entry.Value;
             using var process = Process.Start(start)!;

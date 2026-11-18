@@ -749,6 +749,10 @@ The manifest protects package integrity; it does not establish a verified Window
 for the bootstrap installer. Check the [code signing policy](docs/code-signing-policy.md)
 and the specific release notes for signing status.
 
+Release acceptance also requires the separate [candidate provenance and published-asset
+receipt checks](docs/code-signing-policy.md#release-evidence). A receipt for downloaded
+release files does not prove that those files were compiled from the claimed source.
+
 **1. Download the release.** From the same release, download `LocalAi.Installer.exe`,
 `release-manifest.json`, `release-manifest.sig` and `localai-package.zip`. Keep the three
 package files together and point the installer's package page at that folder. The installer
