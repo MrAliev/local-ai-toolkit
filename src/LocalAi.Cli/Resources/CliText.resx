@@ -1189,9 +1189,12 @@ To keep a worktree whatever its branch: git worktree lock &lt;path&gt;</value>
   <data name="DocsPlanType" xml:space="preserve"><value>Type: {0} ({1})</value></data>
   <data name="DocsPlanSources" xml:space="preserve"><value>  Source declarations: {0}</value></data>
   <data name="DocsPlanDependencies" xml:space="preserve"><value>  Dependency sources: {0}</value></data>
-  <data name="DiagnosticsHelp" xml:space="preserve"><value>Display the diagnostic manifest and data. Add --out to save the same contents as a ZIP.</value></data>
+  <data name="DiagnosticsHelp" xml:space="preserve"><value>Display the diagnostic manifest and data. Add --out to save a ZIP, or --identity to include precise component, catalog and recorded-index fingerprints.</value></data>
   <data name="DiagnosticsNotice" xml:space="preserve"><value>Recorded states do not establish current service health or index freshness. Missing, unreadable and partly collected sources are identified in the snapshot.</value></data>
   <data name="DiagnosticsPrivacyNotice" xml:space="preserve"><value>The snapshot excludes prompts, documents, model answers, raw logs, paths, job and call IDs, and model names.</value></data>
+  <data name="DiagnosticsIdentityNotice" xml:space="preserve">
+    <value>Precise runtime fingerprints are included. Review this optional metadata before sharing. Declared source metadata, recorded installation and file identity have separate evidence; signatures, model selection and live index health are not verified.</value>
+  </data>
   <data name="DiagnosticsSaved" xml:space="preserve"><value>Diagnostic ZIP saved to '{0}'.</value></data>
   <data name="DiagnosticsOutputExists" xml:space="preserve"><value>The output file already exists. Choose a new --out path.</value></data>
   <data name="DiagnosticsInputFailed" xml:space="preserve"><value>Diagnostic collection could not be completed because of a read error. Check access to local diagnostic data.</value></data>

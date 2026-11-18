@@ -25,13 +25,7 @@ public sealed class ModelRoutingCatalogStore
             using var stream = File.OpenRead(FilePath);
             var document = JsonSerializer.Deserialize<ModelRoutingCatalogDocument>(stream, LocalAiJson.Strict)
                 ?? throw new InvalidDataException("Model routing catalog is empty.");
-            Validate(document);
-            // Formatting is not a change of catalogue. Hash its parsed, canonical form so a
-            // stale client cannot reuse a preflight after a hand edit left catalogVersion alone.
-            var hash = SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(document, LocalAiJson.Strict));
-            return new ModelRoutingCatalogSnapshot(
-                document with { CatalogVersion = "custom-" + Convert.ToHexString(hash).ToLowerInvariant() },
-                FilePath);
+            return new ModelRoutingCatalogSnapshot(IdentifyConfigured(document), FilePath);
         }
         catch (FileNotFoundException)
         {
@@ -45,6 +39,19 @@ public sealed class ModelRoutingCatalogStore
         {
             throw new InvalidDataException($"Model routing catalog '{FilePath}' could not be read: {failure.Message}", failure);
         }
+    }
+
+    /// <summary>Validates configured bytes without resolving paths, opening files, or changing settings.</summary>
+    public static ModelRoutingCatalogDocument ParseConfigured(ReadOnlySpan<byte> utf8Json) =>
+        IdentifyConfigured(JsonSerializer.Deserialize<ModelRoutingCatalogDocument>(utf8Json, LocalAiJson.Strict)
+            ?? throw new InvalidDataException("Model routing catalog is empty."));
+
+    private static ModelRoutingCatalogDocument IdentifyConfigured(ModelRoutingCatalogDocument document)
+    {
+        Validate(document);
+        // Keep the configured reader's existing identity: formatting is not a change of catalogue.
+        var hash = SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(document, LocalAiJson.Strict));
+        return document with { CatalogVersion = "custom-" + Convert.ToHexString(hash).ToLowerInvariant() };
     }
 
     public static ModelRoutingCatalogDocument LoadEmbedded()

@@ -98,7 +98,7 @@ public sealed class SyncNoticeWiringTests : IDisposable
     [Fact]
     public void A_status_with_no_index_is_not_told_to_start_the_build_that_is_running()
     {
-        var status = CodeSearchTools.IndexStatus(Service(), Reader(building: true), _root);
+        var status = CodeSearchTools.IndexStatus(Service(), Reader(building: true), _root, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Contains(CodeSearchText.BuildAlreadyRunning, status, StringComparison.Ordinal);
         Assert.DoesNotContain(CodeSearchText.BuildItWith, status, StringComparison.Ordinal);
@@ -121,7 +121,7 @@ public sealed class SyncNoticeWiringTests : IDisposable
         notice.Above(_root, SyncNoticeAudience.Answer);
 
         sighting = Finished();
-        CodeSearchTools.IndexStatus(Service(), Reader(building: false), _root);
+        CodeSearchTools.IndexStatus(Service(), Reader(building: false), _root, cancellationToken: TestContext.Current.CancellationToken);
         var next = notice.Above(_root, SyncNoticeAudience.Answer);
 
         Assert.Contains(CodeSearchText.SyncEnded, next, StringComparison.Ordinal);
@@ -130,7 +130,7 @@ public sealed class SyncNoticeWiringTests : IDisposable
     [Fact]
     public void A_status_with_no_index_and_nothing_running_still_says_how_to_build_one()
     {
-        var status = CodeSearchTools.IndexStatus(Service(), Reader(building: false), _root);
+        var status = CodeSearchTools.IndexStatus(Service(), Reader(building: false), _root, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Contains(CodeSearchText.BuildItWith, status, StringComparison.Ordinal);
         Assert.Contains("sync --root", status, StringComparison.Ordinal);
@@ -149,7 +149,7 @@ public sealed class SyncNoticeWiringTests : IDisposable
     [InlineData(false)]
     public void The_instruction_is_a_paragraph_of_its_own_either_way(bool building)
     {
-        var status = CodeSearchTools.IndexStatus(Service(), Reader(building), _root);
+        var status = CodeSearchTools.IndexStatus(Service(), Reader(building), _root, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Contains("Status:     NOT BUILT", status, StringComparison.Ordinal);
         Assert.DoesNotContain("\n\n\n", status, StringComparison.Ordinal);

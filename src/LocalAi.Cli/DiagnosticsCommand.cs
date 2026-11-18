@@ -17,13 +17,19 @@ internal static class DiagnosticsCommand
                 ? MachineOutput.Refusal("diagnostics", code, message) : code + ": " + message);
             return exit;
         }
-        if (args.Length != 0 && args is not ["--out", var _])
-            return Refuse("invalid_arguments", LocalAiCommandSyntax.Diagnostics, 2);
-        string? destination = args.Length == 2 ? args[1] : null;
+        string? destination = null;
+        var includeIdentity = false;
+        for (var i = 0; i < args.Length; i++)
+        {
+            if (args[i] == "--identity" && !includeIdentity) includeIdentity = true;
+            else if (args[i] == "--out" && destination is null && i + 1 < args.Length
+                && !args[i + 1].StartsWith("--", StringComparison.Ordinal)) destination = args[++i];
+            else return Refuse("invalid_arguments", LocalAiCommandSyntax.Diagnostics, 2);
+        }
         if (destination is not null && string.IsNullOrWhiteSpace(destination))
             return Refuse("invalid_arguments", LocalAiCommandSyntax.Diagnostics, 2);
         DiagnosticSnapshot snapshot;
-        try { snapshot = await DiagnosticBundle.CaptureAsync(runtimeRoot ?? ModelResidencyPolicyStore.DefaultRuntimeRoot, cancellationToken); }
+        try { snapshot = await DiagnosticBundle.CaptureAsync(runtimeRoot ?? ModelResidencyPolicyStore.DefaultRuntimeRoot, cancellationToken, includeIdentity); }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException)
         { return Refuse("diagnostic_read_failed", CliText.Catalogue.Get("DiagnosticsInputFailed"), 74); }
         if (destination is not null)
@@ -39,6 +45,7 @@ internal static class DiagnosticsCommand
             streams.Out.WriteLine(CliText.Catalogue.Get("DiagnosticsHelp"));
             streams.Out.WriteLine(CliText.Catalogue.Get("DiagnosticsNotice"));
             streams.Out.WriteLine(CliText.Catalogue.Get("DiagnosticsPrivacyNotice"));
+            if (includeIdentity) streams.Out.WriteLine(CliText.Catalogue.Get("DiagnosticsIdentityNotice"));
             if (destination is not null) streams.Out.WriteLine(CliText.Catalogue.Format("DiagnosticsSaved", Path.GetFullPath(destination)));
         }
         streams.Out.WriteLine(machineReadable ? MachineOutput.Answer("diagnostics", data) : JsonSerializer.Serialize(data, DiagnosticBundle.Json));
