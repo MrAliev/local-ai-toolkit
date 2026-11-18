@@ -2,6 +2,8 @@
 
 [English version](Architecture.md) · [Главная](Home.ru.md)
 
+[Контракты продукта и приёмка релиза](https://github.com/MrAliev/local-ai-toolkit/blob/main/README.ru.md#контракты-продукта-и-приёмка-релиза) связывают поведение компонентов с реализацией и тестами.
+
 ```mermaid
 ---
 config:

@@ -60,6 +60,8 @@
 - [Пакеты документации](documentation-packages.ru.md)
 - [Задания брокера и прерванное ожидание](broker-jobs-and-interrupted-waits.ru.md)
 - [Проверка отдельного запроса навигации](bounded-navigation-diagnostics.ru.md)
+- [Контракты продукта и приёмка релиза](product-contracts-and-release-acceptance.ru.md)
+  - [Матрица приёмки релиза](product-contracts-and-release-acceptance.ru.md#матрица-приёмки-релиза)
 - [Собрать и проверить](building-and-testing.ru.md)
   - [Независимые корпуса для проверки качества](building-and-testing.ru.md#независимые-корпуса-для-проверки-качества)
 - [Лицензия](licence.ru.md)
