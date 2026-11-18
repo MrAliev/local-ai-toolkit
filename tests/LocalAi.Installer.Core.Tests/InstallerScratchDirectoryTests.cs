@@ -15,6 +15,37 @@ public sealed class InstallerScratchDirectoryTests : IDisposable
         "LocalAi.Installer.Core.Scratch.Tests",
         Guid.NewGuid().ToString("N"));
 
+    [Fact]
+    public void Default_package_runs_own_distinct_directories_under_the_existing_staging_root()
+    {
+        string firstPath;
+        string secondPath;
+        using (var first = InstallerScratchDirectory.ClaimPackageRun())
+        using (var second = InstallerScratchDirectory.ClaimPackageRun())
+        {
+            firstPath = first.Path;
+            secondPath = second.Path;
+            var expectedRoot = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "LocalAi-installer"));
+            Assert.NotEqual(firstPath, secondPath);
+            foreach (var path in new[] { firstPath, secondPath })
+            {
+                Assert.Equal(expectedRoot, Path.GetDirectoryName(path));
+                Assert.StartsWith("run-", Path.GetFileName(path));
+                Assert.True(File.Exists(Path.Combine(path, InstallerScratchDirectory.MarkerFileName)));
+            }
+        }
+
+        Assert.False(Directory.Exists(firstPath));
+        Assert.False(Directory.Exists(secondPath));
+    }
+
+    [Fact]
+    public void Best_effort_cleanup_ignores_a_blank_root()
+    {
+        InstallerScratchDirectory.RemoveLeftovers(string.Empty);
+        InstallerScratchDirectory.RemoveLeftovers(string.Empty, "fixture-");
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(root))
