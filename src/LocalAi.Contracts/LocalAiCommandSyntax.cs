@@ -23,7 +23,7 @@ public static class LocalAiCommandSyntax
     // branch is not.
     public const string RepoPrune = "localai repo prune [--root dir] [--dry-run]";
     public const string Doctor = "localai doctor [--root dir] [--json]";
-    public const string Diagnostics = "localai diagnostics [--out file.zip] [--json]";
+    public const string Diagnostics = "localai diagnostics [--identity] [--out file.zip] [--json]";
     public const string HardwarePlan = "localai hardware plan --release <folder> [--disk <existing-path>] [--json]";
     public const string OfflineBundle = "localai offline bundle --source <folder> --out <new-folder> [--json]";
     public const string OfflineVerify = "localai offline verify --bundle <folder> --manifest-sha256 <trusted-hash> [--json]";

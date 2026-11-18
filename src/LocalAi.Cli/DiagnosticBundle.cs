@@ -21,7 +21,7 @@ internal static class DiagnosticBundle
     internal const int MaximumTotalBytes = 32 * 1024 * 1024;
     private static readonly string[] Excluded = ["prompts", "documents", "model_answers", "raw_logs", "exception_messages", "paths", "repository_names", "model_names", "job_and_call_ids", "settings", "environment_variables"];
 
-    internal static Task<DiagnosticSnapshot> CaptureAsync(string runtimeRoot, CancellationToken cancellationToken)
+    internal static Task<DiagnosticSnapshot> CaptureAsync(string runtimeRoot, CancellationToken cancellationToken, bool includeIdentity = false)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var started = DateTimeOffset.UtcNow;
@@ -30,15 +30,20 @@ internal static class DiagnosticBundle
         {
             ["versions.json"] = Element(reader.Versions()),
             ["queue.json"] = Element(reader.Queue()),
-            ["indexes.json"] = Element(reader.Indexes()),
+            ["indexes.json"] = Element(reader.Indexes(includeIdentity)),
             ["errors.json"] = Element(reader.Errors()),
             ["metrics.json"] = Element(reader.Metrics()),
         };
+        if (includeIdentity)
+            contents["runtime-evidence.json"] = Element(RuntimeEvidenceReader.Capture(
+                typeof(DiagnosticBundle).Assembly, "cli", runtimeRoot, reader.IdentityIndexes, cancellationToken));
         cancellationToken.ThrowIfCancellationRequested();
         var manifest = Element(new
         {
             schemaVersion = 1, startedAtUtc = started, completedAtUtc = DateTimeOffset.UtcNow,
-            scope = "recorded_state_only", consistency = "independent_file_reads_not_atomic", liveHealthChecked = false,
+            scope = includeIdentity ? "recorded_state_and_component_file_evidence" : "recorded_state_only",
+            runtimeIdentityIncluded = includeIdentity,
+            consistency = "independent_file_reads_not_atomic", liveHealthChecked = false,
             indexFreshnessChecked = false, excluded = Excluded,
             limits = new { jobs = MaximumJobs, repositories = MaximumRepositories, reports = MaximumReports, fileBytes = MaximumFileBytes, totalBytes = MaximumTotalBytes },
             files = contents.Select(pair => new { name = pair.Key, bytes = Bytes(pair.Value).Length, sha256 = Convert.ToHexString(SHA256.HashData(Bytes(pair.Value))) }).ToArray(),
@@ -115,6 +120,8 @@ internal static class DiagnosticBundle
     {
         private readonly string _root = Path.GetFullPath(root);
         private int _remaining = MaximumTotalBytes;
+        private readonly List<RuntimeIndexEvidence> _identityIndexes = [];
+        internal IReadOnlyList<RuntimeIndexEvidence> IdentityIndexes => _identityIndexes;
 
         // Inspect every component, including the runtime root's ancestors. Refuse links rather
         // than following a telemetry or repository directory outside the selected runtime.
@@ -144,11 +151,17 @@ internal static class DiagnosticBundle
         }
 
         private JsonElement? Read(string path, Coverage coverage, int maximum = MaximumFileBytes)
+            => Read(path, coverage, out _, maximum);
+
+        private JsonElement? Read(string path, Coverage coverage, out string? sha256, int maximum = MaximumFileBytes)
         {
+            sha256 = null;
             try
             {
-                using var json = JsonDocument.Parse(ReadBytes(path, maximum), new JsonDocumentOptions { MaxDepth = 32, AllowDuplicateProperties = false });
+                var bytes = ReadBytes(path, maximum);
+                using var json = JsonDocument.Parse(bytes, new JsonDocumentOptions { MaxDepth = 32, AllowDuplicateProperties = false });
                 if (json.RootElement.ValueKind != JsonValueKind.Object) throw new InvalidDataException();
+                sha256 = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
                 return json.RootElement.Clone();
             }
             catch (Exception error) when (Recoverable(error)) { coverage.Omit(Reason(error)); return null; }
@@ -216,7 +229,7 @@ internal static class DiagnosticBundle
             return new { source, states, scope = "active_job_directory_only", leaseRecoveryPerformed = false };
         }
 
-        internal object Indexes()
+        internal object Indexes(bool includeIdentity = false)
         {
             var source = new Coverage();
             var repositories = new List<object>();
@@ -224,7 +237,7 @@ internal static class DiagnosticBundle
             {
                 var manifestSource = new Coverage();
                 var progressSource = new Coverage();
-                var document = Read(Path.Combine(directory, "manifest.json"), manifestSource);
+                var document = Read(Path.Combine(directory, "manifest.json"), manifestSource, out var manifestSha256);
                 var progressDocument = Read(Path.Combine(directory, "progress.json"), progressSource, 65536);
                 RepositoryManifest? manifest = null;
                 RepositoryIndexProgress? progress = null;
@@ -254,6 +267,15 @@ internal static class DiagnosticBundle
                 }
                 catch (Exception error) when (Recoverable(error) || error is KeyNotFoundException)
                 { progress = null; progressSource.Omit("invalid"); }
+                if (includeIdentity)
+                    _identityIndexes.Add(new RuntimeIndexEvidence(
+                        repositories.Count + 1,
+                        manifestSha256,
+                        manifest is null ? null : SafeHash(manifest.CurrentGenerationId),
+                        null, // PublishedGitTree is a tree identity, not a source commit.
+                        string.IsNullOrWhiteSpace(manifest?.EmbeddingModel) ? null
+                            : Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(manifest.EmbeddingModel))).ToLowerInvariant(),
+                        manifest is null ? "unknown" : "recorded"));
                 repositories.Add(new
                 {
                     ordinal = repositories.Count + 1, manifestSource, progressSource,

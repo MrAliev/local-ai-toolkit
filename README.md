@@ -1104,6 +1104,29 @@ this comparison, while older task-specific scalar estimates retain their legacy 
 Evidence is bounded to 16,384 distinct source units per call; longer streams report
 `source_evidence_limit` instead of crediting a partial baseline.
 
+For a justified local call, choose the history and baseline separately:
+
+| Situation | CLI environment values | MCP arguments | Meaning |
+| --- | --- | --- | --- |
+| History is unknown | `LOCALAI_SOURCE_CONTEXT=Unknown`, `LOCALAI_CONTEXT_BASIS=Unknown` | `sourceContext: "Unknown", contextBasis: "Unknown"` | Avoided source context is unknown. Any displayed context delta remains conditional. |
+| First reading of bounded input selected for this task | `LOCALAI_SOURCE_CONTEXT=NotPresent`, `LOCALAI_CONTEXT_BASIS=ExplicitTaskInput` | `sourceContext: "NotPresent", contextBasis: "ExplicitTaskInput"` | Compare that declared input conditionally; it is not a measured account charge or a proven minimum. |
+| Source is already in cloud context | `LOCALAI_SOURCE_CONTEXT=AlreadyPresent`, `LOCALAI_CONTEXT_BASIS=ExplicitTaskInput` | `sourceContext: "AlreadyPresent", contextBasis: "ExplicitTaskInput"` | No additional source credit. Returning more context can make the comparison negative. |
+| Source is unread, but its necessity is undeclared | `LOCALAI_SOURCE_CONTEXT=NotPresent`, `LOCALAI_CONTEXT_BASIS=Unknown` | `sourceContext: "NotPresent", contextBasis: "Unknown"` | Missing baseline; reading a file alone cannot establish savings. |
+
+For example, in PowerShell, when the first-reading assumptions actually hold:
+
+```powershell
+$env:LOCALAI_SOURCE_CONTEXT = 'NotPresent'
+$env:LOCALAI_CONTEXT_BASIS = 'ExplicitTaskInput'
+lai localai ask 'List the error categories only.' C:\work\selected-input.txt --json
+```
+
+Reuse the answer before requesting another local reading. If another call is justified after
+the source entered cloud context, set `AlreadyPresent`; if its history is uncertain, reset
+both values to `Unknown`. The same rules apply to the supported MCP parameters. The contract
+tests exercise first and repeated readings with synthetic sources and fake executors, without
+model inference; they do not require a positive savings number.
+
 #### Triage a log
 
 ```powershell
@@ -1352,7 +1375,7 @@ as a ZIP in an existing folder; it refuses to replace an existing destination. A
 the existing machine envelope with `saved`, `manifest` and `contents` fields. Help, cancellation
 and the administrative cloud-token report apply; collecting a bundle calls no model or network
 service. Collection does not modify its sources; the usual CLI usage report is still recorded.
-No new MCP tool or changes to existing MCP responses are introduced by this pilot.
+Default MCP responses remain unchanged; the explicit identity-only status mode below is optional.
 
 The ZIP contains `manifest.json` and five JSON projections: collector/.NET/OS versions and the
 recorded installed release, active queue state counts, recorded repository/index build states,
@@ -1374,6 +1397,40 @@ Links are not followed. The first pilot samples at most 1,024 active jobs, 256 r
 The two broker log rotations contribute recognized categories only; unknown categories become
 `Other`. Manifest file sizes and SHA-256 hashes describe the exact projected ZIP entries, not
 the private source files. A cancelled or failed export does not publish a partial ZIP.
+
+**Precise component identity is opt-in.** Add `--identity` to include a sixth projection,
+`runtime-evidence.json`, in the displayed contents or ZIP:
+
+```powershell
+lai localai diagnostics --identity --out C:\support\localai-identity.zip --json
+```
+
+Review this optional metadata before sharing. One `localai.runtime-evidence.v1` snapshot
+separates `observed`, `recorded`, `unknown` and `not_evaluated` values. It fingerprints the
+responding CLI component file, reports available declared assembly/source metadata and
+recorded installation identity, and includes the effective catalog's canonical content
+identity and opaque validated index records. Paths, repository/model names and job/call IDs
+remain excluded. The default five projections do not gain these precise fingerprints.
+
+A file SHA-256 describes bytes read from disk, not process memory or an authenticated build.
+For a framework-dependent component the reader fingerprints its DLL, not `dotnet.exe`.
+Matching pointer and install records do not prove which binary is answering. Missing full
+source SHA or retained release-manifest evidence remains unknown; a tree hash is not substituted
+for a commit. Catalog configuration is not a measured model selection, and recorded index
+identity does not establish live freshness or navigation health. The catalog digest is
+canonical/semantic, so formatting alone does not change it. Read limits are 256 MiB for the
+component, 64 KiB per installation record, 1 MiB for the catalog and 32 index identities;
+the recorded-state collection limits above remain separate.
+
+The two existing MCP status tools can identify their own responding process without querying
+the broker, models or index. Send `runtimeEvidenceOnly: true` to `index_status` or
+`local_models_status`; the response uses the same snapshot schema, with index/model selection
+marked not evaluated. No new MCP tool or persistent identity store is introduced.
+
+To link an observation to a verified unsigned candidate, compare the **same file's** hash with the
+verified candidate manifest and preserve the source/run/artifact identity. A DLL hash and a
+self-contained executable hash describe different files. Version strings and declared source
+metadata alone do not establish that link; signature and attestation verification are separate.
 
 #### Estimate capacity on the target computer
 

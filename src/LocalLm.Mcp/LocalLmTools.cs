@@ -409,8 +409,13 @@ public static class LocalLmTools
     [Description("Shows installed and resident models, recommended missing models, and per-task experiment state.")]
     public static Task<string> LocalModelsStatus(
         ModelManagementTasks tasks,
-        CancellationToken cancellationToken = default) =>
-        Structured(
+        CancellationToken cancellationToken = default,
+        [Description("Return only this MCP component's precise local runtime evidence; do not query models or the broker. Optional; review fingerprints before sharing.")]
+        bool runtimeEvidenceOnly = false) =>
+        runtimeEvidenceOnly
+            ? Structured("local_models_status", () => Task.FromResult(LocalAi.Contracts.RuntimeEvidenceReader.Capture(
+                typeof(LocalLmTools).Assembly, "locallm-mcp", cancellationToken: cancellationToken)), cancellationToken)
+            : Structured(
             "local_models_status",
             () => tasks.GetStatusAsync(cancellationToken),
             cancellationToken);

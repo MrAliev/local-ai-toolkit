@@ -734,8 +734,14 @@ public static class CodeSearchTools
         SearchService service,
         RepositoryProgressReader reader,
         [Description("Repository root. Defaults to the repository containing the working directory.")]
-        string? root = null)
+        string? root = null,
+        [Description("Return only this MCP component's precise local runtime evidence; do not inspect the repository, probe services or run a model. Optional; review fingerprints before sharing.")]
+        bool runtimeEvidenceOnly = false,
+        CancellationToken cancellationToken = default)
     {
+        if (runtimeEvidenceOnly)
+            return LocalAi.Contracts.RuntimeEvidenceReader.ToJson(LocalAi.Contracts.RuntimeEvidenceReader.Capture(
+                typeof(CodeSearchTools).Assembly, "codesearch-mcp", service?.RuntimeRoot, cancellationToken: cancellationToken));
         var status = service.Status(root);
 
         // The reader rather than the notice, and one look rather than two.
