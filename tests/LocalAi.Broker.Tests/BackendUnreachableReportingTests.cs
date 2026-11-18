@@ -45,7 +45,7 @@ public sealed class BackendUnreachableReportingTests : IDisposable
     /// Ollama is down would send the reader somewhere there is nothing to find.
     /// </summary>
     [Fact]
-    public async Task A_wait_that_runs_out_while_the_backend_answers_stays_a_cancellation()
+    public async Task A_wait_that_runs_out_while_the_backend_answers_reports_its_timeout()
     {
         var queue = new DurableQueue(_root);
         var client = new BrokerClient(
@@ -55,7 +55,7 @@ public sealed class BackendUnreachableReportingTests : IDisposable
             timeout: TimeSpan.FromMilliseconds(50),
             pollInterval: TimeSpan.FromMilliseconds(5));
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+        await Assert.ThrowsAsync<BrokerJobWaitTimeoutException>(() =>
             client.ExecuteAsync<object>(Request(), TestContext.Current.CancellationToken));
     }
 
@@ -74,7 +74,7 @@ public sealed class BackendUnreachableReportingTests : IDisposable
             timeout: TimeSpan.FromMilliseconds(50),
             pollInterval: TimeSpan.FromMilliseconds(5));
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+        await Assert.ThrowsAsync<BrokerJobWaitTimeoutException>(() =>
             client.ExecuteAsync<object>(Request(), TestContext.Current.CancellationToken));
     }
 

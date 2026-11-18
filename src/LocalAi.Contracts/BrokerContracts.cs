@@ -73,7 +73,7 @@ public static class BrokerCompatibilityContract
     /// </summary>
     public const int HostStateSchemaVersion = 4;
     public const int ProtocolVersion = 1;
-    public const string BuildCompatibilityId = "localai-broker-v1";
+    public const string BuildCompatibilityId = "localai-broker-v2-job-lifecycle";
 
     public static BrokerCompatibility Current { get; } =
         new(ProtocolVersion, BuildCompatibilityId);

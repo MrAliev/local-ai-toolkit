@@ -1259,4 +1259,13 @@
   <data name="DoctorRepositorySyncNone" xml:space="preserve"><value>Запись прогресса общей синхронизации отсутствует.</value></data>
   <data name="DoctorRepositorySyncUnknown" xml:space="preserve"><value>Не удалось проверить прогресс общей синхронизации; сведения о рабочем дереве выше остаются доступными.</value></data>
   <data name="DoctorNavigationHeaderOnly" xml:space="preserve"><value>HeaderOnly (заголовки совпадают; целостность всех данных и готовность навигации не проверены)</value></data>
+  <data name="JobSubmitted" xml:space="preserve"><value>Задание брокера {0} (joined={1}). Ctrl+C прекращает ожидание, но не отменяет задание. Проверка: localai job status {0}; продолжение ожидания: localai job wait {0}.</value></data>
+  <data name="JobWaitDetached" xml:space="preserve"><value>Ожидание задания брокера {0} прекращено; задание сохранено. Проверка: localai job status {0}; продолжение ожидания: localai job wait {0}. Возобновляется ожидание одного задания брокера, а не вся исходная многоэтапная команда.</value></data>
+  <data name="JobCancelled" xml:space="preserve"><value>Задание брокера {0} отменено.</value></data>
+  <data name="JobHandleNotSaved" xml:space="preserve"><value>Не удалось сохранить или прочитать локальные сведения о владельце задания брокера {0}. Задание сохранено; его состояние по-прежнему можно проверить.</value></data>
+  <data name="JobArguments" xml:space="preserve"><value>Используйте localai job status|wait|cancel job-id. Только wait принимает --timeout-seconds (1–86400). Команды относятся к одному заданию брокера, а не ко всей многоэтапной операции.</value></data>
+  <data name="JobNotFound" xml:space="preserve"><value>Сохранённое задание с таким ID не найдено.</value></data>
+  <data name="JobNotOwner" xml:space="preserve"><value>Для этого задания нет действительного локального подтверждения владения. Присоединение к заданию или знание его ID не даёт права отмены.</value></data>
+  <data name="JobCancelUnsupported" xml:space="preserve"><value>Работающий брокер не подтверждает поддержку отмены владельцем. Запрос отмены не отправлен; общий брокер не перезапускался.</value></data>
+  <data name="JobFailed" xml:space="preserve"><value>Задание брокера завершилось с ошибкой. Команда job status показывает сохранённый код ошибки.</value></data>
 </root>

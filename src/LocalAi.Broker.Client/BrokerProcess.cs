@@ -19,10 +19,16 @@ public interface IBrokerProcess
     /// Defaulted so a caller that only starts a broker does not have to answer this.
     /// </summary>
     BrokerBackendState? ReadBackendState() => null;
+
+    /// <summary>Read-only capability check; never starts or replaces a shared host.</summary>
+    bool SupportsJobCancellation() => false;
 }
 
 public sealed class BrokerProcess : IBrokerProcess
 {
+    public bool SupportsJobCancellation() =>
+        ReadObservation().Status == BrokerObservationStatus.CompatibleHealthy;
+
     private const int MaximumDiagnosticValueLength = 512;
     private static readonly TimeSpan MaximumSemaphoreWaitSlice =
         TimeSpan.FromMilliseconds(100);

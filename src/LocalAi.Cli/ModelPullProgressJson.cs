@@ -24,13 +24,13 @@ public sealed class ModelPullProgressJson(TextWriter writer, string model) : ILo
 
     public void Report(LocalRunStep step)
     {
-        if (step is not ModelDownloadProgress download)
+        // Keep the version-one shape accepted by existing installers. Submission is an
+        // informational "other" status, not a new wire record or download byte count.
+        var progress = step switch
         {
-            return;
-        }
-
-        var line = JsonSerializer.Serialize(
-            new ModelPullProgressLine(
+            BrokerJobSubmitted submitted => new ModelPullProgressLine(1, "pull", model, "other", null, null,
+                $"broker_job:{submitted.JobId:D};joined={(submitted.JoinedExisting ? "true" : "false")}"),
+            ModelDownloadProgress download => new ModelPullProgressLine(
                 1,
                 "pull",
                 model,
@@ -38,7 +38,10 @@ public sealed class ModelPullProgressJson(TextWriter writer, string model) : ILo
                 download.Phase == "downloading" ? download.Completed : null,
                 download.Phase == "downloading" ? download.Total : null,
                 download.Phase == "other" ? download.Detail : null),
-            LocalAiJson.Strict);
+            _ => null,
+        };
+        if (progress is null) return;
+        var line = JsonSerializer.Serialize(progress, LocalAiJson.Strict);
 
         // The client polls ten times a second and the broker republishes at most every two, so
         // most of what arrives here is the position already reported. A repeated line would be

@@ -766,6 +766,41 @@ public sealed class ModelCommandTests
             "client", "operation", "model", TimeSpan.Zero, TimeSpan.Zero,
             0, 0, null, null, null));
 
+    [Theory]
+    [InlineData("detached", ModelCommand.CancelledExitCode, "job_wait_detached")]
+    [InlineData("timeout", 75, "job_wait_timeout")]
+    [InlineData("cancelled", ModelCommand.CancelledExitCode, "job_cancelled")]
+    [InlineData("sink", 73, "job_handle_not_saved")]
+    public async Task Pull_preserves_job_identity_and_distinguishes_wait_from_work_cancellation(
+        string failure, int expectedExit, string expectedCode)
+    {
+        var id = Guid.NewGuid();
+        Exception exception = failure switch
+        {
+            "detached" => new BrokerJobWaitCancelledException(id, new CancellationToken(true)),
+            "timeout" => new BrokerJobWaitTimeoutException(id, TimeSpan.FromHours(12)),
+            "cancelled" => new BrokerJobCancelledException(id),
+            _ => new BrokerJobSubmissionNotificationException(id, new IOException("private sink failed")),
+        };
+        var client = new RecordingClient { Failure = exception };
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+        var exit = await ModelCommand.ExecuteProductionAsync(
+            ["pull", "--model", "qwen3.5:9b", "--catalog-version", "signed-7", "--progress-json"],
+            (observer, _, _) => { observer?.Report(new BrokerJobSubmitted(id, false)); return client; },
+            output, TestContext.Current.CancellationToken, error);
+        Assert.Equal(expectedExit, exit);
+        using var response = System.Text.Json.JsonDocument.Parse(output.ToString());
+        Assert.Equal(expectedCode, response.RootElement.GetProperty("code").GetString());
+        Assert.Equal(id, response.RootElement.GetProperty("jobId").GetGuid());
+        Assert.Equal("broker-job", response.RootElement.GetProperty("scope").GetString());
+        using var progress = System.Text.Json.JsonDocument.Parse(error.ToString());
+        Assert.Equal(1, progress.RootElement.GetProperty("schemaVersion").GetInt32());
+        Assert.Equal("other", progress.RootElement.GetProperty("phase").GetString());
+        Assert.Contains(id.ToString(), progress.RootElement.GetProperty("status").GetString());
+        Assert.Equal(["pull:qwen3.5:9b:signed-7"], client.Calls);
+    }
+
     private sealed class RecordingClient : ILocalModelClient
     {
         public List<string> Calls { get; } = [];

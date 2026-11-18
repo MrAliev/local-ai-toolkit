@@ -58,6 +58,8 @@ if you would rather work on your own.
   - [Remove it entirely](#remove-it-entirely)
 - [Impact evidence: C# pilot](#impact-evidence-c-pilot)
 - [Documentation packages](#documentation-packages)
+- [Broker jobs and interrupted waits](#broker-jobs-and-interrupted-waits)
+- [Bounded navigation diagnostics](#bounded-navigation-diagnostics)
 - [Building and testing](#building-and-testing)
   - [Independent quality corpora](#independent-quality-corpora)
 - [Licence](#licence)
@@ -2118,6 +2120,36 @@ creates no commit. It skips files edited since the previous apply and prints the
 files left by a different subset are retained. If sources or HEAD changed since build, build
 again before applying. Symbolic links and junctions in the destination are refused. Review
 the resulting Git diff and commit the accepted files together. No documentation hook is installed.
+
+## Broker jobs and interrupted waits
+
+Local model commands and human-readable model downloads report the durable broker job ID as soon as it has been accepted. With `model pull --progress-json`, the same ID appears on stderr in the existing version-one progress shape: `phase="other"`, `status="broker_job:<id>;joined=false"` (or `joined=true`). Download byte counters keep their existing meaning.
+
+```powershell
+localai job status <job-id>
+localai job wait <job-id> --timeout-seconds 1800
+localai job cancel <job-id>
+```
+
+All three commands support `--json`. They target the current installation's default runtime; they do not select a different `--runtime-root` used by a targeted status or preflight command. Status and cancellation do not start or restart the shared broker. An older or unverifiable host returns `job_cancel_unsupported` rather than accepting an unsupported cancellation request.
+
+Ctrl+C or a wait timeout stops that client's wait and preserves the job. `job wait` reattaches to **one broker job** and returns its cached result inside an untrusted-content boundary. It neither repeats inference nor resumes the original command's remaining fragments, validation or output-writing steps. A multi-step `triage`, translation or documentation build may require those caller-side steps after a job has finished; a completed broker job alone does not prove that its whole command completed.
+
+Only the creator receives cancellation authority. CLI clients save that authority privately under the runtime's `client-handles` directory; joining a deduplicated job does not grant it or erase an existing owner record. Knowing a job ID is sufficient to inspect or wait for it, but not to cancel it. Do not include private owner records in diagnostic exports.
+
+`Requested` confirms a cancellation request, not a terminal outcome. Check status for `Cancelled`; normal completion can win a race with cancellation. Cancellation survives an expired worker lease and prevents a replacement attempt from restarting the cancelled job. Other clients' jobs continue. Model-download error responses now distinguish `job_wait_detached`, `job_wait_timeout` and `job_cancelled`, with the canonical `jobId`. For `model pull`, stopping a wait or confirming cancellation retains exit code 4; a wait timeout uses 75, and failure to save private ownership information uses 73. The version-one download progress record shape remains compatible.
+
+## Bounded navigation diagnostics
+
+The default MCP `index_status` remains a cheap header check. `HeaderOnly` does not establish full integrity, language coverage or readiness of every navigation query. For one explicit query, supply `navigationPath`, a one-based `navigationLine` and UTF-16 `navigationColumn`, and `navigationOperation` (`definition` or `references`). For example:
+
+```json
+{"root":"R:/example","navigationPath":"src/Example.cs","navigationLine":42,"navigationColumn":1,"navigationOperation":"references"}
+```
+
+The additional, untrusted-wrapped JSON reports `HeaderEvidence`, `Freshness`, language, position, operation, `Precision`, `ResultCount` and `Reason`. `Coverage` remains `Unknown`: neither readable headers nor a successful location proves complete document or language coverage. A query performs at most one existing navigation operation, without an index rebuild, repository scan or persistent health cache. It cannot be combined with `runtimeEvidenceOnly`.
+
+Freshness and query precision are separate facts. A stale index can still answer a particular query; a current header cannot guarantee a precise answer. An empty precise-reference result may fall back to bounded text matches, explicitly marked as degraded/heuristic. This means the query found no recorded precise references; it does not mean that no symbol or no uses exist in the repository. A zero-result probe retains `Precision="Unknown"` rather than proving global absence.
 
 ## Building and testing
 

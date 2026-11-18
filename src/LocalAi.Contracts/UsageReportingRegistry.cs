@@ -93,9 +93,13 @@ public static class UsageReportingRegistry
             ("model status", "local_models_status"), ("model pull", null), ("model preflight", "local_model_preflight"),
         }) yield return new(UsageSurface.Cli, "localai", command, UsagePolicy.Administration with { Response = UsageResponseShape.LegacyJson }, tool);
 
+        foreach (var command in new[] { "job status", "job wait", "job cancel" })
+            yield return new(UsageSurface.Cli, "localai", command,
+                UsagePolicy.Administration with { Response = UsageResponseShape.Envelope });
+
         foreach (var command in new[]
         {
-            "help", "--help", "-h", "model", "native", "docs", "documents", "hardware", "offline", "policy", "policy show", "policy set", "update", "semantic", "semantic status",
+            "help", "--help", "-h", "model", "job", "native", "docs", "documents", "hardware", "offline", "policy", "policy show", "policy set", "update", "semantic", "semantic status",
             "semantic config", "semantic config show", "semantic config path", "semantic config init",
             "semantic lsp-config", "semantic lsp-config show", "semantic lsp-config path", "semantic lsp-config init",
             "semantic fallback-config", "semantic fallback-config show", "semantic fallback-config path", "semantic fallback-config init",

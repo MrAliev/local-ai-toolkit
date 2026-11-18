@@ -75,6 +75,10 @@ public sealed class LocalRunProgress : ILocalRunObserver
         var now = clock();
         switch (step)
         {
+            case BrokerJobSubmitted submitted:
+                Write(CliText.JobSubmitted(submitted.JobId, submitted.JoinedExisting), now);
+                break;
+
             case BrokerJobPending pending:
                 ReportPending(pending, now);
                 break;

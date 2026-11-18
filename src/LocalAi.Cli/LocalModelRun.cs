@@ -264,7 +264,7 @@ internal static class LocalModelRun
     private static LocalTasks Tasks(ILocalRunObserver observer) =>
         new(
             new BrokerLocalModelClient(
-                BrokerClientFactory.CreateDefault(observer: observer)),
+                CliBrokerJobs.Create(observer: observer)),
             observer);
 
     /// <summary>
@@ -286,6 +286,14 @@ internal static class LocalModelRun
         Exception exception,
         LocalTaskProfile profile) => exception switch
         {
+            BrokerJobWaitCancelledException detached =>
+                ("job_wait_detached", CliText.JobWaitDetached(detached.JobId), 130),
+            BrokerJobWaitTimeoutException timedOut =>
+                ("job_wait_timeout", CliText.JobWaitDetached(timedOut.JobId), 75),
+            BrokerJobCancelledException cancelled =>
+                ("job_cancelled", CliText.JobCancelled(cancelled.JobId), 130),
+            BrokerJobSubmissionNotificationException submitted =>
+                ("job_handle_not_saved", CliText.JobHandleNotSaved(submitted.JobId), 73),
             // 69 is EX_UNAVAILABLE: a service this needs is not there. Not 2, which would send
             // somebody to fix a command line that is correct, and not 75, which says try again
             // later — a model that is not installed does not install itself. The message names
@@ -367,7 +375,8 @@ internal static class LocalModelRun
         bool machineReadable, CommandStreams streams)
     {
         if (exitCode == 69) UsageCall.Current?.NoInference();
-        if (exitCode is 2 or 69) UsageCall.Current?.Refused(code);
+        if (exitCode == 130) UsageCall.Current?.Cancelled();
+        else if (exitCode is 2 or 69) UsageCall.Current?.Refused(code);
         else if (exitCode != 73 && exitCode != 65) UsageCall.Current?.Failed(code);
         if (machineReadable)
         {

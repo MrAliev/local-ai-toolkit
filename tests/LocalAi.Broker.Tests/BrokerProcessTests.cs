@@ -1245,7 +1245,7 @@ public sealed class BrokerProcessTests
         // regressions.
         Assert.Equal(
             $"expected schema={BrokerCompatibilityContract.HostStateSchemaVersion} " +
-            "protocol=1 build=localai-broker-v1; " +
+            $"protocol={BrokerCompatibilityContract.ProtocolVersion} build={BrokerCompatibilityContract.BuildCompatibilityId}; " +
             expectedActualDetail,
             exception.Message);
         Assert.Equal(0, starts);

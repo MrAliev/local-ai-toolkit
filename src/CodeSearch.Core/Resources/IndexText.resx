@@ -337,4 +337,13 @@
   <data name="ImpactQuestion_type-contract" xml:space="preserve"><value>Would a change to the selected type require this declaration to change?</value></data>
   <data name="ImpactQuestion_test-coverage" xml:space="preserve"><value>Which tests would cover a change involving this relationship?</value></data>
   <data name="ImpactQuestion_insufficient-context" xml:space="preserve"><value>No review question selected: the model marked the supplied context as insufficient.</value></data>
+  <data name="NoPreciseReferencesForQuery" xml:space="preserve">
+    <value>The semantic index returned no precise references for this query; any results below are bounded text matches.</value>
+  </data>
+  <data name="NavigationProbeUnavailable" xml:space="preserve">
+    <value>No navigation query ran because its gateway is unavailable; query readiness and coverage are unknown.</value>
+  </data>
+  <data name="NavigationProbeNoLocations" xml:space="preserve">
+    <value>This query returned no locations; this does not establish that references or definitions are absent.</value>
+  </data>
 </root>

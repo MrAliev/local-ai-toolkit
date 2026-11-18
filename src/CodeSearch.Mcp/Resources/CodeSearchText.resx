@@ -279,4 +279,10 @@ Check the broker, then search again: localai doctor</value>
   </data>
   <data name="NavigationUnknownHeader" xml:space="preserve"><value>Navigation: UNKNOWN (semantic index or overlay header could not be verified); run: {0}</value></data>
   <data name="NavigationHeaderOnly" xml:space="preserve"><value>Navigation: HEADER ONLY (semantic headers match; full data integrity and navigation readiness were not verified by this status check)</value></data>
+  <data name="NavigationProbeParametersInvalid" xml:space="preserve">
+    <value>A navigation query requires a repository-relative navigationPath, line and column counted from 1, and navigationOperation definition or references.</value>
+  </data>
+  <data name="NavigationProbeRuntimeEvidenceConflict" xml:space="preserve">
+    <value>runtimeEvidenceOnly cannot be combined with a navigation query; runtime evidence never inspects a repository or runs navigation.</value>
+  </data>
 </root>

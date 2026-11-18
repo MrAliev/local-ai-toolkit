@@ -276,7 +276,7 @@ public sealed class SemanticNavigationGateway
                 return SemanticNavigationOutcome.Precise(precise);
             }
 
-            degradation = EmptyPreciseResult;
+            degradation = new SemanticDegradation(IndexText.NoPreciseReferencesForQuery, null);
         }
         catch (SemanticNavigationNotReadyException exception) when (
             _heuristicNavigation is not null)

@@ -729,6 +729,8 @@ public static class CodeSearchTools
         Reports whether a repository has a code-search index, how big it is, which embedding
         model built it, and whether the mainline branch has moved since it was built. Check this
         when search results look wrong or suspiciously empty.
+        Optional navigationPath probes exactly one definition or references query. HeaderOnly
+        remains header evidence; query precision, unknown coverage and freshness are separate.
         """)]
     public static string IndexStatus(
         SearchService service,
@@ -737,12 +739,35 @@ public static class CodeSearchTools
         string? root = null,
         [Description("Return only this MCP component's precise local runtime evidence; do not inspect the repository, probe services or run a model. Optional; review fingerprints before sharing.")]
         bool runtimeEvidenceOnly = false,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        [Description("Optional repository-relative path for one bounded navigation-health query; omitted means header checks only.")]
+        string? navigationPath = null,
+        [Description("Navigation probe line, counted from 1.")]
+        int navigationLine = 1,
+        [Description("Navigation probe UTF-16 column, counted from 1.")]
+        int navigationColumn = 1,
+        [Description("Exactly one probe operation: definition or references.")]
+        string navigationOperation = "definition",
+        SemanticNavigationGateway? navigationGateway = null)
     {
+        var probeRequested = navigationPath is not null || navigationLine != 1 ||
+            navigationColumn != 1 || navigationOperation != "definition";
+        if (probeRequested && runtimeEvidenceOnly)
+            return CodeSearchText.NavigationProbeRuntimeEvidenceConflict;
+        if (probeRequested && (navigationPath is null ||
+            !SemanticDocumentPath.IsRepositoryRelative(navigationPath) ||
+            !SourcePosition.TryFromOneBased(navigationLine, navigationColumn, out _) ||
+            navigationOperation is not ("definition" or "references")))
+            return CodeSearchText.NavigationProbeParametersInvalid;
         if (runtimeEvidenceOnly)
             return LocalAi.Contracts.RuntimeEvidenceReader.ToJson(LocalAi.Contracts.RuntimeEvidenceReader.Capture(
                 typeof(CodeSearchTools).Assembly, "codesearch-mcp", service?.RuntimeRoot, cancellationToken: cancellationToken));
         var status = service.Status(root);
+        var queryHealth = navigationPath is null ? string.Empty : "\nNavigation query: " +
+            UntrustedContent.Wrap(JsonSerializer.Serialize(NavigationQueryHealth.ProbeAsync(
+                status, navigationGateway, navigationPath, navigationLine, navigationColumn,
+                navigationOperation, root, cancellationToken).GetAwaiter().GetResult()),
+                "index_status:navigation_query");
 
         // The reader rather than the notice, and one look rather than two.
         //
@@ -772,7 +797,7 @@ public static class CodeSearchTools
                 $"Repository: {status.RepositoryRoot}",
                 $"Index:      {status.IndexPath}",
                 "Status:     NOT BUILT",
-                progressText) + "\n\n" + build;
+                progressText) + "\n\n" + build + queryHealth;
         }
 
         return Rows(
@@ -785,7 +810,7 @@ public static class CodeSearchTools
             $"Built:      {CodeSearchText.BuiltAtCommit(status.IndexedAtUtc.ToString("u", CultureInfo.InvariantCulture), Short(status.IndexedCommit))}",
             $"Status:     {Staleness(status)}",
             $"Navigation: {Navigation(status)}",
-            progressText) + UpdateNotice.ForStatus(service.RuntimeRoot);
+            progressText) + UpdateNotice.ForStatus(service.RuntimeRoot) + queryHealth;
     }
 
     /// <summary>

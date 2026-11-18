@@ -304,6 +304,9 @@ public static class IndexText
     private static string Sentence(string fact, string remedy) => fact + " " + remedy;
 
     public static string NoSymbolAtPosition => Catalogue.Get(nameof(NoSymbolAtPosition));
+    public static string NoPreciseReferencesForQuery => Catalogue.Get(nameof(NoPreciseReferencesForQuery));
+    public static string NavigationProbeUnavailable => Catalogue.Get(nameof(NavigationProbeUnavailable));
+    public static string NavigationProbeNoLocations => Catalogue.Get(nameof(NavigationProbeNoLocations));
 
     public static string SnapshotMismatch => Catalogue.Get(nameof(SnapshotMismatch));
 

@@ -124,6 +124,6 @@ Apply копирует доступные документы в `docs/generated/
 
 ---
 
-← [Данные для анализа влияния: пилот C#](impact-evidence-c-pilot.ru.md) · [Оглавление](README.ru.md#оглавление) · [Собрать и проверить](building-and-testing.ru.md) →
+← [Данные для анализа влияния: пилот C#](impact-evidence-c-pilot.ru.md) · [Оглавление](README.ru.md#оглавление) · [Задания брокера и прерванное ожидание](broker-jobs-and-interrupted-waits.ru.md) →
 
 <!-- Generated from the README by DocumentationSiteTests. -->
