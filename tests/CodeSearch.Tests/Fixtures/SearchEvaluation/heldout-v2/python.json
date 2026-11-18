@@ -1,0 +1,195 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "id": "v2-python-available-en",
+      "query": "Where are negative available-stock quantities normalized to zero without rounding positive quantities?",
+      "category": "en-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/stock/available.py",
+          "symbol": "normalize"
+        }
+      ]
+    },
+    {
+      "id": "v2-python-available-ru",
+      "query": "Где отрицательный остаток товара заменяется нулём, а положительное количество не округляется?",
+      "category": "ru-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/stock/available.py",
+          "symbol": "normalize"
+        }
+      ]
+    },
+    {
+      "id": "v2-python-reorder-en",
+      "query": "Find the stock normalization that rounds a nonnegative whole-unit reorder quantity up to a multiple of five.",
+      "category": "en-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/stock/reorder.py",
+          "symbol": "normalize"
+        }
+      ]
+    },
+    {
+      "id": "v2-python-reorder-ru",
+      "query": "Найди нормализацию целого количества для пополнения: неотрицательное значение округляется вверх до числа, кратного пяти.",
+      "category": "ru-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/stock/reorder.py",
+          "symbol": "normalize"
+        }
+      ]
+    },
+    {
+      "id": "v2-python-labels-en",
+      "query": "Where are stock labels uppercased and runs of whitespace collapsed to single spaces?",
+      "category": "en-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/stock/labels.py",
+          "symbol": "normalize"
+        }
+      ]
+    },
+    {
+      "id": "v2-python-labels-ru",
+      "query": "Где текстовые метки товаров переводятся в верхний регистр, а последовательности пробельных символов заменяются одним пробелом?",
+      "category": "ru-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/stock/labels.py",
+          "symbol": "normalize"
+        }
+      ]
+    },
+    {
+      "id": "v2-python-allocation-en",
+      "query": "Find the allocation that clamps both stock and requested quantity to zero when negative, then returns their minimum.",
+      "category": "en-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/stock/allocation.py",
+          "symbol": "allocate"
+        }
+      ]
+    },
+    {
+      "id": "v2-python-allocation-ru",
+      "query": "Найди распределение, которое заменяет отрицательные остаток и запрос нулями, а затем возвращает меньшее из двух значений.",
+      "category": "ru-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/stock/allocation.py",
+          "symbol": "allocate"
+        }
+      ]
+    },
+    {
+      "id": "v2-python-backorder-en",
+      "query": "Which allocation returns the unfulfilled part of a request after subtracting available stock?",
+      "category": "en-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/stock/backorder.py",
+          "symbol": "allocate"
+        }
+      ]
+    },
+    {
+      "id": "v2-python-backorder-ru",
+      "query": "Какое распределение возвращает неудовлетворённую часть заявки после вычитания доступного остатка?",
+      "category": "ru-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/stock/backorder.py",
+          "symbol": "allocate"
+        }
+      ]
+    },
+    {
+      "id": "v2-python-nearest-warehouse-en",
+      "query": "Which allocator chooses a warehouse by distance from the delivery address?",
+      "category": "no-answer",
+      "noAnswer": true,
+      "relevant": []
+    },
+    {
+      "id": "v2-python-nearest-warehouse-ru",
+      "query": "Какой распределитель выбирает склад по расстоянию до адреса доставки?",
+      "category": "no-answer",
+      "noAnswer": true,
+      "relevant": []
+    },
+    {
+      "id": "v2-python-supplier-lead-time-en",
+      "query": "Where are reorder quantities adjusted using supplier lead time?",
+      "category": "no-answer",
+      "noAnswer": true,
+      "relevant": []
+    },
+    {
+      "id": "v2-python-supplier-lead-time-ru",
+      "query": "Где количество для пополнения корректируется с учётом срока поставки?",
+      "category": "no-answer",
+      "noAnswer": true,
+      "relevant": []
+    },
+    {
+      "id": "v2-python-unicode-nfc-en",
+      "query": "Where do stock labels undergo Unicode NFC normalization before uppercasing?",
+      "category": "no-answer",
+      "noAnswer": true,
+      "relevant": []
+    },
+    {
+      "id": "v2-python-unicode-nfc-ru",
+      "query": "Где названия товаров приводятся к форме Unicode NFC перед переводом в верхний регистр?",
+      "category": "no-answer",
+      "noAnswer": true,
+      "relevant": []
+    },
+    {
+      "id": "v2-python-release-cancelled-en",
+      "query": "Where is reserved stock released when an order is cancelled?",
+      "category": "no-answer",
+      "noAnswer": true,
+      "relevant": []
+    },
+    {
+      "id": "v2-python-release-cancelled-ru",
+      "query": "Где освобождается зарезервированный остаток при отмене заказа?",
+      "category": "no-answer",
+      "noAnswer": true,
+      "relevant": []
+    },
+    {
+      "id": "v2-python-pack-size-en",
+      "query": "Find stock normalization that converts boxes into pieces using each SKU's pack size.",
+      "category": "no-answer",
+      "noAnswer": true,
+      "relevant": []
+    },
+    {
+      "id": "v2-python-pack-size-ru",
+      "query": "Найди нормализацию остатков, переводящую коробки в штуки по размеру упаковки конкретного артикула.",
+      "category": "no-answer",
+      "noAnswer": true,
+      "relevant": []
+    }
+  ]
+}

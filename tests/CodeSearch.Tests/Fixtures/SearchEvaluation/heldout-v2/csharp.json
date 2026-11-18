@@ -1,0 +1,195 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "id": "v2-csharp-temperature-en",
+      "query": "Where is a temperature reading clamped to the range from -40 to 85?",
+      "category": "en-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/sensors/CelsiusBand.cs",
+          "symbol": "CelsiusBand.Normalize"
+        }
+      ]
+    },
+    {
+      "id": "v2-csharp-temperature-ru",
+      "query": "Где показание температуры ограничивается диапазоном от −40 до 85?",
+      "category": "ru-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/sensors/CelsiusBand.cs",
+          "symbol": "CelsiusBand.Normalize"
+        }
+      ]
+    },
+    {
+      "id": "v2-csharp-humidity-en",
+      "query": "Find the normalization that clamps humidity readings to zero through one hundred.",
+      "category": "en-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/sensors/HumidityBand.cs",
+          "symbol": "HumidityBand.Normalize"
+        }
+      ]
+    },
+    {
+      "id": "v2-csharp-humidity-ru",
+      "query": "Найди нормализацию влажности с ограничением от нуля до ста.",
+      "category": "ru-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/sensors/HumidityBand.cs",
+          "symbol": "HumidityBand.Normalize"
+        }
+      ]
+    },
+    {
+      "id": "v2-csharp-voltage-en",
+      "query": "Where are millivolts converted to volts and rounded to three decimal places using ties-to-even?",
+      "category": "en-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/sensors/VoltageBand.cs",
+          "symbol": "VoltageBand.Normalize"
+        }
+      ]
+    },
+    {
+      "id": "v2-csharp-voltage-ru",
+      "query": "Где милливольты переводятся в вольты с округлением до трёх знаков по правилу к ближайшему чётному?",
+      "category": "ru-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/sensors/VoltageBand.cs",
+          "symbol": "VoltageBand.Normalize"
+        }
+      ]
+    },
+    {
+      "id": "v2-csharp-sample-accept-en",
+      "query": "Find the policy that accepts a valid sensor result only when at least three samples exist.",
+      "category": "en-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/sensors/SamplePolicy.cs",
+          "symbol": "SamplePolicy.Accept"
+        }
+      ]
+    },
+    {
+      "id": "v2-csharp-sample-accept-ru",
+      "query": "Найди правило, которое принимает корректный результат датчика только при наличии хотя бы трёх замеров.",
+      "category": "ru-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/sensors/SamplePolicy.cs",
+          "symbol": "SamplePolicy.Accept"
+        }
+      ]
+    },
+    {
+      "id": "v2-csharp-drift-accept-en",
+      "query": "Which policy accepts the current sensor value when its absolute change is at most 0.5?",
+      "category": "en-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/sensors/DriftPolicy.cs",
+          "symbol": "DriftPolicy.Accept"
+        }
+      ]
+    },
+    {
+      "id": "v2-csharp-drift-accept-ru",
+      "query": "Какое правило принимает новое значение датчика, если абсолютное изменение не превышает 0,5?",
+      "category": "ru-natural",
+      "noAnswer": false,
+      "relevant": [
+        {
+          "path": "src/sensors/DriftPolicy.cs",
+          "symbol": "DriftPolicy.Accept"
+        }
+      ]
+    },
+    {
+      "id": "v2-csharp-fahrenheit-en",
+      "query": "Where is a Celsius sensor reading converted to Fahrenheit?",
+      "category": "no-answer",
+      "noAnswer": true,
+      "relevant": []
+    },
+    {
+      "id": "v2-csharp-fahrenheit-ru",
+      "query": "Где показание датчика переводится из градусов Цельсия в градусы Фаренгейта?",
+      "category": "no-answer",
+      "noAnswer": true,
+      "relevant": []
+    },
+    {
+      "id": "v2-csharp-median-en",
+      "query": "Find the rolling median calculation for the last thirty sensor readings.",
+      "category": "no-answer",
+      "noAnswer": true,
+      "relevant": []
+    },
+    {
+      "id": "v2-csharp-median-ru",
+      "query": "Найди расчёт скользящей медианы последних тридцати показаний датчика.",
+      "category": "no-answer",
+      "noAnswer": true,
+      "relevant": []
+    },
+    {
+      "id": "v2-csharp-pressure-en",
+      "query": "Where does humidity normalization compensate for atmospheric pressure?",
+      "category": "no-answer",
+      "noAnswer": true,
+      "relevant": []
+    },
+    {
+      "id": "v2-csharp-pressure-ru",
+      "query": "Где при нормализации влажности учитывается атмосферное давление?",
+      "category": "no-answer",
+      "noAnswer": true,
+      "relevant": []
+    },
+    {
+      "id": "v2-csharp-device-offset-en",
+      "query": "Find per-device offset calibration applied during voltage normalization.",
+      "category": "no-answer",
+      "noAnswer": true,
+      "relevant": []
+    },
+    {
+      "id": "v2-csharp-device-offset-ru",
+      "query": "Найди применение индивидуальной калибровочной поправки датчика при нормализации напряжения.",
+      "category": "no-answer",
+      "noAnswer": true,
+      "relevant": []
+    },
+    {
+      "id": "v2-csharp-retry-invalid-en",
+      "query": "Where are invalid sensor samples put into a retry queue?",
+      "category": "no-answer",
+      "noAnswer": true,
+      "relevant": []
+    },
+    {
+      "id": "v2-csharp-retry-invalid-ru",
+      "query": "Где некорректные замеры датчика помещаются в очередь повторной обработки?",
+      "category": "no-answer",
+      "noAnswer": true,
+      "relevant": []
+    }
+  ]
+}

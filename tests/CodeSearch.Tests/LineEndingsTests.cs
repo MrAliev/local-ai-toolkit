@@ -25,7 +25,7 @@ public sealed class LineEndingsTests
     /// key and bundled TrueType fonts. Named rather than detected, so a source file that becomes unreadable to git is
     /// a failure here rather than a new entry in a heuristic.
     /// </summary>
-    private static readonly string[] BinaryExtensions = [".png", ".ico", ".der", ".ttf"];
+    private static readonly string[] BinaryExtensions = [".png", ".ico", ".der", ".ttf", ".zip"];
 
     [Fact]
     public void Git_stores_every_source_and_document_as_text()

@@ -1,0 +1,949 @@
+{
+  "schemaVersion": 1,
+  "suite": "heldout-v2",
+  "parityPassed": true,
+  "queries": 60,
+  "intents": 30,
+  "rankingChange": "none_harness_parity_only",
+  "baselineSourceCommit": "86a54e04c3e77a94f41e63dc4834dfe73639edf6",
+  "measuredCandidateSourceCommit": "98366969b05d4ae42508520723aba5e219e3fcca",
+  "candidateSourceAnchor": "Original unpushed source anchor retained in a private local Git bundle; public history excludes the noncanonical timestamp representation. Subsequent changes affect offline verification, tests and reports, not retrieval implementation.",
+  "normalization": {
+    "originalPrivateProtocolSha256": "8cd8a57d4123a917288371d0f408f7497b53d84d1661c37f747b1153cd83de1c",
+    "publicCanonicalCopySha256": "7d393e78880303ba32fe917e9aa6f1bbe232281de4a359defb7332731579d76b",
+    "sameCalibrationInstant": true,
+    "allOtherProfileFieldsEqual": true,
+    "correctedAfterMeasurement": true,
+    "retrievalReplayed": false,
+    "originalFailedComparisonRetained": true,
+    "originalArtifactPlanSha256": "e0c1413426cd79971ccae4ebb487b9da73d29785e0b8341ff28a12278e7fb0ed"
+  },
+  "positiveBothSucceeded": {
+    "numerator": 10,
+    "denominator": 15,
+    "rate": 0.6666666666666666,
+    "lower": 0.41713547738519774,
+    "upper": 0.8482367556028526
+  },
+  "negativeAnyHit": {
+    "numerator": 15,
+    "denominator": 15,
+    "rate": 1,
+    "lower": 0.7961166989641515,
+    "upper": 1
+  },
+  "corpora": [
+    {
+      "corpus": "csharp",
+      "baseline": {
+        "precisionAt5": 0.19999999999999998,
+        "recallAt10": 1,
+        "meanFirstRelevantRank": 1,
+        "noAnswerFalsePositiveRate": 1,
+        "responseCharacters": 33841,
+        "estimatedResponseTokens": 8461,
+        "estimatedResponseTokensLowerBound": 5641,
+        "estimatedResponseTokensUpperBound": 11281,
+        "sourceLines": 427,
+        "chunkReads": 153,
+        "fileReads": 82,
+        "elapsedMilliseconds": 34693.897,
+        "brokerQueueWaitMilliseconds": null,
+        "responseTokenEstimatePolicy": {
+          "schemaVersion": 1,
+          "method": "utf16_characters_v1",
+          "rangeBasis": "heuristic_not_confidence_interval",
+          "pointDivisor": 4,
+          "lowerBoundDivisor": 6,
+          "upperBoundDivisor": 3
+        }
+      },
+      "candidate": {
+        "precisionAt5": 0.19999999999999998,
+        "recallAt10": 1,
+        "meanFirstRelevantRank": 1,
+        "noAnswerFalsePositiveRate": 1,
+        "responseCharacters": 33841,
+        "estimatedResponseTokens": 8461,
+        "estimatedResponseTokensLowerBound": 5641,
+        "estimatedResponseTokensUpperBound": 11281,
+        "sourceLines": 427,
+        "chunkReads": 153,
+        "fileReads": 82,
+        "elapsedMilliseconds": 66941.8529,
+        "brokerQueueWaitMilliseconds": null,
+        "responseTokenEstimatePolicy": {
+          "schemaVersion": 1,
+          "method": "utf16_characters_v1",
+          "rangeBasis": "heuristic_not_confidence_interval",
+          "pointDivisor": 4,
+          "lowerBoundDivisor": 6,
+          "upperBoundDivisor": 3
+        }
+      },
+      "baselineIntents": {
+        "intentCount": 10,
+        "bothSucceeded": 5,
+        "oneSucceeded": 0,
+        "neitherSucceeded": 5,
+        "positiveBothSucceeded": {
+          "numerator": 5,
+          "denominator": 5,
+          "rate": 1,
+          "lower": 0.5655175352168251,
+          "upper": 1
+        },
+        "noAnswerAnyHit": {
+          "numerator": 5,
+          "denominator": 5,
+          "rate": 1,
+          "lower": 0.5655175352168251,
+          "upper": 1
+        },
+        "outcomes": [
+          {
+            "intentId": "csharp-temperature",
+            "noAnswer": false,
+            "successfulParaphrases": 2
+          },
+          {
+            "intentId": "csharp-humidity",
+            "noAnswer": false,
+            "successfulParaphrases": 2
+          },
+          {
+            "intentId": "csharp-voltage",
+            "noAnswer": false,
+            "successfulParaphrases": 2
+          },
+          {
+            "intentId": "csharp-sample-accept",
+            "noAnswer": false,
+            "successfulParaphrases": 2
+          },
+          {
+            "intentId": "csharp-drift-accept",
+            "noAnswer": false,
+            "successfulParaphrases": 2
+          },
+          {
+            "intentId": "csharp-fahrenheit",
+            "noAnswer": true,
+            "successfulParaphrases": 0
+          },
+          {
+            "intentId": "csharp-median",
+            "noAnswer": true,
+            "successfulParaphrases": 0
+          },
+          {
+            "intentId": "csharp-pressure",
+            "noAnswer": true,
+            "successfulParaphrases": 0
+          },
+          {
+            "intentId": "csharp-device-offset",
+            "noAnswer": true,
+            "successfulParaphrases": 0
+          },
+          {
+            "intentId": "csharp-retry-invalid",
+            "noAnswer": true,
+            "successfulParaphrases": 0
+          }
+        ],
+        "rangeBasis": "descriptive_wilson95_independence_reference_only_synthetic_groups_may_be_correlated",
+        "positiveSuccess": "every_relevant_target_found_in_top10_for_both_paraphrases",
+        "negativeFailure": "any_hit_returned_for_either_paraphrase_without_an_annotated_direct_implementation_not_hallucination_rate"
+      },
+      "candidateIntents": {
+        "intentCount": 10,
+        "bothSucceeded": 5,
+        "oneSucceeded": 0,
+        "neitherSucceeded": 5,
+        "positiveBothSucceeded": {
+          "numerator": 5,
+          "denominator": 5,
+          "rate": 1,
+          "lower": 0.5655175352168251,
+          "upper": 1
+        },
+        "noAnswerAnyHit": {
+          "numerator": 5,
+          "denominator": 5,
+          "rate": 1,
+          "lower": 0.5655175352168251,
+          "upper": 1
+        },
+        "outcomes": [
+          {
+            "intentId": "csharp-temperature",
+            "noAnswer": false,
+            "successfulParaphrases": 2
+          },
+          {
+            "intentId": "csharp-humidity",
+            "noAnswer": false,
+            "successfulParaphrases": 2
+          },
+          {
+            "intentId": "csharp-voltage",
+            "noAnswer": false,
+            "successfulParaphrases": 2
+          },
+          {
+            "intentId": "csharp-sample-accept",
+            "noAnswer": false,
+            "successfulParaphrases": 2
+          },
+          {
+            "intentId": "csharp-drift-accept",
+            "noAnswer": false,
+            "successfulParaphrases": 2
+          },
+          {
+            "intentId": "csharp-fahrenheit",
+            "noAnswer": true,
+            "successfulParaphrases": 0
+          },
+          {
+            "intentId": "csharp-median",
+            "noAnswer": true,
+            "successfulParaphrases": 0
+          },
+          {
+            "intentId": "csharp-pressure",
+            "noAnswer": true,
+            "successfulParaphrases": 0
+          },
+          {
+            "intentId": "csharp-device-offset",
+            "noAnswer": true,
+            "successfulParaphrases": 0
+          },
+          {
+            "intentId": "csharp-retry-invalid",
+            "noAnswer": true,
+            "successfulParaphrases": 0
+          }
+        ],
+        "rangeBasis": "descriptive_wilson95_independence_reference_only_synthetic_groups_may_be_correlated",
+        "positiveSuccess": "every_relevant_target_found_in_top10_for_both_paraphrases",
+        "negativeFailure": "any_hit_returned_for_either_paraphrase_without_an_annotated_direct_implementation_not_hallucination_rate"
+      },
+      "locales": {
+        "en": {
+          "baseline": {
+            "precisionAt5": 0.2,
+            "recallAt10": 1,
+            "meanFirstRelevantRank": 1,
+            "noAnswerFalsePositiveRate": 1,
+            "responseCharacters": 18146,
+            "estimatedResponseTokens": 4537,
+            "estimatedResponseTokensLowerBound": 3025,
+            "estimatedResponseTokensUpperBound": 6049,
+            "sourceLines": 226,
+            "chunkReads": 82,
+            "fileReads": 42,
+            "elapsedMilliseconds": 21577.4187,
+            "brokerQueueWaitMilliseconds": null,
+            "responseTokenEstimatePolicy": {
+              "schemaVersion": 1,
+              "method": "utf16_characters_v1",
+              "rangeBasis": "heuristic_not_confidence_interval",
+              "pointDivisor": 4,
+              "lowerBoundDivisor": 6,
+              "upperBoundDivisor": 3
+            }
+          },
+          "candidate": {
+            "precisionAt5": 0.2,
+            "recallAt10": 1,
+            "meanFirstRelevantRank": 1,
+            "noAnswerFalsePositiveRate": 1,
+            "responseCharacters": 18146,
+            "estimatedResponseTokens": 4537,
+            "estimatedResponseTokensLowerBound": 3025,
+            "estimatedResponseTokensUpperBound": 6049,
+            "sourceLines": 226,
+            "chunkReads": 82,
+            "fileReads": 42,
+            "elapsedMilliseconds": 33685.9534,
+            "brokerQueueWaitMilliseconds": null,
+            "responseTokenEstimatePolicy": {
+              "schemaVersion": 1,
+              "method": "utf16_characters_v1",
+              "rangeBasis": "heuristic_not_confidence_interval",
+              "pointDivisor": 4,
+              "lowerBoundDivisor": 6,
+              "upperBoundDivisor": 3
+            }
+          }
+        },
+        "ru": {
+          "baseline": {
+            "precisionAt5": 0.2,
+            "recallAt10": 1,
+            "meanFirstRelevantRank": 1,
+            "noAnswerFalsePositiveRate": 1,
+            "responseCharacters": 15695,
+            "estimatedResponseTokens": 3924,
+            "estimatedResponseTokensLowerBound": 2616,
+            "estimatedResponseTokensUpperBound": 5232,
+            "sourceLines": 201,
+            "chunkReads": 71,
+            "fileReads": 40,
+            "elapsedMilliseconds": 13116.478299999999,
+            "brokerQueueWaitMilliseconds": null,
+            "responseTokenEstimatePolicy": {
+              "schemaVersion": 1,
+              "method": "utf16_characters_v1",
+              "rangeBasis": "heuristic_not_confidence_interval",
+              "pointDivisor": 4,
+              "lowerBoundDivisor": 6,
+              "upperBoundDivisor": 3
+            }
+          },
+          "candidate": {
+            "precisionAt5": 0.2,
+            "recallAt10": 1,
+            "meanFirstRelevantRank": 1,
+            "noAnswerFalsePositiveRate": 1,
+            "responseCharacters": 15695,
+            "estimatedResponseTokens": 3924,
+            "estimatedResponseTokensLowerBound": 2616,
+            "estimatedResponseTokensUpperBound": 5232,
+            "sourceLines": 201,
+            "chunkReads": 71,
+            "fileReads": 40,
+            "elapsedMilliseconds": 33255.8995,
+            "brokerQueueWaitMilliseconds": null,
+            "responseTokenEstimatePolicy": {
+              "schemaVersion": 1,
+              "method": "utf16_characters_v1",
+              "rangeBasis": "heuristic_not_confidence_interval",
+              "pointDivisor": 4,
+              "lowerBoundDivisor": 6,
+              "upperBoundDivisor": 3
+            }
+          }
+        }
+      }
+    },
+    {
+      "corpus": "typescript",
+      "baseline": {
+        "precisionAt5": 0,
+        "recallAt10": 0,
+        "meanFirstRelevantRank": 11,
+        "noAnswerFalsePositiveRate": 1,
+        "responseCharacters": 9066,
+        "estimatedResponseTokens": 2267,
+        "estimatedResponseTokensLowerBound": 1511,
+        "estimatedResponseTokensUpperBound": 3022,
+        "sourceLines": 147,
+        "chunkReads": 53,
+        "fileReads": 53,
+        "elapsedMilliseconds": 31280.8295,
+        "brokerQueueWaitMilliseconds": null,
+        "responseTokenEstimatePolicy": {
+          "schemaVersion": 1,
+          "method": "utf16_characters_v1",
+          "rangeBasis": "heuristic_not_confidence_interval",
+          "pointDivisor": 4,
+          "lowerBoundDivisor": 6,
+          "upperBoundDivisor": 3
+        }
+      },
+      "candidate": {
+        "precisionAt5": 0,
+        "recallAt10": 0,
+        "meanFirstRelevantRank": 11,
+        "noAnswerFalsePositiveRate": 1,
+        "responseCharacters": 9066,
+        "estimatedResponseTokens": 2267,
+        "estimatedResponseTokensLowerBound": 1511,
+        "estimatedResponseTokensUpperBound": 3022,
+        "sourceLines": 147,
+        "chunkReads": 53,
+        "fileReads": 53,
+        "elapsedMilliseconds": 69382.7515,
+        "brokerQueueWaitMilliseconds": null,
+        "responseTokenEstimatePolicy": {
+          "schemaVersion": 1,
+          "method": "utf16_characters_v1",
+          "rangeBasis": "heuristic_not_confidence_interval",
+          "pointDivisor": 4,
+          "lowerBoundDivisor": 6,
+          "upperBoundDivisor": 3
+        }
+      },
+      "baselineIntents": {
+        "intentCount": 10,
+        "bothSucceeded": 0,
+        "oneSucceeded": 0,
+        "neitherSucceeded": 10,
+        "positiveBothSucceeded": {
+          "numerator": 0,
+          "denominator": 5,
+          "rate": 0,
+          "lower": 0,
+          "upper": 0.43448246478317476
+        },
+        "noAnswerAnyHit": {
+          "numerator": 5,
+          "denominator": 5,
+          "rate": 1,
+          "lower": 0.5655175352168251,
+          "upper": 1
+        },
+        "outcomes": [
+          {
+            "intentId": "typescript-money",
+            "noAnswer": false,
+            "successfulParaphrases": 0
+          },
+          {
+            "intentId": "typescript-percent",
+            "noAnswer": false,
+            "successfulParaphrases": 0
+          },
+          {
+            "intentId": "typescript-identifier",
+            "noAnswer": false,
+            "successfulParaphrases": 0
+          },
+          {
+            "intentId": "typescript-required",
+            "noAnswer": false,
+            "successfulParaphrases": 0
+          },
+          {
+            "intentId": "typescript-length",
+            "noAnswer": false,
+            "successfulParaphrases": 0
+          },
+          {
+            "intentId": "typescript-locale-money",
+            "noAnswer": true,
+            "successfulParaphrases": 0
+          },
+          {
+            "intentId": "typescript-exchange-rate",
+            "noAnswer": true,
+            "successfulParaphrases": 0
+          },
+          {
+            "intentId": "typescript-breach-check",
+            "noAnswer": true,
+            "successfulParaphrases": 0
+          },
+          {
+            "intentId": "typescript-check-digit",
+            "noAnswer": true,
+            "successfulParaphrases": 0
+          },
+          {
+            "intentId": "typescript-proportion-interval",
+            "noAnswer": true,
+            "successfulParaphrases": 0
+          }
+        ],
+        "rangeBasis": "descriptive_wilson95_independence_reference_only_synthetic_groups_may_be_correlated",
+        "positiveSuccess": "every_relevant_target_found_in_top10_for_both_paraphrases",
+        "negativeFailure": "any_hit_returned_for_either_paraphrase_without_an_annotated_direct_implementation_not_hallucination_rate"
+      },
+      "candidateIntents": {
+        "intentCount": 10,
+        "bothSucceeded": 0,
+        "oneSucceeded": 0,
+        "neitherSucceeded": 10,
+        "positiveBothSucceeded": {
+          "numerator": 0,
+          "denominator": 5,
+          "rate": 0,
+          "lower": 0,
+          "upper": 0.43448246478317476
+        },
+        "noAnswerAnyHit": {
+          "numerator": 5,
+          "denominator": 5,
+          "rate": 1,
+          "lower": 0.5655175352168251,
+          "upper": 1
+        },
+        "outcomes": [
+          {
+            "intentId": "typescript-money",
+            "noAnswer": false,
+            "successfulParaphrases": 0
+          },
+          {
+            "intentId": "typescript-percent",
+            "noAnswer": false,
+            "successfulParaphrases": 0
+          },
+          {
+            "intentId": "typescript-identifier",
+            "noAnswer": false,
+            "successfulParaphrases": 0
+          },
+          {
+            "intentId": "typescript-required",
+            "noAnswer": false,
+            "successfulParaphrases": 0
+          },
+          {
+            "intentId": "typescript-length",
+            "noAnswer": false,
+            "successfulParaphrases": 0
+          },
+          {
+            "intentId": "typescript-locale-money",
+            "noAnswer": true,
+            "successfulParaphrases": 0
+          },
+          {
+            "intentId": "typescript-exchange-rate",
+            "noAnswer": true,
+            "successfulParaphrases": 0
+          },
+          {
+            "intentId": "typescript-breach-check",
+            "noAnswer": true,
+            "successfulParaphrases": 0
+          },
+          {
+            "intentId": "typescript-check-digit",
+            "noAnswer": true,
+            "successfulParaphrases": 0
+          },
+          {
+            "intentId": "typescript-proportion-interval",
+            "noAnswer": true,
+            "successfulParaphrases": 0
+          }
+        ],
+        "rangeBasis": "descriptive_wilson95_independence_reference_only_synthetic_groups_may_be_correlated",
+        "positiveSuccess": "every_relevant_target_found_in_top10_for_both_paraphrases",
+        "negativeFailure": "any_hit_returned_for_either_paraphrase_without_an_annotated_direct_implementation_not_hallucination_rate"
+      },
+      "locales": {
+        "en": {
+          "baseline": {
+            "precisionAt5": 0,
+            "recallAt10": 0,
+            "meanFirstRelevantRank": 11,
+            "noAnswerFalsePositiveRate": 1,
+            "responseCharacters": 6091,
+            "estimatedResponseTokens": 1523,
+            "estimatedResponseTokensLowerBound": 1016,
+            "estimatedResponseTokensUpperBound": 2031,
+            "sourceLines": 96,
+            "chunkReads": 36,
+            "fileReads": 36,
+            "elapsedMilliseconds": 18205.839099999997,
+            "brokerQueueWaitMilliseconds": null,
+            "responseTokenEstimatePolicy": {
+              "schemaVersion": 1,
+              "method": "utf16_characters_v1",
+              "rangeBasis": "heuristic_not_confidence_interval",
+              "pointDivisor": 4,
+              "lowerBoundDivisor": 6,
+              "upperBoundDivisor": 3
+            }
+          },
+          "candidate": {
+            "precisionAt5": 0,
+            "recallAt10": 0,
+            "meanFirstRelevantRank": 11,
+            "noAnswerFalsePositiveRate": 1,
+            "responseCharacters": 6091,
+            "estimatedResponseTokens": 1523,
+            "estimatedResponseTokensLowerBound": 1016,
+            "estimatedResponseTokensUpperBound": 2031,
+            "sourceLines": 96,
+            "chunkReads": 36,
+            "fileReads": 36,
+            "elapsedMilliseconds": 34056.5886,
+            "brokerQueueWaitMilliseconds": null,
+            "responseTokenEstimatePolicy": {
+              "schemaVersion": 1,
+              "method": "utf16_characters_v1",
+              "rangeBasis": "heuristic_not_confidence_interval",
+              "pointDivisor": 4,
+              "lowerBoundDivisor": 6,
+              "upperBoundDivisor": 3
+            }
+          }
+        },
+        "ru": {
+          "baseline": {
+            "precisionAt5": 0,
+            "recallAt10": 0,
+            "meanFirstRelevantRank": 11,
+            "noAnswerFalsePositiveRate": 1,
+            "responseCharacters": 2975,
+            "estimatedResponseTokens": 744,
+            "estimatedResponseTokensLowerBound": 496,
+            "estimatedResponseTokensUpperBound": 992,
+            "sourceLines": 51,
+            "chunkReads": 17,
+            "fileReads": 17,
+            "elapsedMilliseconds": 13074.9904,
+            "brokerQueueWaitMilliseconds": null,
+            "responseTokenEstimatePolicy": {
+              "schemaVersion": 1,
+              "method": "utf16_characters_v1",
+              "rangeBasis": "heuristic_not_confidence_interval",
+              "pointDivisor": 4,
+              "lowerBoundDivisor": 6,
+              "upperBoundDivisor": 3
+            }
+          },
+          "candidate": {
+            "precisionAt5": 0,
+            "recallAt10": 0,
+            "meanFirstRelevantRank": 11,
+            "noAnswerFalsePositiveRate": 1,
+            "responseCharacters": 2975,
+            "estimatedResponseTokens": 744,
+            "estimatedResponseTokensLowerBound": 496,
+            "estimatedResponseTokensUpperBound": 992,
+            "sourceLines": 51,
+            "chunkReads": 17,
+            "fileReads": 17,
+            "elapsedMilliseconds": 35326.1629,
+            "brokerQueueWaitMilliseconds": null,
+            "responseTokenEstimatePolicy": {
+              "schemaVersion": 1,
+              "method": "utf16_characters_v1",
+              "rangeBasis": "heuristic_not_confidence_interval",
+              "pointDivisor": 4,
+              "lowerBoundDivisor": 6,
+              "upperBoundDivisor": 3
+            }
+          }
+        }
+      }
+    },
+    {
+      "corpus": "python",
+      "baseline": {
+        "precisionAt5": 0.19999999999999998,
+        "recallAt10": 1,
+        "meanFirstRelevantRank": 1.2,
+        "noAnswerFalsePositiveRate": 0.9,
+        "responseCharacters": 13673,
+        "estimatedResponseTokens": 3419,
+        "estimatedResponseTokensLowerBound": 2279,
+        "estimatedResponseTokensUpperBound": 4558,
+        "sourceLines": 170,
+        "chunkReads": 77,
+        "fileReads": 77,
+        "elapsedMilliseconds": 26720.1232,
+        "brokerQueueWaitMilliseconds": null,
+        "responseTokenEstimatePolicy": {
+          "schemaVersion": 1,
+          "method": "utf16_characters_v1",
+          "rangeBasis": "heuristic_not_confidence_interval",
+          "pointDivisor": 4,
+          "lowerBoundDivisor": 6,
+          "upperBoundDivisor": 3
+        }
+      },
+      "candidate": {
+        "precisionAt5": 0.19999999999999998,
+        "recallAt10": 1,
+        "meanFirstRelevantRank": 1.2,
+        "noAnswerFalsePositiveRate": 0.9,
+        "responseCharacters": 13673,
+        "estimatedResponseTokens": 3419,
+        "estimatedResponseTokensLowerBound": 2279,
+        "estimatedResponseTokensUpperBound": 4558,
+        "sourceLines": 170,
+        "chunkReads": 77,
+        "fileReads": 77,
+        "elapsedMilliseconds": 67413.9394,
+        "brokerQueueWaitMilliseconds": null,
+        "responseTokenEstimatePolicy": {
+          "schemaVersion": 1,
+          "method": "utf16_characters_v1",
+          "rangeBasis": "heuristic_not_confidence_interval",
+          "pointDivisor": 4,
+          "lowerBoundDivisor": 6,
+          "upperBoundDivisor": 3
+        }
+      },
+      "baselineIntents": {
+        "intentCount": 10,
+        "bothSucceeded": 5,
+        "oneSucceeded": 1,
+        "neitherSucceeded": 4,
+        "positiveBothSucceeded": {
+          "numerator": 5,
+          "denominator": 5,
+          "rate": 1,
+          "lower": 0.5655175352168251,
+          "upper": 1
+        },
+        "noAnswerAnyHit": {
+          "numerator": 5,
+          "denominator": 5,
+          "rate": 1,
+          "lower": 0.5655175352168251,
+          "upper": 1
+        },
+        "outcomes": [
+          {
+            "intentId": "python-available",
+            "noAnswer": false,
+            "successfulParaphrases": 2
+          },
+          {
+            "intentId": "python-reorder",
+            "noAnswer": false,
+            "successfulParaphrases": 2
+          },
+          {
+            "intentId": "python-labels",
+            "noAnswer": false,
+            "successfulParaphrases": 2
+          },
+          {
+            "intentId": "python-allocation",
+            "noAnswer": false,
+            "successfulParaphrases": 2
+          },
+          {
+            "intentId": "python-backorder",
+            "noAnswer": false,
+            "successfulParaphrases": 2
+          },
+          {
+            "intentId": "python-nearest-warehouse",
+            "noAnswer": true,
+            "successfulParaphrases": 1
+          },
+          {
+            "intentId": "python-supplier-lead-time",
+            "noAnswer": true,
+            "successfulParaphrases": 0
+          },
+          {
+            "intentId": "python-unicode-nfc",
+            "noAnswer": true,
+            "successfulParaphrases": 0
+          },
+          {
+            "intentId": "python-release-cancelled",
+            "noAnswer": true,
+            "successfulParaphrases": 0
+          },
+          {
+            "intentId": "python-pack-size",
+            "noAnswer": true,
+            "successfulParaphrases": 0
+          }
+        ],
+        "rangeBasis": "descriptive_wilson95_independence_reference_only_synthetic_groups_may_be_correlated",
+        "positiveSuccess": "every_relevant_target_found_in_top10_for_both_paraphrases",
+        "negativeFailure": "any_hit_returned_for_either_paraphrase_without_an_annotated_direct_implementation_not_hallucination_rate"
+      },
+      "candidateIntents": {
+        "intentCount": 10,
+        "bothSucceeded": 5,
+        "oneSucceeded": 1,
+        "neitherSucceeded": 4,
+        "positiveBothSucceeded": {
+          "numerator": 5,
+          "denominator": 5,
+          "rate": 1,
+          "lower": 0.5655175352168251,
+          "upper": 1
+        },
+        "noAnswerAnyHit": {
+          "numerator": 5,
+          "denominator": 5,
+          "rate": 1,
+          "lower": 0.5655175352168251,
+          "upper": 1
+        },
+        "outcomes": [
+          {
+            "intentId": "python-available",
+            "noAnswer": false,
+            "successfulParaphrases": 2
+          },
+          {
+            "intentId": "python-reorder",
+            "noAnswer": false,
+            "successfulParaphrases": 2
+          },
+          {
+            "intentId": "python-labels",
+            "noAnswer": false,
+            "successfulParaphrases": 2
+          },
+          {
+            "intentId": "python-allocation",
+            "noAnswer": false,
+            "successfulParaphrases": 2
+          },
+          {
+            "intentId": "python-backorder",
+            "noAnswer": false,
+            "successfulParaphrases": 2
+          },
+          {
+            "intentId": "python-nearest-warehouse",
+            "noAnswer": true,
+            "successfulParaphrases": 1
+          },
+          {
+            "intentId": "python-supplier-lead-time",
+            "noAnswer": true,
+            "successfulParaphrases": 0
+          },
+          {
+            "intentId": "python-unicode-nfc",
+            "noAnswer": true,
+            "successfulParaphrases": 0
+          },
+          {
+            "intentId": "python-release-cancelled",
+            "noAnswer": true,
+            "successfulParaphrases": 0
+          },
+          {
+            "intentId": "python-pack-size",
+            "noAnswer": true,
+            "successfulParaphrases": 0
+          }
+        ],
+        "rangeBasis": "descriptive_wilson95_independence_reference_only_synthetic_groups_may_be_correlated",
+        "positiveSuccess": "every_relevant_target_found_in_top10_for_both_paraphrases",
+        "negativeFailure": "any_hit_returned_for_either_paraphrase_without_an_annotated_direct_implementation_not_hallucination_rate"
+      },
+      "locales": {
+        "en": {
+          "baseline": {
+            "precisionAt5": 0.2,
+            "recallAt10": 1,
+            "meanFirstRelevantRank": 1,
+            "noAnswerFalsePositiveRate": 1,
+            "responseCharacters": 9141,
+            "estimatedResponseTokens": 2286,
+            "estimatedResponseTokensLowerBound": 1524,
+            "estimatedResponseTokensUpperBound": 3047,
+            "sourceLines": 120,
+            "chunkReads": 52,
+            "fileReads": 52,
+            "elapsedMilliseconds": 13570.804199999999,
+            "brokerQueueWaitMilliseconds": null,
+            "responseTokenEstimatePolicy": {
+              "schemaVersion": 1,
+              "method": "utf16_characters_v1",
+              "rangeBasis": "heuristic_not_confidence_interval",
+              "pointDivisor": 4,
+              "lowerBoundDivisor": 6,
+              "upperBoundDivisor": 3
+            }
+          },
+          "candidate": {
+            "precisionAt5": 0.2,
+            "recallAt10": 1,
+            "meanFirstRelevantRank": 1,
+            "noAnswerFalsePositiveRate": 1,
+            "responseCharacters": 9141,
+            "estimatedResponseTokens": 2286,
+            "estimatedResponseTokensLowerBound": 1524,
+            "estimatedResponseTokensUpperBound": 3047,
+            "sourceLines": 120,
+            "chunkReads": 52,
+            "fileReads": 52,
+            "elapsedMilliseconds": 33891.813200000004,
+            "brokerQueueWaitMilliseconds": null,
+            "responseTokenEstimatePolicy": {
+              "schemaVersion": 1,
+              "method": "utf16_characters_v1",
+              "rangeBasis": "heuristic_not_confidence_interval",
+              "pointDivisor": 4,
+              "lowerBoundDivisor": 6,
+              "upperBoundDivisor": 3
+            }
+          }
+        },
+        "ru": {
+          "baseline": {
+            "precisionAt5": 0.2,
+            "recallAt10": 1,
+            "meanFirstRelevantRank": 1.4,
+            "noAnswerFalsePositiveRate": 0.8,
+            "responseCharacters": 4532,
+            "estimatedResponseTokens": 1133,
+            "estimatedResponseTokensLowerBound": 756,
+            "estimatedResponseTokensUpperBound": 1511,
+            "sourceLines": 50,
+            "chunkReads": 25,
+            "fileReads": 25,
+            "elapsedMilliseconds": 13149.319,
+            "brokerQueueWaitMilliseconds": null,
+            "responseTokenEstimatePolicy": {
+              "schemaVersion": 1,
+              "method": "utf16_characters_v1",
+              "rangeBasis": "heuristic_not_confidence_interval",
+              "pointDivisor": 4,
+              "lowerBoundDivisor": 6,
+              "upperBoundDivisor": 3
+            }
+          },
+          "candidate": {
+            "precisionAt5": 0.2,
+            "recallAt10": 1,
+            "meanFirstRelevantRank": 1.4,
+            "noAnswerFalsePositiveRate": 0.8,
+            "responseCharacters": 4532,
+            "estimatedResponseTokens": 1133,
+            "estimatedResponseTokensLowerBound": 756,
+            "estimatedResponseTokensUpperBound": 1511,
+            "sourceLines": 50,
+            "chunkReads": 25,
+            "fileReads": 25,
+            "elapsedMilliseconds": 33522.1262,
+            "brokerQueueWaitMilliseconds": null,
+            "responseTokenEstimatePolicy": {
+              "schemaVersion": 1,
+              "method": "utf16_characters_v1",
+              "rangeBasis": "heuristic_not_confidence_interval",
+              "pointDivisor": 4,
+              "lowerBoundDivisor": 6,
+              "upperBoundDivisor": 3
+            }
+          }
+        }
+      }
+    }
+  ],
+  "typescriptDiagnostic": {
+    "diagnosticOnly": "post-measurement path presence; does not replace frozen strict symbol metric",
+    "positiveQueries": 10,
+    "allRelevantPathsInTop10": 10,
+    "rawHitKinds": {
+      "3": 28
+    },
+    "strictSymbolRecallRemains": 0
+  },
+  "limitations": [
+    "AI-authored references with blind agent review; human validation not established",
+    "Synthetic correlated templates; ranges are descriptive independence references",
+    "No ranking change or quality improvement claim",
+    "Latency descriptive; shared broker load/cold-warm state uncontrolled; queue wait may be unavailable",
+    "Historical v1 metrics use different inputs",
+    "Requested model tag is controlled; model weight digest and per-request routing proof unavailable",
+    "This suite is a known regression corpus after its first measured use",
+    "TypeScript strict symbol recall is zero; post-hoc path-presence diagnostic is separate and does not relabel cases.",
+    "C# snapshot emitted a Roslyn Git diagnostic; one precise definition was confirmed, not full navigation health.",
+    "Original private protocol and full runtime provenance are retained locally; public evidence contains a marked canonical copy and derived runtime fingerprint subsets."
+  ]
+}

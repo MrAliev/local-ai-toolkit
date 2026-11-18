@@ -26,14 +26,127 @@ public static class QualityCorpusSources
         }
     }
 
-    public static void Write(string root, string corpus)
+    public static IEnumerable<(string Path, string Text)> Files(string corpus, string suite)
+    {
+        if (suite == "independent") return Files(corpus);
+        if (suite != "heldout-v2" || corpus is not ("csharp" or "typescript" or "python"))
+            throw new ArgumentException("quality_suite_corpus_unknown", nameof(suite));
+        return HoldoutFiles(corpus);
+    }
+
+    public static void Write(string root, string corpus) => Write(root, corpus, "independent");
+
+    public static void Write(string root, string corpus, string suite)
     {
         Directory.CreateDirectory(root);
-        foreach (var (path, text) in Files(corpus))
+        foreach (var (path, text) in Files(corpus, suite))
         {
             var destination = Path.Combine(root, path.Replace('/', Path.DirectorySeparatorChar));
             Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
             File.WriteAllText(destination, text.ReplaceLineEndings("\n"), new UTF8Encoding(false));
+        }
+    }
+
+    private static IEnumerable<(string Path, string Text)> HoldoutFiles(string corpus)
+    {
+        yield return (".gitignore", "bin/\nobj/\nindex.scip\n.scip/\n.venv/\n__pycache__/\n*.pyc\nnode_modules/\n");
+        if (corpus == "csharp")
+        {
+            yield return ("QualityHoldout.csproj", """
+                <Project Sdk="Microsoft.NET.Sdk">
+                  <PropertyGroup><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup>
+                </Project>
+                """);
+            yield return ("src/sensors/CelsiusBand.cs", """
+                namespace Holdout.Sensors;
+                public static class CelsiusBand
+                {
+                    public static int Normalize(int reading) => Math.Clamp(reading, -40, 85);
+                }
+                """);
+            yield return ("src/sensors/HumidityBand.cs", """
+                namespace Holdout.Sensors;
+                public static class HumidityBand
+                {
+                    public static int Normalize(int reading) => Math.Clamp(reading, 0, 100);
+                }
+                """);
+            yield return ("src/sensors/VoltageBand.cs", """
+                namespace Holdout.Sensors;
+                public static class VoltageBand
+                {
+                    public static decimal Normalize(decimal millivolts) =>
+                        decimal.Round(millivolts / 1000m, 3, MidpointRounding.ToEven);
+                }
+                """);
+            yield return ("src/sensors/SamplePolicy.cs", """
+                namespace Holdout.Sensors;
+                public static class SamplePolicy
+                {
+                    public static bool Accept(bool valid, int samples) => valid && samples >= 3;
+                }
+                """);
+            yield return ("src/sensors/DriftPolicy.cs", """
+                namespace Holdout.Sensors;
+                public static class DriftPolicy
+                {
+                    public static bool Accept(decimal previous, decimal current) => Math.Abs(current - previous) <= 0.5m;
+                }
+                """);
+        }
+        else if (corpus == "python")
+        {
+            yield return ("pyproject.toml", "[project]\nname = \"localai-holdout-stock\"\nversion = \"1.0.0\"\nrequires-python = \">=3.10\"\n");
+            yield return ("src/stock/available.py", """
+                def normalize(quantity: int) -> int:
+                    return max(quantity, 0)
+                """);
+            yield return ("src/stock/reorder.py", """
+                def normalize(quantity: int) -> int:
+                    return ((max(quantity, 0) + 4) // 5) * 5
+                """);
+            yield return ("src/stock/labels.py", """
+                def normalize(label: str) -> str:
+                    return " ".join(label.split()).upper()
+                """);
+            yield return ("src/stock/allocation.py", """
+                def allocate(stock: int, requested: int) -> int:
+                    return min(max(stock, 0), max(requested, 0))
+                """);
+            yield return ("src/stock/backorder.py", """
+                def allocate(stock: int, requested: int) -> int:
+                    return max(requested - max(stock, 0), 0)
+                """);
+        }
+        else
+        {
+            yield return ("package.json", "{\"name\":\"localai-holdout-formatters\",\"version\":\"1.0.0\",\"private\":true}\n");
+            yield return ("tsconfig.json", "{\"compilerOptions\":{\"target\":\"ES2020\",\"module\":\"ESNext\",\"strict\":true},\"include\":[\"src/**/*.ts\"]}\n");
+            yield return ("src/formatters/money.ts", """
+                export function format(value: number): string {
+                    return "$" + value.toFixed(2);
+                }
+                """);
+            yield return ("src/formatters/percent.ts", """
+                export function format(value: number): string {
+                    return (value * 100).toFixed(1) + "%";
+                }
+                """);
+            yield return ("src/formatters/identifier.ts", """
+                export function format(value: string): string {
+                    return value.trim().toUpperCase();
+                }
+                """);
+            yield return ("src/forms/required.ts", """
+                export function validate(value: string): boolean {
+                    return value.trim().length > 0;
+                }
+                """);
+            yield return ("src/forms/length.ts", """
+                export function validate(value: string): boolean {
+                    return value.length >= 8 && value.length <= 32;
+                }
+                """);
         }
     }
 
