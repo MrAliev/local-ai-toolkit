@@ -1,0 +1,432 @@
+{
+  "schemaVersion": 1,
+  "suite": "heldout-v2",
+  "status": "canonical-copy-after-measurement",
+  "provenance": {
+    "authors": "AI-assisted fixture authorship",
+    "independentReview": "Completed blind independent agent source/query review before first measurement; labels and retrieval outputs withheld; all target mappings agreed; wording clarified before freeze",
+    "humanValidation": "not established",
+    "trainingNovelty": "not claimed",
+    "metadataCorrection": "After measurement: canonicalized only the calibration timestamp representation. Its instant and every other profile field are unchanged. Original private frozen bytes and original artifact plan remain retained locally."
+  },
+  "sample": {
+    "repositories": 3,
+    "queries": 60,
+    "intentGroups": 30,
+    "positiveGroups": 15,
+    "negativeGroups": 15,
+    "locales": [
+      "en",
+      "ru"
+    ],
+    "independence": "EN/RU paraphrases are one intent; synthetic source templates are correlated"
+  },
+  "config": {
+    "requestedModel": "qwen3-embedding:8b-q8_0",
+    "profileMinVectorScore": 0.43,
+    "topK": 10,
+    "maxPerFile": 3,
+    "useQueryInstruction": true,
+    "noFloor": false,
+    "noInstruct": false,
+    "scope": "all generated source files; annotations/results outside indexed trees",
+    "fullSearchOptions": {
+      "topK": 10,
+      "kind": null,
+      "pathContains": null,
+      "excludedPaths": [],
+      "maxPerFile": 3,
+      "snippetLines": 12,
+      "minVectorScore": 0.43,
+      "allowUncalibratedModelForEvaluation": false,
+      "allowLexicalFallbackWhenEmbeddingsUnavailable": false
+    },
+    "modelDigest": null,
+    "qualityProfile": {
+      "model": "qwen3-embedding:8b-q8_0",
+      "minVectorScore": 0.43,
+      "corpusVersion": "schema1:sha256:d675331cb7008a67a7335c5a1f2aba85e382974b71b1473e34b9e4685f0d7a52",
+      "generationId": "399fcc0b53b35ede05dc64f1a84cbc3bfc6bf382bdd2de7d71f2f9dc1ae8debc",
+      "caseCount": 24,
+      "calibratedAtUtc": "2026-07-30T23:55:00+00:00",
+      "selectionRule": "Lowest conservative hundredth above every observed no-answer vector score (maximum 0.426) without excluding an observed relevant score (minimum 0.508); recall@10 is therefore not reduced by the floor."
+    },
+    "modelDigestBasis": "Unknown: supported management surface exposes requested/installed tags, not weight digests or per-request routing proof"
+  },
+  "acceptance": {
+    "rankingChange": "none; comparison checks harness parity",
+    "identicalInputs": [
+      "sourceCommit",
+      "sourceTree",
+      "dirtyHash",
+      "indexedTree",
+      "generationId",
+      "model",
+      "corpusSha256",
+      "searchOptions",
+      "useQueryInstruction",
+      "qualityProfile"
+    ],
+    "quality": "canonical raw hit sequences must match; investigate every mismatch",
+    "timing": "descriptive only; shared broker load and cold/warm state are not controlled; queue wait Unknown when unavailable",
+    "referenceChanges": "resolve review disagreements before freeze; no post-results relabel or tuning",
+    "historical": "v1 historical metrics use different inputs; no direct delta claim"
+  },
+  "negativePolicy": "A hit returned when no direct relevant implementation is annotated counts as operational no-answer false positive; this is not a hallucination rate and related context may still be useful.",
+  "reporting": {
+    "primary": "intent groups; both locales succeed / one succeeds / neither succeeds",
+    "queryMetrics": "existing SearchEvaluation.Measure, separately by corpus and locale",
+    "intervals": "descriptive Wilson intervals for grouped binary outcomes, not a guarantee on real repositories"
+  },
+  "freeze": {
+    "corpusHashes": {
+      "csharp": "8dc25b3b7d81b0366eb88ac2a85273d75b6071d8383725f59d70b61a98d55d0a",
+      "typescript": "a347a3f026917d3b0eadc3515adf11fd58ce9a5f73403fd32164c1d3a35e3631",
+      "python": "98799b72f73e20f5754c1ad677e724db6094b99bc9e692a907d45f1870013a70"
+    },
+    "sourceTrees": {
+      "csharp": "9737cf122cb198cbdfc1d3152292f9afaba802ef",
+      "typescript": "248de5494984ec3e91c597d719274f005bdbfeec",
+      "python": "a77654f8f265a6555534fb10fcce342604e358be"
+    },
+    "generationIds": {
+      "csharp": "7cb953c801deb3fccbc3a6fbbb9920ef1b349df88ddee263ad700422939418a9",
+      "typescript": "518995450e37545674806d503185d856c4b98054d9d969520680565a7e0f6357",
+      "python": "9f8e128efc2e36015f18c119a2f9d3a13285857ddc60540a092fba18bb8eb9bf"
+    },
+    "sourceHashes": {
+      "csharp": {
+        ".gitignore": "6fc2bd61e55dd652c3e6dd35e8ea8607702c4b42a9568ada1339183486548b07",
+        "QualityHoldout.csproj": "d26f849ef54768dcc7658afedbb6891c66c692d26b3718b4039c68b7208f43bd",
+        "src/sensors/HumidityBand.cs": "e07baf39545f6faad49803eb53206485e9731393fd441ba609fe2a5d8c7a92bd",
+        "src/sensors/SamplePolicy.cs": "1ad4a659d1bc6a301b2b5843294f333a6091b55eaf4f57c9b1f429a9b3fc7a46",
+        "src/sensors/DriftPolicy.cs": "e07fde8109eb5a6896b52287ee6877a90dfa054e5dbd83001d59cadcca4293fe",
+        "src/sensors/CelsiusBand.cs": "4dabea892ae0348cf0b5faee5c5224def723cae89acb5a84048e877467aa2e7a",
+        "src/sensors/VoltageBand.cs": "c31951d27882483f1f09b351635bc14bb6a79bcf522437e1c84a615b065eafe1"
+      },
+      "typescript": {
+        ".gitignore": "6fc2bd61e55dd652c3e6dd35e8ea8607702c4b42a9568ada1339183486548b07",
+        "src/forms/required.ts": "0197ee1f41d42fc5f9e22dd058552f6550ef42763462dc2600a07bd3ab1d32f4",
+        "src/formatters/identifier.ts": "741890db8c98aee4ac9bd2f01b08e21fe8921f4e307ce228cdd57cd9057067cf",
+        "tsconfig.json": "ff91888f251c676b34ff9faa9b99c207fd7abe020b23ef6c67a54813b4b540c9",
+        "src/formatters/money.ts": "fe341981cf9b4203ac579b419b89913788518f976998d305ecb89cf6ae8c80c6",
+        "src/forms/length.ts": "7c882a81a3232640e9b04503e9364eddb68e0d3b4db397b86b056e1f3c6e49bc",
+        "src/formatters/percent.ts": "ab5f2b64d02f6442a2a95b5a03f79a99a289b528c9030498c25b14021ef0d984",
+        "package.json": "89eb0b2e44f3ba37b47bf16eb92ce54b36e01a565880bc94c03aced434e45971"
+      },
+      "python": {
+        ".gitignore": "6fc2bd61e55dd652c3e6dd35e8ea8607702c4b42a9568ada1339183486548b07",
+        "pyproject.toml": "c0d327b169f72273fa109d65796369eaf125830c3a755c1b26bff0d7ef6316ec",
+        "src/stock/available.py": "45737fad16e24b83cf63eb5edd4214fa4befa7f3d243479ffed1ff2a0b3b4183",
+        "src/stock/backorder.py": "c51ed9a98b753398a5bbcb4ba6150178d36c0138385804ed224999cb12a62b08",
+        "src/stock/labels.py": "c84b919edf4ed39b861ab4a8535df97d5d99e07ac0015aa16b4f100b0d79bfb5",
+        "src/stock/allocation.py": "6c1af9deb59d20a20657953f205068b98a295944a7cd110a321ef29025c26e8d",
+        "src/stock/reorder.py": "4e22fab366912b2418f0805e52b2dda158de0638562ade306ab295100dd19ec4"
+      }
+    },
+    "protocolHash": "recorded externally from the same frozen bytes; no self hash",
+    "originalPrivateProtocolSha256": "8cd8a57d4123a917288371d0f408f7497b53d84d1661c37f747b1153cd83de1c"
+  },
+  "groups": [
+    {
+      "intentId": "csharp-temperature",
+      "corpus": "csharp",
+      "split": "heldout-v2",
+      "answerable": true,
+      "cases": [
+        "v2-csharp-temperature-en",
+        "v2-csharp-temperature-ru"
+      ]
+    },
+    {
+      "intentId": "csharp-humidity",
+      "corpus": "csharp",
+      "split": "heldout-v2",
+      "answerable": true,
+      "cases": [
+        "v2-csharp-humidity-en",
+        "v2-csharp-humidity-ru"
+      ]
+    },
+    {
+      "intentId": "csharp-voltage",
+      "corpus": "csharp",
+      "split": "heldout-v2",
+      "answerable": true,
+      "cases": [
+        "v2-csharp-voltage-en",
+        "v2-csharp-voltage-ru"
+      ]
+    },
+    {
+      "intentId": "csharp-sample-accept",
+      "corpus": "csharp",
+      "split": "heldout-v2",
+      "answerable": true,
+      "cases": [
+        "v2-csharp-sample-accept-en",
+        "v2-csharp-sample-accept-ru"
+      ]
+    },
+    {
+      "intentId": "csharp-drift-accept",
+      "corpus": "csharp",
+      "split": "heldout-v2",
+      "answerable": true,
+      "cases": [
+        "v2-csharp-drift-accept-en",
+        "v2-csharp-drift-accept-ru"
+      ]
+    },
+    {
+      "intentId": "csharp-fahrenheit",
+      "corpus": "csharp",
+      "split": "heldout-v2",
+      "answerable": false,
+      "cases": [
+        "v2-csharp-fahrenheit-en",
+        "v2-csharp-fahrenheit-ru"
+      ]
+    },
+    {
+      "intentId": "csharp-median",
+      "corpus": "csharp",
+      "split": "heldout-v2",
+      "answerable": false,
+      "cases": [
+        "v2-csharp-median-en",
+        "v2-csharp-median-ru"
+      ]
+    },
+    {
+      "intentId": "csharp-pressure",
+      "corpus": "csharp",
+      "split": "heldout-v2",
+      "answerable": false,
+      "cases": [
+        "v2-csharp-pressure-en",
+        "v2-csharp-pressure-ru"
+      ]
+    },
+    {
+      "intentId": "csharp-device-offset",
+      "corpus": "csharp",
+      "split": "heldout-v2",
+      "answerable": false,
+      "cases": [
+        "v2-csharp-device-offset-en",
+        "v2-csharp-device-offset-ru"
+      ]
+    },
+    {
+      "intentId": "csharp-retry-invalid",
+      "corpus": "csharp",
+      "split": "heldout-v2",
+      "answerable": false,
+      "cases": [
+        "v2-csharp-retry-invalid-en",
+        "v2-csharp-retry-invalid-ru"
+      ]
+    },
+    {
+      "intentId": "python-available",
+      "corpus": "python",
+      "split": "heldout-v2",
+      "answerable": true,
+      "cases": [
+        "v2-python-available-en",
+        "v2-python-available-ru"
+      ]
+    },
+    {
+      "intentId": "python-reorder",
+      "corpus": "python",
+      "split": "heldout-v2",
+      "answerable": true,
+      "cases": [
+        "v2-python-reorder-en",
+        "v2-python-reorder-ru"
+      ]
+    },
+    {
+      "intentId": "python-labels",
+      "corpus": "python",
+      "split": "heldout-v2",
+      "answerable": true,
+      "cases": [
+        "v2-python-labels-en",
+        "v2-python-labels-ru"
+      ]
+    },
+    {
+      "intentId": "python-allocation",
+      "corpus": "python",
+      "split": "heldout-v2",
+      "answerable": true,
+      "cases": [
+        "v2-python-allocation-en",
+        "v2-python-allocation-ru"
+      ]
+    },
+    {
+      "intentId": "python-backorder",
+      "corpus": "python",
+      "split": "heldout-v2",
+      "answerable": true,
+      "cases": [
+        "v2-python-backorder-en",
+        "v2-python-backorder-ru"
+      ]
+    },
+    {
+      "intentId": "python-nearest-warehouse",
+      "corpus": "python",
+      "split": "heldout-v2",
+      "answerable": false,
+      "cases": [
+        "v2-python-nearest-warehouse-en",
+        "v2-python-nearest-warehouse-ru"
+      ]
+    },
+    {
+      "intentId": "python-supplier-lead-time",
+      "corpus": "python",
+      "split": "heldout-v2",
+      "answerable": false,
+      "cases": [
+        "v2-python-supplier-lead-time-en",
+        "v2-python-supplier-lead-time-ru"
+      ]
+    },
+    {
+      "intentId": "python-unicode-nfc",
+      "corpus": "python",
+      "split": "heldout-v2",
+      "answerable": false,
+      "cases": [
+        "v2-python-unicode-nfc-en",
+        "v2-python-unicode-nfc-ru"
+      ]
+    },
+    {
+      "intentId": "python-release-cancelled",
+      "corpus": "python",
+      "split": "heldout-v2",
+      "answerable": false,
+      "cases": [
+        "v2-python-release-cancelled-en",
+        "v2-python-release-cancelled-ru"
+      ]
+    },
+    {
+      "intentId": "python-pack-size",
+      "corpus": "python",
+      "split": "heldout-v2",
+      "answerable": false,
+      "cases": [
+        "v2-python-pack-size-en",
+        "v2-python-pack-size-ru"
+      ]
+    },
+    {
+      "intentId": "typescript-money",
+      "corpus": "typescript",
+      "split": "heldout-v2",
+      "answerable": true,
+      "cases": [
+        "v2-typescript-money-en",
+        "v2-typescript-money-ru"
+      ]
+    },
+    {
+      "intentId": "typescript-percent",
+      "corpus": "typescript",
+      "split": "heldout-v2",
+      "answerable": true,
+      "cases": [
+        "v2-typescript-percent-en",
+        "v2-typescript-percent-ru"
+      ]
+    },
+    {
+      "intentId": "typescript-identifier",
+      "corpus": "typescript",
+      "split": "heldout-v2",
+      "answerable": true,
+      "cases": [
+        "v2-typescript-identifier-en",
+        "v2-typescript-identifier-ru"
+      ]
+    },
+    {
+      "intentId": "typescript-required",
+      "corpus": "typescript",
+      "split": "heldout-v2",
+      "answerable": true,
+      "cases": [
+        "v2-typescript-required-en",
+        "v2-typescript-required-ru"
+      ]
+    },
+    {
+      "intentId": "typescript-length",
+      "corpus": "typescript",
+      "split": "heldout-v2",
+      "answerable": true,
+      "cases": [
+        "v2-typescript-length-en",
+        "v2-typescript-length-ru"
+      ]
+    },
+    {
+      "intentId": "typescript-locale-money",
+      "corpus": "typescript",
+      "split": "heldout-v2",
+      "answerable": false,
+      "cases": [
+        "v2-typescript-locale-money-en",
+        "v2-typescript-locale-money-ru"
+      ]
+    },
+    {
+      "intentId": "typescript-exchange-rate",
+      "corpus": "typescript",
+      "split": "heldout-v2",
+      "answerable": false,
+      "cases": [
+        "v2-typescript-exchange-rate-en",
+        "v2-typescript-exchange-rate-ru"
+      ]
+    },
+    {
+      "intentId": "typescript-breach-check",
+      "corpus": "typescript",
+      "split": "heldout-v2",
+      "answerable": false,
+      "cases": [
+        "v2-typescript-breach-check-en",
+        "v2-typescript-breach-check-ru"
+      ]
+    },
+    {
+      "intentId": "typescript-check-digit",
+      "corpus": "typescript",
+      "split": "heldout-v2",
+      "answerable": false,
+      "cases": [
+        "v2-typescript-check-digit-en",
+        "v2-typescript-check-digit-ru"
+      ]
+    },
+    {
+      "intentId": "typescript-proportion-interval",
+      "corpus": "typescript",
+      "split": "heldout-v2",
+      "answerable": false,
+      "cases": [
+        "v2-typescript-proportion-interval-en",
+        "v2-typescript-proportion-interval-ru"
+      ]
+    }
+  ]
+}

@@ -2,6 +2,11 @@
 
 [Contents](README.md#contents) · [Русская версия](building-and-testing.ru.md)
 
+**On this page**
+
+- [Independent quality corpora](#independent-quality-corpora)
+  - [Paired holdout comparison](#paired-holdout-comparison)
+
 ```powershell
 dotnet test LocalAi.slnx --configuration Release --max-parallel-test-modules 1 --timeout 20m
 ```
@@ -56,6 +61,50 @@ pwsh -NoProfile -File .\scripts\quality\run.ps1 `
 `Search` and `Ocr` select individual suites; `Prepare` creates the search repositories
 without invoking models and needs neither executable. Every mode requires an output
 directory outside the repository that is empty or does not exist yet. Results, raw responses and provenance are retained under that directory.
+
+### Paired holdout comparison
+
+`-SearchSuite heldout-v2` is an additional search suite: three new source repositories,
+60 EN/RU queries and 30 paired intents. Each language has five answerable and five
+no-answer intents. The references are AI-authored and were checked by a blind independent
+agent before measurement; human validation and novelty relative to model training are
+not established. After its first measured use, the suite is a known regression corpus.
+
+Prepare once with `-Mode Prepare -SearchSuite heldout-v2`. Index those three source
+repositories through the broker, then freeze `heldout-v2/protocol.json` with the actual
+source trees, corpus hashes, generation IDs, complete search options and quality profile.
+Keep annotations and results outside the source trees. A model tag does not prove a
+weight digest or server routing; unavailable evidence stays unknown.
+
+Build the baseline and candidate from clean, recorded commits. Before either search run,
+retain an artifact-plan JSON with `schemaVersion: 1`, the frozen protocol's `protocolSha256`,
+and `baseline.codeSearch` / `candidate.codeSearch` fingerprint arrays: each executable and
+adjacent DLL's `file`, `version`, `recordedProductVersion` and `sha256`. This external plan
+avoids a binary/protocol self-hash cycle. Pass the same `-PreparedRoot` and separate empty
+`-OutputRoot` directories to both `-Mode Search -SearchSuite heldout-v2` runs. Prepared
+reuse does not reindex. The runner checks every corpus before evaluation, captures
+streamed output, and checks source/corpus and binary identities again afterwards.
+
+`dotnet run --file scripts/quality/evaluate-holdout.cs --configuration Release -- validate <protocol> <prepared-root>`
+validates references without retrieval. The `compare <protocol> <prepared-root> <artifact-plan> <baseline-root> <candidate-root> <report.json>`
+mode requires the frozen identities and equal canonical raw hit sequences. This change
+checks harness parity; it changes neither ranking nor the `0.43` threshold and makes no
+quality-improvement claim. `test-heldout.ps1` checks the data and rejection paths offline;
+Windows CI runs it and the process-streaming regression.
+
+The [first paired result](https://github.com/MrAliev/local-ai-toolkit/tree/main/tests/CodeSearch.Tests/Fixtures/SearchEvaluation/heldout-v2/baseline-2026-11-18/README.md)
+retains the original strict scores and describes the TypeScript symbol-matching limitation.
+The checked-in protocol is a marked canonical copy made after that measurement. For a new
+run, capture fresh identities in a new copy and set `status` to `frozen-unmeasured` before
+measuring; do not present this already-used suite as a new blind holdout. Only the profile's
+calibration date is compared by its explicit-offset instant; all other profile fields remain exact.
+
+Report query metrics by language and locale, plus paired intents where both, one or
+neither paraphrase succeeds. A no-answer hit means that no direct implementation was
+annotated; it is an operational false positive, not a hallucination measure. Synthetic
+templates are correlated: grouped Wilson ranges are descriptive independence references,
+not population guarantees. Timing remains descriptive under shared broker load; missing
+queue-wait evidence stays unknown. Historical v1 figures below use different inputs.
 
 The four OCR references cover short and long EN/RU text and include repeated lines.
 Scoring preserves repetitions and reports character/word error rates (CER/WER), nonempty

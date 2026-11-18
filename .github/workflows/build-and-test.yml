@@ -96,6 +96,12 @@ jobs:
       - name: Build
         run: dotnet build LocalAi.slnx --configuration Release --no-restore
 
+      - name: Test quality harness offline contracts
+        shell: pwsh
+        run: |
+          & ./scripts/quality/test-runner.ps1
+          & ./scripts/quality/test-heldout.ps1
+
       - name: Prepare the verified Windows Python fixture
         shell: pwsh
         run: |

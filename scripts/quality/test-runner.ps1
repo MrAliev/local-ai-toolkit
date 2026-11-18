@@ -34,8 +34,37 @@ exit 37
     if ([IO.File]::ReadAllText($run.stdout) -ne 'result') { throw 'The standard output was changed.' }
     if ([IO.File]::ReadAllText($run.stderr) -ne 'diagnostic') { throw 'The standard error was changed.' }
     if ($run.elapsedMs -lt 0) { throw 'Invalid elapsed duration.' }
+    $liveChild = Join-Path $temporary 'live-child.ps1'
+    [IO.File]::WriteAllText($liveChild, @'
+param([string] $ProgressLog)
+$ErrorActionPreference = 'Stop'
+[Console]::Error.Write('phase-one')
+[Console]::Error.Flush()
+$wait = [Diagnostics.Stopwatch]::StartNew()
+while ($true) {
+    $stream = [IO.File]::Open($ProgressLog, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::ReadWrite)
+    $reader = [IO.StreamReader]::new($stream)
+    try { $visible = $reader.ReadToEnd() } finally { $reader.Dispose() }
+    if ($visible -eq 'phase-one') { break }
+    if ($wait.Elapsed -gt [TimeSpan]::FromSeconds(30)) { throw 'Progress was not visible while the child was running.' }
+    [Threading.Thread]::Sleep(10)
+}
+[Console]::Out.Write('live-progress-observed')
+exit 0
+'@, [Text.UTF8Encoding]::new($false))
+    $liveStem = Join-Path $temporary 'live'
+    $live = Invoke-Recorded $shell @('-NoProfile', '-File', $liveChild, ($liveStem + '.stderr.log')) $liveStem $temporary
+    if ($live.exitCode -ne 0 -or [IO.File]::ReadAllText($live.stdout) -ne 'live-progress-observed') {
+        throw 'Process progress was buffered until exit.'
+    }
     Write-Output 'Process recording contract passed: one record, native exit code, and both unmodified streams.'
 }
 finally {
+    $resolved = (Resolve-Path -LiteralPath $temporary).Path
+    if ($resolved -ne $temporary -or -not $resolved.StartsWith($tempParent, [StringComparison]::OrdinalIgnoreCase) -or
+        -not (Split-Path -Leaf $resolved).StartsWith('localai-quality-runner-') -or
+        ((Get-Item -LiteralPath $resolved).Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+        throw 'Refusing cleanup outside the owned runner-test directory.'
+    }
     Remove-Item -LiteralPath $temporary -Recurse -Force
 }
