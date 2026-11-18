@@ -61,11 +61,16 @@ public sealed partial class DurableQueue
     private static string HashControlToken(string token) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
 
-    private static JobControlDocument? ReadControl(JobEntry entry)
+    private JobControlDocument? ReadControl(JobEntry entry)
     {
         try
         {
-            var path = GetControlPath(entry.Directory);
+            var path = Path.GetFullPath(GetControlPath(entry.Directory));
+            var root = Path.GetFullPath(RuntimeRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+            // Job entries include directory names read from storage. Keep the authority
+            // sidecar inside the configured runtime even when that input is malformed.
+            if (!path.StartsWith(root + Path.DirectorySeparatorChar, comparison)) return null;
             if (!File.Exists(path)) return null;
             var control = JsonSerializer.Deserialize<JobControlDocument>(File.ReadAllText(path), JsonOptions);
             return control is { SchemaVersion: 1, ControlTokenHash.Length: 64 } &&

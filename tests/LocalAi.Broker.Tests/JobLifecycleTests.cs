@@ -110,8 +110,10 @@ public sealed class JobLifecycleTests
     {
         using var runtime = new Runtime();
         var queue = new DurableQueue(runtime.Path);
-        var owned = await queue.EnqueueOwnedAsync(Request("queued"), Ct);
-        var jobDirectory = System.IO.Path.Combine(runtime.Path, "jobs", owned.JobId.ToString("N"));
+        var queuedRequest = Request("queued");
+        var owned = await queue.EnqueueOwnedAsync(queuedRequest, Ct);
+        Assert.Equal(queuedRequest.JobId, owned.JobId);
+        var jobDirectory = System.IO.Path.Combine(runtime.Path, "jobs", queuedRequest.JobId.ToString("N"));
         using var state = JsonDocument.Parse(await File.ReadAllTextAsync(System.IO.Path.Combine(jobDirectory, "state.json"), Ct));
         Assert.Equal(14, state.RootElement.EnumerateObject().Count());
         using var request = JsonDocument.Parse(await File.ReadAllTextAsync(System.IO.Path.Combine(jobDirectory, "request.json"), Ct));
@@ -172,6 +174,29 @@ public sealed class JobLifecycleTests
         var unsupported = new BrokerClient(queue, new LegacyProcess());
         Assert.Equal(JobCancellationResult.Unsupported, await unsupported.RequestCancellationAsync(captured, Ct));
         Assert.Equal(JobCancellationResult.Requested, await queue.RequestCancellationAsync(captured, Ct));
+    }
+
+    [Fact]
+    public async Task An_authority_sidecar_outside_the_runtime_is_not_trusted()
+    {
+        using var runtime = new Runtime();
+        using var outside = new Runtime();
+        var queue = new DurableQueue(runtime.Path);
+        var request = Request("bounded-control");
+        await queue.EnqueueOwnedAsync(request, Ct);
+        var jobDirectory = System.IO.Path.Combine(runtime.Path, "jobs", request.JobId.ToString("N"));
+        Directory.CreateDirectory(outside.Path);
+        File.Copy(System.IO.Path.Combine(jobDirectory, "control.json"),
+            System.IO.Path.Combine(outside.Path, "control.json"));
+        // Exercise the storage-reader boundary with an entry whose directory came from
+        // outside this runtime. The sidecar itself is otherwise a valid owned-job record.
+        const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.Instance |
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public;
+        var state = typeof(DurableQueue).GetMethod("ReadState", flags)!.Invoke(queue, [jobDirectory]);
+        var entryType = typeof(DurableQueue).GetNestedType("JobEntry", flags)!;
+        var entry = Activator.CreateInstance(entryType, flags, null, [outside.Path, state], null);
+        var control = typeof(DurableQueue).GetMethod("ReadControl", flags)!.Invoke(queue, [entry]);
+        Assert.Null(control);
     }
 
     [Theory]
