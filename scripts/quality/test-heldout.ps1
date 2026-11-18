@@ -142,7 +142,7 @@ try {
     $changedRun.codeSearchAfter[0].sha256 = 'changed-during-run'
     Save-TestJson $changedRun (Join-Path $candidateRoot 'run.json')
     Invoke-Comparison 'changed-binary' 'Observed before/after binaries differ'
-    foreach ($mutation in @('profile','profile-time','profile-time-invalid','profile-time-missing','profile-time-no-offset','options','generation','references','scope')) {
+    foreach ($mutation in @('profile','profile-time','profile-time-invalid','profile-time-missing','profile-time-null','profile-time-newline','profile-time-space','profile-time-no-offset','options','generation','references','scope')) {
         Reset-Comparison
         foreach ($root in @($baselineRoot, $candidateRoot)) {
             $path = Join-Path $root 'results/csharp/baseline.json'
@@ -152,6 +152,9 @@ try {
                 profile-time { $changed.qualityProfile.calibratedAtUtc = $instant.AddMinutes(1).ToString('O') }
                 profile-time-invalid { $changed.qualityProfile.calibratedAtUtc = 'invalid' }
                 profile-time-missing { $changed.qualityProfile.PSObject.Properties.Remove('calibratedAtUtc') }
+                profile-time-null { $changed.qualityProfile.calibratedAtUtc = $null }
+                profile-time-newline { $changed.qualityProfile.calibratedAtUtc = $instant.ToString('O') + "`n" }
+                profile-time-space { $changed.qualityProfile.calibratedAtUtc = $instant.ToString('O') + ' ' }
                 profile-time-no-offset { $changed.qualityProfile.calibratedAtUtc = '2001-01-01T00:00:00' }
                 options { $changed.searchOptions.topK = 1 }
                 generation { $changed.generationId = 'wrong' }
@@ -162,7 +165,7 @@ try {
         }
         $expected = switch ($mutation) {
             generation { 'Measured source/index identity differs' }
-            { $_ -in @('profile-time-invalid','profile-time-missing','profile-time-no-offset') } { 'Holdout comparison identity/config mismatch' }
+            { $_ -in @('profile-time-invalid','profile-time-missing','profile-time-null','profile-time-newline','profile-time-space','profile-time-no-offset') } { 'Holdout comparison identity/config mismatch' }
             { $_ -in @('references','scope') } { 'Measured scope/references differ' }
             default { 'Measured configuration differs' }
         }

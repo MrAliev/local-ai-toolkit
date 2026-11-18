@@ -3,7 +3,7 @@
 [Русская версия](README.ru.md)
 
 The baseline and candidate returned identical canonical hit sequences for all **60 queries**
-across three source repositories. Ranking, model selection and the `0.43` floor were unchanged.
+across three source repositories. Ranking, the requested model-tag configuration and the `0.43` floor were unchanged.
 This validates harness parity, not a quality improvement.
 
 | Source language | Strict recall@10 | Positive intents: both paraphrases succeed | No-answer query false positives | Negative intents: any hit |
