@@ -288,8 +288,7 @@ public sealed class JobLifecycleTests
 
     private sealed class Runtime : IDisposable
     {
-        public string Path { get; } = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
-            "localai-lifecycle-" + Guid.NewGuid().ToString("N"));
+        public string Path { get; } = Directory.CreateTempSubdirectory("localai-lifecycle-").FullName;
         public void Dispose()
         {
             if (Directory.Exists(Path)) Directory.Delete(Path, recursive: true);

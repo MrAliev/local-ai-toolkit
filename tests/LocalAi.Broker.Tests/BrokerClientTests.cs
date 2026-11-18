@@ -318,8 +318,7 @@ public sealed class BrokerClientTests
         /// </summary>
         private static readonly TimeSpan ClientTimeout = TimeSpan.FromMinutes(5);
 
-        private readonly string _root =
-            Path.Combine(Path.GetTempPath(), "localai-client-" + Guid.NewGuid().ToString("N"));
+        private readonly string _root = Directory.CreateTempSubdirectory("localai-client-").FullName;
 
         public BrokerClientFixture()
         {
