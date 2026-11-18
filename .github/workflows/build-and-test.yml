@@ -33,13 +33,9 @@ jobs:
       # scip-typescript or a language server reports the same green as a run that exercised
       # them, which is how the 0.1.31, 0.1.32 and 0.1.33 defects reached releases.
       LOCALAI_STRICT_FIXTURES: "1"
-      # Declared, not assumed. scip-python 0.6.6 crashes on load under Windows —
-      # `new RegExp(path.sep)` is an invalid pattern — and only reaches that code when it has to
-      # build a virtual environment, so it runs on a developer machine with an interpreter it
-      # already accepts and dies on a clean runner. Naming it here keeps strictness meaning
-      # something for every other tool, and this line is what to delete when the upstream bug is
-      # fixed. A silent skip would restore exactly the blindness this workflow removes.
-      LOCALAI_STRICT_FIXTURES_EXCEPT: "scip-python"
+      LOCALAI_STRICT_FIXTURES_EXCEPT: ""
+      # Python uses the installer's verified Windows patch on a private npm fixture.
+      # Missing prerequisites or failed semantic indexing must fail this job too.
 
     steps:
       - uses: actions/checkout@v7
@@ -80,17 +76,18 @@ jobs:
       - name: Install fixture prerequisites
         shell: pwsh
         run: |
-          # scip-python is deliberately absent. Version 0.6.6 dies on load under Windows on
-          # `new RegExp(path.sep)`, an invalid pattern, and only reaches that code when it has to
-          # build a virtual environment — so it runs on a developer machine that already has an
-          # interpreter it accepts and cannot start here. Installing it would put a tool on the
-          # runner that no fixture can use, and the failure would look like ours. Absent, it is
-          # excused by name below and the skip says exactly why.
           npm install --global `
             @sourcegraph/scip-typescript@0.4.0 `
             typescript-language-server@5.3.0 `
             typescript@5.9.3 `
             pyright@1.1.403
+          if ($LASTEXITCODE -ne 0) { throw 'Fixture prerequisite installation failed.' }
+          # Keep the upstream bundle out of the shared npm prefix. The next step
+          # applies the production version/hash guards before exposing its shim.
+          $pythonFixture = Join-Path $env:RUNNER_TEMP 'scip-python-fixture'
+          npm install --prefix $pythonFixture --no-audit --no-fund --ignore-scripts --save-exact @sourcegraph/scip-python@0.6.6
+          if ($LASTEXITCODE -ne 0) { throw 'Python fixture installation failed.' }
+          "LOCALAI_SCIP_PYTHON_FIXTURE=$pythonFixture" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           npm list --global --depth=0
 
       - name: Restore
@@ -98,6 +95,22 @@ jobs:
 
       - name: Build
         run: dotnet build LocalAi.slnx --configuration Release --no-restore
+
+      - name: Prepare the verified Windows Python fixture
+        shell: pwsh
+        run: |
+          dotnet run --file scripts/quality/prepare-scip-python-fixture.cs --configuration Release -- $env:LOCALAI_SCIP_PYTHON_FIXTURE
+          if ($LASTEXITCODE -ne 0) { throw 'Python fixture preparation failed.' }
+          & ./scripts/quality/test-scip-python-fixture.ps1 -FixturePrefix $env:LOCALAI_SCIP_PYTHON_FIXTURE
+          $shimDirectory = Join-Path $env:LOCALAI_SCIP_PYTHON_FIXTURE 'node_modules/.bin'
+          $command = Join-Path $shimDirectory 'scip-python.cmd'
+          & $command --version
+          if ($LASTEXITCODE -ne 0) { throw 'The prepared Python indexer cannot start.' }
+          python --version
+          if ($LASTEXITCODE -ne 0) { throw 'Python is unavailable.' }
+          Get-FileHash -LiteralPath (Join-Path $env:LOCALAI_SCIP_PYTHON_FIXTURE 'node_modules/@sourcegraph/scip-python/dist/scip-python.js') -Algorithm SHA256
+          "LOCALAI_SCIP_PYTHON_EXECUTABLE=$command" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          $shimDirectory | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Test
         shell: pwsh
