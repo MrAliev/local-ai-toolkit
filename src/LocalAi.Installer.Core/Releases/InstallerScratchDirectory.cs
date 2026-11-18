@@ -21,6 +21,7 @@ public sealed class InstallerScratchDirectory : IDisposable
 
     private const string Prefix = "run-";
     private const string PackageContainerName = "LocalAi-installer";
+    private const string PackageReservationPrefix = "LocalAi-installer-reserve-";
 
     private static readonly byte[] MarkerContent =
         Encoding.ASCII.GetBytes("LocalAi installer run directory\n");
@@ -37,18 +38,15 @@ public sealed class InstallerScratchDirectory : IDisposable
 
     public string Path { get; }
 
-    public static string DefaultPackageRoot =>
-        System.IO.Path.Combine(System.IO.Path.GetTempPath(), PackageContainerName);
-
     /// <summary>Reserves a fresh workspace and places it in the usual package staging folder.</summary>
     public static InstallerScratchDirectory ClaimPackageRun()
     {
-        var reserved = Directory.CreateTempSubdirectory("LocalAi-installer-reserve-");
+        var reserved = Directory.CreateTempSubdirectory(PackageReservationPrefix);
         var ownedPath = reserved.FullName;
         try
         {
-            var tempRoot = reserved.Parent ?? throw new IOException("The temporary directory has no parent.");
-            var packageRoot = tempRoot.CreateSubdirectory(PackageContainerName);
+            var packageRoot = GetPackageRoot(reserved);
+            packageRoot.Create();
             if (packageRoot.Attributes.HasFlag(FileAttributes.ReparsePoint))
             {
                 throw new IOException("The installer package staging directory cannot be a link.");
@@ -66,6 +64,64 @@ public sealed class InstallerScratchDirectory : IDisposable
             TryRemove(ownedPath);
             throw;
         }
+    }
+
+    /// <summary>Best-effort cleanup of old package runs in the system temporary directory.</summary>
+    public static void RemovePackageLeftovers()
+    {
+        try
+        {
+            // The standard per-user Temp folder can be swept even when the volume
+            // has no space left to reserve a new directory.
+            if (GetStandardPackageRoot() is { } standardRoot)
+            {
+                RemoveLeftovers(standardRoot);
+                return;
+            }
+
+            var reserved = Directory.CreateTempSubdirectory(PackageReservationPrefix);
+            try
+            {
+                RemoveLeftovers(GetPackageRoot(reserved).FullName);
+            }
+            finally
+            {
+                reserved.Delete();
+            }
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException or
+                System.Security.SecurityException)
+        {
+        }
+    }
+
+    private static string? GetStandardPackageRoot()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return null;
+        }
+
+        var localData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (localData.Length == 0)
+        {
+            return null;
+        }
+
+        var standardTemp = System.IO.Path.Combine(localData, "Temp");
+        return string.Equals(
+            System.IO.Path.TrimEndingDirectorySeparator(System.IO.Path.GetTempPath()),
+            standardTemp,
+            StringComparison.OrdinalIgnoreCase)
+            ? System.IO.Path.Combine(standardTemp, PackageContainerName)
+            : null;
+    }
+
+    private static DirectoryInfo GetPackageRoot(DirectoryInfo reserved)
+    {
+        var tempRoot = reserved.Parent ?? throw new IOException("The temporary directory has no parent.");
+        return new DirectoryInfo(System.IO.Path.Combine(tempRoot.FullName, PackageContainerName));
     }
 
     public static InstallerScratchDirectory Claim(string root) => Claim(root, Prefix);

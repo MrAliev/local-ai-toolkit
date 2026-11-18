@@ -466,8 +466,6 @@ public sealed class InstallerWizardViewModel : ObservableObject
     /// </summary>
     internal string? ScratchRoot { get; init; }
 
-    public static string DefaultScratchRoot => InstallerScratchDirectory.DefaultPackageRoot;
-
     /// <summary>Stands in for the public model registry in a test, which must not go online.</summary>
     internal IModelSizeSource? ModelSizeSource { get; init; }
 

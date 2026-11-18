@@ -78,7 +78,7 @@ public partial class App : Application
         // to about 800 MB.
         _ = Task.Run(() =>
         {
-            InstallerScratchDirectory.RemoveLeftovers(InstallerWizardViewModel.DefaultScratchRoot);
+            InstallerScratchDirectory.RemovePackageLeftovers();
             UninstallerRelaunch.RemoveLeftovers(Path.GetTempPath());
         });
 
