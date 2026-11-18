@@ -2,6 +2,8 @@
 
 [Русская версия](Token-estimates.ru.md) · [Home](Home.md)
 
+See the token accounting row in the [product contracts](https://github.com/MrAliev/local-ai-toolkit/blob/main/README.md#product-contracts-and-release-acceptance) for the implementation and its checks.
+
 **Necessary request context is the baseline. Whole-file sizes are not a universal substitute.**
 
 ```mermaid

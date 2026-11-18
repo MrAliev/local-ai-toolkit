@@ -2,6 +2,8 @@
 
 [Русская версия](Architecture.ru.md) · [Home](Home.md)
 
+See the [product contracts and release acceptance matrix](https://github.com/MrAliev/local-ai-toolkit/blob/main/README.md#product-contracts-and-release-acceptance) for owning components, source references, and checks.
+
 ```mermaid
 ---
 config:

@@ -14,6 +14,6 @@
 
 ---
 
-← [Задания брокера и прерванное ожидание](broker-jobs-and-interrupted-waits.ru.md) · [Оглавление](README.ru.md#оглавление) · [Собрать и проверить](building-and-testing.ru.md) →
+← [Задания брокера и прерванное ожидание](broker-jobs-and-interrupted-waits.ru.md) · [Оглавление](README.ru.md#оглавление) · [Контракты продукта и приёмка релиза](product-contracts-and-release-acceptance.ru.md) →
 
 <!-- Generated from the README by DocumentationSiteTests. -->

@@ -61,6 +61,8 @@ if you would rather work on your own.
 - [Documentation packages](documentation-packages.md)
 - [Broker jobs and interrupted waits](broker-jobs-and-interrupted-waits.md)
 - [Bounded navigation diagnostics](bounded-navigation-diagnostics.md)
+- [Product contracts and release acceptance](product-contracts-and-release-acceptance.md)
+  - [Release acceptance matrix](product-contracts-and-release-acceptance.md#release-acceptance-matrix)
 - [Building and testing](building-and-testing.md)
   - [Independent quality corpora](building-and-testing.md#independent-quality-corpora)
 - [Licence](licence.md)
