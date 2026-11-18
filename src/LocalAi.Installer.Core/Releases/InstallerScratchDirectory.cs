@@ -20,6 +20,8 @@ public sealed class InstallerScratchDirectory : IDisposable
     public const string MarkerFileName = ".localai-installer-run";
 
     private const string Prefix = "run-";
+    private const string PackageContainerName = "LocalAi-installer";
+    private const string PackageReservationPrefix = "LocalAi-installer-reserve-";
 
     private static readonly byte[] MarkerContent =
         Encoding.ASCII.GetBytes("LocalAi installer run directory\n");
@@ -35,6 +37,92 @@ public sealed class InstallerScratchDirectory : IDisposable
     }
 
     public string Path { get; }
+
+    /// <summary>Reserves a fresh workspace and places it in the usual package staging folder.</summary>
+    public static InstallerScratchDirectory ClaimPackageRun()
+    {
+        var reserved = Directory.CreateTempSubdirectory(PackageReservationPrefix);
+        var ownedPath = reserved.FullName;
+        try
+        {
+            var packageRoot = GetPackageRoot(reserved);
+            packageRoot.Create();
+            if (packageRoot.Attributes.HasFlag(FileAttributes.ReparsePoint))
+            {
+                throw new IOException("The installer package staging directory cannot be a link.");
+            }
+
+            // Move an exclusively acquired directory on the same volume. A pre-existing
+            // destination is an error, and remains outside this call's cleanup scope.
+            var destination = System.IO.Path.Combine(packageRoot.FullName, Prefix + Guid.NewGuid().ToString("N"));
+            Directory.Move(ownedPath, destination);
+            ownedPath = destination;
+            return OpenMarker(ownedPath);
+        }
+        catch
+        {
+            TryRemove(ownedPath);
+            throw;
+        }
+    }
+
+    /// <summary>Best-effort cleanup of old package runs in the system temporary directory.</summary>
+    public static void RemovePackageLeftovers()
+    {
+        try
+        {
+            // The standard per-user Temp folder can be swept even when the volume
+            // has no space left to reserve a new directory.
+            if (GetStandardPackageRoot() is { } standardRoot)
+            {
+                RemoveLeftovers(standardRoot);
+                return;
+            }
+
+            var reserved = Directory.CreateTempSubdirectory(PackageReservationPrefix);
+            try
+            {
+                RemoveLeftovers(GetPackageRoot(reserved).FullName);
+            }
+            finally
+            {
+                reserved.Delete();
+            }
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException or
+                System.Security.SecurityException)
+        {
+        }
+    }
+
+    private static string? GetStandardPackageRoot()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return null;
+        }
+
+        var localData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (localData.Length == 0)
+        {
+            return null;
+        }
+
+        var standardTemp = System.IO.Path.Combine(localData, "Temp");
+        return string.Equals(
+            System.IO.Path.TrimEndingDirectorySeparator(System.IO.Path.GetTempPath()),
+            standardTemp,
+            StringComparison.OrdinalIgnoreCase)
+            ? System.IO.Path.Combine(standardTemp, PackageContainerName)
+            : null;
+    }
+
+    private static DirectoryInfo GetPackageRoot(DirectoryInfo reserved)
+    {
+        var tempRoot = reserved.Parent ?? throw new IOException("The temporary directory has no parent.");
+        return new DirectoryInfo(System.IO.Path.Combine(tempRoot.FullName, PackageContainerName));
+    }
 
     public static InstallerScratchDirectory Claim(string root) => Claim(root, Prefix);
 
@@ -87,9 +175,11 @@ public sealed class InstallerScratchDirectory : IDisposable
     /// Removes the directories of runs that have ended. Never throws: a directory that will not
     /// go now is tried again at the next start.
     /// </summary>
-    public static void RemoveLeftovers(string root) => RemoveLeftovers(root, Prefix);
+    public static void RemoveLeftovers(string root) => RemoveLeftovers(root, Prefix, requirePlainRoot: true);
 
-    public static void RemoveLeftovers(string root, string prefix)
+    public static void RemoveLeftovers(string root, string prefix) => RemoveLeftovers(root, prefix, requirePlainRoot: false);
+
+    private static void RemoveLeftovers(string root, string prefix, bool requirePlainRoot)
     {
         try
         {
@@ -98,7 +188,13 @@ public sealed class InstallerScratchDirectory : IDisposable
                 return;
             }
 
-            foreach (var directory in new DirectoryInfo(root).EnumerateDirectories(prefix + "*"))
+            var container = new DirectoryInfo(root);
+            if (requirePlainRoot && container.Attributes.HasFlag(FileAttributes.ReparsePoint))
+            {
+                return;
+            }
+
+            foreach (var directory in container.EnumerateDirectories(prefix + "*"))
             {
                 if (!directory.Attributes.HasFlag(FileAttributes.ReparsePoint) &&
                     IsLeftover(directory.FullName))
