@@ -554,11 +554,15 @@ is `Foreground`, and the embeddings of an index build are `Background`. The brok
 next job by priority first, then by whether its model is already in video memory, then by
 the shortest expected job:
 
-- a question you are waiting on does not queue behind an index build; it costs a model swap,
-  and the trade is deliberate;
+- priority normally puts a question ahead of an index build, even when that requires a
+  model swap;
 - among jobs of equal urgency, the model already loaded keeps working;
-- a job that has waited long enough goes first whatever its priority;
-- before it switches models, the broker waits a moment for more work for the same model.
+- after 15 minutes, the oldest eligible job goes first, ahead of priority, model affinity
+  and a previously chosen batch;
+- an ordinary model switch opens a brief window to gather more work for the same model.
+
+Age is checked between jobs; it does not interrupt running work. A backlog of aged jobs
+can delay new questions.
 
 Two identical requests that arrive while the first is still queued or running become one job.
 
