@@ -80,6 +80,10 @@ the shortest expected job:
 Age is checked between jobs; it does not interrupt running work. A backlog of aged jobs
 can delay new questions.
 
+Model maintenance starts only when no ready job of another kind is queued. Work waiting
+on dependencies does not hold the broker idle. A steady stream of other ready work can
+delay maintenance beyond the aging threshold.
+
 Two identical requests that arrive while the first is still queued or running become one job.
 
 By default a model has to fit entirely in video memory, and one that does not is refused
