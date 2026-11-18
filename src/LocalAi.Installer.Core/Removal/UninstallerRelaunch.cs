@@ -94,6 +94,10 @@ public sealed class UninstallerRelaunch(
         }
     }
 
+    /// <summary>Removes abandoned copies from the system temporary directory.</summary>
+    public static void RemoveLeftovers() =>
+        InstallerScratchDirectory.RemoveTemporaryLeftovers(DirectoryPrefix);
+
     /// <summary>What copies whose own cleanup never ran left under <paramref name="temporaryRoot"/>.</summary>
     public static void RemoveLeftovers(string temporaryRoot) =>
         InstallerScratchDirectory.RemoveLeftovers(temporaryRoot, DirectoryPrefix);
