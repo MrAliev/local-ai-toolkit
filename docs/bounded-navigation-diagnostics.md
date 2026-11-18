@@ -14,6 +14,6 @@ Freshness and query precision are separate facts. A stale index can still answer
 
 ---
 
-← [Broker jobs and interrupted waits](broker-jobs-and-interrupted-waits.md) · [Contents](README.md#contents) · [Building and testing](building-and-testing.md) →
+← [Broker jobs and interrupted waits](broker-jobs-and-interrupted-waits.md) · [Contents](README.md#contents) · [Product contracts and release acceptance](product-contracts-and-release-acceptance.md) →
 
 <!-- Generated from the README by DocumentationSiteTests. -->

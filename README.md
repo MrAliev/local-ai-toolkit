@@ -60,6 +60,8 @@ if you would rather work on your own.
 - [Documentation packages](#documentation-packages)
 - [Broker jobs and interrupted waits](#broker-jobs-and-interrupted-waits)
 - [Bounded navigation diagnostics](#bounded-navigation-diagnostics)
+- [Product contracts and release acceptance](#product-contracts-and-release-acceptance)
+  - [Release acceptance matrix](#release-acceptance-matrix)
 - [Building and testing](#building-and-testing)
   - [Independent quality corpora](#independent-quality-corpora)
 - [Licence](#licence)
@@ -2150,6 +2152,31 @@ The default MCP `index_status` remains a cheap header check. `HeaderOnly` does n
 The additional, untrusted-wrapped JSON reports `HeaderEvidence`, `Freshness`, language, position, operation, `Precision`, `ResultCount` and `Reason`. `Coverage` remains `Unknown`: neither readable headers nor a successful location proves complete document or language coverage. A query performs at most one existing navigation operation, without an index rebuild, repository scan or persistent health cache. It cannot be combined with `runtimeEvidenceOnly`.
 
 Freshness and query precision are separate facts. A stale index can still answer a particular query; a current header cannot guarantee a precise answer. An empty precise-reference result may fall back to bounded text matches, explicitly marked as degraded/heuristic. This means the query found no recorded precise references; it does not mean that no symbol or no uses exist in the repository. A zero-result probe retains `Precision="Unknown"` rather than proving global absence.
+
+## Product contracts and release acceptance
+
+The English and Russian READMEs define the same product contracts. The documentation site generates its pages from these READMEs. The Wiki source pages link to this section for the detailed contracts.
+
+| Contract | Owning component and behavior | Implementation and checks |
+| --- | --- | --- |
+| Queue aging | Broker scheduler. Ready work that has aged gets a turn ahead of continuations. Ready maintenance can proceed when inference is waiting on a prerequisite. | [Scheduler](src/LocalAi.Broker/ModelAwareScheduler.cs) · [Scheduling tests](tests/LocalAi.Broker.Tests/ModelAwareSchedulerTests.cs) · [Recovery tests](tests/LocalAi.Broker.Tests/BrokerRecoveryTests.cs) |
+| Job ownership and cancellation | Broker client and durable queue. Stopping a wait leaves the job available by ID. The owner can request cancellation when the live broker advertises support. Read the terminal state to confirm the outcome. | [Client](src/LocalAi.Broker.Client/BrokerClient.cs) · [Queue control](src/LocalAi.Broker.Core/DurableQueue.Control.cs) · [Lifecycle tests](tests/LocalAi.Broker.Tests/JobLifecycleTests.cs) · [Broker process tests](tests/LocalAi.Broker.Tests/BrokerProcessTests.cs) |
+| Model residency | Broker runtime. Full VRAM residency is the default requirement. A deliberately relaxed policy can allow partial residency, and the run reports partial residency and the observed share in VRAM when available. | [Runtime](src/LocalAi.Broker/ModelRuntime.cs) · [Residency tests](tests/LocalAi.Broker.Tests/ModelRuntimeResidencyPolicyTests.cs) |
+| Index freshness and navigation | CodeSearch. Report the freshness of the indexed snapshot separately from query precision. `HeaderOnly` confirms the header check. An explicit navigation probe reports evidence for one requested position and operation. | [Index status](src/CodeSearch.Core/Search/SearchService.cs) · [Query probe](src/CodeSearch.Core/Semantics/NavigationQueryHealth.cs) · [Status tests](tests/CodeSearch.Tests/CodeSearchConsoleJsonTests.cs) · [Probe tests](tests/CodeSearch.Tests/NavigationQueryHealthTests.cs) |
+| Token accounting | Usage reporting. When a comparison is supported, the estimate is the hypothetical cloud input minus the complete context returned to the caller. Keep unavailable estimates, negative estimates, and observed model usage distinct. | [Methodology](src/LocalAi.Contracts/CloudTokenMethodology.cs) · [Usage lifecycle](src/LocalAi.Contracts/UsageCall.cs) · [Accounting tests](tests/LocalAi.Broker.Tests/CloudTokenMethodologyTests.cs) · [Report tests](tests/LocalAi.Broker.Tests/UsageReportContractTests.cs) |
+
+### Release acceptance matrix
+
+The isolated fixture checks below passed on source `08b5f92b00d478440decfe803c7c342e87631d9e`. They use temporary installations and synthetic packages. The launcher activation check writes the active version pointer directly. The installer and rollback fixtures use a test process runner to exercise the layout and activation or rollback contract.
+
+| Scenario | Verified with fixtures | Signed candidate acceptance |
+| --- | --- | --- |
+| Clean install | Passed. The installer writes the version and launcher and passes the expected activation target. A separate launcher test writes the pointer and reads it back. [Installer checks](tests/LocalAi.Installer.Core.Tests/LocalAiPackageInstallerTests.cs) · [Activation checks](tests/LocalAi.Launcher.Tests/VersionActivatorTests.cs) | Pending. Install the candidate normally in a disposable Windows environment. Verify the installed executable identity, active pointer, and launcher startup. |
+| Upgrade | Passed. A fixture upgrades a prior layout and preserves its version files. [Installer checks](tests/LocalAi.Installer.Core.Tests/LocalAiPackageInstallerTests.cs) | Pending. Upgrade from a named supported signed baseline. Verify installed identity, pointer, preserved configuration, and successful startup. |
+| Rollback | Passed. The test reactivates the prior version using the guarded launcher command and records the result in the journal. [Rollback checks](tests/LocalAi.Installer.Core.Tests/InstallerRunRollbackTests.cs) | Pending. Run the supported rollback in the disposable environment. Verify the pointer, prior installed identity, and journal outcome. |
+| Hardware and local services | Pending. Record the GPU, driver, model, residency policy, and actual results for each environment exercised. | Run the chosen scenarios in isolation from the shared broker and its queued work. |
+
+For each candidate, retain the source SHA, version, workflow run and artifact IDs, manifest and package SHA-256 hashes, signed baseline, and environment. Record the actual command, exit result, installed identity, pointer or journal observations, and the reviewer’s decision for each row. Use `Pending` or `Skipped` with a reason when evidence is missing. An unsigned artifact verification, an index header check, and a historical green CI run are separate pieces of evidence.
 
 ## Building and testing
 
