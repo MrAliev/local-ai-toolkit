@@ -74,6 +74,31 @@ public sealed class BrokerProcessTests
     }
 
     [Fact]
+    public void Job_cancellation_requires_an_advertisement_from_the_current_healthy_host()
+    {
+        using var runtime = new TemporaryRuntimeRoot();
+        var store = new BrokerRuntimeStateStore(runtime.Path);
+        var now = DateTimeOffset.UtcNow;
+        var owner = new BrokerProcessState(
+            42, now.AddMinutes(-1), now, BrokerCompatibilityContract.HostStateSchemaVersion,
+            BrokerAssemblyPath, BrokerCompatibilityContract.Current);
+        store.Publish(owner);
+        var live = true;
+        var process = new BrokerProcess(
+            BrokerAssemblyPath, runtime.Path, BrokerProcess.ReadState, _ => live,
+            (_, _) => throw new InvalidOperationException("Capability checks must not start a broker."),
+            TimeProvider.System, static (_, _) => Task.CompletedTask);
+
+        Assert.False(process.SupportsJobCancellation());
+        store.PublishJobCancellation(owner with { StartedAtUtc = owner.StartedAtUtc.AddMinutes(-5) });
+        Assert.False(process.SupportsJobCancellation());
+        store.PublishJobCancellation(owner);
+        Assert.True(process.SupportsJobCancellation());
+        live = false;
+        Assert.False(process.SupportsJobCancellation());
+    }
+
+    [Fact]
     public async Task Healthy_matching_process_is_reused()
     {
         var now = DateTimeOffset.UtcNow;

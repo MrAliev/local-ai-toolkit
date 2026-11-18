@@ -26,8 +26,25 @@ public interface IBrokerProcess
 
 public sealed class BrokerProcess : IBrokerProcess
 {
-    public bool SupportsJobCancellation() =>
-        ReadObservation().Status == BrokerObservationStatus.CompatibleHealthy;
+    public bool SupportsJobCancellation()
+    {
+        try
+        {
+            var state = _readState(_runtimeRoot);
+            if (state is null || Observe(state).Status != BrokerObservationStatus.CompatibleHealthy)
+                return false;
+
+            var path = Path.Combine(_runtimeRoot, BrokerJobCancellationCapability.FileName);
+            using var stream = File.OpenRead(path);
+            if (stream.Length > 4096) return false;
+            return JsonSerializer.Deserialize<BrokerJobCancellationCapability>(stream, LocalAiJson.Strict)
+                ?.Matches(state) == true;
+        }
+        catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
 
     private const int MaximumDiagnosticValueLength = 512;
     private static readonly TimeSpan MaximumSemaphoreWaitSlice =

@@ -73,7 +73,7 @@ public static class BrokerCompatibilityContract
     /// </summary>
     public const int HostStateSchemaVersion = 4;
     public const int ProtocolVersion = 1;
-    public const string BuildCompatibilityId = "localai-broker-v2-job-lifecycle";
+    public const string BuildCompatibilityId = "localai-broker-v1";
 
     public static BrokerCompatibility Current { get; } =
         new(ProtocolVersion, BuildCompatibilityId);
@@ -109,6 +109,18 @@ public sealed record BrokerProcessState(
     [property: JsonRequired] string BrokerAssemblyPath,
     BrokerCompatibility? Compatibility = null,
     BrokerBackendState? Backend = null);
+
+/// <summary>Optional feature evidence, tied to the owner of the current host heartbeat.</summary>
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+public sealed record BrokerJobCancellationCapability(
+    [property: JsonRequired] int ProcessId,
+    [property: JsonRequired] DateTimeOffset StartedAtUtc)
+{
+    public const string FileName = "host-job-cancellation.json";
+
+    public bool Matches(BrokerProcessState host) =>
+        ProcessId == host.ProcessId && StartedAtUtc == host.StartedAtUtc;
+}
 
 [JsonPolymorphic(
     TypeDiscriminatorPropertyName = "$type",
