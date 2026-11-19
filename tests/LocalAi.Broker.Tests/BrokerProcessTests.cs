@@ -1214,15 +1214,20 @@ public sealed class BrokerProcessTests
             Path.GetTempPath(),
             "localai-process-" + Guid.NewGuid().ToString("N"));
         var now = DateTimeOffset.UtcNow;
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var startEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var publishReady = new ManualResetEventSlim();
+        using var allowSemaphoreWait = new ManualResetEventSlim();
+        var waitClock = new ContendedStartupClock(allowSemaphoreWait, cancellationToken);
         var ready = false;
         var starts = 0;
-        BrokerProcess CreateProcess() => new(
+        BrokerProcess CreateProcess(TimeProvider clock) => new(
             BrokerAssemblyPath,
             runtimeRoot,
-            _ => ready
+            _ => Volatile.Read(ref ready)
                 ? new BrokerProcessState(
                     99,
-                    now,
+                    DateTimeOffset.UtcNow,
                     now,
                     BrokerCompatibilityContract.HostStateSchemaVersion,
                     BrokerAssemblyPath,
@@ -1232,22 +1237,35 @@ public sealed class BrokerProcessTests
             (_, _) =>
             {
                 Interlocked.Increment(ref starts);
+                startEntered.TrySetResult();
+                publishReady.Wait(cancellationToken);
+                Volatile.Write(ref ready, true);
                 return 99;
             },
-            TimeProvider.System,
+            clock,
             static (_, token) => Task.Delay(5, token),
-            startupTimeout: TimeSpan.FromSeconds(2));
+            startupTimeout: StartupFixtureBudget);
 
-        var first = CreateProcess().EnsureRunningAsync(
-            TestContext.Current.CancellationToken);
-        var second = CreateProcess().EnsureRunningAsync(
-            TestContext.Current.CancellationToken);
-        await Task.Delay(
-            TimeSpan.FromMilliseconds(100),
-            TestContext.Current.CancellationToken);
-        ready = true;
+        var first = Task.Run(
+            () => CreateProcess(TimeProvider.System).EnsureRunningAsync(cancellationToken),
+            cancellationToken);
+        Task? second = null;
+        try
+        {
+            await startEntered.Task.WaitAsync(StartupFixtureBudget, cancellationToken);
+            second = CreateProcess(waitClock).EnsureRunningAsync(cancellationToken);
+            await waitClock.WaitEntered.Task.WaitAsync(StartupFixtureBudget, cancellationToken);
+            allowSemaphoreWait.Set();
 
-        await Task.WhenAll(first, second);
+            // Keep the first launcher unready until the second has tried the held semaphore.
+            await waitClock.FirstWaitFinished.Task.WaitAsync(StartupFixtureBudget, cancellationToken);
+        }
+        finally
+        {
+            allowSemaphoreWait.Set();
+            publishReady.Set();
+            await (second is null ? first : Task.WhenAll(first, second));
+        }
 
         Assert.Equal(1, starts);
     }
@@ -1341,14 +1359,24 @@ public sealed class BrokerProcessTests
         public TaskCompletionSource WaitEntered { get; } =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
 
+        public TaskCompletionSource FirstWaitFinished { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
         public override long GetTimestamp()
         {
             // The first read starts the budget. The next is after the semaphore loop's
             // cancellation check and before its first wait on the held semaphore.
-            if (Interlocked.Increment(ref _timestampReads) == 2)
+            var read = Interlocked.Increment(ref _timestampReads);
+            if (read == 2)
             {
                 WaitEntered.SetResult();
                 allowWait.Wait(cancellationToken);
+            }
+            else if (read == 3)
+            {
+                // With the owner still holding the semaphore, the budget is checked again
+                // after the first wait expires.
+                FirstWaitFinished.SetResult();
             }
 
             // Give the wait its full startup budget regardless of test setup and scheduling.
