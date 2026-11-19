@@ -15,7 +15,12 @@ permissions:
 
 jobs:
   validate:
-    if: github.repository == 'MrAliev/local-ai-toolkit' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
+    # A history sync can match the push path filter. A release PR merge advances releases
+    # without rewriting it, and the jobs below require this validation to succeed.
+    if: >-
+      github.repository == 'MrAliev/local-ai-toolkit' &&
+      ((github.event_name == 'push' && !github.event.forced) ||
+       (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
