@@ -1,68 +1,39 @@
-# Архитектура · общая граница модельных вычислений
+# Архитектура LocalAI
 
 [English version](Architecture.md) · [Главная](Home.ru.md)
 
 [Контракты продукта и приёмка релиза](https://github.com/MrAliev/local-ai-toolkit/blob/main/README.ru.md#контракты-продукта-и-приёмка-релиза) связывают поведение компонентов с реализацией и тестами.
 
+Клиенты запускают CodeSearch и LocalLm через программу запуска. CodeSearch использует индекс текущего рабочего дерева. Если инструменту нужна модель, запрос поступает в общую очередь брокера.
+
 ```mermaid
----
-config:
-  theme: base
-  themeVariables:
-    primaryColor: "#CCE4F7"
-    primaryTextColor: "#1A1A1A"
-    primaryBorderColor: "#2D7FD3"
-    lineColor: "#0067C0"
-    secondaryColor: "#FAFAFA"
-    tertiaryColor: "#F3F3F3"
----
 flowchart TB
-  subgraph clients["Клиенты"]
-    agent["Codex / Claude Code"]
-    cli["Командная строка"]
-  end
-  agent --> launcher["Постоянный launcher"]
-  cli --> launcher
-  launcher --> search["CodeSearch"]
-  launcher --> local["LocalLm"]
-  search --> index["База репозитория + overlay worktree"]
-  search --> queue["Общая долговечная очередь"]
-  local --> queue
-  queue --> broker["Брокер: планирование и размещение"]
-  broker --> models["Настроенный модельный backend"]
+  clients["Codex, Claude Code или CLI"] --> launcher["Программа запуска"]
+  launcher --> tools["CodeSearch и LocalLm"]
+  tools --> queue["Общая очередь"]
+  queue --> broker["Брокер"]
+  broker --> models["Сервер моделей"]
 ```
 
-| Граница | Ответственность |
-| --- | --- |
-| Launcher | Постоянный путь запуска при обновлениях runtime |
-| CodeSearch | Поиск кода и навигация по индексированным символам |
-| LocalLm | Ограниченные задачи по файлам, журналам, изображениям и переводу |
-| Индекс | Базовое поколение и overlay состояния рабочего дерева |
-| Брокер | Общее планирование, доступ к backend и проверки размещения |
-| Вызывающий клиент | Решение о передаче результатов облачному сервису |
+## Что делает каждый компонент
+
+- **Программа запуска.** Постоянный путь к `localai-launcher.exe` при обновлении LocalAI.
+- **CodeSearch.** Поиск кода и навигация по индексированным символам.
+- **LocalLm.** Разбор файлов, журналов и изображений, а также перевод в пределах заданных ограничений.
+- **Индекс.** Базовая часть и слой изменений текущего рабочего дерева (`overlay`).
+- **Брокер.** Планирование заданий в общей очереди, вызов сервера моделей и проверка размещения модели в памяти.
+- **Вызывающий клиент.** Решение о передаче результатов облачному сервису.
+
+## Как работает поиск
+
+При поиске CodeSearch проверяет базовую часть индекса и слой изменений для текущего рабочего дерева. Затем он запрашивает у брокера вектор поискового запроса и возвращает подходящие фрагменты с путями и номерами строк.
 
 ```mermaid
----
-config:
-  theme: base
-  themeVariables:
-    primaryColor: "#CCE4F7"
-    primaryTextColor: "#1A1A1A"
-    primaryBorderColor: "#2D7FD3"
-    lineColor: "#0067C0"
-    secondaryColor: "#FAFAFA"
-    tertiaryColor: "#F3F3F3"
----
-sequenceDiagram
-  participant C as Клиент
-  participant S as CodeSearch
-  participant B as Брокер
-  C->>S: Поиск по репозиторию
-  S->>S: Проверка базы и overlay
-  S->>B: Embedding запроса
-  B-->>S: Вектор запроса
-  S-->>C: Фрагменты с рейтингом и координатами
+flowchart TB
+  query["Клиент отправляет запрос"] --> index["CodeSearch проверяет индекс"]
+  index --> embedding["Брокер возвращает вектор"]
+  embedding --> results["CodeSearch выдаёт результаты"]
 ```
 
-См. [полную архитектуру](../how-it-works.ru.md) и [карту ответственности](../architecture/responsibility-map.ru.md).
-Схемы объясняют границы, а не показывают текущую телеметрию.
+- [Полная архитектура](../how-it-works.ru.md)
+- [Карта ответственности](../architecture/responsibility-map.ru.md)

@@ -2,28 +2,19 @@
 
 [Русская версия](unsigned-release-candidate.ru.md)
 
-The **Build unsigned candidate** GitHub Actions workflow prepares a build for review.
-It does not provide Authenticode signing, create an installable release, sign a release
-manifest, or publish a GitHub release. An unsigned candidate is not an update source
-and must not be presented as a signed download. SignPath approval and a real signing
-certificate are still prerequisites for the future signing integration.
+This page explains artifacts from the retired **Build unsigned candidate** GitHub
+Actions workflow. For current builds, follow the
+[release pull request instructions](publication.md).
 
-## Build and inspect a candidate
+An archived unsigned candidate is evidence of a build for review. Install updates
+from GitHub Releases with a signed manifest.
 
-After this workflow has reached `main`, a maintainer can open **Actions → Build unsigned
-candidate → Run workflow**, choose `main`, and enter the intended version, for example
-`0.3.0-rc.1`. The equivalent command is:
+## Inspect a historical candidate
 
-```powershell
-gh workflow run build-unsigned-candidate.yml --repo MrAliev/local-ai-toolkit --ref main -f version=0.3.0-rc.1
-```
-
-Only a manual dispatch in `MrAliev/local-ai-toolkit` on `refs/heads/main` can run the job.
-The checkout uses the immutable `github.sha` selected at dispatch, rather than a version
-input or an arbitrary source-ref input. A later change to `main` does not change that
-run's source. The build script checks the repository, event, ref and checked-out SHA
-again before compiling. The version must have three numeric parts, each no greater
-than 65534, with an optional SemVer prerelease and no build metadata.
+The workflow accepted a manual dispatch on `refs/heads/main` in
+`MrAliev/local-ai-toolkit`. It checked the repository, event, ref and immutable
+`github.sha` selected at dispatch before compiling. The version had three numeric
+parts, each no greater than 65534, with an optional SemVer prerelease.
 
 All compilation runs on a GitHub-hosted `windows-2025` runner with the SDK from
 `global.json`. The workflow has only `contents: read`, disables checkout credential

@@ -22,6 +22,10 @@ automatically faster for every task.
 A subscription to any cloud agent is optional: the same tools answer from the command line,
 if you would rather work on your own.
 
+- [Install or update](https://github.com/MrAliev/local-ai-toolkit/wiki/Getting-started#install-or-update)
+- [Connect a repository and run your first search](https://github.com/MrAliev/local-ai-toolkit/wiki/Getting-started#connect-a-repository-and-run-your-first-search)
+- [Diagnose a queue or an error](https://github.com/MrAliev/local-ai-toolkit/wiki/Getting-started#diagnose-a-queue-or-an-error)
+
 ---
 
 ## Contents

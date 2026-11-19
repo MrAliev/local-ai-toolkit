@@ -4,65 +4,36 @@
 
 See the [product contracts and release acceptance matrix](https://github.com/MrAliev/local-ai-toolkit/blob/main/README.md#product-contracts-and-release-acceptance) for owning components, source references, and checks.
 
+Clients use a stable launcher to start CodeSearch and LocalLm. CodeSearch reads the index for the current worktree. When either tool needs a model, its request goes through the same broker and queue.
+
 ```mermaid
----
-config:
-  theme: base
-  themeVariables:
-    primaryColor: "#CCE4F7"
-    primaryTextColor: "#1A1A1A"
-    primaryBorderColor: "#2D7FD3"
-    lineColor: "#0067C0"
-    secondaryColor: "#FAFAFA"
-    tertiaryColor: "#F3F3F3"
----
 flowchart TB
-  subgraph clients["Clients"]
-    agent["Codex / Claude Code"]
-    cli["Command line"]
-  end
-  agent --> launcher["Stable launcher"]
-  cli --> launcher
-  launcher --> search["CodeSearch"]
-  launcher --> local["LocalLm"]
-  search --> index["Repository base + worktree overlay"]
-  search --> queue["Durable shared queue"]
-  local --> queue
-  queue --> broker["Broker: scheduling and residency"]
-  broker --> models["Configured model backend"]
+  clients["Codex, Claude Code or CLI"] --> launcher["Stable launcher"]
+  launcher --> tools["CodeSearch and LocalLm"]
+  tools --> queue["Shared queue"]
+  queue --> broker["Broker"]
+  broker --> models["Model backend"]
 ```
 
-| Boundary | Responsibility |
-| --- | --- |
-| Launcher | Stable executable path across installed runtime versions |
-| CodeSearch | Locate matching code and navigate indexed symbols |
-| LocalLm | Bounded tasks over files, logs, images and translation |
-| Index | Base generation plus overlay matching the worktree state |
-| Broker | Shared scheduling, backend access and residency checks |
-| Calling client | Decide what results it forwards to a cloud service |
+## What each component does
+
+- **Launcher.** Stable executable path across installed runtime versions.
+- **CodeSearch.** Locate matching code and navigate indexed symbols.
+- **LocalLm.** Bounded tasks over files, logs, images and translation.
+- **Index.** Base generation plus overlay matching the worktree state.
+- **Broker.** Shared scheduling, backend access and residency checks.
+- **Calling client.** Decide what results it forwards to a cloud service.
+
+## How a search works
+
+On each search, CodeSearch checks which index base and overlay match the worktree, requests a query vector from the broker, and returns ranked results with file paths and line ranges.
 
 ```mermaid
----
-config:
-  theme: base
-  themeVariables:
-    primaryColor: "#CCE4F7"
-    primaryTextColor: "#1A1A1A"
-    primaryBorderColor: "#2D7FD3"
-    lineColor: "#0067C0"
-    secondaryColor: "#FAFAFA"
-    tertiaryColor: "#F3F3F3"
----
-sequenceDiagram
-  participant C as Client
-  participant S as CodeSearch
-  participant B as Broker
-  C->>S: Search a repository
-  S->>S: Check matching base and overlay
-  S->>B: Embed the query
-  B-->>S: Query embedding
-  S-->>C: Ranked fragments and source locations
+flowchart TB
+  query["Client submits a query"] --> index["CodeSearch checks the index"]
+  index --> embedding["Broker provides the query vector"]
+  embedding --> results["CodeSearch returns ranked results"]
 ```
 
-See [the full architecture](../how-it-works.md) and [responsibility map](../architecture/responsibility-map.md).
-The drawings explain boundaries; they are not live telemetry.
+- [Full architecture](../how-it-works.md)
+- [Responsibility map](../architecture/responsibility-map.md)
