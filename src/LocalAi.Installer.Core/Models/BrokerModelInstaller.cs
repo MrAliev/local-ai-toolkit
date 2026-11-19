@@ -124,6 +124,8 @@ public sealed class BrokerModelInstallRequest
     public ModelInstallAction Action { get; }
 
     public IReadOnlyList<ModelRecommendationChoice> FallbackChoices { get; }
+
+    internal bool CheckInstalledOnly { get; init; }
 }
 
 public enum BrokerModelInstallOutcome
@@ -199,18 +201,23 @@ public sealed class BrokerModelInstallBatchResult
         IReadOnlyList<BrokerModelInstallResult> models,
         BrokerModelBatchStopReason stopReason,
         bool externalStateMayBeIndeterminate,
-        string code)
+        string code,
+        IReadOnlyList<string>? missingCachedModels = null)
     {
         Models = new ReadOnlyCollection<BrokerModelInstallResult>(models.ToArray());
         StopReason = stopReason;
         ExternalStateMayBeIndeterminate = externalStateMayBeIndeterminate;
         Code = code;
+        MissingCachedModels = missingCachedModels is null
+            ? []
+            : new ReadOnlyCollection<string>(missingCachedModels.ToArray());
     }
 
     public IReadOnlyList<BrokerModelInstallResult> Models { get; }
     public BrokerModelBatchStopReason StopReason { get; }
     public bool ExternalStateMayBeIndeterminate { get; }
     public string Code { get; }
+    public IReadOnlyList<string> MissingCachedModels { get; }
 }
 
 public sealed class BrokerModelInstaller : IDisposable
@@ -439,6 +446,14 @@ public sealed class BrokerModelInstaller : IDisposable
         }
 
         var installed = status.InstalledModels.ToHashSet(StringComparer.Ordinal);
+        var missingCachedModels = snapshot
+            .Where(request => request.CheckInstalledOnly && !installed.Contains(request.Action.Model))
+            .Select(request => request.Action.Model)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        snapshot = snapshot
+            .Where(request => !request.CheckInstalledOnly || installed.Contains(request.Action.Model))
+            .ToArray();
         var results = new List<BrokerModelInstallResult>(snapshot.Length);
 
         // Every model announced before the first one starts. The plan comes from the signed
@@ -456,7 +471,7 @@ public sealed class BrokerModelInstaller : IDisposable
             var pullCompleted = false;
             try
             {
-                if (!installed.Contains(action.Model))
+                if (!request.CheckInstalledOnly && !installed.Contains(action.Model))
                 {
                     // Reported before the work, not after: the wait is what needs explaining.
                     Report(action, ModelProvisioningPhase.Downloading, results.Count);
@@ -576,11 +591,12 @@ public sealed class BrokerModelInstaller : IDisposable
                     results,
                     failure.StopReason,
                     failure.Indeterminate,
-                    failure.Code);
+                    failure.Code,
+                    missingCachedModels);
             }
         }
 
-        return Batch(results, BrokerModelBatchStopReason.None, false, "none");
+        return Batch(results, BrokerModelBatchStopReason.None, false, "none", missingCachedModels);
 
         void Report(
             ModelInstallAction action, ModelProvisioningPhase phase, int completed,
@@ -1190,9 +1206,11 @@ public sealed class BrokerModelInstaller : IDisposable
                 request.Action.Model,
                 StringComparison.Ordinal) &&
             choice.ContextTokens == request.Action.ContextSize);
-        if (selected is null || !selected.IsEnabled ||
-            selected.OverBudgetBytes != 0 ||
-            selected.RequiredBytes > selected.AvailableDedicatedBytes)
+        if (selected is null || (request.CheckInstalledOnly
+                ? !selected.CanProbeOnUma
+                : !selected.IsEnabled ||
+                    selected.OverBudgetBytes != 0 ||
+                    selected.RequiredBytes > selected.AvailableDedicatedBytes))
         {
             throw new ArgumentException(
                 "The selected model is not an enabled recommendation choice.");
@@ -1369,8 +1387,9 @@ public sealed class BrokerModelInstaller : IDisposable
         IReadOnlyList<BrokerModelInstallResult> models,
         BrokerModelBatchStopReason stopReason,
         bool indeterminate,
-        string code) =>
-        new(models, stopReason, indeterminate, code);
+        string code,
+        IReadOnlyList<string>? missingCachedModels = null) =>
+        new(models, stopReason, indeterminate, code, missingCachedModels);
 
     private static CommandFailure Failure(
         BrokerModelBatchStopReason stopReason,

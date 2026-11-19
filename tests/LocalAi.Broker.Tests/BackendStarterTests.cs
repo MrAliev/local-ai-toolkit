@@ -31,6 +31,27 @@ public sealed class BackendStarterTests : IDisposable
         Assert.Contains(reports, line => line.Contains("started", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void A_new_local_backend_receives_the_current_Windows_user_iGPU_setting()
+    {
+        RecordPath(Recorded);
+        var setting = "0";
+        System.Diagnostics.ProcessStartInfo? started = null;
+        var starter = new BackendStarter(
+            new Uri("http://127.0.0.1:11434/"),
+            new OllamaLaunchRecordStore(_root),
+            _ => { },
+            isListening: _ => false,
+            startProcess: info => started = info,
+            readUserIntegratedGpuSetting: () => setting);
+
+        setting = "1";
+        starter.OnDiagnostic(Diagnostic(nameof(HttpRequestException)));
+
+        Assert.NotNull(started);
+        Assert.Equal("1", started.Environment[OllamaEnvironment.IntegratedGpu]);
+    }
+
     /// <summary>
     /// The whole reason the path is recorded rather than looked up. Nothing is started on a
     /// machine where no installation established what to start.

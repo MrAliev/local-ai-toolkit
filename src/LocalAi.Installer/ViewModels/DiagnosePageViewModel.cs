@@ -167,7 +167,7 @@ public sealed class DiagnosePageViewModel : ObservableObject
         var usableAdapters = diagnosis.Gpu.Adapters
             .Where(adapter => !adapter.IsSoftware)
             .ToArray();
-        HasUsableAdapter = usableAdapters.Any(adapter => adapter.DedicatedLocalBytes > 0);
+        HasUsableAdapter = usableAdapters.Any(adapter => adapter.DedicatedLocalBytes > 0 || adapter.IsUma);
         rows.Add(new EnvironmentCheck(
             InstallerCulture.Pick("Graphics adapters", "Видеоадаптеры"),
             HasUsableAdapter ? CheckStatus.Ok : CheckStatus.Warning,

@@ -41,6 +41,25 @@ public sealed class ModelProvisioningPlannerTests
     }
 
     [Fact]
+    public void Exact_uma_selection_checks_only_the_chosen_signed_context()
+    {
+        var gpu = new GpuSnapshot(
+            ObservationState.Available,
+            [new("uma", "Arc", 128 * 1024 * 1024, false) { IsUma = true, SharedSystemMemoryBytes = 16 * Gigabyte }],
+            null);
+        var catalog = new[] { Model("small:1b", 2048, Gigabyte), Model("small:1b", 8192, Gigabyte) };
+
+        var plan = ModelProvisioningPlanner.Create(
+            catalog, gpu, new(ModelProvisioningMode.Exact, "small:1b", 8192));
+
+        var request = Assert.Single(plan.Requests);
+        Assert.True(request.CheckInstalledOnly);
+        Assert.Equal(8192, request.Action.ContextSize);
+        Assert.Empty(plan.Excluded);
+        Assert.False(Assert.Single(request.FallbackChoices).IsEnabled);
+    }
+
+    [Fact]
     public void Every_request_carries_the_whole_choice_set_for_one_adapter()
     {
         var plan = ModelProvisioningPlanner.Create(

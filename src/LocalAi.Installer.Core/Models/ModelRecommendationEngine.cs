@@ -79,13 +79,8 @@ public sealed partial class ModelRecommendationEngine
         var eligible = gpu.Adapters
             .Where(adapter => adapter is not null &&
                 !adapter.IsSoftware &&
-                adapter.DedicatedLocalBytes > 0 &&
+                (adapter.DedicatedLocalBytes > 0 || adapter.IsUma) &&
                 !string.IsNullOrWhiteSpace(adapter.StableId))
-            .Select(adapter => new GpuAdapterSnapshot(
-                adapter.StableId,
-                adapter.Name,
-                adapter.DedicatedLocalBytes,
-                false))
             .ToArray();
         var duplicate = eligible
             .GroupBy(adapter => adapter.StableId, StringComparer.Ordinal)
@@ -124,7 +119,8 @@ public sealed partial class ModelRecommendationEngine
         }
 
         var defaultAdapter = eligible
-            .OrderByDescending(adapter => adapter.DedicatedLocalBytes)
+            .OrderBy(adapter => adapter.IsUma)
+            .ThenByDescending(adapter => adapter.DedicatedLocalBytes)
             .ThenBy(adapter => adapter.StableId, StringComparer.Ordinal)
             .FirstOrDefault();
         if (defaultAdapter is not null)
@@ -134,8 +130,9 @@ public sealed partial class ModelRecommendationEngine
                 defaultAdapter,
                 // The name, not the StableId: this sentence reaches the models page, and a
                 // PCI path is not an answer to "which card is this weighed against".
-                FormattableString.Invariant(
-                    $"Using {GpuAdapterDisplay.DescribeInEnglish(defaultAdapter)}, the adapter with the most dedicated video memory."));
+                defaultAdapter.IsUma
+                    ? $"Using {GpuAdapterDisplay.DescribeInEnglish(defaultAdapter)} for trial loads through the broker."
+                    : $"Using {GpuAdapterDisplay.DescribeInEnglish(defaultAdapter)}, the adapter with the most dedicated video memory.");
         }
 
         return new AdapterSelection(
@@ -200,6 +197,12 @@ public sealed partial class ModelRecommendationEngine
             explanation = "Enabled: estimated to fit selected-adapter dedicated VRAM; broker preflight is required for proof.";
         }
 
+        var canProbeOnUma = adapter?.IsUma == true && invalidReason is null && !overflow;
+        if (canProbeOnUma)
+        {
+            explanation = "UMA: the broker must check residency using an already downloaded model.";
+        }
+
         return new ModelRecommendationChoice(
             model.Name ?? string.Empty,
             model.ContextTokens,
@@ -212,7 +215,10 @@ public sealed partial class ModelRecommendationEngine
             enabled ? available - required : 0,
             !overflow && required > available ? required - available : 0,
             enabled,
-            explanation);
+            explanation)
+        {
+            CanProbeOnUma = canProbeOnUma,
+        };
     }
 
     private static string? ValidateModel(

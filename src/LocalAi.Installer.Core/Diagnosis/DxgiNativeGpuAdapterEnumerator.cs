@@ -6,7 +6,10 @@ public sealed class DxgiNativeGpuAdapterEnumerator : INativeGpuAdapterEnumerator
 {
     private const uint DxgiAdapterFlagSoftware = 2;
     private const int DxgiErrorNotFound = unchecked((int)0x887A0002);
+    private const uint D3dFeatureLevel11 = 0xB000;
+    private const uint D3d12FeatureArchitecture1 = 16;
     private static readonly Guid IdxgiFactory1 = new("770AAE78-F26F-4DBA-A829-253C83D1B387");
+    private static readonly Guid Id3d12Device = new("189819F1-1DB6-4B57-BE54-1821339B85F7");
 
     public NativeGpuEnumeration Enumerate()
     {
@@ -60,11 +63,16 @@ public sealed class DxgiNativeGpuAdapterEnumerator : INativeGpuAdapterEnumerator
             {
                 var getDescription = GetVTableDelegate<GetDesc1Delegate>(adapter, 10);
                 Marshal.ThrowExceptionForHR(getDescription(adapter, out var description));
+                var isSoftware = (description.Flags & DxgiAdapterFlagSoftware) != 0;
                 adapters.Add(new NativeGpuAdapterDescriptor(
                     $"LUID:{description.AdapterLuid.HighPart:X8}{description.AdapterLuid.LowPart:X8}",
                     description.Description.TrimEnd('\0'),
                     description.DedicatedVideoMemory,
-                    (description.Flags & DxgiAdapterFlagSoftware) != 0));
+                    isSoftware)
+                {
+                    SharedSystemMemoryBytes = description.SharedSystemMemory,
+                    IsUma = !isSoftware && IsUnifiedMemoryAdapter(adapter),
+                });
             }
             finally
             {
@@ -76,6 +84,44 @@ public sealed class DxgiNativeGpuAdapterEnumerator : INativeGpuAdapterEnumerator
             ObservationState.Available,
             adapters,
             null);
+    }
+
+    private static bool IsUnifiedMemoryAdapter(IntPtr adapter)
+    {
+        IntPtr device = IntPtr.Zero;
+        try
+        {
+            var deviceId = Id3d12Device;
+            if (D3D12CreateDevice(adapter, D3dFeatureLevel11, ref deviceId, out device) < 0 || device == IntPtr.Zero)
+            {
+                return false;
+            }
+
+            // The architecture feature describes one physical node. For a linked adapter,
+            // node zero cannot establish the architecture of the whole adapter.
+            var getNodeCount = GetVTableDelegate<GetNodeCountDelegate>(device, 7);
+            if (getNodeCount(device) != 1)
+            {
+                return false;
+            }
+
+            var checkFeature = GetVTableDelegate<CheckFeatureSupportDelegate>(device, 13);
+            var architecture = new D3d12Architecture1 { NodeIndex = 0 };
+            return checkFeature(device, D3d12FeatureArchitecture1, ref architecture,
+                (uint)Marshal.SizeOf<D3d12Architecture1>()) >= 0 && architecture.Uma != 0;
+        }
+        catch (Exception exception) when (exception is DllNotFoundException or EntryPointNotFoundException)
+        {
+            // DXGI's dedicated-memory report remains useful without the D3D12 runtime.
+            return false;
+        }
+        finally
+        {
+            if (device != IntPtr.Zero)
+            {
+                Marshal.Release(device);
+            }
+        }
     }
 
     private static T GetVTableDelegate<T>(IntPtr instance, int methodIndex)
@@ -91,6 +137,14 @@ public sealed class DxgiNativeGpuAdapterEnumerator : INativeGpuAdapterEnumerator
         ref Guid riid,
         out IntPtr factory);
 
+    [DllImport("d3d12.dll", ExactSpelling = true)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    private static extern int D3D12CreateDevice(
+        IntPtr adapter,
+        uint minimumFeatureLevel,
+        ref Guid riid,
+        out IntPtr device);
+
     [UnmanagedFunctionPointer(CallingConvention.StdCall)]
     private delegate int EnumAdapters1Delegate(
         IntPtr factory,
@@ -102,6 +156,26 @@ public sealed class DxgiNativeGpuAdapterEnumerator : INativeGpuAdapterEnumerator
         IntPtr adapter,
         out DxgiAdapterDescription1 description);
 
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+    private delegate uint GetNodeCountDelegate(IntPtr device);
+
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+    private delegate int CheckFeatureSupportDelegate(
+        IntPtr device,
+        uint feature,
+        ref D3d12Architecture1 featureData,
+        uint featureDataSize);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct D3d12Architecture1
+    {
+        public uint NodeIndex;
+        public int TileBasedRenderer;
+        public int Uma;
+        public int CacheCoherentUma;
+        public int IsolatedMmu;
+    }
+
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     private struct DxgiAdapterDescription1
     {
@@ -111,9 +185,9 @@ public sealed class DxgiNativeGpuAdapterEnumerator : INativeGpuAdapterEnumerator
         public uint DeviceId;
         public uint SubSysId;
         public uint Revision;
-        public ulong DedicatedVideoMemory;
-        public ulong DedicatedSystemMemory;
-        public ulong SharedSystemMemory;
+        public nuint DedicatedVideoMemory;
+        public nuint DedicatedSystemMemory;
+        public nuint SharedSystemMemory;
         public Luid AdapterLuid;
         public uint Flags;
     }

@@ -180,6 +180,8 @@ public sealed class ModelsPageViewModel : ObservableObject
             "Размеры моделей ещё не проверялись.")
         // Setup weighs the signed manifest's models itself, so without sizes it still installs
         // only what fits.
+        : recommendation.RequiresUmaPreflight
+            ? UmaSetupSummary
         : !recommendation.SizesKnown
             ? InstallerCulture.Pick(
                 "Model sizes could not be retrieved, so this page cannot say which models fit. " +
@@ -213,7 +215,7 @@ public sealed class ModelsPageViewModel : ObservableObject
             OnPropertyChanged(nameof(ReviewText));
             if (!modeChosen)
             {
-                ApplyMode(IsOffline ? ModelSelectionMode.Skip : unchosen);
+                ApplyMode(HasNetworkNote ? ModelSelectionMode.Skip : unchosen);
             }
         }
     }
@@ -226,7 +228,7 @@ public sealed class ModelsPageViewModel : ObservableObject
         : adapters == ObservationState.Unavailable ? ModelsOffline.NoNetworkConnection
         : ModelsOffline.RegistryDoesNotAnswer;
 
-    public bool HasNetworkNote => IsOffline;
+    public bool HasNetworkNote => IsOffline && !recommendation.RequiresUmaPreflight;
 
     public string NetworkNote => offline switch
     {
@@ -260,6 +262,7 @@ public sealed class ModelsPageViewModel : ObservableObject
         RebuildAutomaticSelection();
         OnPropertyChanged(nameof(RuleSummary));
         OnPropertyChanged(nameof(AutomaticSummary));
+        OnPropertyChanged(nameof(HasNetworkNote));
         OnPropertyChanged(nameof(CanContinue));
         OnPropertyChanged(nameof(ReviewText));
     }
@@ -278,6 +281,12 @@ public sealed class ModelsPageViewModel : ObservableObject
     private void RebuildAutomaticSelection()
     {
         AutomaticSelection.Clear();
+        if (recommendation.RequiresUmaPreflight)
+        {
+            OnPropertyChanged(nameof(AutomaticSelection));
+            return;
+        }
+
         foreach (var fit in recommendation.Fitting
                      .GroupBy(fit => fit.Tag, StringComparer.Ordinal)
                      .Select(group => group.OrderByDescending(fit => fit.ContextTokens).First()))
@@ -377,6 +386,13 @@ public sealed class ModelsPageViewModel : ObservableObject
         var rule = residencyRequiresVideoMemory
             ? InstallerCulture.Pick("Whole model in video memory", "Вся модель в видеопамяти")
             : InstallerCulture.Pick("Relaxed video memory rule", "Смягчённое правило видеопамяти");
+        if (recommendation.RequiresUmaPreflight)
+        {
+            return rule + InstallerCulture.Pick(
+                " — residency will be checked by the broker",
+                " — размещение модели в памяти проверит брокер");
+        }
+
         if (!recommendation.SizesKnown)
         {
             return string.Format(
@@ -413,7 +429,7 @@ public sealed class ModelsPageViewModel : ObservableObject
                 unsized);
     }
 
-    public string ReviewText => Mode == ModelSelectionMode.Skip || !IsOffline
+    public string ReviewText => Mode == ModelSelectionMode.Skip || !IsOffline || recommendation.RequiresUmaPreflight
         ? ChoiceReviewText
         : ChoiceReviewText + " " + (offline == ModelsOffline.NoNetworkConnection
             ? InstallerCulture.Pick(
@@ -436,7 +452,10 @@ public sealed class ModelsPageViewModel : ObservableObject
                 "Models: {0} with a {1} token context",
                 "Модели: {0}, контекст {1} токенов"),
             selectedModel?.Tag,
-            selectedContext),
+            selectedContext) + (recommendation.RequiresUmaPreflight
+                ? InstallerCulture.Pick(" — only if already downloaded", " — только если модель уже скачана")
+                : string.Empty),
+        _ when recommendation.RequiresUmaPreflight => UmaSetupSummary,
         _ => AutomaticSelection.Count > 0
             ? InstallerCulture.Pick("Models: ", "Модели: ") +
                 string.Join(", ", AutomaticSelection)
@@ -445,6 +464,12 @@ public sealed class ModelsPageViewModel : ObservableObject
                 "Модели: ни одна не помещается в видеопамять этого компьютера, поэтому ни одна " +
                 "не будет установлена"),
     };
+
+    private static string UmaSetupSummary => InstallerCulture.Pick(
+        "The broker will check models from this release that are already downloaded in Ollama, " +
+        "using the smallest listed context for each model. No models will be downloaded.",
+        "Брокер проверит модели из этого релиза, которые уже скачаны в Ollama. Для каждой " +
+        "модели он возьмёт самый короткий контекст из списка. Новые модели скачиваться не будут.");
 
     private void RebuildContexts()
     {

@@ -98,6 +98,18 @@ public static class PageLabels
     // --- Models and memory --------------------------------------------------------------
     public static string VideoMemory => InstallerCulture.Pick("Video memory", "Видеопамять");
 
+    public static string OllamaIntegratedGpu => InstallerCulture.Pick(
+        "Allow Ollama to use integrated graphics",
+        "Разрешить Ollama использовать встроенную графику");
+
+    public static string OllamaIntegratedGpuHint => InstallerCulture.Pick(
+        "Applies to this Windows account. If Ollama is already running, quit and reopen it after applying " +
+        "this setting, then check the models again. " +
+        "Intel graphics may also require Vulkan (OLLAMA_VULKAN=1).",
+        "Настройка действует для текущей учётной записи Windows. Если Ollama уже запущен, после применения " +
+        "настройки закройте и снова запустите Ollama, затем повторите проверку моделей. Для графики Intel может понадобиться " +
+        "Vulkan (OLLAMA_VULKAN=1).");
+
     public static string RequireFullVram => InstallerCulture.Pick(
         "Require the whole model in video memory (recommended)",
         "Требовать всю модель в видеопамяти (рекомендуется)");

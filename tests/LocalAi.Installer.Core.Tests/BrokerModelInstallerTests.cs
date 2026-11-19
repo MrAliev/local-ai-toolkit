@@ -80,6 +80,41 @@ public sealed class BrokerModelInstallerTests : IDisposable
     }
 
     [Theory]
+    [InlineData(100, true, BrokerModelInstallOutcome.Accepted)]
+    [InlineData(40, false, BrokerModelInstallOutcome.RejectedResidency)]
+    [InlineData(40, true, BrokerModelInstallOutcome.RejectedResidency)]
+    [InlineData(0, false, BrokerModelInstallOutcome.RejectedResidency)]
+    public async Task Uma_checks_only_cached_signed_models_and_keeps_full_residency(
+        long residentBytes, bool fullyResident, BrokerModelInstallOutcome expected)
+    {
+        var runner = new RecordingProcessRunner(
+            Success(Status(["model-a", "outside-the-catalog"], [], "signed-7")),
+            Success(Preflight("model-a", 2048, 100, residentBytes, fullyResident)));
+        var trust = Trust();
+        using var installer = new BrokerModelInstaller(
+            runner, Launcher(), layout, trust, TimeSpan.FromMinutes(5),
+            readResidencyPolicy: () => ModelResidencyPolicy.RequireFullVram);
+        var gpu = new LocalAi.Installer.Core.Diagnosis.GpuSnapshot(
+            LocalAi.Installer.Core.Diagnosis.ObservationState.Available,
+            [new("uma", "Arc", 0, false) { IsUma = true }],
+            null);
+        var plan = ModelProvisioningPlanner.Create(trust.Models, gpu, new(ModelProvisioningMode.Automatic));
+
+        var result = await installer.InstallAsync(plan.Requests, TestContext.Current.CancellationToken);
+
+        var model = Assert.Single(result.Models);
+        Assert.Equal(expected, model.Outcome);
+        Assert.False(model.PullAttempted);
+        Assert.Equal(["model-b", "model-c", "model-d", "qwen3.5:9b"], result.MissingCachedModels);
+        Assert.Equal(
+            [
+                "run localai model status",
+                "run localai model preflight --model model-a --context 2048 --catalog-version signed-7",
+            ],
+            runner.Calls.Select(call => string.Join(' ', call.Arguments)));
+    }
+
+    [Theory]
     [InlineData(ModelResidencyPolicy.RequireFullVram, 100, false)]
     [InlineData(ModelResidencyPolicy.AllowPartialOffload, 100, false)]
     [InlineData(ModelResidencyPolicy.AllowPartialOffload, 40, true)]

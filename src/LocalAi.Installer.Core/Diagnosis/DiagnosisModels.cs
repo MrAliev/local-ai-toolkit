@@ -92,7 +92,14 @@ public sealed record GpuAdapterSnapshot(
     string StableId,
     string Name,
     ulong DedicatedLocalBytes,
-    bool IsSoftware);
+    bool IsSoftware)
+{
+    /// <summary>True when the graphics driver confirms a unified memory architecture.</summary>
+    public bool IsUma { get; init; }
+
+    /// <summary>DXGI's shared-memory ceiling, independent of the adapter's current budget.</summary>
+    public ulong SharedSystemMemoryBytes { get; init; }
+}
 
 public sealed record GpuSnapshot
 {

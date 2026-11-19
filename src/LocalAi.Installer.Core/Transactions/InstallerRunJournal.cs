@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using LocalAi.Installer.Core.Releases;
 
 namespace LocalAi.Installer.Core.Transactions;
 
@@ -34,6 +35,9 @@ public enum InstallerRunEffectKind
 
     /// <summary>Loading an explicitly selected local model through the target broker without downloading.</summary>
     ModelPreflight,
+
+    /// <summary>Allowing Ollama to use integrated graphics for this Windows account.</summary>
+    OllamaIntegratedGpu,
 }
 
 public enum InstallerRunStepStatus
@@ -109,11 +113,14 @@ public sealed record InstallerRunFileUndo(
 /// <summary>A value that lives outside any file, as it was before the run and as the run wrote it.</summary>
 public sealed record InstallerRunValueUndo(string Before, string After);
 
+public sealed record InstallerRunOllamaIntegratedGpuUndo(OllamaIntegratedGpuUserValue? Before);
+
 public sealed record InstallerRunUndoData(
     string? ActivatedVersion = null,
     string? PriorVersion = null,
     IReadOnlyList<InstallerRunFileUndo>? Files = null,
-    InstallerRunValueUndo? UninstallEntryVersion = null);
+    InstallerRunValueUndo? UninstallEntryVersion = null,
+    InstallerRunOllamaIntegratedGpuUndo? OllamaIntegratedGpu = null);
 
 public sealed record InstallerRunStep(
     string StepId,

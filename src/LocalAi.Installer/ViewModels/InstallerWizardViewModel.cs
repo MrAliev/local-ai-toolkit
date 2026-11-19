@@ -210,6 +210,8 @@ public sealed class InstallerWizardViewModel : ObservableObject
     /// not its name: the row is worded again when the language changes.
     /// </summary>
     private (ModelResidencyPolicy Policy, string Reason)? residencyNotStored;
+    private bool ollamaIntegratedGpuEnabled;
+    private string? ollamaIntegratedGpuError;
 
     private RunMark pathMark = RunMark.None;
 
@@ -326,6 +328,10 @@ public sealed class InstallerWizardViewModel : ObservableObject
             if (args.PropertyName == nameof(ResidencyPageViewModel.Policy))
             {
                 OnResidencyChanged();
+            }
+            else if (args.PropertyName == nameof(ResidencyPageViewModel.EnableOllamaIntegratedGpu))
+            {
+                RefreshAll();
             }
         };
 
@@ -1112,6 +1118,8 @@ public sealed class InstallerWizardViewModel : ObservableObject
             : null;
         reportSaveFailure = null;
         residencyNotStored = null;
+        ollamaIntegratedGpuEnabled = false;
+        ollamaIntegratedGpuError = null;
         packageOutcome = null;
         packageInstalled = false;
         modelStepFailure = null;
@@ -1182,6 +1190,8 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 .ToArray();
             SetProgress(0, InstallerCulture.Pick("Checking this computer again…", "Ещё раз проверяю этот компьютер…"));
             await RefreshEnvironmentDiagnosticsAsync(token);
+            token.ThrowIfCancellationRequested();
+            ApplyOllamaIntegratedGpuSetting(report);
             requested = selected.Length;
             requestedPrerequisites.AddRange(selected);
             AppendLog(report, selected.Length == 0
@@ -1867,6 +1877,43 @@ public sealed class InstallerWizardViewModel : ObservableObject
         }
     }
 
+    private void ApplyOllamaIntegratedGpuSetting(StringBuilder report)
+    {
+        if (!residency.EnableOllamaIntegratedGpu)
+        {
+            return;
+        }
+
+        string? step = null;
+        try
+        {
+            var setting = new OllamaIntegratedGpuSetting();
+            var before = setting.Read();
+            if (before != OllamaIntegratedGpuSetting.Enabled)
+            {
+                step = JournalBegin(InstallerRunEffectKind.OllamaIntegratedGpu, "Ollama integrated graphics");
+                setting.Write(OllamaIntegratedGpuSetting.Enabled);
+                JournalComplete(
+                    step,
+                    $"Set {OllamaEnvironment.IntegratedGpu}=1 for the current Windows account.",
+                    isReversible: true,
+                    new InstallerRunUndoData(OllamaIntegratedGpu: new(before)));
+            }
+
+            ollamaIntegratedGpuEnabled = true;
+            AppendLog(report, $"Ollama integrated graphics: {OllamaEnvironment.IntegratedGpu}=1 for the current " +
+                "Windows account. If Ollama was running, quit and reopen it before checking the models again.");
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or
+            System.Security.SecurityException or InvalidOperationException)
+        {
+            choiceNotApplied = true;
+            ollamaIntegratedGpuError = exception.Message;
+            JournalFail(step, exception.Message);
+            AppendLog(report, $"Ollama integrated graphics: user setting could not be saved ({exception.Message}).");
+        }
+    }
+
     private void ApplyResidencyPolicy(StringBuilder report)
     {
         string? residencyStep = null;
@@ -2194,7 +2241,8 @@ public sealed class InstallerWizardViewModel : ObservableObject
             (ReviewSection.Release, ReviewGroup.SplitLines(package.ReviewText, LauncherBackupsReviewLine())),
             (ReviewSection.Components, ReviewGroup.SplitLines(dependencies.ReviewText)),
             (ReviewSection.Models, ReviewGroup.SplitLines(
-                models.ReviewText, UnofferedModelSetupNote(), residency.ReviewText + StoredResidencyNote())),
+                models.ReviewText, UnofferedModelSetupNote(), residency.ReviewText + StoredResidencyNote(),
+                residency.EnableOllamaIntegratedGpu ? PageLabels.OllamaIntegratedGpu : string.Empty)),
             (ReviewSection.Clients, ReviewGroup.SplitLines(agents.ReviewText, agents.GateReviewText,
                 agents.WorktreeReviewText, LauncherPathReviewLine())),
             (ReviewSection.Additional, ReviewGroup.SplitLines(UpdateCheckReviewLine())),
@@ -2463,6 +2511,18 @@ public sealed class InstallerWizardViewModel : ObservableObject
             finish.Results.Add(RunResults.ResidencyNotStored(notStored.Policy, notStored.Reason));
         }
 
+        if (ollamaIntegratedGpuError is { } settingError)
+        {
+            finish.Results.Add(new RunResultRow(RunMark.Failed, PageLabels.OllamaIntegratedGpu,
+                InstallerCulture.Pick("Could not save the Windows user setting.", "Не удалось сохранить настройку Windows.")
+                + " " + settingError));
+        }
+        else if (ollamaIntegratedGpuEnabled && !finish.HasRollbackReport)
+        {
+            finish.Results.Add(new RunResultRow(RunMark.Done, PageLabels.OllamaIntegratedGpu,
+                PageLabels.OllamaIntegratedGpuHint));
+        }
+
         if (clientOutcomes.Count == 0)
         {
             finish.Results.Add(RunResults.Clients(configuredAgents));
@@ -2533,12 +2593,13 @@ public sealed class InstallerWizardViewModel : ObservableObject
 
         diagnose.Load(diagnosis, registryAnswered);
         residency.HasUsableAdapter = diagnose.HasUsableAdapter;
-        // The card the rule is about, named the way the machine reports it. The one the
-        // recommendation weighs against is the one with the most dedicated video memory, so
-        // that is the one the group names.
+        // Match the recommendation engine's preference for dedicated adapters, with UMA
+        // as the fallback when no dedicated adapter can supply an estimate.
         residency.WeighedAdapter = diagnosis.Gpu.Adapters
-            .Where(adapter => !adapter.IsSoftware)
-            .OrderByDescending(adapter => adapter.DedicatedLocalBytes)
+            .Where(adapter => !adapter.IsSoftware && (adapter.DedicatedLocalBytes > 0 || adapter.IsUma))
+            .OrderBy(adapter => adapter.IsUma)
+            .ThenByDescending(adapter => adapter.DedicatedLocalBytes)
+            .ThenBy(adapter => adapter.StableId, StringComparer.Ordinal)
             .FirstOrDefault();
         agents.ApplyDetection(diagnosis.Agents);
         models.Offline = ModelsPageViewModel.OfflineFor(diagnosis.Network.State, registryAnswered);
@@ -2607,7 +2668,8 @@ public sealed class InstallerWizardViewModel : ObservableObject
         }
 
         lastRecommendation = registry;
-        if (!registry.SizesKnown &&
+        if (!registry.RequiresUmaPreflight &&
+            !registry.SizesKnown &&
             package.Resolved is { } release &&
             environmentDiagnosis is { } diagnosis)
         {
@@ -3601,11 +3663,8 @@ public sealed class InstallerWizardViewModel : ObservableObject
                 : string.Join(" ", models.Excluded);
             AppendLog(
                 report,
-                "Local models: none were installed. " + reasons +
-                " Nothing else in this installation is affected, but local model work — " +
-                "CodeSearch indexing included — cannot run until at least one model is " +
-                "present. Ask the client to run the 'local_models_sync' tool, or install " +
-                "one from a release whose manifest carries the model list.");
+                "Local models: none were set up. " + reasons +
+                " The runtime installation is unaffected.");
             hasRunError = true;
             return;
         }
@@ -3616,6 +3675,11 @@ public sealed class InstallerWizardViewModel : ObservableObject
         foreach (var excluded in models.Excluded)
         {
             AppendLog(report, excluded);
+        }
+
+        if (batch.Models.Count == 0 && batch.MissingCachedModels.Count != 0)
+        {
+            AppendLog(report, "No downloaded models from this release were available for UMA preflight.");
         }
 
         foreach (var model in batch.Models)

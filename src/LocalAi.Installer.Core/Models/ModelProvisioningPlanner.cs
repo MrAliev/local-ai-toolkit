@@ -116,11 +116,12 @@ public static class ModelProvisioningPlanner
         // adapter budget across them and uses the rest to suggest a smaller context when the
         // selected one is refused.
         var choices = recommendation.Choices;
+        var probeOnUma = recommendation.SelectedAdapter?.IsUma == true;
         var excluded = new List<string>();
         List<ModelRecommendationChoice> selected;
         if (selection.Mode == ModelProvisioningMode.Exact)
         {
-            selected = ExactChoice(choices, selection, out var exclusion);
+            selected = ExactChoice(choices, selection, probeOnUma, out var exclusion);
             if (exclusion is not null)
             {
                 excluded.Add(exclusion);
@@ -128,8 +129,8 @@ public static class ModelProvisioningPlanner
         }
         else
         {
-            selected = AutomaticChoices(choices);
-            excluded.AddRange(AutomaticExclusions(choices));
+            selected = AutomaticChoices(choices, probeOnUma);
+            excluded.AddRange(AutomaticExclusions(choices, probeOnUma));
         }
 
         var requests = new List<BrokerModelInstallRequest>(selected.Count);
@@ -145,35 +146,43 @@ public static class ModelProvisioningPlanner
                     choice.ContextTokens,
                     Selected: true,
                     ConsentGranted: true),
-                choices));
+                probeOnUma ? [choice] : choices)
+            {
+                CheckInstalledOnly = probeOnUma,
+            });
         }
 
         return new(requests, excluded);
     }
 
     private static List<ModelRecommendationChoice> AutomaticChoices(
-        IReadOnlyList<ModelRecommendationChoice> choices) =>
+        IReadOnlyList<ModelRecommendationChoice> choices, bool probeOnUma) =>
         [.. choices
-            .Where(choice => choice.IsEnabled)
+            .Where(choice => IsEligible(choice, probeOnUma))
             .GroupBy(choice => choice.Name, StringComparer.Ordinal)
-            // The largest context the adapter can hold, so a model is not installed in a
-            // shape the machine could have bettered for free.
-            .Select(group => group.OrderByDescending(choice => choice.ContextTokens).First())
+            // Dedicated memory supports an estimate for the largest context. UMA starts with
+            // the smallest signed context to give each cached model its best chance.
+            .Select(group => probeOnUma
+                ? group.MinBy(choice => choice.ContextTokens)!
+                : group.MaxBy(choice => choice.ContextTokens)!)
             .OrderBy(choice => choice.Name, StringComparer.Ordinal)];
 
     private static IEnumerable<string> AutomaticExclusions(
-        IReadOnlyList<ModelRecommendationChoice> choices) =>
+        IReadOnlyList<ModelRecommendationChoice> choices, bool probeOnUma) =>
         choices
             .GroupBy(choice => choice.Name, StringComparer.Ordinal)
-            .Where(group => group.All(choice => !choice.IsEnabled))
+            .Where(group => group.All(choice => !IsEligible(choice, probeOnUma)))
             .OrderBy(group => group.Key, StringComparer.Ordinal)
-            .Select(group =>
+            .Select(group => probeOnUma
+                ? $"{group.Key}: the release has no valid model configuration to check."
+                :
                 $"{group.Key}: does not fit the adapter at any context size, so it was not " +
                 "downloaded.");
 
     private static List<ModelRecommendationChoice> ExactChoice(
         IReadOnlyList<ModelRecommendationChoice> choices,
         ModelProvisioningSelection selection,
+        bool probeOnUma,
         out string? exclusion)
     {
         var match = choices.SingleOrDefault(choice =>
@@ -187,7 +196,7 @@ public static class ModelProvisioningPlanner
             return [];
         }
 
-        if (!match.IsEnabled)
+        if (!IsEligible(match, probeOnUma))
         {
             exclusion = $"{match.Name} at {match.ContextTokens} tokens: {match.Explanation}";
             return [];
@@ -196,4 +205,7 @@ public static class ModelProvisioningPlanner
         exclusion = null;
         return [match];
     }
+
+    private static bool IsEligible(ModelRecommendationChoice choice, bool probeOnUma) =>
+        probeOnUma ? choice.CanProbeOnUma : choice.IsEnabled;
 }

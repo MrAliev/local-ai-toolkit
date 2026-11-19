@@ -2,6 +2,7 @@ using System.Runtime.Versioning;
 using LocalAi.Contracts.Activation;
 using LocalAi.Installer.Core.Abstractions;
 using LocalAi.Installer.Core.Activation;
+using LocalAi.Installer.Core.Releases;
 using LocalAi.Installer.Core.Removal;
 
 namespace LocalAi.Installer.Core.Transactions;
@@ -46,7 +47,8 @@ public sealed class InstallerRunRollback(
     IProcessRunner processRunner,
     InstallationLayout layout,
     TimeSpan activationTimeout,
-    string? uninstallRegistrySubKey = null)
+    string? uninstallRegistrySubKey = null,
+    OllamaIntegratedGpuSetting? integratedGpuSetting = null)
 {
     private readonly IProcessRunner processRunner =
         processRunner ?? throw new ArgumentNullException(nameof(processRunner));
@@ -126,6 +128,7 @@ public sealed class InstallerRunRollback(
                 InstallerRunEffectKind.ResidencyPolicy or
                     InstallerRunEffectKind.OllamaLaunchRecord or
                     InstallerRunEffectKind.AgentConfiguration => UndoFiles(step),
+                InstallerRunEffectKind.OllamaIntegratedGpu => UndoOllamaIntegratedGpu(step),
                 _ => (
                     InstallerRollbackStepOutcome.Failed,
                     "The journal marks this step reversible but no undo procedure exists " +
@@ -136,10 +139,29 @@ public sealed class InstallerRunRollback(
             exception is not OperationCanceledException &&
             (exception is IOException or UnauthorizedAccessException or
                 NotSupportedException or ArgumentException or FormatException or
-                InvalidOperationException))
+                 InvalidOperationException or System.Security.SecurityException))
         {
             return (InstallerRollbackStepOutcome.Failed, exception.Message);
         }
+    }
+
+    private (InstallerRollbackStepOutcome, string) UndoOllamaIntegratedGpu(InstallerRunStep step)
+    {
+        if (step.Undo?.OllamaIntegratedGpu is not { } undo)
+        {
+            return (InstallerRollbackStepOutcome.Failed, "The previous iGPU setting was not recorded.");
+        }
+
+        var setting = integratedGpuSetting ?? new OllamaIntegratedGpuSetting();
+        if (setting.Read() != OllamaIntegratedGpuSetting.Enabled)
+        {
+            return (InstallerRollbackStepOutcome.Skipped,
+                "The current user setting has changed since this run.");
+        }
+
+        setting.Write(undo.Before);
+        return (InstallerRollbackStepOutcome.Undone,
+            "Restored the previous user iGPU setting. Restart Ollama if it is running.");
     }
 
     /// <summary>

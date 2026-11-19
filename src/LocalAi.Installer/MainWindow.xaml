@@ -540,6 +540,17 @@
                                        Style="{StaticResource WarningText}" TextWrapping="Wrap" />
                         </Border>
 
+                        <CheckBox IsChecked="{Binding Residency.EnableOllamaIntegratedGpu, Mode=TwoWay}"
+                                  Margin="0,12,0,0"
+                                  AutomationProperties.Name="{vm:Label OllamaIntegratedGpu}"
+                                  AutomationProperties.HelpText="{vm:Label OllamaIntegratedGpuHint}">
+                            <StackPanel>
+                                <TextBlock Text="{vm:Label OllamaIntegratedGpu}" TextWrapping="Wrap" />
+                                <TextBlock Text="{vm:Label OllamaIntegratedGpuHint}" Style="{StaticResource Muted}"
+                                           FontSize="11" TextWrapping="Wrap" Margin="0,2,0,0" />
+                            </StackPanel>
+                        </CheckBox>
+
                         <TextBlock x:Name="LocalModelsLabel" Text="{vm:Label LocalModels}" FontWeight="SemiBold" Margin="0,16,0,6" />
                         <!-- The anchor: it restates the rule inside the group the rule governs,
                              so the dependency stays legible once the radios have scrolled away,
