@@ -52,6 +52,8 @@ def check(root):
             reason = None
             if not destination.is_relative_to(root) or not destination.exists():
                 reason = "missing-file"
+            elif url.fragment and destination.suffix.lower() in (".md", ".markdown"):
+                reason = "fragment-in-raw-markdown"
             elif url.fragment and destination in pages and unquote(url.fragment) not in pages[destination].ids:
                 reason = "missing-anchor"
             if reason:

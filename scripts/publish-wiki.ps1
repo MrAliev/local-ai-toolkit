@@ -57,36 +57,57 @@ foreach($page in $pages){
         }
         return $match.Groups['prefix'].Value+$resolved+$match.Groups['suffix'].Value
     })
+    $russian=$pageName.EndsWith('.ru.md')
+    $shortSha=$sha.Substring(0,12)
+    $sourceLink="[$shortSha](https://github.com/$repository/tree/$sha/docs/wiki)"
     if($Publish){
-        $text+="`n`n---`n`nSource: [$($sha.Substring(0,12))](https://github.com/$repository/tree/$sha/docs/wiki). Changes via pull request.`n"
+        $publicationStamp=if($russian){ "Исходники: $sourceLink. Изменения вносятся через pull request." }
+            else { "Source: $sourceLink. Changes via pull request." }
     } else {
-        $text+="`n`n---`n`nWorking-tree preview based on $($sha.Substring(0,12)); not published.`n"
+        $publicationStamp=if($russian){ "Предварительный просмотр рабочей копии на основе $shortSha. Эта версия ещё не опубликована." }
+            else { "Working-tree preview based on $shortSha. This version is unpublished." }
     }
+    $text+="`n`n---`n`n$publicationStamp`n"
     [IO.File]::WriteAllText((Join-Path $target $pageName),$text,$utf8)
 }
 $sidebar=@'
 ## Local AI Toolkit
 
-**English**
+### English
+
 - [Home](Home)
-- [First repository](Getting-started)
+- [Install or update](Getting-started#install-or-update)
+- [First repository and search](Getting-started#connect-a-repository-and-run-your-first-search)
+- [Queues and errors](Getting-started#diagnose-a-queue-or-an-error)
 - [Architecture](Architecture)
 - [Token estimates](Token-estimates)
 - [Trust & security](Trust-and-security)
 - [Community](Community)
 
-**Русский**
+### Русский
+
 - [Главная](Home.ru)
-- [Первый репозиторий](Getting-started.ru)
+- [Установка и обновление](Getting-started.ru#установить-или-обновить)
+- [Первый репозиторий и поиск](Getting-started.ru#подключить-репозиторий-и-выполнить-первый-поиск)
+- [Очередь и ошибки](Getting-started.ru#разобраться-с-очередью-или-ошибкой)
 - [Архитектура](Architecture.ru)
 - [Оценка токенов](Token-estimates.ru)
 - [Доверие и безопасность](Trust-and-security.ru)
 - [Сообщество](Community.ru)
 
-[Interactive portal / Интерактивный портал](https://mraliev.github.io/local-ai-toolkit/)
+- [Interactive portal](https://mraliev.github.io/local-ai-toolkit/)
+- [Портал на русском](https://mraliev.github.io/local-ai-toolkit/?lang=ru)
 '@
 [IO.File]::WriteAllText((Join-Path $target '_Sidebar.md'),$sidebar,$utf8)
-[IO.File]::WriteAllText((Join-Path $target '_Footer.md'),"MIT · [Source](https://github.com/$repository) · [Privacy](https://mraliev.github.io/local-ai-toolkit/privacy.html) · [Code signing policy](https://mraliev.github.io/local-ai-toolkit/code-signing-policy.html)`n",$utf8)
+$site='https://mraliev.github.io/local-ai-toolkit'
+$footer=@"
+[Source / Исходники](https://github.com/$repository) · MIT
+
+[Privacy]($site/privacy.html) · [Code signing]($site/code-signing-policy.html)
+
+[Конфиденциальность]($site/privacy.ru.html) · [Политика подписи]($site/code-signing-policy.ru.html)
+"@
+[IO.File]::WriteAllText((Join-Path $target '_Footer.md'),$footer,$utf8)
 if($Publish){
     & git -C $target add -- ($pages.Name) '_Sidebar.md' '_Footer.md'
     if($LASTEXITCODE -ne 0){ throw 'Cannot stage managed Wiki pages.' }

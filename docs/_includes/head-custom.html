@@ -1,19 +1,83 @@
-<!-- github.com draws ```mermaid blocks itself; on the Pages site they arrive as code, so this draws them. -->
+<!-- GitHub renders Mermaid natively. On Pages, keep the code block until a diagram is ready. -->
 <script type="module">
-  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.12.1/dist/mermaid.esm.min.mjs";
+  const diagrams = [...document.querySelectorAll("div.language-mermaid, pre > code.language-mermaid")]
+    .map(block => ({
+      source: block.textContent,
+      original: block.matches("code") ? block.parentElement : block,
+      rendered: null
+    }));
 
-  mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: "base",
-    themeVariables: { primaryColor: "#CCE4F7", primaryTextColor: "#1A1A1A",
-      primaryBorderColor: "#2D7FD3", lineColor: "#0067C0", secondaryColor: "#FAFAFA",
-      tertiaryColor: "#F3F3F3" } });
-  document.addEventListener("DOMContentLoaded", async () => {
-    for (const block of document.querySelectorAll("div.language-mermaid, pre > code.language-mermaid")) {
-      const holder = block.matches("code") ? block.parentElement : block;
-      const diagram = document.createElement("pre");
-      diagram.className = "mermaid";
-      diagram.textContent = block.textContent;
-      holder.replaceWith(diagram);
+  if (diagrams.length) {
+    try {
+      const { default: mermaid } = await import("https://cdn.jsdelivr.net/npm/mermaid@11.12.1/dist/mermaid.esm.min.mjs");
+      const appearance = window.matchMedia("(prefers-color-scheme: dark)");
+      let revision = 0;
+      let pending = Promise.resolve();
+
+      function render() {
+        const current = ++revision;
+        pending = pending.then(async () => {
+          if (current !== revision) return;
+
+          const styles = getComputedStyle(document.documentElement);
+          const color = name => styles.getPropertyValue(name).trim();
+          const paper = color("--paper");
+          const surface = color("--surface");
+          const ink = color("--ink");
+          const accent = color("--accent");
+          const tint = color("--tint");
+
+          mermaid.initialize({
+            startOnLoad: false,
+            securityLevel: "strict",
+            suppressErrorRendering: true,
+            theme: "base",
+            themeVariables: {
+              darkMode: appearance.matches,
+              background: paper,
+              primaryColor: tint,
+              primaryTextColor: ink,
+              primaryBorderColor: accent,
+              secondaryColor: surface,
+              secondaryTextColor: ink,
+              tertiaryColor: surface,
+              tertiaryTextColor: ink,
+              textColor: ink,
+              lineColor: accent,
+              edgeLabelBackground: surface,
+              clusterBorder: color("--control-border"),
+              noteBkgColor: tint,
+              noteTextColor: ink
+            }
+          });
+
+          for (const [index, entry] of diagrams.entries()) {
+            if (current !== revision) return;
+
+            try {
+              const { svg, bindFunctions } = await mermaid.render("doc-diagram-" + current + "-" + index, entry.source);
+              if (current !== revision) return;
+
+              const diagram = document.createElement("div");
+              diagram.className = "mermaid";
+              diagram.innerHTML = svg;
+              (entry.rendered || entry.original).replaceWith(diagram);
+              entry.rendered = diagram;
+              bindFunctions?.(diagram);
+            } catch {
+              if (current === revision && entry.rendered) {
+                entry.rendered.replaceWith(entry.original);
+                entry.rendered = null;
+              }
+            }
+          }
+        });
+      }
+
+      appearance.addEventListener("change", render);
+      render();
+    } catch {
+      // The original diagram text remains available when the renderer cannot load.
     }
-    await mermaid.run();
-  });
+  }
 </script>

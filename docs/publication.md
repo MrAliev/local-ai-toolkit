@@ -6,6 +6,36 @@ This is the maintainer's runbook for opening the repository and publishing docum
 An unchecked step is not evidence of completion. The existing signing follow-up is
 [#210](https://github.com/MrAliev/local-ai-toolkit/issues/210).
 
+## Prepare a release through a pull request
+
+On a branch in this repository based on `releases`, add or update
+`.github/release-request.json`. Set
+`version` to the intended release version and `sourceCommit` to the full commit
+SHA already on `main`. Open a pull request into `releases`. GitHub checks the
+request on the pull request and prepares the package after merge when the source
+commit has passed **Build and test** on `main`.
+
+**Release from PR** uploads the unsigned package and installer with an attested
+inventory. The inventory binds their hashes to the verified source SHA from
+`main`, and the attestation identifies the workflow run on `releases`.
+
+After the release request merges and the build succeeds, the signing job runs
+automatically. It verifies the build artifact, uses the `release-signing`
+environment's `LOCALAI_MANIFEST_SIGNING_KEY` secret to sign the manifest, and
+verifies the package with the installer trust anchor. The signing utility is
+built from its own pinned, reviewed SHA. The environment allows only the
+protected `releases` branch and the secret is the base64 encoding of the
+PKCS#8 DER private key.
+
+A separate job uploads the four assets to a draft, checks their SHA-256
+digests, and publishes it with a tag at the source SHA. Versions such as
+`0.3.0-rc.1` are prereleases and leave the latest stable release in place.
+The workflow records the published bytes. This process signs the manifest
+under the existing distribution policy. Authenticode is tracked in #210.
+
+If upload or verification fails, the draft stays unpublished. Inspect it
+before retrying, since the workflow never replaces an existing release.
+
 ## Before changing repository visibility
 
 1. Audit the actual commit and every remote branch/tag that will be exposed. Scan secrets
@@ -25,9 +55,10 @@ An unchecked step is not evidence of completion. The existing signing follow-up 
 
 ## Documentation publication
 
-The portal is `docs/index.html`; the reference is generated from the paired READMEs.
-The **Documentation** workflow builds the Jekyll site on PRs. Its deployment job only
-runs from public `main`; private or PR builds must not publish it.
+The portal starts at `docs/index.html`. Its reference pages come from the paired READMEs.
+The **Documentation** workflow verifies PRs and deploys Pages from public `main`.
+Publish the Wiki separately from a clean checkout of the exact `origin/main` commit
+after that commit passes CI.
 
 After the disclosure review, enable GitHub Pages with **GitHub Actions** as the source,
 enable the Wiki, and publish the versioned Wiki sources with
@@ -92,8 +123,8 @@ Keep application correspondence and API tokens outside this repository.
    Publish signer identity, verification instructions and independent digest/provenance
    evidence. Close #210 only when the actual release and key-custody evidence support it.
 
-The existing release-asset attestation records uploaded bytes. It must not be described as
-CI build provenance until a build-to-source attestation is produced by the build itself.
+Use the attested build inventory for CI build provenance and the published-asset
+attestation for the digests of the files available from GitHub Releases.
 
-[Unsigned release candidate](unsigned-release-candidate.md) describes the CI groundwork
-and its limits. Its output is not installable or signed release distribution.
+[Unsigned release candidate](unsigned-release-candidate.md) documents the artifacts
+of the historical manual build workflow.
