@@ -19,7 +19,7 @@ public sealed class UnsignedCandidateTests
         var workflow = Path.Combine(RepositoryRoot(), ".github", "workflows", "build-unsigned-candidate.yml");
         Assert.True(File.Exists(workflow), "An unsigned candidate workflow is required.");
         var text = File.ReadAllText(workflow);
-        Assert.Contains("workflow_dispatch:", text);
+        Assert.Contains("workflow_call:", text);
         Assert.Contains("github.repository == 'MrAliev/local-ai-toolkit'", text);
         Assert.Contains("github.ref == 'refs/heads/main'", text);
         Assert.Contains("github.event_name == 'workflow_dispatch'", text);
@@ -37,6 +37,8 @@ public sealed class UnsignedCandidateTests
         Assert.Contains("attestations: write", text);
         Assert.Contains("--source-digest", text);
         Assert.Contains("--signer-workflow", text);
+        Assert.Contains("--signer-digest", text);
+        Assert.Contains("EXPECTED_SIGNER: ${{ job.workflow_sha }}", text);
         Assert.Contains("verify-localai-unsigned-candidate.ps1", text);
         Assert.Contains("artifact-ids:", text);
         Assert.Contains("gh api", text);
