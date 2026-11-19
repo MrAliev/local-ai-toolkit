@@ -3,7 +3,9 @@
 name: Attest release assets
 
 on:
-  workflow_call:
+  release:
+    types: [published]
+  workflow_dispatch:
     inputs:
       release_id:
         description: 'Numeric ID of an existing published release'
@@ -33,8 +35,7 @@ jobs:
       - name: Check out the receipt implementation
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          repository: ${{ job.workflow_repository }}
-          ref: ${{ job.workflow_sha }}
+          ref: ${{ github.sha }}
           fetch-depth: 1
           persist-credentials: false
 

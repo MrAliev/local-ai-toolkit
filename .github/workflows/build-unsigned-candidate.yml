@@ -3,7 +3,7 @@ name: Build unsigned candidate
 # Build unsigned PE files and verify their build provenance. This does not use a
 # production signing certificate, package an installable release, or publish assets.
 on:
-  workflow_call:
+  workflow_dispatch:
     inputs:
       version:
         description: 'Candidate version, for example 0.3.0-rc.1'
@@ -140,21 +140,6 @@ jobs:
             [ordered]@{ workflow = $workflow; state = $state }
           }
           ConvertTo-Json -InputObject @($states) -Depth 3 | Set-Content -LiteralPath publish/candidate-verification/workflow-states.json -Encoding utf8
-
-      - name: Confirm the identity of the reusable workflow
-        shell: pwsh
-        env:
-          EXPECTED_SIGNER: ${{ job.workflow_sha }}
-        run: |
-          if ($env:EXPECTED_SIGNER -cnotmatch '^[0-9a-f]{40}$') { throw 'The reusable workflow SHA is unavailable.' }
-          $arguments = @('attestation', 'verify', 'candidate/unsigned-candidate.json',
-            '--hostname', 'github.com', '--repo', 'MrAliev/local-ai-toolkit',
-            '--predicate-type', 'https://slsa.dev/provenance/v1', '--deny-self-hosted-runners',
-            '--source-ref', 'refs/heads/main', '--source-digest', $env:EXPECTED_SOURCE,
-            '--signer-workflow', 'MrAliev/local-ai-toolkit/.github/workflows/build-unsigned-candidate.yml',
-            '--signer-digest', $env:EXPECTED_SIGNER, '--format', 'json')
-          & gh @arguments > publish/candidate-verification/workflow-identity.json
-          if ($LASTEXITCODE -ne 0) { throw 'Verification failed for the selected source and reusable workflow.' }
 
       - name: Verify the candidate bytes and their build provenance
         shell: pwsh

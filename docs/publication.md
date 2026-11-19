@@ -6,6 +6,20 @@ This is the maintainer's runbook for opening the repository and publishing docum
 An unchecked step is not evidence of completion. The existing signing follow-up is
 [#210](https://github.com/MrAliev/local-ai-toolkit/issues/210).
 
+## Prepare a release through a pull request
+
+On a branch in this repository based on `releases`, add or update
+`.github/release-request.json`. Set
+`version` to the intended release version and `sourceCommit` to the full commit
+SHA already on `main`. Open a pull request into `releases`. GitHub checks the
+request on the pull request and prepares the package after merge when the source
+commit has passed **Build and test** on `main`.
+
+**Prepare release from PR** uploads the unsigned package and installer as a run
+artifact. GitHub attests the run on `releases` and the file inventory, which
+records the verified source SHA from `main`. Use the signing and publication
+procedure below for the actual release.
+
 ## Before changing repository visibility
 
 1. Audit the actual commit and every remote branch/tag that will be exposed. Scan secrets
