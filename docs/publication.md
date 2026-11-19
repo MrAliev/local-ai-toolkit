@@ -19,13 +19,13 @@ commit has passed **Build and test** on `main`.
 inventory. The inventory binds their hashes to the verified source SHA from
 `main`, and the attestation identifies the workflow run on `releases`.
 
-Approve the job in the `release-signing` environment after checking the version
-and source SHA. That job verifies the build artifact, uses the environment's
-`LOCALAI_MANIFEST_SIGNING_KEY` secret to sign the manifest, and verifies the
-package with the installer trust anchor. The signing utility is built from
-its own pinned, reviewed SHA. The secret is the
-base64 encoding of the PKCS#8 DER private key. It belongs in that environment,
-which allows only `releases` and requires a reviewer.
+After the release request merges and the build succeeds, the signing job runs
+automatically. It verifies the build artifact, uses the `release-signing`
+environment's `LOCALAI_MANIFEST_SIGNING_KEY` secret to sign the manifest, and
+verifies the package with the installer trust anchor. The signing utility is
+built from its own pinned, reviewed SHA. The environment allows only the
+protected `releases` branch and the secret is the base64 encoding of the
+PKCS#8 DER private key.
 
 A separate job uploads the four assets to a draft, checks their SHA-256
 digests, and publishes it with a tag at the source SHA. Versions such as
