@@ -4,18 +4,9 @@
 
 See the [product contracts and release acceptance matrix](https://github.com/MrAliev/local-ai-toolkit/blob/main/README.md#product-contracts-and-release-acceptance) for owning components, source references, and checks.
 
+Clients use a stable launcher to start CodeSearch and LocalLm. CodeSearch reads the index for the current worktree. When either tool needs a model, its request goes through the same broker and queue.
+
 ```mermaid
----
-config:
-  theme: base
-  themeVariables:
-    primaryColor: "#CCE4F7"
-    primaryTextColor: "#1A1A1A"
-    primaryBorderColor: "#2D7FD3"
-    lineColor: "#0067C0"
-    secondaryColor: "#FAFAFA"
-    tertiaryColor: "#F3F3F3"
----
 flowchart TB
   subgraph clients["Clients"]
     agent["Codex / Claude Code"]
@@ -41,18 +32,9 @@ flowchart TB
 | Broker | Shared scheduling, backend access and residency checks |
 | Calling client | Decide what results it forwards to a cloud service |
 
+On each search, CodeSearch checks which index base and overlay match the worktree, requests a query vector from the broker, and returns ranked results with file paths and line ranges.
+
 ```mermaid
----
-config:
-  theme: base
-  themeVariables:
-    primaryColor: "#CCE4F7"
-    primaryTextColor: "#1A1A1A"
-    primaryBorderColor: "#2D7FD3"
-    lineColor: "#0067C0"
-    secondaryColor: "#FAFAFA"
-    tertiaryColor: "#F3F3F3"
----
 sequenceDiagram
   participant C as Client
   participant S as CodeSearch

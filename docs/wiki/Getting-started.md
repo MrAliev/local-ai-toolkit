@@ -2,44 +2,52 @@
 
 [Русская версия](Getting-started.ru.md) · [Home](Home.md)
 
-## 1 · Install deliberately
+## Install or update
 
-Read [requirements and installation](../installing.md). Use the latest release from the
-project, verify it as described in the release notes, and review prerequisite/model choices.
-The default residency policy requires the selected model to fit fully in VRAM.
+For a clean installation, follow the [requirements and installation guide](../installing.md). Verify the release package as described in its release notes and review the dependency and model choices. For an existing installation, follow the [update guide](../updating-and-removing.md). The default residency policy requires the selected model to fit entirely in GPU memory (VRAM).
 
-## 2 · Connect explicitly
+## Connect a repository and run your first search
 
-Use the installed launcher. The walkthrough defines the `lai` helper and the commands;
-do not invoke the model backend directly.
+Open PowerShell and replace `C:\work\myapp` with the path to the Git worktree you want to index. The `lai` function calls the installed launcher and is available in this PowerShell session.
 
 ```powershell
-lai localai repo status --root C:\work\myapp
-lai localai sync --root C:\work\myapp
-lai localai hooks install --root C:\work\myapp
+function lai { & "$env:LOCALAPPDATA\LocalAi\bin\launcher\localai-launcher.exe" run @args }
+$repo = "C:\work\myapp"
+lai localai repo status --root $repo
 ```
 
-Repository setup is opt-in. A connected repository is not necessarily ready: inspect the
-build's phase and counts. Do not start duplicate builds while a sync is active.
+If the status is `NOT_CONFIGURED`, start the initial build. Indexing is opt-in for each repository.
 
-By default, sync targets the requested worktree; `--all-worktrees` explicitly includes the
-others. The admission estimate covers all scheduled work, while live progress describes
-the current pass. An unknown overall ETA remains unknown. Keep the operation ID printed
-at startup: `lai localai sync cancel --root C:\work\myapp --operation <GUID>` cancels
-that exact operation. A client timeout does not establish that the backend has stopped.
+```powershell
+lai localai sync --root $repo
+```
 
-## 3 · Keep the right context
+If a sync is already running, use `lai localai repo status --root $repo --follow` in another PowerShell session with the same `lai` definition and `$repo` value. Follow the reported phase and counts.
 
-After saved edits, a merge or a branch change, refresh the working tree before searching it.
-Hooks help when installed; do not assume every repository has them. For MCP clients, use
-`index_status`, then `index_refresh` when needed. Follow the current [CLI walkthrough](../using-it-from-the-command-line.md)
-and the installed LocalAI skill for exact command options.
+Once the build completes, check the index status and search from that worktree. Replace the example query with a question about your code.
 
-<details>
-<summary>When something fails</summary>
+```powershell
+Set-Location -LiteralPath $repo
+lai codesearch status --root $repo
+lai codesearch search --query "where are background jobs scheduled" --top 3
+```
 
-Report the actual refusal and status. A missing overlay, unavailable model and unsupported
-residency have different remedies. Check the shared runtime before changing anything;
-another project may be using it. [Support checklist](../support.md).
+A matching search returns up to three ranked results with file paths and source line ranges. If the query finds no relevant code, try a symbol or feature name you know exists.
 
-</details>
+### Keep the index current
+
+Refresh the worktree index after saved edits, a merge or a branch change. MCP clients can check `index_status` and run `index_refresh` when needed. To automate updates for Git events such as a commit or checkout, you can install Git hooks separately.
+
+```powershell
+lai localai hooks install --root $repo
+```
+
+See the [command-line guide](../using-it-from-the-command-line.md) and the installed LocalAI skill for the full set of options.
+
+## Diagnose a queue or an error
+
+Check the operation ID, phase and counts in `repo status --follow`. Sync targets the requested worktree by default. `--all-worktrees` includes the other worktrees. The admission estimate covers the scheduled work, and live chunk counts, rate and ETA describe the current pass when available.
+
+To request cancellation, use `lai localai sync cancel --root $repo --operation <GUID>` with the operation ID shown at startup. Check the resulting status. The operation may continue after a client timeout.
+
+Copy the exact error and the reported status when requesting help. Check whether another project is using the shared broker before changing its configuration. See the [support checklist](../support.md) for recovery steps.

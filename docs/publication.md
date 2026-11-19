@@ -6,6 +6,36 @@ This is the maintainer's runbook for opening the repository and publishing docum
 An unchecked step is not evidence of completion. The existing signing follow-up is
 [#210](https://github.com/MrAliev/local-ai-toolkit/issues/210).
 
+## Prepare a release through a pull request
+
+On a branch in this repository based on `releases`, add or update
+`.github/release-request.json`. Set
+`version` to the intended release version and `sourceCommit` to the full commit
+SHA already on `main`. Open a pull request into `releases`. GitHub checks the
+request on the pull request and prepares the package after merge when the source
+commit has passed **Build and test** on `main`.
+
+**Release from PR** uploads the unsigned package and installer with an attested
+inventory. The inventory binds their hashes to the verified source SHA from
+`main`, and the attestation identifies the workflow run on `releases`.
+
+After the release request merges and the build succeeds, the signing job runs
+automatically. It verifies the build artifact, uses the `release-signing`
+environment's `LOCALAI_MANIFEST_SIGNING_KEY` secret to sign the manifest, and
+verifies the package with the installer trust anchor. The signing utility is
+built from its own pinned, reviewed SHA. The environment allows only the
+protected `releases` branch and the secret is the base64 encoding of the
+PKCS#8 DER private key.
+
+A separate job uploads the four assets to a draft, checks their SHA-256
+digests, and publishes it with a tag at the source SHA. Versions such as
+`0.3.0-rc.1` are prereleases and leave the latest stable release in place.
+The workflow records the published bytes. This process signs the manifest
+under the existing distribution policy. Authenticode is tracked in #210.
+
+If upload or verification fails, the draft stays unpublished. Inspect it
+before retrying, since the workflow never replaces an existing release.
+
 ## Before changing repository visibility
 
 1. Audit the actual commit and every remote branch/tag that will be exposed. Scan secrets
