@@ -15,10 +15,26 @@ SHA already on `main`. Open a pull request into `releases`. GitHub checks the
 request on the pull request and prepares the package after merge when the source
 commit has passed **Build and test** on `main`.
 
-**Prepare release from PR** uploads the unsigned package and installer as a run
-artifact. GitHub attests the run on `releases` and the file inventory, which
-records the verified source SHA from `main`. Use the signing and publication
-procedure below for the actual release.
+**Release from PR** uploads the unsigned package and installer with an attested
+inventory. The inventory binds their hashes to the verified source SHA from
+`main`, and the attestation identifies the workflow run on `releases`.
+
+Approve the job in the `release-signing` environment after checking the version
+and source SHA. That job verifies the build artifact, uses the environment's
+`LOCALAI_MANIFEST_SIGNING_KEY` secret to sign the manifest, and verifies the
+package with the installer trust anchor. The signing utility is built from
+its own pinned, reviewed SHA. The secret is the
+base64 encoding of the PKCS#8 DER private key. It belongs in that environment,
+which allows only `releases` and requires a reviewer.
+
+A separate job uploads the four assets to a draft, checks their SHA-256
+digests, and publishes it with a tag at the source SHA. Versions such as
+`0.3.0-rc.1` are prereleases and leave the latest stable release in place.
+The workflow records the published bytes. This process signs the manifest
+under the existing distribution policy. Authenticode is tracked in #210.
+
+If upload or verification fails, the draft stays unpublished. Inspect it
+before retrying, since the workflow never replaces an existing release.
 
 ## Before changing repository visibility
 
