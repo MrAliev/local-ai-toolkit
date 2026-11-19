@@ -73,27 +73,40 @@ foreach($page in $pages){
 $sidebar=@'
 ## Local AI Toolkit
 
-**English**
+### English
+
 - [Home](Home)
-- [First repository](Getting-started)
+- [Install or update](Getting-started#install-or-update)
+- [First repository and search](Getting-started#connect-a-repository-and-run-your-first-search)
+- [Queues and errors](Getting-started#diagnose-a-queue-or-an-error)
 - [Architecture](Architecture)
 - [Token estimates](Token-estimates)
 - [Trust & security](Trust-and-security)
 - [Community](Community)
 
-**Русский**
+### Русский
+
 - [Главная](Home.ru)
-- [Первый репозиторий](Getting-started.ru)
+- [Установка и обновление](Getting-started.ru#установить-или-обновить)
+- [Первый репозиторий и поиск](Getting-started.ru#подключить-репозиторий-и-выполнить-первый-поиск)
+- [Очередь и ошибки](Getting-started.ru#разобраться-с-очередью-или-ошибкой)
 - [Архитектура](Architecture.ru)
 - [Оценка токенов](Token-estimates.ru)
 - [Доверие и безопасность](Trust-and-security.ru)
 - [Сообщество](Community.ru)
 
-[Interactive portal / Интерактивный портал](https://mraliev.github.io/local-ai-toolkit/)
+- [Interactive portal](https://mraliev.github.io/local-ai-toolkit/)
+- [Портал на русском](https://mraliev.github.io/local-ai-toolkit/?lang=ru)
 '@
 [IO.File]::WriteAllText((Join-Path $target '_Sidebar.md'),$sidebar,$utf8)
 $site='https://mraliev.github.io/local-ai-toolkit'
-$footer="MIT · [Source / Исходники](https://github.com/$repository) · [Privacy]($site/privacy.html) · [Конфиденциальность]($site/privacy.ru.html) · [Code signing policy]($site/code-signing-policy.html) · [Политика подписи]($site/code-signing-policy.ru.html)`n"
+$footer=@"
+[Source / Исходники](https://github.com/$repository) · MIT
+
+[Privacy]($site/privacy.html) · [Code signing]($site/code-signing-policy.html)
+
+[Конфиденциальность]($site/privacy.ru.html) · [Политика подписи]($site/code-signing-policy.ru.html)
+"@
 [IO.File]::WriteAllText((Join-Path $target '_Footer.md'),$footer,$utf8)
 if($Publish){
     & git -C $target add -- ($pages.Name) '_Sidebar.md' '_Footer.md'

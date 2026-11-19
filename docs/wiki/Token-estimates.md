@@ -9,14 +9,11 @@ See the token accounting row in the [product contracts](https://github.com/MrAli
 Start with the context the alternative cloud request would have needed. Credit only context the cloud has not already seen, then subtract the response and request overhead. An unknown baseline produces no estimate.
 
 ```mermaid
-flowchart TD
-  task["Alternative task context known?"] -->|No| unknown["Cannot estimate"]
-  task -->|Yes| seen["Already in cloud context?"]
-  seen -->|Yes| zero["No source-reading credit"]
-  seen -->|No| credit["Credit only declared necessary context"]
-  zero --> cost["Subtract complete response and request overhead"]
-  credit --> cost
-  cost --> result["Conditional saving or additional tokens"]
+flowchart TB
+  task{"Known cloud context?"} -->|Yes| credit["Count needed unseen context"]
+  task -->|No| unknown["No estimate"]
+  credit --> cost["Subtract response and overhead"]
+  cost --> result["Net token estimate"]
 ```
 
 For an explicit text scenario: `S - V - 2R`, where `S` is necessary unseen source context,
@@ -37,5 +34,5 @@ This example is not a measured result or an account charge.
 
 </details>
 
-[Try the illustrative calculator](https://mraliev.github.io/local-ai-toolkit/#tokens) ·
-[Full methodology and limits](../token-comparison.md).
+- [Illustrative calculator](https://mraliev.github.io/local-ai-toolkit/#tokens)
+- [Full methodology and limits](../token-comparison.md)

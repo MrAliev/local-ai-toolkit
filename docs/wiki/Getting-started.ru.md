@@ -2,6 +2,10 @@
 
 [English version](Getting-started.md) · [Главная](Home.ru.md)
 
+- [Установка и обновление](#установить-или-обновить)
+- [Первый поиск](#подключить-репозиторий-и-выполнить-первый-поиск)
+- [Очередь и ошибки](#разобраться-с-очередью-или-ошибкой)
+
 ## Установить или обновить
 
 При первой установке следуйте [руководству по установке](../installing.ru.md). Проверьте пакет по примечаниям к релизу и выберите зависимости и модели. Если LocalAI уже установлен, воспользуйтесь [руководством по обновлению](../updating-and-removing.ru.md). По умолчанию выбранная модель должна целиком помещаться в видеопамяти (VRAM).
@@ -11,7 +15,10 @@
 Откройте PowerShell и замените `C:\work\myapp` путём к рабочему дереву Git, которое хотите проиндексировать. Функция `lai` вызывает установленную программу запуска и доступна в текущем сеансе PowerShell.
 
 ```powershell
-function lai { & "$env:LOCALAPPDATA\LocalAi\bin\launcher\localai-launcher.exe" run @args }
+function lai {
+    $directory = "$env:LOCALAPPDATA\LocalAi\bin\launcher"
+    & "$directory\localai-launcher.exe" run @args
+}
 $repo = "C:\work\myapp"
 lai localai repo status --root $repo
 ```
@@ -29,7 +36,8 @@ lai localai sync --root $repo
 ```powershell
 Set-Location -LiteralPath $repo
 lai codesearch status --root $repo
-lai codesearch search --query "где планируются фоновые задания" --top 3
+$query = "где планируются фоновые задания"
+lai codesearch search --query $query --top 3
 ```
 
 Поиск выдаёт до трёх подходящих результатов в порядке релевантности, с путями к файлам и номерами строк. Если совпадений нет, попробуйте известное имя символа или функции.

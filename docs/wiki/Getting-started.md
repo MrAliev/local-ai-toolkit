@@ -2,6 +2,10 @@
 
 [Русская версия](Getting-started.ru.md) · [Home](Home.md)
 
+- [Installation and updates](#install-or-update)
+- [First search](#connect-a-repository-and-run-your-first-search)
+- [Queue and errors](#diagnose-a-queue-or-an-error)
+
 ## Install or update
 
 For a clean installation, follow the [requirements and installation guide](../installing.md). Verify the release package as described in its release notes and review the dependency and model choices. For an existing installation, follow the [update guide](../updating-and-removing.md). The default residency policy requires the selected model to fit entirely in GPU memory (VRAM).
@@ -11,7 +15,10 @@ For a clean installation, follow the [requirements and installation guide](../in
 Open PowerShell and replace `C:\work\myapp` with the path to the Git worktree you want to index. The `lai` function calls the installed launcher and is available in this PowerShell session.
 
 ```powershell
-function lai { & "$env:LOCALAPPDATA\LocalAi\bin\launcher\localai-launcher.exe" run @args }
+function lai {
+    $directory = "$env:LOCALAPPDATA\LocalAi\bin\launcher"
+    & "$directory\localai-launcher.exe" run @args
+}
 $repo = "C:\work\myapp"
 lai localai repo status --root $repo
 ```
@@ -29,7 +36,8 @@ Once the build completes, check the index status and search from that worktree. 
 ```powershell
 Set-Location -LiteralPath $repo
 lai codesearch status --root $repo
-lai codesearch search --query "where are background jobs scheduled" --top 3
+$query = "where are background jobs scheduled"
+lai codesearch search --query $query --top 3
 ```
 
 A matching search returns up to three ranked results with file paths and source line ranges. If the query finds no relevant code, try a symbol or feature name you know exists.

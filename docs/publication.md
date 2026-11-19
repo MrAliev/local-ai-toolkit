@@ -55,9 +55,10 @@ before retrying, since the workflow never replaces an existing release.
 
 ## Documentation publication
 
-The portal is `docs/index.html`; the reference is generated from the paired READMEs.
-The **Documentation** workflow builds the Jekyll site on PRs. Its deployment job only
-runs from public `main`; private or PR builds must not publish it.
+The portal starts at `docs/index.html`. Its reference pages come from the paired READMEs.
+The **Documentation** workflow verifies PRs and deploys Pages from public `main`.
+Publish the Wiki separately from a clean checkout of the exact `origin/main` commit
+after that commit passes CI.
 
 After the disclosure review, enable GitHub Pages with **GitHub Actions** as the source,
 enable the Wiki, and publish the versioned Wiki sources with
@@ -122,8 +123,8 @@ Keep application correspondence and API tokens outside this repository.
    Publish signer identity, verification instructions and independent digest/provenance
    evidence. Close #210 only when the actual release and key-custody evidence support it.
 
-The existing release-asset attestation records uploaded bytes. It must not be described as
-CI build provenance until a build-to-source attestation is produced by the build itself.
+Use the attested build inventory for CI build provenance and the published-asset
+attestation for the digests of the files available from GitHub Releases.
 
-[Unsigned release candidate](unsigned-release-candidate.md) describes the CI groundwork
-and its limits. Its output is not installable or signed release distribution.
+[Unsigned release candidate](unsigned-release-candidate.md) documents the artifacts
+of the historical manual build workflow.
