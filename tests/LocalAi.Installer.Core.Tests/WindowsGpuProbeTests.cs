@@ -10,7 +10,15 @@ public sealed class WindowsGpuProbeTests
         var native = new FakeNativeGpuAdapterEnumerator(
         [
             new NativeGpuAdapterDescriptor("luid-1", "GPU A", 8_000, false),
-            new NativeGpuAdapterDescriptor("luid-2", "GPU B", 16_000, false),
+            new NativeGpuAdapterDescriptor("luid-2", "GPU B", 16_000, false)
+            {
+                SharedSystemMemoryBytes = 60_000,
+            },
+            new NativeGpuAdapterDescriptor("luid-3", "GPU UMA", 0, false)
+            {
+                SharedSystemMemoryBytes = 16UL * 1024 * 1024 * 1024,
+                IsUma = true,
+            },
             new NativeGpuAdapterDescriptor("warp", "Microsoft Basic Render", 64_000, true),
         ]);
         var probe = new WindowsGpuProbe(native);
@@ -30,7 +38,20 @@ public sealed class WindowsGpuProbeTests
             {
                 Assert.Equal("luid-2", adapter.StableId);
                 Assert.Equal(16_000UL, adapter.DedicatedLocalBytes);
+                Assert.Equal(60_000UL, adapter.SharedSystemMemoryBytes);
+                Assert.False(adapter.IsUma);
+                Assert.DoesNotContain("UMA", GpuAdapterDisplay.DescribeInEnglish(adapter));
                 Assert.False(adapter.IsSoftware);
+            },
+            adapter =>
+            {
+                Assert.Equal("luid-3", adapter.StableId);
+                Assert.Equal(0UL, adapter.DedicatedLocalBytes);
+                Assert.Equal(16UL * 1024 * 1024 * 1024, adapter.SharedSystemMemoryBytes);
+                Assert.True(adapter.IsUma);
+                Assert.Equal(
+                    "GPU UMA (no dedicated memory) [UMA, up to 16.0 GB shared memory]",
+                    GpuAdapterDisplay.DescribeInEnglish(adapter));
             });
         Assert.DoesNotContain(snapshot.Adapters, adapter => adapter.StableId == "warp");
     }

@@ -53,7 +53,7 @@ internal sealed class WindowsUserPathStore(string? registrySubKey = null, Action
     /// What Environment.SetEnvironmentVariable sends after writing a user variable, except that a
     /// window which has stopped answering is skipped rather than waited on.
     /// </summary>
-    private static void AnnounceToOtherProcesses() =>
+    internal static void AnnounceToOtherProcesses() =>
         SendMessageTimeout(
             new IntPtr(0xFFFF),
             0x001A,

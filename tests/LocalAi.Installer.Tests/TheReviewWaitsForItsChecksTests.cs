@@ -325,6 +325,23 @@ public sealed class TheReviewWaitsForItsChecksTests : IDisposable
     }
 
     [Fact]
+    public void Enabling_Ollama_integrated_graphics_requires_consent_and_preserves_strict_residency()
+    {
+        var wizard = Wizard(new Feed());
+        WalkToTheReview(wizard);
+        wizard.SetReviewConfirmed(true);
+        Assert.False(wizard.Residency.EnableOllamaIntegratedGpu);
+        Assert.DoesNotContain(PageLabels.OllamaIntegratedGpu, wizard.ReviewText, StringComparison.Ordinal);
+
+        wizard.Residency.EnableOllamaIntegratedGpu = true;
+
+        Assert.True(wizard.Residency.IsRequireFullVram);
+        Assert.Contains(PageLabels.OllamaIntegratedGpu, wizard.ReviewText, StringComparison.Ordinal);
+        Assert.False(wizard.Review.IsConfirmed);
+        Assert.False(wizard.CanRun);
+    }
+
+    [Fact]
     public void Every_group_that_changed_is_named_in_the_readers_language()
     {
         InstallerCulture.Current = InstallerLanguage.Russian;

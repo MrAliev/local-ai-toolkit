@@ -34,6 +34,7 @@ public sealed class BackendStarter
     private readonly OllamaLaunchRecordStore _records;
     private readonly Action<string> _report;
     private readonly Action<ProcessStartInfo> _start;
+    private readonly Func<string?> _readUserIntegratedGpuSetting;
 
     /// <summary>
     /// Whether anything answers at the endpoint. A socket rather than a request on purpose: the
@@ -56,13 +57,15 @@ public sealed class BackendStarter
         Action<string> report,
         Action<string>? start = null,
         Func<Uri, bool>? isListening = null,
-        Action<ProcessStartInfo>? startProcess = null)
+        Action<ProcessStartInfo>? startProcess = null,
+        Func<string?>? readUserIntegratedGpuSetting = null)
     {
         _endpoint = endpoint ?? throw new ArgumentNullException(nameof(endpoint));
         _records = records ?? throw new ArgumentNullException(nameof(records));
         _report = report ?? throw new ArgumentNullException(nameof(report));
         _start = startProcess ?? (start is null ? StartDetached : info => start(info.FileName));
         _isListening = isListening ?? BackendEndpoint.AnythingListening;
+        _readUserIntegratedGpuSetting = readUserIntegratedGpuSetting ?? ReadUserIntegratedGpuSetting;
     }
 
     /// <summary>
@@ -145,6 +148,13 @@ public sealed class BackendStarter
                 OllamaLaunchRecordStore.ValidateModelsDirectory(record.ModelsDirectory);
                 startInfo.Environment["OLLAMA_MODELS"] = record.ModelsDirectory;
             }
+
+            // The broker may have started before the installer wrote the Windows user setting.
+            if (_readUserIntegratedGpuSetting() is { } integratedGpu)
+            {
+                startInfo.Environment[OllamaEnvironment.IntegratedGpu] = integratedGpu;
+            }
+
             _start(startInfo);
             _report(
                 $"Ollama was not answering; started {record.ExecutablePath}. Queued work runs " +
@@ -152,13 +162,18 @@ public sealed class BackendStarter
         }
         catch (Exception exception) when (
             exception is Win32Exception or InvalidOperationException or IOException or
-                ObjectDisposedException or UnauthorizedAccessException or ArgumentException)
+                ObjectDisposedException or UnauthorizedAccessException or ArgumentException or
+                System.Security.SecurityException)
         {
             _report(
                 $"Ollama could not be started from {record.ExecutablePath}: " +
                 exception.Message);
         }
     }
+
+    private static string? ReadUserIntegratedGpuSetting() => OperatingSystem.IsWindows()
+        ? Environment.GetEnvironmentVariable(OllamaEnvironment.IntegratedGpu, EnvironmentVariableTarget.User)
+        : null;
 
     private static void StartDetached(ProcessStartInfo startInfo)
     {

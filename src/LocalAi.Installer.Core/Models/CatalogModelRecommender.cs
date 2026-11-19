@@ -28,6 +28,8 @@ public sealed record CatalogRecommendation(
     /// <summary>Whether the registry gave any answer while sizing, with or without a size.</summary>
     public bool RegistryAnswered { get; init; }
 
+    public bool RequiresUmaPreflight { get; init; }
+
     public IReadOnlyList<CatalogModelFit> Fitting =>
         [.. Fits.Where(fit => fit.FitsInVideoMemory)];
 }
@@ -75,7 +77,12 @@ public sealed class CatalogModelRecommender(
         {
             // Without sizes there is nothing to weigh against the adapter. Say so plainly
             // instead of presenting a guess as a recommendation.
-            return Unsized with { RegistryAnswered = answered };
+            var adapter = engine.Recommend(gpu, []);
+            return Unsized with
+            {
+                RegistryAnswered = answered,
+                RequiresUmaPreflight = adapter.SelectedAdapter?.IsUma == true,
+            };
         }
 
         var manifestModels = catalogModels
@@ -132,5 +139,8 @@ public sealed class CatalogModelRecommender(
                 (long)choice.SignedDownloadSizeBytes,
                 choice.Explanation))],
             recommendation.AdapterSelectionExplanation,
-            SizesKnown: true);
+            SizesKnown: true)
+        {
+            RequiresUmaPreflight = recommendation.SelectedAdapter?.IsUma == true,
+        };
 }

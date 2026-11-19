@@ -59,6 +59,22 @@ public sealed class ModelsAndMemoryPageTests
     }
 
     [Fact]
+    public void Uma_offline_still_offers_a_cached_check_under_the_full_memory_rule()
+    {
+        var page = new ModelsPageViewModel();
+        page.ApplyRecommendation(
+            CatalogRecommendation.Empty with { RequiresUmaPreflight = true },
+            residencyRequiresVideoMemory: true);
+        page.Offline = ModelsOffline.NoNetworkConnection;
+
+        Assert.Equal(ModelProvisioningMode.Automatic, page.BuildProvisioningSelection().Mode);
+        Assert.False(page.HasNetworkNote);
+        Assert.Contains("Whole model in video memory", page.RuleSummary, StringComparison.Ordinal);
+        Assert.Contains("already downloaded", page.AutomaticSummary, StringComparison.Ordinal);
+        Assert.Contains("No models will be downloaded", page.ReviewText, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Relaxing_the_rule_changes_the_line_the_list_follows()
     {
         var page = new ModelsPageViewModel();

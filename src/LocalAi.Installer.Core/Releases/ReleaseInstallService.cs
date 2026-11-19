@@ -245,7 +245,15 @@ public sealed class ReleaseInstallService(
         var batch = await modelInstaller
             .InstallAsync(plan.Requests, progress, cancellationToken)
             .ConfigureAwait(false);
-        return new(plan.Excluded, batch);
+        var excluded = plan.Excluded.Concat(batch.MissingCachedModels.Select(model =>
+            $"{model}: absent from Ollama's installed models; UMA setup did not download it.")).ToArray();
+        if (selection.Mode == ModelProvisioningMode.Exact &&
+            batch.StopReason == BrokerModelBatchStopReason.None && batch.Models.Count == 0)
+        {
+            return new(excluded, null);
+        }
+
+        return new(excluded, batch);
     }
 
     /// <summary>

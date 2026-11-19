@@ -101,6 +101,8 @@ public sealed class ModelRecommendationChoice
 
     public bool IsEnabled { get; }
 
+    internal bool CanProbeOnUma { get; init; }
+
     public string Explanation { get; }
 }
 
@@ -123,13 +125,7 @@ public sealed class ModelRecommendation
     {
         AdapterSelectionStatus = adapterSelectionStatus;
         AdapterSelectionExplanation = adapterSelectionExplanation;
-        SelectedAdapter = selectedAdapter is null
-            ? null
-            : new GpuAdapterSnapshot(
-                selectedAdapter.StableId,
-                selectedAdapter.Name,
-                selectedAdapter.DedicatedLocalBytes,
-                selectedAdapter.IsSoftware);
+        SelectedAdapter = selectedAdapter;
         Choices = new ReadOnlyCollection<ModelRecommendationChoice>(choices.ToArray());
         Minimal = minimal;
         Recommended = recommended;

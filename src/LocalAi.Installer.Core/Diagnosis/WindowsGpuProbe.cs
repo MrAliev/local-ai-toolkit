@@ -6,7 +6,11 @@ public sealed record NativeGpuAdapterDescriptor(
     string StableId,
     string Name,
     ulong DedicatedLocalBytes,
-    bool IsSoftware);
+    bool IsSoftware)
+{
+    public bool IsUma { get; init; }
+    public ulong SharedSystemMemoryBytes { get; init; }
+}
 
 public sealed record NativeGpuEnumeration
 {
@@ -43,7 +47,11 @@ public sealed class WindowsGpuProbe(
                 adapter.StableId,
                 adapter.Name,
                 adapter.DedicatedLocalBytes,
-                false))
+                false)
+            {
+                IsUma = adapter.IsUma,
+                SharedSystemMemoryBytes = adapter.SharedSystemMemoryBytes,
+            })
             .ToArray();
         var state = native.State == ObservationState.Available &&
                     physicalAdapters.Length == 0

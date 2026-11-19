@@ -3,7 +3,9 @@ using System.Security.Cryptography;
 using LocalAi.Contracts.Activation;
 using LocalAi.Installer.Core.Abstractions;
 using LocalAi.Installer.Core.Activation;
+using LocalAi.Installer.Core.Releases;
 using LocalAi.Installer.Core.Transactions;
+using Microsoft.Win32;
 
 namespace LocalAi.Installer.Core.Tests;
 
@@ -317,6 +319,51 @@ public sealed class InstallerRunRollbackTests : IDisposable
             result.Steps.Select(step => step.StepId).ToArray());
         Assert.False(File.Exists(first));
         Assert.False(File.Exists(second));
+    }
+
+    [Theory]
+    [InlineData(null, false, false)]
+    [InlineData("%LOCALAI_TEST_VALUE%", true, false)]
+    [InlineData("false", false, true)]
+    public async Task Ollama_integrated_graphics_rollback_restores_only_the_changed_setting(
+        string? previous, bool expandable, bool changedAfterInstall)
+    {
+        var registryKey = @"Software\LocalAi.Tests\" + Guid.NewGuid().ToString("N");
+        var setting = new OllamaIntegratedGpuSetting(registryKey, () => { });
+        try
+        {
+            OllamaIntegratedGpuUserValue? before = previous is null ? null : new(previous, expandable);
+            if (before is not null)
+            {
+                setting.Write(before);
+            }
+
+            using var journal = InstallerRunJournal.Start(journalDirectory);
+            var step = journal.BeginStep(InstallerRunEffectKind.OllamaIntegratedGpu, "Ollama integrated graphics");
+            setting.Write(OllamaIntegratedGpuSetting.Enabled);
+            journal.CompleteStep(step, "enabled", true, new InstallerRunUndoData(OllamaIntegratedGpu: new(before)));
+            journal.Finish(InstallerRunOutcome.Failed);
+
+            var changed = new OllamaIntegratedGpuUserValue("0", false);
+            if (changedAfterInstall)
+            {
+                setting.Write(changed);
+            }
+
+            using var reloaded = InstallerRunJournal.Load(journal.JournalPath);
+            var rollback = new InstallerRunRollback(
+                NoProcessRunner(), layout, TimeSpan.FromSeconds(30), integratedGpuSetting: setting);
+            var report = await rollback.RollbackAsync(reloaded, TestContext.Current.CancellationToken);
+
+            Assert.Equal(
+                changedAfterInstall ? InstallerRollbackStepOutcome.Skipped : InstallerRollbackStepOutcome.Undone,
+                Assert.Single(report.Steps).Outcome);
+            Assert.Equal(changedAfterInstall ? changed : before, setting.Read());
+        }
+        finally
+        {
+            Registry.CurrentUser.DeleteSubKeyTree(registryKey, throwOnMissingSubKey: false);
+        }
     }
 
     private InstallerRunRollback Rollback(IProcessRunner runner) =>

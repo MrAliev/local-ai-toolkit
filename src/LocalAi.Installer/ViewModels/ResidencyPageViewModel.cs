@@ -16,6 +16,13 @@ public sealed class ResidencyPageViewModel : ObservableObject
 {
     private ModelResidencyPolicy policy = ModelResidencyPolicy.RequireFullVram;
     private bool hasUsableAdapter = true;
+    private bool enableOllamaIntegratedGpu;
+
+    public bool EnableOllamaIntegratedGpu
+    {
+        get => enableOllamaIntegratedGpu;
+        set => SetProperty(ref enableOllamaIntegratedGpu, value);
+    }
 
     public ModelResidencyPolicy Policy
     {

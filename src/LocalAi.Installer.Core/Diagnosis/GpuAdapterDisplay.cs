@@ -8,12 +8,13 @@ namespace LocalAi.Installer.Core.Diagnosis;
 /// the model recommendation said "Using dedicated GPU adapter 'PCI\VEN_10DE&amp;DEV_2C02&amp;…'",
 /// and the second one is what reached the models page.
 ///
-/// The name comes from DXGI's adapter description, and the memory from its dedicated video
-/// memory — not from WMI, whose <c>AdapterRAM</c> is a 32-bit field that reports 4 GB for every
-/// card above that.
+/// DXGI provides the adapter name, dedicated video memory and shared-memory ceiling.
+/// The shared-memory ceiling describes capacity and may be higher than the current GPU budget.
 /// </summary>
 public static class GpuAdapterDisplay
 {
+    private const double BytesPerGigabyte = 1024d * 1024 * 1024;
+
     /// <summary>For a window. Follows the language the installer was told to speak.</summary>
     public static string Describe(GpuAdapterSnapshot adapter)
     {
@@ -23,14 +24,25 @@ public static class GpuAdapterDisplay
                 InstallerCulture.Pick(
                     " ({0:N1} GB dedicated)",
                     " ({0:N1} ГБ выделенной памяти)"),
-                adapter.DedicatedLocalBytes / (1024d * 1024 * 1024))
+                adapter.DedicatedLocalBytes / BytesPerGigabyte)
             : InstallerCulture.Pick(
                 " (no dedicated memory)",
                 " (выделенной памяти нет)");
+        var uma = string.Empty;
+        if (adapter.IsUma)
+        {
+            uma = adapter.SharedSystemMemoryBytes > 0
+                ? string.Format(
+                    InstallerCulture.Pick(
+                        " [UMA, up to {0:N1} GB shared memory]",
+                        " [UMA, до {0:N1} ГБ общей памяти]"),
+                    adapter.SharedSystemMemoryBytes / BytesPerGigabyte)
+                : " [UMA]";
+        }
         var software = adapter.IsSoftware
             ? InstallerCulture.Pick(" [software]", " [программный]")
             : string.Empty;
-        return adapter.Name + memory + software;
+        return adapter.Name + memory + uma + software;
     }
 
     /// <summary>
@@ -42,8 +54,17 @@ public static class GpuAdapterDisplay
         ArgumentNullException.ThrowIfNull(adapter);
         var memory = adapter.DedicatedLocalBytes > 0
             ? FormattableString.Invariant(
-                $" ({adapter.DedicatedLocalBytes / (1024d * 1024 * 1024):N1} GB dedicated)")
+                $" ({adapter.DedicatedLocalBytes / BytesPerGigabyte:N1} GB dedicated)")
             : " (no dedicated memory)";
-        return adapter.Name + memory + (adapter.IsSoftware ? " [software]" : string.Empty);
+        var uma = string.Empty;
+        if (adapter.IsUma)
+        {
+            uma = adapter.SharedSystemMemoryBytes > 0
+                ? FormattableString.Invariant(
+                    $" [UMA, up to {adapter.SharedSystemMemoryBytes / BytesPerGigabyte:N1} GB shared memory]")
+                : " [UMA]";
+        }
+
+        return adapter.Name + memory + uma + (adapter.IsSoftware ? " [software]" : string.Empty);
     }
 }
