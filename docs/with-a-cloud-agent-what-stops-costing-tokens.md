@@ -133,7 +133,7 @@ Nothing is nailed down — the settings live in `%LOCALAPPDATA%\LocalAi\settings
 | A model's fate after a trial | `local_model_feedback`: promote it, keep it as a fallback only, or disable it for that task |
 | Where a model is allowed to sit | `localai policy set --residency` — wholly in video memory, with offload, or on the processor |
 | How long a model stays loaded | `localai policy set --idle-model-keep-alive-seconds` |
-| Take the tools away from a client | unregister the MCP servers from Claude or Codex — the agent then simply does not see them |
+| Remove the tools from a client | unregister the MCP servers from that client |
 
 To choose models for each task, copy the complete [model-routing.json](https://github.com/MrAliev/local-ai-toolkit/blob/main/model-routing.json)
 from the repository root to `%LOCALAPPDATA%\LocalAi\settings\model-routing.json`.

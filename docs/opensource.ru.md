@@ -28,7 +28,7 @@ Launcher даёт клиентам постоянный путь запуска.
 
 ```mermaid
 flowchart LR
-  clients["Codex / Claude Code / CLI"] --> launcher["Постоянный launcher"]
+  clients["Клиенты MCP и CLI"] --> launcher["Постоянный launcher"]
   launcher --> tools["CodeSearch / LocalLm"]
   tools --> index["Базовый индекс + overlay worktree"]
   tools --> broker["Общий брокер и очередь"]

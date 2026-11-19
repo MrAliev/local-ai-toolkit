@@ -88,13 +88,13 @@ there like any program. A wizard opens, and each part is decided **separately**,
 | Queue, archive, quarantine, telemetry | transient broker state; nothing to preserve |
 | Everything else in the runtime root | anything the installer does not recognise, listed by path |
 | Git hooks | per connected repository |
-| Claude and Codex integration | separately for each: unregister the MCP servers and remove the instruction block |
+| Agent client integrations | unregister the MCP servers and remove the instruction block separately for each client |
 | Release signing keys | **always asked** — never removed by default under any preset |
 
 There are ready-made presets: remove everything except the signing keys; remove the binaries,
-the transient state and anything unrecognised, keeping the indexes and settings; take Local AI
-out of Claude, Codex and the Git hooks without touching the runtime. A preset is just a set of boxes
-already ticked, and any of them can be changed.
+the transient state and anything unrecognised, keeping the indexes and settings; remove
+Local AI from agent clients and Git hooks while keeping the runtime. You can adjust
+the selections in any preset.
 
 **Models stay.** They belong to Ollama rather than to Local AI, and you may want them for
 something else. Remove those through Ollama.
