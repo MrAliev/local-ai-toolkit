@@ -10,6 +10,8 @@ public sealed class BrokerProcessTests
     private static readonly string BrokerAssemblyPath =
         Path.GetFullPath("LocalAi.Broker.dll");
 
+    private static readonly TimeSpan StartupFixtureBudget = TimeSpan.FromSeconds(30);
+
     /// <summary>
     /// The startup budget the blocked process is given, named rather than repeated so the one
     /// assertion in this file that still looks at a clock can be written against it instead of
@@ -757,7 +759,8 @@ public sealed class BrokerProcessTests
             Path.GetTempPath(),
             "localai-process-" + Guid.NewGuid().ToString("N"));
         var now = DateTimeOffset.UtcNow;
-        using var startEntered = new ManualResetEventSlim();
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var startEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         using var releaseStart = new ManualResetEventSlim();
         var ready = false;
         var secondStarts = 0;
@@ -766,7 +769,7 @@ public sealed class BrokerProcessTests
                 ? new BrokerProcessState(
                     42,
                     now,
-                    now,
+                    DateTimeOffset.UtcNow,
                     BrokerCompatibilityContract.HostStateSchemaVersion,
                     BrokerAssemblyPath,
                     BrokerCompatibilityContract.Current)
@@ -778,14 +781,14 @@ public sealed class BrokerProcessTests
             state => state.ProcessId == 42,
             (_, _) =>
             {
-                startEntered.Set();
-                releaseStart.Wait(TestContext.Current.CancellationToken);
+                startEntered.SetResult();
+                releaseStart.Wait(cancellationToken);
                 ready = true;
                 return FakeStartAttempt.Running(42);
             },
             TimeProvider.System,
             static (_, token) => Task.Delay(5, token),
-            startupTimeout: TimeSpan.FromSeconds(5));
+            startupTimeout: StartupFixtureBudget);
         var second = BrokerProcess.CreateForTesting(
             BrokerAssemblyPath,
             runtimeRoot,
@@ -800,16 +803,15 @@ public sealed class BrokerProcessTests
             static (_, token) => Task.Delay(5, token),
             startupTimeout: TimeSpan.FromMilliseconds(75));
 
-        var firstTask = first.EnsureRunningAsync(TestContext.Current.CancellationToken);
-        Assert.True(
-            startEntered.Wait(
-                TimeSpan.FromSeconds(5),
-                TestContext.Current.CancellationToken));
-        using var safetyCancellation = CancellationTokenSource.CreateLinkedTokenSource(
-            TestContext.Current.CancellationToken);
-        safetyCancellation.CancelAfter(TimeSpan.FromSeconds(2));
+        // The fake start is synchronous. Keep it off the test's synchronization context,
+        // even if acquiring the semaphore completes inline.
+        var firstTask = Task.Run(() => first.EnsureRunningAsync(cancellationToken), cancellationToken);
         try
         {
+            await startEntered.Task.WaitAsync(StartupFixtureBudget, cancellationToken);
+            using var safetyCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            safetyCancellation.CancelAfter(TimeSpan.FromSeconds(2));
+
             var exception = await Assert.ThrowsAsync<BrokerBootstrapException>(
                 () => second.EnsureRunningAsync(safetyCancellation.Token));
 
@@ -836,8 +838,12 @@ public sealed class BrokerProcessTests
             Path.GetTempPath(),
             "localai-process-" + Guid.NewGuid().ToString("N"));
         var now = DateTimeOffset.UtcNow;
-        using var startEntered = new ManualResetEventSlim();
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var startEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         using var releaseStart = new ManualResetEventSlim();
+        using var allowSemaphoreWait = new ManualResetEventSlim();
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var waitClock = new ContendedStartupClock(allowSemaphoreWait, cancellationToken);
         var ready = false;
         var blockedStarts = 0;
         var reuseStarts = 0;
@@ -846,7 +852,7 @@ public sealed class BrokerProcessTests
                 ? new BrokerProcessState(
                     42,
                     now,
-                    now,
+                    DateTimeOffset.UtcNow,
                     BrokerCompatibilityContract.HostStateSchemaVersion,
                     BrokerAssemblyPath,
                     BrokerCompatibilityContract.Current)
@@ -858,14 +864,14 @@ public sealed class BrokerProcessTests
             state => state.ProcessId == 42,
             (_, _) =>
             {
-                startEntered.Set();
-                releaseStart.Wait(TestContext.Current.CancellationToken);
+                startEntered.SetResult();
+                releaseStart.Wait(cancellationToken);
                 ready = true;
                 return FakeStartAttempt.Running(42);
             },
             TimeProvider.System,
             static (_, token) => Task.Delay(5, token),
-            startupTimeout: TimeSpan.FromSeconds(5));
+            startupTimeout: StartupFixtureBudget);
         var blocked = BrokerProcess.CreateForTesting(
             BrokerAssemblyPath,
             runtimeRoot,
@@ -876,25 +882,21 @@ public sealed class BrokerProcessTests
                 blockedStarts++;
                 return FakeStartAttempt.Running(99);
             },
-            TimeProvider.System,
+            waitClock,
             static (_, token) => Task.Delay(5, token),
             startupTimeout: BlockedStartupBudget);
 
-        var firstTask = first.EnsureRunningAsync(TestContext.Current.CancellationToken);
-        Assert.True(
-            startEntered.Wait(
-                TimeSpan.FromSeconds(5),
-                TestContext.Current.CancellationToken));
-        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(
-            TestContext.Current.CancellationToken);
-        var blockedTask = blocked.EnsureRunningAsync(cancellation.Token);
-        await Task.Delay(
-            TimeSpan.FromMilliseconds(50),
-            TestContext.Current.CancellationToken);
-        var stopwatch = Stopwatch.StartNew();
-        cancellation.Cancel();
+        var firstTask = Task.Run(() => first.EnsureRunningAsync(cancellationToken), cancellationToken);
+        Task? blockedTask = null;
         try
         {
+            await startEntered.Task.WaitAsync(StartupFixtureBudget, cancellationToken);
+            blockedTask = blocked.EnsureRunningAsync(cancellation.Token);
+            await waitClock.WaitEntered.Task.WaitAsync(StartupFixtureBudget, cancellationToken);
+            var stopwatch = Stopwatch.StartNew();
+            cancellation.Cancel();
+            allowSemaphoreWait.Set();
+
             await Assert.ThrowsAnyAsync<OperationCanceledException>(
                 () => blockedTask);
 
@@ -912,13 +914,21 @@ public sealed class BrokerProcessTests
             // twenty-five slices of headroom and still fails a run that waited the budget out.
             Assert.True(
                 stopwatch.Elapsed < BlockedStartupBudget / 2,
-                $"cancellation took {stopwatch.Elapsed}, which is not within one wait slice of " +
-                $"being asked — the semaphore wait is no longer sliced.");
+                $"Cancellation took {stopwatch.Elapsed}; the held semaphore wait should observe " +
+                "cancellation well before the startup budget expires.");
             Assert.Equal(0, blockedStarts);
         }
         finally
         {
+            cancellation.Cancel();
+            allowSemaphoreWait.Set();
             releaseStart.Set();
+            if (blockedTask is not null)
+            {
+                await blockedTask.ConfigureAwait(
+                    ConfigureAwaitOptions.ContinueOnCapturedContext | ConfigureAwaitOptions.SuppressThrowing);
+            }
+
             await firstTask;
         }
 
@@ -936,7 +946,7 @@ public sealed class BrokerProcessTests
             static (_, token) => Task.Delay(5, token),
             startupTimeout: TimeSpan.FromSeconds(1));
 
-        await reuse.EnsureRunningAsync(TestContext.Current.CancellationToken);
+        await reuse.EnsureRunningAsync(cancellationToken);
 
         Assert.Equal(0, reuseStarts);
     }
@@ -1319,6 +1329,30 @@ public sealed class BrokerProcessTests
         {
             _timestamp += elapsed.Ticks;
             _utcNow += utcChange;
+        }
+    }
+
+    private sealed class ContendedStartupClock(
+        ManualResetEventSlim allowWait,
+        CancellationToken cancellationToken) : TimeProvider
+    {
+        private int _timestampReads;
+
+        public TaskCompletionSource WaitEntered { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public override long GetTimestamp()
+        {
+            // The first read starts the budget. The next is after the semaphore loop's
+            // cancellation check and before its first wait on the held semaphore.
+            if (Interlocked.Increment(ref _timestampReads) == 2)
+            {
+                WaitEntered.SetResult();
+                allowWait.Wait(cancellationToken);
+            }
+
+            // Give the wait its full startup budget regardless of test setup and scheduling.
+            return 0;
         }
     }
 
