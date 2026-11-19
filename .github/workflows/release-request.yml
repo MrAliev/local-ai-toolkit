@@ -1,0 +1,288 @@
+name: Release from PR
+
+on:
+  pull_request:
+    branches: [releases]
+    paths:
+      - .github/release-request.json
+  push:
+    branches: [releases]
+    paths:
+      - .github/release-request.json
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    if: github.repository == 'MrAliev/local-ai-toolkit' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+    outputs:
+      version: ${{ steps.request.outputs.version }}
+      source_commit: ${{ steps.request.outputs.source_commit }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check the version and approved source commit
+        id: request
+        shell: pwsh
+        run: |
+          $request = ./scripts/validate-localai-release-request.ps1 -RequestPath .github/release-request.json | ConvertFrom-Json
+          "version=$($request.version)" >> $env:GITHUB_OUTPUT
+          "source_commit=$($request.sourceCommit)" >> $env:GITHUB_OUTPUT
+
+      - name: Check the merged release PR
+        if: github.event_name == 'push'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $endpoint = "repos/$env:GITHUB_REPOSITORY/commits/$env:GITHUB_SHA/pulls"
+          $merged = $false
+          for ($attempt = 1; $attempt -le 5; $attempt++) {
+            $pulls = & gh api $endpoint
+            if ($LASTEXITCODE -ne 0) { throw 'Could not find the pull request for this commit.' }
+            $merged = @($pulls | ConvertFrom-Json | Where-Object {
+              $_.base.ref -ceq 'releases' -and $_.merged_at -and $_.merge_commit_sha -ceq $env:GITHUB_SHA
+            }).Count -eq 1
+            if ($merged) { break }
+            Start-Sleep -Seconds 5
+          }
+          if (-not $merged) { throw 'A release request must land through a pull request into releases.' }
+
+      - name: Confirm CI for the source commit
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_COMMIT: ${{ steps.request.outputs.source_commit }}
+        run: |
+          $runs = & gh api "repos/$env:GITHUB_REPOSITORY/actions/workflows/build-and-test.yml/runs?branch=main&event=push&head_sha=$env:SOURCE_COMMIT&status=success&per_page=5"
+          if ($LASTEXITCODE -ne 0) { throw 'Could not verify CI for the source commit.' }
+          $matched = @((($runs | ConvertFrom-Json).workflow_runs) | Where-Object {
+            $_.head_sha -ceq $env:SOURCE_COMMIT -and $_.head_branch -ceq 'main' -and $_.conclusion -ceq 'success'
+          })
+          if ($matched.Count -eq 0) { throw 'Select a main commit with a successful Build and test run.' }
+
+  build:
+    if: github.repository == 'MrAliev/local-ai-toolkit' && github.event_name == 'push' && github.ref == 'refs/heads/releases'
+    needs: validate
+    runs-on: windows-2025
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    outputs:
+      artifact_id: ${{ steps.candidate.outputs.artifact-id }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.validate.outputs.source_commit }}
+          path: source
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: source/global.json
+      - name: Build and record the unsigned package
+        shell: pwsh
+        working-directory: source
+        env:
+          RELEASE_VERSION: ${{ needs.validate.outputs.version }}
+          SOURCE_COMMIT: ${{ needs.validate.outputs.source_commit }}
+        run: |
+          $actual = ([string](& git rev-parse HEAD)).Trim()
+          if ($LASTEXITCODE -ne 0 -or $actual -cne $env:SOURCE_COMMIT) { throw 'Source checkout does not match the release request.' }
+          # The packaging script can exit the PowerShell process. Run it as a child.
+          & pwsh -NoProfile -File scripts/publish-localai-release-win-x64-self-contained.ps1 -ReleaseVersion $env:RELEASE_VERSION -PublishRoot publish/ci-release -VersionDirectory $actual.Substring(0, 12)
+          if ($LASTEXITCODE -ne 0) { throw "Package build failed with code $LASTEXITCODE." }
+
+          $candidate = New-Item -ItemType Directory -Path publish/ci-release/candidate
+          Copy-Item -LiteralPath publish/ci-release/LocalAi.Installer/LocalAi.Installer.exe -Destination $candidate.FullName
+          Copy-Item -LiteralPath publish/ci-release/release/localai-package.zip -Destination $candidate.FullName
+          $files = foreach ($name in @('LocalAi.Installer.exe', 'localai-package.zip')) {
+            $hash = Get-FileHash -LiteralPath (Join-Path $candidate.FullName $name) -Algorithm SHA256
+            [ordered]@{ name = $name; sha256 = $hash.Hash.ToLowerInvariant() }
+          }
+          [ordered]@{
+            version = $env:RELEASE_VERSION
+            sourceCommit = $actual
+            requestCommit = $env:GITHUB_SHA
+            manifestSigned = $false
+            files = @($files)
+          } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $candidate.FullName release-input.json)
+      - name: Attest the unsigned input inventory
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: source/publish/ci-release/candidate/release-input.json
+          create-storage-record: false
+      - name: Upload the unsigned release input
+        id: candidate
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: localai-release-input-${{ github.run_id }}-${{ github.run_attempt }}
+          path: source/publish/ci-release/candidate/
+          if-no-files-found: error
+          retention-days: 7
+
+  sign:
+    if: github.repository == 'MrAliev/local-ai-toolkit' && github.event_name == 'push' && github.ref == 'refs/heads/releases'
+    needs: [validate, build]
+    runs-on: windows-2025
+    environment: release-signing
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+      attestations: read
+    outputs:
+      artifact_id: ${{ steps.signed.outputs.artifact-id }}
+    env:
+      RELEASE_VERSION: ${{ needs.validate.outputs.version }}
+      SOURCE_COMMIT: ${{ needs.validate.outputs.source_commit }}
+      SIGNER_COMMIT: fe569523d6abca3055feb652673abe43c4f170ee
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          path: automation
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.SIGNER_COMMIT }}
+          path: signer-source
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          artifact-ids: ${{ needs.build.outputs.artifact_id }}
+          path: candidate
+      - name: Verify the exact build input
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh attestation verify candidate/release-input.json --repo $env:GITHUB_REPOSITORY --source-ref refs/heads/releases --source-digest $env:GITHUB_SHA --signer-workflow "$env:GITHUB_REPOSITORY/.github/workflows/release-request.yml" --signer-digest $env:GITHUB_SHA --deny-self-hosted-runners
+          if ($LASTEXITCODE -ne 0) { throw 'Could not verify the release input attestation.' }
+          $inputInventory = Get-Content -LiteralPath candidate/release-input.json -Raw | ConvertFrom-Json
+          if ($inputInventory.manifestSigned -ne $false -or $inputInventory.version -cne $env:RELEASE_VERSION -or
+              $inputInventory.sourceCommit -cne $env:SOURCE_COMMIT -or $inputInventory.requestCommit -cne $env:GITHUB_SHA -or
+              @($inputInventory.files).Count -ne 2) { throw 'Release input does not match the approved request.' }
+          foreach ($name in @('LocalAi.Installer.exe', 'localai-package.zip')) {
+            $entries = @($inputInventory.files | Where-Object { $_.name -ceq $name })
+            $hash = (Get-FileHash -LiteralPath "candidate/$name" -Algorithm SHA256).Hash
+            if ($entries.Count -ne 1 -or $entries[0].sha256 -ine $hash) { throw "Invalid release input: $name" }
+          }
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: signer-source/global.json
+      - name: Build the pinned manifest signer and resolve the model list
+        shell: pwsh
+        working-directory: signer-source
+        run: |
+          $actual = ([string](& git rev-parse HEAD)).Trim()
+          if ($LASTEXITCODE -ne 0 -or $actual -cne $env:SIGNER_COMMIT) { throw 'Signer source checkout does not match its pinned SHA.' }
+          $project = 'src/LocalAi.ReleaseSigner/LocalAi.ReleaseSigner.csproj'
+          dotnet build $project -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'Could not build the release signer.' }
+          $signer = ([string](& dotnet msbuild $project -nologo -p:Configuration=Release -getProperty:TargetPath)).Trim()
+          if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $signer -PathType Leaf)) { throw 'Could not locate the built signer.' }
+          $models = Join-Path $env:RUNNER_TEMP 'localai-release-models.json'
+          dotnet $signer models --out $models
+          if ($LASTEXITCODE -ne 0) { throw 'Could not generate release models.' }
+          "LOCALAI_SIGNER=$signer" >> $env:GITHUB_ENV
+          "LOCALAI_RELEASE_MODELS=$models" >> $env:GITHUB_ENV
+      - name: Sign the release manifest and verify the package
+        shell: pwsh
+        env:
+          LOCALAI_MANIFEST_SIGNING_KEY: ${{ secrets.LOCALAI_MANIFEST_SIGNING_KEY }}
+        run: ./automation/scripts/sign-localai-release-request.ps1 -Signer $env:LOCALAI_SIGNER -ArtifactRoot candidate -Models $env:LOCALAI_RELEASE_MODELS -Version $env:RELEASE_VERSION -SourceCommit $env:SOURCE_COMMIT
+      - name: Upload the verified release files
+        id: signed
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: localai-signed-manifest-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            candidate/LocalAi.Installer.exe
+            candidate/localai-package.zip
+            candidate/release-manifest.json
+            candidate/release-manifest.sig
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    if: github.repository == 'MrAliev/local-ai-toolkit' && github.event_name == 'push' && github.ref == 'refs/heads/releases'
+    needs: [validate, sign]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: localai-release-publication
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      actions: read
+    outputs:
+      release_id: ${{ steps.release.outputs.release_id }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          artifact-ids: ${{ needs.sign.outputs.artifact_id }}
+          path: signed
+      - name: Publish the verified release
+        id: release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ needs.validate.outputs.version }}
+          SOURCE_COMMIT: ${{ needs.validate.outputs.source_commit }}
+        run: ./scripts/publish-localai-release-request.ps1 -ArtifactRoot signed -Version $env:RELEASE_VERSION -SourceCommit $env:SOURCE_COMMIT
+
+  receipt:
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    env:
+      RELEASE_ID: ${{ needs.publish.outputs.release_id }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Read the four published assets
+        shell: pwsh
+        run: ./scripts/record-localai-release-receipt.ps1 -ReleaseId $env:RELEASE_ID -OutputRoot publish/release-asset-receipt
+      - name: Attest the published bytes
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: publish/release-asset-receipt/assets/*
+          predicate-type: https://github.com/MrAliev/local-ai-toolkit/attestations/release-asset-receipt/v1
+          predicate-path: publish/release-asset-receipt/receipt-predicate.json
+          create-storage-record: false
+      - name: Verify the published asset attestations
+        shell: pwsh
+        run: |
+          foreach ($asset in Get-ChildItem -LiteralPath publish/release-asset-receipt/assets -File) {
+            gh attestation verify $asset.FullName --repo $env:GITHUB_REPOSITORY --source-ref refs/heads/releases --source-digest $env:GITHUB_SHA --signer-workflow "$env:GITHUB_REPOSITORY/.github/workflows/release-request.yml" --signer-digest $env:GITHUB_SHA --predicate-type https://github.com/MrAliev/local-ai-toolkit/attestations/release-asset-receipt/v1 --deny-self-hosted-runners
+            if ($LASTEXITCODE -ne 0) { throw "Receipt did not verify for $($asset.Name)." }
+          }
+      - name: Preserve the release receipt
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: localai-release-receipt-${{ needs.publish.outputs.release_id }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: publish/release-asset-receipt/receipt-predicate.json
+          if-no-files-found: error
+          retention-days: 30
