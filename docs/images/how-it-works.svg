@@ -56,7 +56,7 @@
   <!-- cloud agent -->
   <rect class="box" x="166" y="24" width="210" height="60" rx="10"/>
   <text class="name" x="271" y="50" text-anchor="middle">Cloud agent</text>
-  <text class="note" x="271" y="70" text-anchor="middle">Claude Code · Codex</text>
+  <text class="note" x="271" y="70" text-anchor="middle">MCP client</text>
 
   <!-- localai tools -->
   <rect class="box lead" x="424" y="92" width="200" height="60" rx="10"/>

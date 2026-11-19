@@ -77,9 +77,8 @@ if you would rather work on your own.
 
 ## Two ways to use it
 
-**As subagents to a cloud agent.** Claude Code, Codex and any other MCP client can call
-Local AI's tools directly. The agent hands them the simple, repetitive work and starts from
-prepared results, instead of doing that drudgery itself on cloud tokens.
+**As subagents to a cloud agent.** MCP clients can call Local AI's tools directly.
+The agent delegates repetitive work and uses the results as context.
 
 **Without a cloud agent, from the command line.** The same capabilities, but as helpers for
 you: search code by meaning, triage a log, read an image, translate a document. It is the
@@ -90,8 +89,8 @@ agent later.
 
 **Why there is a broker in the middle.** There is one per runtime directory —
 `%LOCALAPPDATA%\LocalAi`, so one per Windows user — and it holds the queue.
-That is how Claude, Codex and the command line all work at once without tripping over each
-other, and why one model sits in video memory rather than four fighting over it.
+Agent clients and the command line share that queue. The broker schedules their
+requests and reuses a model already loaded in video memory when possible.
 
 **Model processing is local by default.** The broker sends your code and the prompts built
 from it to Ollama at `http://127.0.0.1:11434/`, on this machine; a broker started with another
@@ -439,7 +438,7 @@ Nothing is nailed down — the settings live in `%LOCALAPPDATA%\LocalAi\settings
 | A model's fate after a trial | `local_model_feedback`: promote it, keep it as a fallback only, or disable it for that task |
 | Where a model is allowed to sit | `localai policy set --residency` — wholly in video memory, with offload, or on the processor |
 | How long a model stays loaded | `localai policy set --idle-model-keep-alive-seconds` |
-| Take the tools away from a client | unregister the MCP servers from Claude or Codex — the agent then simply does not see them |
+| Remove the tools from a client | unregister the MCP servers from that client |
 
 To choose models for each task, copy the complete [model-routing.json](model-routing.json)
 from the repository root to `%LOCALAPPDATA%\LocalAi\settings\model-routing.json`.
@@ -512,7 +511,7 @@ through them.
 
 ```mermaid
 flowchart LR
-    agent["Cloud agent<br/>Claude Code, Codex"]
+    agent["Cloud agent<br/>MCP client"]
     you["You, in a terminal"]
     launcher["localai-launcher.exe"]
     mcp["codesearch-mcp<br/>locallm-mcp"]
@@ -539,7 +538,7 @@ flowchart LR
   tool from the version it names under `bin\versions`, and it starts exactly four:
   `localai`, `codesearch`, `codesearch-mcp` and `locallm-mcp`. An update adds a version and
   moves the pointer, so nothing that points at the launcher has to change.
-- **The MCP servers** are what Claude Code and Codex start. The installer registers them as
+- **The MCP servers** are what configured agent clients start. The installer registers them as
   `localai-launcher.exe run codesearch-mcp` and `run locallm-mcp`: twelve code-search tools
   and eleven local-model tools.
 - **The broker**, `LocalAi.Broker`, is the only program that talks to Ollama. Nothing installs
@@ -554,8 +553,8 @@ flowchart LR
 ### One queue in front of every model
 
 Every model call goes through the same queue — a search query, the embeddings of an index
-build, a question to `ask_local`. That is how Claude, Codex and the command line use the
-models at once without loading them over each other.
+build, a question to `ask_local`. The queue coordinates model loading for agent clients
+and the command line.
 
 Each request carries a priority. A search query is `Interactive`, a question to a local model
 is `Foreground`, and the embeddings of an index build are `Background`. The broker picks the
@@ -939,9 +938,9 @@ lai localai repo status
 ```
 
 **A worktree is the same repository.** A repository is identified by its shared git
-directory, so all of its worktrees, Claude, Codex and the command line see one index. But for
-a build, point `--root` at **the tree you are editing**: an overlay is built for one exact
-state of the files.
+directory. All worktrees, agent clients and the command line share the repository index.
+When building an overlay, point `--root` at **the tree you are editing** so it matches
+the current state of those files.
 
 ### Step 3. Connect a repository
 
@@ -951,11 +950,7 @@ Indexing is opt-in per repository. Until you ask, nothing is read.
 lai localai repo status --root C:\work\myapp
 ```
 
-```
-NOT_CONFIGURED: C:\WORK\MYAPP\.GIT — offer CodeSearch, LocalLm, shared broker, mainline generations, branch overlays, hooks, Claude MCP and Codex MCP.
-```
-
-Connect it and install the hooks:
+If the output starts with `NOT_CONFIGURED`, connect the repository and install the hooks.
 
 ```powershell
 lai localai sync --root C:\work\myapp
@@ -1960,13 +1955,13 @@ there like any program. A wizard opens, and each part is decided **separately**,
 | Queue, archive, quarantine, telemetry | transient broker state; nothing to preserve |
 | Everything else in the runtime root | anything the installer does not recognise, listed by path |
 | Git hooks | per connected repository |
-| Claude and Codex integration | separately for each: unregister the MCP servers and remove the instruction block |
+| Agent client integrations | unregister the MCP servers and remove the instruction block separately for each client |
 | Release signing keys | **always asked** — never removed by default under any preset |
 
 There are ready-made presets: remove everything except the signing keys; remove the binaries,
-the transient state and anything unrecognised, keeping the indexes and settings; take Local AI
-out of Claude, Codex and the Git hooks without touching the runtime. A preset is just a set of boxes
-already ticked, and any of them can be changed.
+the transient state and anything unrecognised, keeping the indexes and settings; remove
+Local AI from agent clients and Git hooks while keeping the runtime. You can adjust
+the selections in any preset.
 
 **Models stay.** They belong to Ollama rather than to Local AI, and you may want them for
 something else. Remove those through Ollama.

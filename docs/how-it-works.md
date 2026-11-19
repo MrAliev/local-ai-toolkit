@@ -20,7 +20,7 @@ through them.
 
 ```mermaid
 flowchart LR
-    agent["Cloud agent<br/>Claude Code, Codex"]
+    agent["Cloud agent<br/>MCP client"]
     you["You, in a terminal"]
     launcher["localai-launcher.exe"]
     mcp["codesearch-mcp<br/>locallm-mcp"]
@@ -47,7 +47,7 @@ flowchart LR
   tool from the version it names under `bin\versions`, and it starts exactly four:
   `localai`, `codesearch`, `codesearch-mcp` and `locallm-mcp`. An update adds a version and
   moves the pointer, so nothing that points at the launcher has to change.
-- **The MCP servers** are what Claude Code and Codex start. The installer registers them as
+- **The MCP servers** are what configured agent clients start. The installer registers them as
   `localai-launcher.exe run codesearch-mcp` and `run locallm-mcp`: twelve code-search tools
   and eleven local-model tools.
 - **The broker**, `LocalAi.Broker`, is the only program that talks to Ollama. Nothing installs
@@ -62,8 +62,8 @@ flowchart LR
 ## One queue in front of every model
 
 Every model call goes through the same queue — a search query, the embeddings of an index
-build, a question to `ask_local`. That is how Claude, Codex and the command line use the
-models at once without loading them over each other.
+build, a question to `ask_local`. The queue coordinates model loading for agent clients
+and the command line.
 
 Each request carries a priority. A search query is `Interactive`, a question to a local model
 is `Foreground`, and the embeddings of an index build are `Background`. The broker picks the

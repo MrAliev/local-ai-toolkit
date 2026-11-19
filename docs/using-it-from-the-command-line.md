@@ -56,9 +56,9 @@ lai localai repo status
 ```
 
 **A worktree is the same repository.** A repository is identified by its shared git
-directory, so all of its worktrees, Claude, Codex and the command line see one index. But for
-a build, point `--root` at **the tree you are editing**: an overlay is built for one exact
-state of the files.
+directory. All worktrees, agent clients and the command line share the repository index.
+When building an overlay, point `--root` at **the tree you are editing** so it matches
+the current state of those files.
 
 ## Step 3. Connect a repository
 
@@ -68,11 +68,7 @@ Indexing is opt-in per repository. Until you ask, nothing is read.
 lai localai repo status --root C:\work\myapp
 ```
 
-```
-NOT_CONFIGURED: C:\WORK\MYAPP\.GIT — offer CodeSearch, LocalLm, shared broker, mainline generations, branch overlays, hooks, Claude MCP and Codex MCP.
-```
-
-Connect it and install the hooks:
+If the output starts with `NOT_CONFIGURED`, connect the repository and install the hooks.
 
 ```powershell
 lai localai sync --root C:\work\myapp

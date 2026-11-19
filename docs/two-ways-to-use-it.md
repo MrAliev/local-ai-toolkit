@@ -2,9 +2,8 @@
 
 [Contents](README.md#contents) · [Русская версия](two-ways-to-use-it.ru.md)
 
-**As subagents to a cloud agent.** Claude Code, Codex and any other MCP client can call
-Local AI's tools directly. The agent hands them the simple, repetitive work and starts from
-prepared results, instead of doing that drudgery itself on cloud tokens.
+**As subagents to a cloud agent.** MCP clients can call Local AI's tools directly.
+The agent delegates repetitive work and uses the results as context.
 
 **Without a cloud agent, from the command line.** The same capabilities, but as helpers for
 you: search code by meaning, triage a log, read an image, translate a document. It is the
@@ -15,8 +14,8 @@ agent later.
 
 **Why there is a broker in the middle.** There is one per runtime directory —
 `%LOCALAPPDATA%\LocalAi`, so one per Windows user — and it holds the queue.
-That is how Claude, Codex and the command line all work at once without tripping over each
-other, and why one model sits in video memory rather than four fighting over it.
+Agent clients and the command line share that queue. The broker schedules their
+requests and reuses a model already loaded in video memory when possible.
 
 **Model processing is local by default.** The broker sends your code and the prompts built
 from it to Ollama at `http://127.0.0.1:11434/`, on this machine; a broker started with another

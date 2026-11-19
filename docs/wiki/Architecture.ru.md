@@ -8,7 +8,7 @@
 
 ```mermaid
 flowchart TB
-  clients["Codex, Claude Code или CLI"] --> launcher["Программа запуска"]
+  clients["Клиенты MCP и CLI"] --> launcher["Программа запуска"]
   launcher --> tools["CodeSearch и LocalLm"]
   tools --> queue["Общая очередь"]
   queue --> broker["Брокер"]

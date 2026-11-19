@@ -8,7 +8,7 @@ Clients use a stable launcher to start CodeSearch and LocalLm. CodeSearch reads 
 
 ```mermaid
 flowchart TB
-  clients["Codex, Claude Code or CLI"] --> launcher["Stable launcher"]
+  clients["MCP clients and CLI"] --> launcher["Stable launcher"]
   launcher --> tools["CodeSearch and LocalLm"]
   tools --> queue["Shared queue"]
   queue --> broker["Broker"]

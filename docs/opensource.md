@@ -28,7 +28,7 @@ and worktree overlays. Repositories are connected explicitly.
 
 ```mermaid
 flowchart LR
-  clients["Codex / Claude Code / CLI"] --> launcher["Stable launcher"]
+  clients["MCP clients and CLI"] --> launcher["Stable launcher"]
   launcher --> tools["CodeSearch / LocalLm"]
   tools --> index["Base index + worktree overlay"]
   tools --> broker["Shared broker and queue"]
